@@ -23,12 +23,12 @@
     },
     "staff_launcher": {
       "channel": "staff_launcher",
-      "version": "1.1.2",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip",
-      "sha256": "16aabb927aa56806882938692606396f2df42d56188a35ff8a65af3ad014ccdb",
+      "version": "1.1.3",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip",
+      "sha256": "f74d332c18100862b8187344551b2b7dc5286e3a8dac34ba2472e234d0730c5b",
       "policy": "recommended",
-      "notes": "Adds a selectable single VR client. One of the three Staff Launcher instances can run normally for SteamVR while every other instance is forced Desktop with --no-vr.",
-      "published_at": "2026-10-10T20:05:00Z"
+      "notes": "Fixes the Staff Launcher embedded node relay queue error caused by Relay v1.1.9 returning accepted as a count and accepted_event_ids as the event-ID list. Previously accepted queued sightings retry safely and then clear locally.",
+      "published_at": "2026-10-10T20:12:00Z"
     }
   }
 }
