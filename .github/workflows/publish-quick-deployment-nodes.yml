@@ -1,0 +1,90 @@
+name: Publish Quick Deployment Only Nodes
+on:
+  push:
+    paths:
+      - ".release-parts/nodes/v1.1.7/READY"
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild from published v1.1.6 packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import io, zipfile, pathlib, hashlib, json
+          root=pathlib.Path("updates")
+          tasks=[
+           ("standalone","1.1.7","TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip","TGC_Invite_Node_v1.1.7_Quick_Deployment_Only.zip","tgc_invite_node.py"),
+           ("plugin","1.1.7-plugin","TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip","TGC_Invite_Node_Plugin_v1.1.7-plugin_Quick_Deployment_Only.zip","plugins/distributed_invite_node.py")
+          ]
+          updates={}
+          for channel,version,old_name,new_name,source in tasks:
+              with zipfile.ZipFile(root/channel/old_name) as archive:
+                  files={x:archive.read(x) for x in archive.namelist() if not x.endswith("/")}
+              s=files[source].decode("utf-8")
+              if channel=="standalone":
+                  s=s.replace('APP_VERSION = "1.1.6"','APP_VERSION = "1.1.7"',1)
+                  s=s.replace('ttk.LabelFrame(frame, text="Advanced / Manual Node Configuration")','ttk.LabelFrame(frame, text="Node Preferences")',1)
+                  a=s.index('        fields = [',s.index('text="Node Preferences"'))
+                  b=s.index('        ttk.Label(settings, text="Sync Interval:")',a)
+                  s=s[:a]+'''        ttk.Label(settings, text="Node:").grid(row=0, column=0, sticky=tk.W, padx=6, pady=4)
+                  ttk.Label(settings, textvariable=self.name_var).grid(row=0, column=1, sticky=tk.W, padx=6, pady=4)
+                  ttk.Label(settings, text="Enrollment is managed exclusively through Quick Deployment.", wraplength=690).grid(row=1, column=0, columnspan=4, sticky=tk.W, padx=6, pady=4)
+          '''.replace('                  ','        ')+s[b:]
+                  lines=['            "relay_url": self.url_var.get().strip(),\n','            "node_id": self.node_id_var.get().strip(),\n','            "node_key_runtime": self.key_var.get().strip(),\n']
+                  for line in lines:
+                      assert s.count(line)==2,(line,s.count(line))
+                      s=s.replace(line,'')
+                  files["START_HERE.txt"]=("TGC INVITE NODE v1.1.7 - QUICK DEPLOYMENT ONLY\n\n1. Extract the ZIP.\n2. Run run_node.bat.\n3. Paste the one-time full deployment link supplied by Seawolf.\n4. Click Deploy This Node.\n\nExisting saved credentials remain when upgrading. Manual enrollment is no longer available.\n").encode()
+                  files["README_NODE.txt"]=files["README_NODE.txt"].replace(b"v1.1.6",b"v1.1.7",1)
+              else:
+                  s=s.replace('NODE_VERSION = "1.1.6-plugin"','NODE_VERSION = "1.1.7-plugin"',1)
+                  s=s.replace('ttk.LabelFrame(container, text="Advanced / Manual Node Configuration")','ttk.LabelFrame(container, text="Node Preferences")',1)
+                  a=s.index('        fields = [',s.index('text="Node Preferences"'))
+                  b=s.index('        ttk.Label(settings_frame, text="Sync Interval:")',a)
+                  s=s[:a]+'''        ttk.Label(settings_frame, text="Node:").grid(row=0, column=0, sticky=tk.W, padx=6, pady=4)
+                  ttk.Label(settings_frame, textvariable=self.node_name_var).grid(row=0, column=1, sticky=tk.W, padx=6, pady=4)
+                  ttk.Label(settings_frame, text="Enrollment is managed exclusively through Quick Deployment.", wraplength=820).grid(row=1, column=0, columnspan=4, sticky=tk.W, padx=6, pady=4)
+          '''.replace('                  ','        ')+s[b:]
+                  for line in ['                "relay_url": self.relay_url_var.get().strip(),\n','                "node_id": self.node_id_var.get().strip(),\n','                "node_key_runtime": self.node_key_var.get().strip(),\n']:
+                      assert s.count(line)==1,(line,s.count(line))
+                      s=s.replace(line,'')
+              files[source]=s.encode("utf-8")
+              compile(s,source,"exec")
+              destination=root/channel/new_name
+              with zipfile.ZipFile(destination,"w",zipfile.ZIP_DEFLATED) as z:
+                  for name,data in sorted(files.items()):
+                      z.writestr(name,data)
+              sha=hashlib.sha256(destination.read_bytes()).hexdigest()
+              updates[channel]={"channel":channel,"version":version,"url":"https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/"+channel+"/"+new_name,"sha256":sha,"policy":"required","notes":"Required update: Quick Deployment is now the only enrollment path. Manual Relay URL, Node ID and Node Key entry removed; existing deployed credentials and runtime features are preserved.","published_at":"2026-10-10T23:00:00Z"}
+              print(channel,version,sha)
+          manifest=pathlib.Path("manifest.json")
+          obj=json.loads(manifest.read_text())
+          obj["releases"].update(updates)
+          manifest.write_text(json.dumps(obj,indent=2)+"\n")
+          readme=pathlib.Path("README.md")
+          t=readme.read_text()
+          for channel,version,old_name,new_name,source in tasks:
+              t=t.replace(old_name,new_name)
+              t=t.replace("### Standalone Node 1.1.6","### Standalone Node 1.1.7")
+              t=t.replace("### Plugin Node 1.1.6-plugin","### Plugin Node 1.1.7-plugin")
+              import re
+              heading="### Standalone Node" if channel=="standalone" else "### Plugin Node"
+              a=t.index(heading)
+              b=t.find("\n### ",a+4)
+              if b<0:b=t.find("\nThe plugin package",a)
+              section=t[a:b]
+              section=re.sub(r'(?m)^- SHA-256:.*$',"- SHA-256: `"+updates[channel]["sha256"]+"`",section)
+              section+="\n- REQUIRED: Quick Deployment only; manual enrollment has been removed.\n"
+              t=t[:a]+section+t[b:]
+          readme.write_text(t)
+          PY
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add updates/standalone/TGC_Invite_Node_v1.1.7_Quick_Deployment_Only.zip updates/plugin/TGC_Invite_Node_Plugin_v1.1.7-plugin_Quick_Deployment_Only.zip manifest.json README.md
+          git commit -m "Publish required Quick Deployment Node updates v1.1.7"
+          git push
