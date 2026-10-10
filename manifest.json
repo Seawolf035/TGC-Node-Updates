@@ -5,21 +5,21 @@
   "releases": {
     "standalone": {
       "channel": "standalone",
-      "version": "1.1.6",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip",
-      "sha256": "e71a5cc69ca96c70df41705429b26289a9b8ac338130b8cc9172d52923e4ca02",
-      "policy": "recommended",
-      "notes": "Adds one-link owner deployment and protects the standalone Node Key with Windows DPAPI.",
-      "published_at": "2026-10-10T18:30:00Z"
+      "version": "1.1.7",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.7_Quick_Deployment_Only.zip",
+      "sha256": "fb2521d0d37bbe528f02013187ce95586129c9d37ab4b8a9225212eead26b729",
+      "policy": "required",
+      "notes": "Required update: Quick Deployment is now the only enrollment path. Manual Relay URL, Node ID and Node Key entry removed; existing deployed credentials and runtime features are preserved.",
+      "published_at": "2026-10-10T23:00:00Z"
     },
     "plugin": {
       "channel": "plugin",
-      "version": "1.1.6-plugin",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip",
-      "sha256": "3e1edc731a6104abae3ee54b77d2af1c2a0255dbfaeca638e23382c0c3cb1129",
-      "policy": "recommended",
-      "notes": "Adds one-link owner deployment while preserving encrypted Node Key storage in Auto Invite.",
-      "published_at": "2026-10-10T18:30:00Z"
+      "version": "1.1.7-plugin",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.7-plugin_Quick_Deployment_Only.zip",
+      "sha256": "19093a3b343a1212d8ca74f0e372ea7c64c46cdd5d2430b699ac6bd72e2e6f3b",
+      "policy": "required",
+      "notes": "Required update: Quick Deployment is now the only enrollment path. Manual Relay URL, Node ID and Node Key entry removed; existing deployed credentials and runtime features are preserved.",
+      "published_at": "2026-10-10T23:00:00Z"
     },
     "staff_launcher": {
       "channel": "staff_launcher",

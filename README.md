@@ -6,17 +6,21 @@ The authoritative update feed is `manifest.json`. The standalone node, plugin no
 
 ## Current packages
 
-### Standalone Node 1.1.6
-- File: `updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip`
-- SHA-256: `e71a5cc69ca96c70df41705429b26289a9b8ac338130b8cc9172d52923e4ca02`
-- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip
+### Standalone Node 1.1.7
+- File: `updates/standalone/TGC_Invite_Node_v1.1.7_Quick_Deployment_Only.zip`
+- SHA-256: `fb2521d0d37bbe528f02013187ce95586129c9d37ab4b8a9225212eead26b729`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.7_Quick_Deployment_Only.zip
 - Adds owner-issued one-link deployment and Windows DPAPI protection for the standalone Node Key.
 
-### Plugin Node 1.1.6-plugin
-- File: `updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip`
-- SHA-256: `3e1edc731a6104abae3ee54b77d2af1c2a0255dbfaeca638e23382c0c3cb1129`
-- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip
+- REQUIRED: Quick Deployment only; manual enrollment has been removed.
+
+### Plugin Node 1.1.7-plugin
+- File: `updates/plugin/TGC_Invite_Node_Plugin_v1.1.7-plugin_Quick_Deployment_Only.zip`
+- SHA-256: `19093a3b343a1212d8ca74f0e372ea7c64c46cdd5d2430b699ac6bd72e2e6f3b`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.7-plugin_Quick_Deployment_Only.zip
 - Adds owner-issued one-link deployment while retaining the parent Auto Invite app's encrypted Node Key storage.
+
+- REQUIRED: Quick Deployment only; manual enrollment has been removed.
 
 ### Staff Launcher 1.1.3
 - File: `updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip`
