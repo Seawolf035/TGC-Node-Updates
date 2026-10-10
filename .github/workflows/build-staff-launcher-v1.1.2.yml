@@ -14,92 +14,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Staff Launcher 1.1.2 from verified 1.1.1 package
+      - name: Build and validate Staff Launcher 1.1.2
         shell: bash
         run: |
           set -euo pipefail
           rm -rf build_staff_112
           mkdir -p build_staff_112
           unzip -q updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip -d build_staff_112
-
           cd build_staff_112/TGC_Staff_Launcher_Package
           patch -p0 < ../../.release-tools/staff-launcher-v1.1.2.patch
-
-          python - <<'PY'
-          from pathlib import Path
-
-          readme = Path("README_FIRST.txt")
-          r = readme.read_text(encoding="utf-8")
-          r = r.replace("TGC STAFF LAUNCHER v1.1.0", "TGC STAFF LAUNCHER v1.1.2")
-          r = r.replace(
-              "It can run a maximum of three local VRChat instances and includes the OSC\n"
-              "repeater, avatar scale/eye-height controls, smooth scaling, pulse controls, and\n"
-              "an embedded TGC Invite Node.",
-              "It can run a maximum of three local VRChat instances. One of those three can be\n"
-              "selected for VR while the other two are explicitly forced into Desktop mode. It\n"
-              "also includes the OSC repeater, avatar scale/eye-height controls, smooth scaling,\n"
-              "pulse controls, and an embedded TGC Invite Node.",
-          )
-          r = r.replace(
-              "7. After verification, open Settings and confirm the VRChat launch.exe path.",
-              "7. After verification, open Settings and confirm the VRChat launch.exe path.\n"
-              "8. On the Instances tab, select \"Use VR\" on Instance 1, 2, or 3 if this PC\n"
-              "   should run one VR client. Leave \"Desktop Only\" selected for three desktop clients.",
-          )
-          marker = "INSTANCE PORTS\n--------------"
-          vr_section = """SINGLE VR INSTANCE (v1.1.2+)
-----------------------------
-The Instances tab lets staff select at most one of the three launcher slots as
-the VR client. The selected slot launches normally so VRChat can use SteamVR.
-Every non-selected slot is launched with VRChat's official --no-vr option, which
-forces Desktop mode.
-
-Changing the selection does not alter an already-running client. Restart that
-instance to apply the new mode. The choice is saved in launcher settings and is
-preserved through GitHub self-updates.
-
-"""
-          if "SINGLE VR INSTANCE (v1.1.2+)" not in r:
-              r = r.replace(marker, vr_section + marker)
-          readme.write_text(r, encoding="utf-8")
-
-          Path("V1_1_2_SINGLE_VR_INSTANCE.txt").write_text(
-              """TGC Staff Launcher v1.1.2 - Single VR Instance
-================================================
-
-- Keeps the Staff Launcher hard-limited to three local VRChat clients.
-- Adds a Use VR selector to each instance row.
-- Only one instance can be selected for VR at a time.
-- Adds Desktop Only to force all three clients into desktop mode.
-- Non-selected instances launch with VRChat's official --no-vr option.
-- The selected VR instance launches without --no-vr so VRChat can use SteamVR.
-- The VR selection is saved to tgc_staff_launcher_config.json.
-- Changing the selection applies on the next launch/restart of that instance.
-- The existing verification gate, embedded Invite Node, and GitHub updater are unchanged.
-""",
-              encoding="utf-8",
-          )
-          PY
-
+          sed -i 's/TGC STAFF LAUNCHER v1.1.0/TGC STAFF LAUNCHER v1.1.2/' README_FIRST.txt
+          printf '%s\n' '' 'SINGLE VR INSTANCE (v1.1.2+)' '----------------------------' 'On the Instances tab, select Use VR on at most one of the three slots.' 'The selected slot launches normally for SteamVR. Every other slot is' 'explicitly forced into Desktop mode with VRChat --no-vr.' '' 'Changing the selection applies the next time that instance launches or restarts.' >> README_FIRST.txt
+          printf '%s\n' 'TGC Staff Launcher v1.1.2 - Single VR Instance' '================================================' '' '- Keeps the launcher hard-limited to three local clients.' '- Adds Use VR to each instance row; only one may be selected.' '- Adds Desktop Only to force all three clients into Desktop mode.' '- Non-selected clients use VRChat --no-vr.' '- The selected VR slot launches without --no-vr for SteamVR.' '- The choice is saved and preserved through GitHub self-updates.' '- Verification and the embedded Invite Node remain required.' > V1_1_2_SINGLE_VR_INSTANCE.txt
           python -m py_compile TGC_Staff_Launcher.py tgc_staff_node.py tgc_vrchat_multilog.py staff_launcher_update_helper.py
-
-          python - <<'PY'
-          from pathlib import Path
-          import ast
-
-          p = Path("TGC_Staff_Launcher.py")
-          s = p.read_text(encoding="utf-8")
-          ast.parse(s)
-          assert 'APP_VERSION = "1.1.2"' in s
-          assert '"vr_instance": 0' in s
-          assert 'text="Use VR"' in s
-          assert 'text="Desktop Only"' in s
-          assert 'args.append("--no-vr")' in s
-          assert 'UPDATE_CHANNEL = "staff_launcher"' in s
-          assert 'This deployment is not a Staff Launcher deployment.' in s
-          print("Staff Launcher 1.1.2 structural checks passed")
-          PY
-
+          grep -q 'APP_VERSION = "1.1.2"' TGC_Staff_Launcher.py
+          grep -q '"vr_instance": 0' TGC_Staff_Launcher.py
+          grep -q 'text="Use VR"' TGC_Staff_Launcher.py
+          grep -q 'text="Desktop Only"' TGC_Staff_Launcher.py
+          grep -q 'args.append("--no-vr")' TGC_Staff_Launcher.py
+          grep -q 'UPDATE_CHANNEL = "staff_launcher"' TGC_Staff_Launcher.py
+          grep -q 'This deployment is not a Staff Launcher deployment.' TGC_Staff_Launcher.py
           cd ../..
           mkdir -p updates/staff-launcher
           rm -f updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip
@@ -107,33 +41,11 @@ preserved through GitHub self-updates.
           zip -qr ../updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip TGC_Staff_Launcher_Package -x "*/__pycache__/*" "*.pyc"
           cd ..
 
-      - name: Publish Staff Launcher 1.1.2 manifest entry
+      - name: Publish Staff Launcher 1.1.2
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import hashlib
-          import json
-          from pathlib import Path
-
-          zip_path = Path("updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip")
-          sha = hashlib.sha256(zip_path.read_bytes()).hexdigest()
-
-          p = Path("manifest.json")
-          m = json.loads(p.read_text(encoding="utf-8"))
-          m.setdefault("releases", {})["staff_launcher"] = {
-              "channel": "staff_launcher",
-              "version": "1.1.2",
-              "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip",
-              "sha256": sha,
-              "policy": "recommended",
-              "notes": "Adds a selectable single VR client. One of the three Staff Launcher instances can run normally for SteamVR while every other instance is forced Desktop with --no-vr.",
-              "published_at": "2026-10-10T20:05:00Z"
-          }
-          p.write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
-          print("Published SHA-256:", sha)
-          PY
-
+          python -c 'import hashlib,json,pathlib; z=pathlib.Path("updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip"); sha=hashlib.sha256(z.read_bytes()).hexdigest(); p=pathlib.Path("manifest.json"); m=json.loads(p.read_text()); m.setdefault("releases",{})["staff_launcher"]={"channel":"staff_launcher","version":"1.1.2","url":"https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip","sha256":sha,"policy":"recommended","notes":"Adds a selectable single VR client. One of the three Staff Launcher instances can run normally for SteamVR while every other instance is forced Desktop with --no-vr.","published_at":"2026-10-10T20:05:00Z"}; p.write_text(json.dumps(m,indent=2)+"\n"); print(sha)'
           git config user.name "TGC Release Bot"
           git config user.email "actions@users.noreply.github.com"
           git add updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip manifest.json
