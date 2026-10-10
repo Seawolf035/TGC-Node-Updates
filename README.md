@@ -19,12 +19,14 @@ The authoritative update feed is `manifest.json`. The standalone node, plugin no
 - Adds owner-issued one-link deployment while retaining the parent Auto Invite app's encrypted Node Key storage.
 
 ### Staff Launcher 1.1.3
-- File: `updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip`
-- SHA-256: `f74d332c18100862b8187344551b2b7dc5286e3a8dac34ba2472e234d0730c5b`
-- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip
+- File: `updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip`
+- SHA-256: `17a0acdfe42cde7a94bb6bc1fd87640d5ac339703122baf0fb3918af0745c8bd`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip
 - Fixes the embedded Node relay queue handling: relay responses return an accepted count plus `accepted_event_ids`, which is the list used to acknowledge queued sightings.
 - Preserves idempotent retries for previously accepted events and clears acknowledged entries locally.
 - Retains the v1.1.2 option to run exactly one of three local VRChat slots in VR, with the others forced to Desktop mode using `--no-vr`.
 - Keeps verified-only GitHub self-updates and preserves launcher settings, deployment credentials, Windows DPAPI Node Key, and Invite Node queue database.
+
+- Installer hotfix prefers Python 3.13 and uses a local virtual environment.
 
 The plugin package is intended for Seawolf035's heavily expanded fork/build of TitanBCXR/vrchat-auto-invite, not as a guarantee of compatibility with an untouched upstream install.

@@ -24,10 +24,10 @@
     "staff_launcher": {
       "channel": "staff_launcher",
       "version": "1.1.3",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip",
-      "sha256": "f74d332c18100862b8187344551b2b7dc5286e3a8dac34ba2472e234d0730c5b",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip",
+      "sha256": "17a0acdfe42cde7a94bb6bc1fd87640d5ac339703122baf0fb3918af0745c8bd",
       "policy": "recommended",
-      "notes": "Fixes the Staff Launcher embedded node relay queue error caused by Relay v1.1.9 returning accepted as a count and accepted_event_ids as the event-ID list. Previously accepted queued sightings retry safely and then clear locally.",
+      "notes": "Staff Launcher 1.1.3 relay accepted_event_ids queue fix plus installer compatibility hotfix: Python 3.13 preference and per-install virtual environment.",
       "published_at": "2026-10-10T20:12:00Z"
     }
   }
