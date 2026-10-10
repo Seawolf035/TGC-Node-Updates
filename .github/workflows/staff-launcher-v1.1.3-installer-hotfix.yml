@@ -1,0 +1,124 @@
+name: Publish Staff Launcher v1.1.3 installer hotfix
+on:
+  push:
+    paths:
+      - ".release-parts/staff/v1.1.3-installer/READY"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch installer and launch scripts
+        run: |
+          set -euo pipefail
+          mkdir -p build_hotfix
+          unzip -q updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip -d build_hotfix
+          python - <<'PY'
+          from pathlib import Path
+          root=Path("build_hotfix/TGC_Staff_Launcher_Package")
+          installer=r'''@echo off
+setlocal EnableExtensions
+cd /d "%~dp0"
+title TGC Staff Launcher Installer
+echo =============================================
+echo       TGC Staff Launcher Installer
+echo =============================================
+echo.
+where py >nul 2>nul
+if errorlevel 1 goto :no_python
+set "SELECTED="
+for %%V in (3.13 3.12 3.11 3.14) do (
+    if not defined SELECTED (
+        py -%%V -c "import sys; assert sys.version_info[:2] == tuple(map(int, '%%V'.split('.'))) and getattr(sys, '_is_gil_enabled', lambda: True)()" >nul 2>nul
+        if not errorlevel 1 set "SELECTED=%%V"
+    )
+)
+if not defined SELECTED goto :no_compatible_python
+echo Using Python %SELECTED% for this installation.
+echo.
+if not exist ".venv\Scripts\python.exe" (
+    py -%SELECTED% -m venv ".venv"
+    if errorlevel 1 goto :fail
+)
+".venv\Scripts\python.exe" -m pip install --upgrade pip
+if errorlevel 1 goto :fail
+".venv\Scripts\python.exe" -m pip install -r requirements.txt
+if errorlevel 1 goto :fail
+".venv\Scripts\python.exe" -c "import psutil, win32api; print('Dependencies verified.')"
+if errorlevel 1 goto :fail
+echo.
+echo Installation complete.
+echo Use Run_TGC_Staff_Launcher.bat to start it.
+pause
+exit /b 0
+:no_python
+echo Python Launcher 'py' was not found.
+echo Install Python 3.13 from https://www.python.org/downloads/
+pause
+exit /b 1
+:no_compatible_python
+echo A supported regular CPython installation was not found.
+echo Recommended: install Python 3.13 from https://www.python.org/downloads/
+pause
+exit /b 1
+:fail
+echo.
+echo Installation failed. Copy the error above and send it to Seawolf.
+echo If you switched Python versions, remove the .venv folder and retry.
+pause
+exit /b 1
+'''
+          (root/"Install_TGC_Staff_Launcher.bat").write_bytes(installer.replace("\n","\r\n").encode())
+          for name,debug in [("Run_TGC_Staff_Launcher.bat",False),("Run_TGC_Staff_Launcher_Debug.bat",True)]:
+              original=(root/name).read_text(errors="replace")
+              # Preserve existing entry point and flags; replace only Python resolution.
+              import re
+              lines=original.splitlines()
+              result=[]
+              for line in lines:
+                  line=re.sub(r'(?i)\bpy\s+-3(?:\.\d+)?\s+',r'".venv\Scripts\python.exe" ',line)
+                  result.append(line)
+              (root/name).write_bytes(("\r\n".join(result)+"\r\n").encode())
+          (root/"INSTALLER_COMPATIBILITY_FIX.txt").write_text(
+              "Staff Launcher v1.1.3 installer compatibility hotfix.\n"
+              "Prefers CPython 3.13, 3.12, 3.11, then 3.14. Uses local venv.\n"
+              "Staff Launcher and embedded Node source unchanged.\n")
+          PY
+          python - <<'PY'
+          import zipfile, pathlib
+          base=pathlib.Path("build_hotfix")
+          z=pathlib.Path("updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip")
+          with zipfile.ZipFile(z,"w",zipfile.ZIP_DEFLATED) as out:
+              for p in sorted(base.rglob("*")):
+                  if p.is_file() and "__pycache__" not in p.parts:
+                      out.write(p,p.relative_to(base))
+          import hashlib,json
+          sha=hashlib.sha256(z.read_bytes()).hexdigest()
+          p=pathlib.Path("manifest.json")
+          d=json.loads(p.read_text())
+          d["releases"]["staff_launcher"].update({
+              "url":"https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/"+str(z),
+              "sha256":sha,
+              "notes":"Staff Launcher 1.1.3 relay accepted_event_ids queue fix plus installer compatibility hotfix: Python 3.13 preference and per-install virtual environment."
+          })
+          p.write_text(json.dumps(d,indent=2)+"\n")
+          readme=pathlib.Path("README.md")
+          t=readme.read_text()
+          import re
+          start=t.index("### Staff Launcher 1.1.3")
+          end=t.index("\nThe plugin package",start)
+          section=t[start:end]
+          section=re.sub(r'TGC_Staff_Launcher_v1\.1\.3_Relay_Queue_Fix\.zip','TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip',section)
+          section=re.sub(r'(?m)^- SHA-256:.*$',"- SHA-256: `"+sha+"`",section)
+          section+="\n- Installer hotfix prefers Python 3.13 and uses a local virtual environment.\n"
+          readme.write_text(t[:start]+section+t[end:])
+          print("Published checksum:",sha)
+          PY
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip manifest.json README.md
+          git commit -m "Publish Staff Launcher v1.1.3 installer hotfix"
+          git push
