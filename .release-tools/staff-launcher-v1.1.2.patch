@@ -1,0 +1,238 @@
+--- TGC_Staff_Launcher.py
++++ TGC_Staff_Launcher.py
+@@ -25,7 +25,7 @@
+ from tgc_staff_node import StaffNodeService, NODE_VERSION
+ 
+ APP_NAME = "TGC Staff Launcher"
+-APP_VERSION = "1.1.1"
++APP_VERSION = "1.1.2"
+ INSTANCE_COUNT = 3
+ BASE_DIR = Path(__file__).resolve().parent
+ CONFIG_FILE = BASE_DIR / "tgc_staff_launcher_config.json"
+@@ -40,6 +40,7 @@
+     "program_path": r"C:\Program Files (x86)\Steam\steamapps\common\VRChat\launch.exe",
+     "launch_delay_seconds": 45,
+     "auto_tile": True,
++    "vr_instance": 0,
+     "autostart_repeater": True,
+     "repeater_listen_ip": "0.0.0.0",
+     "repeater_listen_port": 9000,
+@@ -97,6 +98,7 @@
+         self.pulse_running = False
+         self.status_labels: dict[int, ttk.Label] = {}
+         self.pid_labels: dict[int, ttk.Label] = {}
++        self.mode_labels: dict[int, ttk.Label] = {}
+ 
+         root.title(f"{APP_NAME} v{APP_VERSION}")
+         root.geometry("940x760")
+@@ -123,6 +125,14 @@
+         self.program_path = tk.StringVar(value=str(self.config["program_path"]))
+         self.delay_seconds = tk.IntVar(value=int(self.config["launch_delay_seconds"]))
+         self.auto_tile = tk.BooleanVar(value=bool(self.config["auto_tile"]))
++        try:
++            configured_vr_instance = int(self.config.get("vr_instance", 0))
++        except Exception:
++            configured_vr_instance = 0
++        if configured_vr_instance not in range(0, INSTANCE_COUNT + 1):
++            configured_vr_instance = 0
++        self.vr_instance_index = configured_vr_instance
++        self.vr_instance = tk.IntVar(value=configured_vr_instance)
+         self.autostart_repeater = tk.BooleanVar(value=bool(self.config["autostart_repeater"]))
+         self.current_height = tk.DoubleVar(value=1.60)
+         self.pulse_min = tk.DoubleVar(value=1.20)
+@@ -689,7 +699,7 @@
+         ttk.Label(outer, text=APP_NAME, font=("Segoe UI", 20, "bold")).pack(anchor="w")
+         ttk.Label(
+             outer,
+-            text=f"Verified staff edition • Maximum 3 local VRChat instances • Embedded Invite Node v{NODE_VERSION}",
++            text=f"Verified staff edition • 3 local instances • 1 selectable VR client • Embedded Invite Node v{NODE_VERSION}",
+         ).pack(anchor="w", pady=(0, 10))
+ 
+         notebook = ttk.Notebook(outer)
+@@ -716,22 +726,40 @@
+ 
+     def build_launcher_tab(self, tab):
+         ttk.Label(tab, text="VRChat Instances", font=("Segoe UI", 14, "bold")).pack(anchor="w")
+-        ttk.Label(tab, text="Each instance uses its own OSC input/output ports.").pack(anchor="w", pady=(0, 10))
++        ttk.Label(
++            tab,
++            text=(
++                "Each instance uses its own OSC input/output ports. Select at most one instance for VR; "
++                "every other instance is explicitly forced into Desktop mode."
++            ),
++            wraplength=780,
++            justify="left",
++        ).pack(anchor="w", pady=(0, 10))
+ 
+         rows = ttk.Frame(tab)
+         rows.pack(fill="x")
+         for index in range(1, INSTANCE_COUNT + 1):
+             row = ttk.LabelFrame(rows, text=f"Instance {index}", padding=10)
+             row.pack(fill="x", pady=5)
+-            status = ttk.Label(row, text="Stopped", width=13)
++            status = ttk.Label(row, text="Stopped", width=16)
+             status.grid(row=0, column=0, padx=(0, 10))
+             pid = ttk.Label(row, text="PID: —", width=16)
+             pid.grid(row=0, column=1, padx=(0, 10))
+-            ttk.Button(row, text="Start", command=lambda i=index: self.background(self.launch_instance, i)).grid(row=0, column=2, padx=3)
+-            ttk.Button(row, text="Restart", command=lambda i=index: self.background(self.restart_instance, i)).grid(row=0, column=3, padx=3)
+-            ttk.Button(row, text="Stop", command=lambda i=index: self.background(self.stop_instance, i)).grid(row=0, column=4, padx=3)
++            mode = ttk.Label(row, text="Next: Desktop", width=14)
++            mode.grid(row=0, column=2, padx=(0, 8))
++            ttk.Radiobutton(
++                row,
++                text="Use VR",
++                variable=self.vr_instance,
++                value=index,
++                command=self.on_vr_instance_changed,
++            ).grid(row=0, column=3, padx=4)
++            ttk.Button(row, text="Start", command=lambda i=index: self.background(self.launch_instance, i)).grid(row=0, column=4, padx=3)
++            ttk.Button(row, text="Restart", command=lambda i=index: self.background(self.restart_instance, i)).grid(row=0, column=5, padx=3)
++            ttk.Button(row, text="Stop", command=lambda i=index: self.background(self.stop_instance, i)).grid(row=0, column=6, padx=3)
+             self.status_labels[index] = status
+             self.pid_labels[index] = pid
++            self.mode_labels[index] = mode
+ 
+         actions = ttk.LabelFrame(tab, text="All Instances", padding=10)
+         actions.pack(fill="x", pady=(15, 0))
+@@ -740,7 +768,15 @@
+         ttk.Button(actions, text="Stop All", command=lambda: self.background(self.stop_all)).pack(side="left", padx=4)
+         ttk.Button(actions, text="Tile Windows", command=lambda: self.background(self.tile_windows)).pack(side="left", padx=4)
+         ttk.Button(actions, text="Refresh", command=self.refresh_status).pack(side="left", padx=4)
++        ttk.Radiobutton(
++            actions,
++            text="Desktop Only",
++            variable=self.vr_instance,
++            value=0,
++            command=self.on_vr_instance_changed,
++        ).pack(side="right", padx=4)
+ 
++        self.update_mode_labels()
+         self.main_status = ttk.Label(tab, text="Ready", anchor="w")
+         self.main_status.pack(fill="x", pady=(14, 0))
+ 
+@@ -805,10 +841,15 @@
+         ttk.Label(options, text="seconds").grid(row=0, column=2, sticky="w")
+         ttk.Checkbutton(options, text="Automatically tile windows after launches", variable=self.auto_tile).grid(row=1, column=0, columnspan=3, sticky="w", pady=(8, 0))
+         ttk.Checkbutton(options, text="Start OSC repeater automatically", variable=self.autostart_repeater).grid(row=2, column=0, columnspan=3, sticky="w")
++        ttk.Label(
++            options,
++            text="VR instance is selected on the Instances tab. Only one local client can be VR-enabled at a time.",
++        ).grid(row=3, column=0, columnspan=3, sticky="w", pady=(8, 0))
+         ttk.Button(tab, text="Save Settings", command=self.save_settings).pack(anchor="w", pady=8)
+ 
+         note = (
+-            "This edition is intentionally limited to three local VRChat instances. "
++            "This edition is intentionally limited to three local VRChat instances. One of those three can be selected for VR; "
++            "the other clients are launched with VRChat's --no-vr option so they remain Desktop clients. "
+             "It contains no Discord bot, VRChat API login, group-world creation, or owner controls. "
+             "The embedded Invite Node uses only its owner-issued relay credential and will not unlock the launcher unless TGC verification succeeds."
+         )
+@@ -860,6 +901,7 @@
+             "program_path": self.program_path.get().strip(),
+             "launch_delay_seconds": max(5, int(self.delay_seconds.get())),
+             "auto_tile": bool(self.auto_tile.get()),
++            "vr_instance": int(self.vr_instance.get()),
+             "autostart_repeater": bool(self.autostart_repeater.get()),
+         })
+         try:
+@@ -869,6 +911,64 @@
+         except Exception as error:
+             messagebox.showerror(APP_NAME, f"Could not save settings:\n\n{error}")
+ 
++    def on_vr_instance_changed(self):
++        try:
++            selected = int(self.vr_instance.get())
++        except Exception:
++            selected = 0
++        if selected not in range(0, INSTANCE_COUNT + 1):
++            selected = 0
++            self.vr_instance.set(0)
++
++        self.vr_instance_index = selected
++        self.config["vr_instance"] = selected
++        try:
++            save_config(self.config)
++        except Exception as error:
++            self.log(f"Could not save VR instance selection: {error}")
++
++        self.update_mode_labels()
++        if selected:
++            text = (
++                f"Instance {selected} selected for VR. The other two clients will be forced Desktop. "
++                "Restart any already-running client for a mode change to take effect."
++            )
++        else:
++            text = (
++                "Desktop Only selected. All three clients will be forced Desktop. "
++                "Restart any already-running VR client for the change to take effect."
++            )
++        if hasattr(self, "main_status"):
++            self.set_main_status(text)
++        else:
++            self.log(text)
++
++    def update_mode_labels(self):
++        selected = int(getattr(self, "vr_instance_index", 0) or 0)
++        for index, label in self.mode_labels.items():
++            try:
++                label.config(text="Next: VR" if selected == index else "Next: Desktop")
++            except Exception:
++                pass
++
++    def is_vr_instance(self, index: int) -> bool:
++        return int(getattr(self, "vr_instance_index", 0) or 0) == int(index)
++
++    def launch_arguments(self, index: int) -> list[str]:
++        args = [self.program_path.get().strip(), self.osc_arg(index)]
++        if not self.is_vr_instance(index):
++            args.append("--no-vr")
++        return args
++
++    def running_mode(self, proc: psutil.Process | None) -> str:
++        if not proc:
++            return "Unknown"
++        try:
++            cmdline = [str(part).lower() for part in (proc.cmdline() or [])]
++            return "Desktop" if "--no-vr" in cmdline else "VR"
++        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
++            return "Unknown"
++
+     def osc_arg(self, index: int) -> str:
+         in_port = int(self.config["base_instance_in_port"]) + index - 1
+         out_port = int(self.config["base_instance_out_port"]) + index - 1
+@@ -893,9 +993,11 @@
+             self.root.after(0, lambda: messagebox.showerror(APP_NAME, "VRChat launch.exe was not found. Set the correct path under Settings."))
+             return
+         try:
+-            subprocess.Popen([path, self.osc_arg(index)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+-            self.log(f"Launched instance {index} with {self.osc_arg(index)}")
+-            self.set_row(index, "Launching", None)
++            args = self.launch_arguments(index)
++            subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
++            mode = "VR" if self.is_vr_instance(index) else "Desktop"
++            self.log(f"Launched instance {index} in {mode} mode with {self.osc_arg(index)}")
++            self.set_row(index, f"Launching ({mode})", None)
+             self.wait_for_process(index)
+         except Exception as error:
+             self.log(f"Instance {index} launch failed: {error}")
+@@ -906,7 +1008,8 @@
+             proc = self.find_process(index)
+             if proc:
+                 self.processes[index] = proc
+-                self.set_row(index, "Running", proc.pid)
++                mode = self.running_mode(proc)
++                self.set_row(index, f"Running ({mode})", proc.pid)
+                 if self.auto_tile.get():
+                     time.sleep(5)
+                     self.tile_windows()
+@@ -965,7 +1068,8 @@
+             proc = self.find_process(index)
+             if proc and proc.is_running():
+                 self.processes[index] = proc
+-                self.set_row(index, "Running", proc.pid)
++                mode = self.running_mode(proc)
++                self.set_row(index, f"Running ({mode})", proc.pid)
+             else:
+                 self.processes.pop(index, None)
+                 self.set_row(index, "Stopped", None)
