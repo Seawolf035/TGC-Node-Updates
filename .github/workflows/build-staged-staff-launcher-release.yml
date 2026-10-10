@@ -1,0 +1,49 @@
+name: Build staged Staff Launcher release
+
+on:
+  push:
+    paths:
+      - ".release-parts/staff/v1.1.1/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reassemble exact Staff Launcher ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p updates/staff-launcher
+          cat .release-parts/staff/v1.1.1/*.b64 | tr -d '\n\r ' | base64 --decode > updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip
+          echo "1c216b5c02706ef43bd2b7adaff7dbbfb0d7a081e43c01795daea1010eda478c  updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip" | sha256sum -c -
+      - name: Publish Staff Launcher manifest entry
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("manifest.json")
+          m = json.loads(p.read_text(encoding="utf-8"))
+          m.setdefault("releases", {})["staff_launcher"] = {
+            "channel": "staff_launcher",
+            "version": "1.1.1",
+            "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip",
+            "sha256": "1c216b5c02706ef43bd2b7adaff7dbbfb0d7a081e43c01795daea1010eda478c",
+            "policy": "recommended",
+            "notes": "Adds verified-only GitHub self-updates for the Staff Launcher and its embedded Invite Node while preserving deployment credentials, DPAPI key, queue database, and launcher settings.",
+            "published_at": "2026-10-10T19:10:00Z"
+          }
+          p.write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
+          PY
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish Staff Launcher 1.1.1 GitHub updater"
+            git push
+          fi
