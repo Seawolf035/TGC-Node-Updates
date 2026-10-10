@@ -1,0 +1,53 @@
+name: Publish Staff Launcher automatic Python installer
+on:
+  push:
+    paths:
+      - ".release-parts/staff/v1.1.3-python-auto/READY"
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package installer and publish manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib,zipfile,json,hashlib,datetime,re
+          base=pathlib.Path("updates/staff-launcher")
+          src=base/"TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip"
+          dest=base/"TGC_Staff_Launcher_v1.1.3_Auto_Install_Python_Windows.zip"
+          installer=pathlib.Path(".release-tools/staff-installer-windows-auto.bat").read_bytes()
+          with zipfile.ZipFile(src) as old,zipfile.ZipFile(dest,"w",zipfile.ZIP_DEFLATED) as new:
+              for info in old.infolist():
+                  data=old.read(info.filename)
+                  if info.filename.endswith("/Install_TGC_Staff_Launcher.bat"):
+                      data=installer
+                  new.writestr(info,data)
+          with zipfile.ZipFile(dest) as z:
+              assert z.testzip() is None
+              assert any(z.read(n)==installer for n in z.namelist() if n.endswith("/Install_TGC_Staff_Launcher.bat"))
+          sha=hashlib.sha256(dest.read_bytes()).hexdigest()
+          mpath=pathlib.Path("manifest.json");m=json.loads(mpath.read_text())
+          m["releases"]["staff_launcher"].update({
+              "url":"https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/"+str(dest),
+              "sha256":sha,
+              "notes":"Staff Launcher v1.1.3: relay queue fix plus Windows installer that offers automatic Python 3.13 installation via winget and installs dependencies in a local virtual environment.",
+              "published_at":datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          })
+          mpath.write_text(json.dumps(m,indent=2)+"\n")
+          p=pathlib.Path("README.md");t=p.read_text()
+          a=t.index("### Staff Launcher 1.1.3");b=t.index("\nThe plugin package",a)
+          sec=t[a:b].replace("TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip",dest.name)
+          sec=re.sub(r"(?m)^- SHA-256:.*$", "- SHA-256: `"+sha+"`",sec)
+          sec+="\n- Windows installer offers to install missing Python 3.13 automatically through winget.\n"
+          p.write_text(t[:a]+sec+t[b:])
+          print(dest,sha)
+          PY
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Auto_Install_Python_Windows.zip manifest.json README.md
+          git commit -m "Publish Staff Launcher Windows Python auto-installer"
+          git push
