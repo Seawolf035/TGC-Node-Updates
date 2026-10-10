@@ -70,7 +70,7 @@ jobs:
           echo If you switched Python versions, remove the .venv folder and retry.
           pause
           exit /b 1
-'''
+          '''
           (root/"Install_TGC_Staff_Launcher.bat").write_bytes(installer.replace("\n","\r\n").encode())
           run_script='''@echo off
           setlocal
@@ -82,7 +82,7 @@ jobs:
               exit /b 1
           )
           start "" ".venv\\Scripts\\pythonw.exe" "TGC_Staff_Launcher.py"
-'''
+          '''
           debug_script='''@echo off
           setlocal
           cd /d "%~dp0"
@@ -94,7 +94,7 @@ jobs:
           )
           ".venv\\Scripts\\python.exe" "TGC_Staff_Launcher.py"
           pause
-'''
+          '''
           (root/"Run_TGC_Staff_Launcher.bat").write_bytes(run_script.replace("\n","\r\n").encode())
           (root/"Run_TGC_Staff_Launcher_Debug.bat").write_bytes(debug_script.replace("\n","\r\n").encode())
           (root/"INSTALLER_COMPATIBILITY_FIX.txt").write_text(
