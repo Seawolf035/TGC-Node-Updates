@@ -72,16 +72,31 @@ pause
 exit /b 1
 '''
           (root/"Install_TGC_Staff_Launcher.bat").write_bytes(installer.replace("\n","\r\n").encode())
-          for name,debug in [("Run_TGC_Staff_Launcher.bat",False),("Run_TGC_Staff_Launcher_Debug.bat",True)]:
-              original=(root/name).read_text(errors="replace")
-              # Preserve existing entry point and flags; replace only Python resolution.
-              import re
-              lines=original.splitlines()
-              result=[]
-              for line in lines:
-                  line=re.sub(r'(?i)\bpy\s+-3(?:\.\d+)?\s+',r'".venv\Scripts\python.exe" ',line)
-                  result.append(line)
-              (root/name).write_bytes(("\r\n".join(result)+"\r\n").encode())
+          run_script='''@echo off
+setlocal
+cd /d "%~dp0"
+if not exist ".venv\\Scripts\\pythonw.exe" (
+    echo Staff Launcher dependencies are not installed.
+    echo Run Install_TGC_Staff_Launcher.bat first.
+    pause
+    exit /b 1
+)
+start "" ".venv\\Scripts\\pythonw.exe" "TGC_Staff_Launcher.py"
+'''
+          debug_script='''@echo off
+setlocal
+cd /d "%~dp0"
+if not exist ".venv\\Scripts\\python.exe" (
+    echo Staff Launcher dependencies are not installed.
+    echo Run Install_TGC_Staff_Launcher.bat first.
+    pause
+    exit /b 1
+)
+".venv\\Scripts\\python.exe" "TGC_Staff_Launcher.py"
+pause
+'''
+          (root/"Run_TGC_Staff_Launcher.bat").write_bytes(run_script.replace("\n","\r\n").encode())
+          (root/"Run_TGC_Staff_Launcher_Debug.bat").write_bytes(debug_script.replace("\n","\r\n").encode())
           (root/"INSTALLER_COMPATIBILITY_FIX.txt").write_text(
               "Staff Launcher v1.1.3 installer compatibility hotfix.\n"
               "Prefers CPython 3.13, 3.12, 3.11, then 3.14. Uses local venv.\n"
