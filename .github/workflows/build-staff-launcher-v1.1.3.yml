@@ -1,0 +1,90 @@
+name: Build Staff Launcher 1.1.3 Relay Fix
+
+on:
+  push:
+    paths:
+      - ".release-parts/staff/v1.1.3/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and validate Staff Launcher 1.1.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build_staff_113
+          mkdir -p build_staff_113
+          unzip -q updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip -d build_staff_113
+          cd build_staff_113/TGC_Staff_Launcher_Package
+          patch -p0 < ../../.release-tools/staff-launcher-v1.1.3-relay-fix.patch
+          printf '%s\n'             'TGC Staff Launcher v1.1.3 - Relay Queue Fix'             '============================================='             ''             '- Staff Launcher version: 1.1.3'             '- Embedded node version: 1.1.7-staff'             '- Fixes Relay retry pending: int object is not iterable.'             '- Uses Relay v1.1.9 accepted_event_ids correctly.'             '- Previously accepted sightings safely retry idempotently and then clear locally.'             '- Verification, single-VR mode, and GitHub updater remain intact.'             > V1_1_3_RELAY_ACCEPTED_IDS_FIX.txt
+
+          python -m py_compile TGC_Staff_Launcher.py tgc_staff_node.py tgc_vrchat_multilog.py staff_launcher_update_helper.py
+          grep -q 'APP_VERSION = "1.1.3"' TGC_Staff_Launcher.py
+          grep -q 'NODE_VERSION = "1.1.7-staff"' tgc_staff_node.py
+          grep -q 'result.get("accepted_event_ids")' tgc_staff_node.py
+          grep -q 'accepted_count == len(ids)' tgc_staff_node.py
+          grep -q 'args.append("--no-vr")' TGC_Staff_Launcher.py
+          grep -q 'UPDATE_CHANNEL = "staff_launcher"' TGC_Staff_Launcher.py
+          grep -q 'This deployment is not a Staff Launcher deployment.' TGC_Staff_Launcher.py
+
+          python - <<'PY'
+          import tempfile
+          from pathlib import Path
+          import tgc_staff_node as mod
+
+          with tempfile.TemporaryDirectory() as td:
+              svc = mod.StaffNodeService(Path(td))
+              svc.config.update({
+                  "relay_url":"https://example.invalid/exec",
+                  "node_id":"node-test",
+                  "node_key_runtime":"key-test",
+                  "batch_size":100,
+              })
+              svc.verified_session = True
+              for i in range(3):
+                  svc.store.add_sighting(
+                      f"usr_00000000-0000-0000-0000-00000000000{i}",
+                      f"User{i}",
+                      "2026-10-10T20:00:00+00:00",
+                      dedupe_minutes=0,
+                  )
+              ids=[x["event_id"] for x in svc.store.pending()]
+              svc._post=lambda payload, timeout=30: {
+                  "ok":True,
+                  "accepted":3,
+                  "rejected":0,
+                  "accepted_event_ids":ids,
+                  "rejected_event_ids":[],
+              }
+              svc._sync_once()
+              assert svc.store.counts() == (3,0,3), svc.store.counts()
+              assert svc.last_relay_status == "Verified — uploaded 3"
+          print("Relay v1.1.9 response-shape test passed")
+          PY
+
+          cd ../..
+          mkdir -p updates/staff-launcher
+          rm -f updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip
+          cd build_staff_113
+          zip -qr ../updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip TGC_Staff_Launcher_Package -x "*/__pycache__/*" "*.pyc"
+          cd ..
+
+      - name: Publish Staff Launcher 1.1.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -c 'import hashlib,json,pathlib; z=pathlib.Path("updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip"); sha=hashlib.sha256(z.read_bytes()).hexdigest(); p=pathlib.Path("manifest.json"); m=json.loads(p.read_text()); m.setdefault("releases",{})["staff_launcher"]={"channel":"staff_launcher","version":"1.1.3","url":"https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip","sha256":sha,"policy":"recommended","notes":"Fixes the Staff Launcher embedded node relay queue error caused by Relay v1.1.9 returning accepted as a count and accepted_event_ids as the event-ID list. Previously accepted queued sightings retry safely and then clear locally.","published_at":"2026-10-10T20:12:00Z"}; p.write_text(json.dumps(m,indent=2)+"\n"); print(sha)'
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Relay_Queue_Fix.zip manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish Staff Launcher 1.1.3 relay queue fix"
+            git push
+          fi
