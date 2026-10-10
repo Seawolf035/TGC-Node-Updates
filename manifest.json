@@ -5,21 +5,21 @@
   "releases": {
     "standalone": {
       "channel": "standalone",
-      "version": "1.1.5",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.5_GitHub_Auto_Update.zip",
-      "sha256": "3f8db13b26fa765bde2a692d9dad003419ebc0374d26ac4cfe71a8f03bcd9d97",
-      "policy": "optional",
-      "notes": "Uses GitHub manifest.json as the authoritative update source; no Apps Script release publishing is required.",
-      "published_at": "2026-10-10T17:05:00Z"
+      "version": "1.1.6",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip",
+      "sha256": "e71a5cc69ca96c70df41705429b26289a9b8ac338130b8cc9172d52923e4ca02",
+      "policy": "recommended",
+      "notes": "Adds one-link owner deployment and protects the standalone Node Key with Windows DPAPI.",
+      "published_at": "2026-10-10T18:30:00Z"
     },
     "plugin": {
       "channel": "plugin",
-      "version": "1.1.5-plugin",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.5-plugin_GitHub_Auto_Update.zip",
-      "sha256": "7a3b8946b9a9880e6784d1f9117899ab79fbc831e41514880091f7abddb1b6f7",
-      "policy": "optional",
-      "notes": "Uses GitHub manifest.json as the authoritative update source for the node plugin.",
-      "published_at": "2026-10-10T17:05:00Z"
+      "version": "1.1.6-plugin",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip",
+      "sha256": "3e1edc731a6104abae3ee54b77d2af1c2a0255dbfaeca638e23382c0c3cb1129",
+      "policy": "recommended",
+      "notes": "Adds one-link owner deployment for the TGC Invite Node plugin while preserving encrypted Node Key storage in Auto Invite.",
+      "published_at": "2026-10-10T18:30:00Z"
     }
   }
 }
