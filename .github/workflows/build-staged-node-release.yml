@@ -1,0 +1,66 @@
+name: Build staged node release packages
+
+on:
+  push:
+    paths:
+      - ".release-parts/v1.1.6/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reassemble exact release ZIPs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p updates/standalone updates/plugin
+          cat .release-parts/v1.1.6/standalone/*.b64 | tr -d '\n\r ' | base64 --decode > updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip
+          cat .release-parts/v1.1.6/plugin/*.b64 | tr -d '\n\r ' | base64 --decode > updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip
+          echo "e71a5cc69ca96c70df41705429b26289a9b8ac338130b8cc9172d52923e4ca02  updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip" | sha256sum -c -
+          echo "3e1edc731a6104abae3ee54b77d2af1c2a0255dbfaeca638e23382c0c3cb1129  updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip" | sha256sum -c -
+      - name: Publish exact ZIPs and manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m = {
+            "schema_version": 1,
+            "repository": "Seawolf035/TGC-Node-Updates",
+            "source": "github",
+            "releases": {
+              "standalone": {
+                "channel": "standalone",
+                "version": "1.1.6",
+                "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip",
+                "sha256": "e71a5cc69ca96c70df41705429b26289a9b8ac338130b8cc9172d52923e4ca02",
+                "policy": "recommended",
+                "notes": "Adds one-link owner deployment and protects the standalone Node Key with Windows DPAPI.",
+                "published_at": "2026-10-10T18:30:00Z"
+              },
+              "plugin": {
+                "channel": "plugin",
+                "version": "1.1.6-plugin",
+                "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip",
+                "sha256": "3e1edc731a6104abae3ee54b77d2af1c2a0255dbfaeca638e23382c0c3cb1129",
+                "policy": "recommended",
+                "notes": "Adds one-link owner deployment while preserving encrypted Node Key storage in Auto Invite.",
+                "published_at": "2026-10-10T18:30:00Z"
+              }
+            }
+          }
+          Path("manifest.json").write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
+          PY
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip
+          git add updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip
+          git add manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish exact one-link deployment builds 1.1.6"
+            git push
+          fi
