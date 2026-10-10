@@ -18,11 +18,12 @@ The authoritative update feed is `manifest.json`. The standalone node, plugin no
 - Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip
 - Adds owner-issued one-link deployment while retaining the parent Auto Invite app's encrypted Node Key storage.
 
-### Staff Launcher 1.1.1
-- File: `updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip`
-- SHA-256: `1c216b5c02706ef43bd2b7adaff7dbbfb0d7a081e43c01795daea1010eda478c`
-- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip
-- Adds verified-only GitHub self-updates for the Staff Launcher and its embedded Invite Node.
-- Update installs preserve the Staff Launcher configuration, deployment credentials, Windows DPAPI Node Key, and Invite Node queue database.
+### Staff Launcher 1.1.2
+- File: `updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip`
+- SHA-256: `16aabb927aa56806882938692606396f2df42d56188a35ff8a65af3ad014ccdb`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.2_Single_VR_Instance.zip
+- Lets staff choose one of the three local VRChat slots as the VR client.
+- All non-selected slots are forced into Desktop mode with VRChat's `--no-vr` launch option.
+- Keeps verified-only GitHub self-updates and preserves launcher configuration, deployment credentials, Windows DPAPI Node Key, and Invite Node queue database.
 
 The plugin package is intended for Seawolf035's heavily expanded fork/build of TitanBCXR/vrchat-auto-invite, not as a guarantee of compatibility with an untouched upstream install.
