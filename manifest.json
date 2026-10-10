@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "repository": "Seawolf035/TGC-Node-Updates",
+  "source": "github",
+  "releases": {
+    "standalone": {
+      "channel": "standalone",
+      "version": "1.1.4",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.4_Auto_Update.zip",
+      "sha256": "ff8ff57240cd18814acfdb6d15802cf391dd6af3c7518f59dec9991dd4440efd",
+      "policy": "optional",
+      "notes": "Adds one-click self-updating for the standalone TGC Invite Node.",
+      "published_at": "2026-10-10T16:40:00Z"
+    },
+    "plugin": {
+      "channel": "plugin",
+      "version": "1.1.4-plugin",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.4-plugin_Auto_Update.zip",
+      "sha256": "46ca01490a38b005398796a544d650e61dda06a9321cbd218fa729227db31225",
+      "policy": "optional",
+      "notes": "Adds one-click self-updating for the TGC Invite Node plugin.",
+      "published_at": "2026-10-10T16:40:00Z"
+    }
+  }
+}
