@@ -6,14 +6,16 @@ The authoritative update feed is `manifest.json`. The standalone node, plugin no
 
 ## Current packages
 
-### Standalone Node 1.1.5
-- File: `updates/standalone/TGC_Invite_Node_v1.1.5_GitHub_Auto_Update.zip`
-- SHA-256: `3f8db13b26fa765bde2a692d9dad003419ebc0374d26ac4cfe71a8f03bcd9d97`
-- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.5_GitHub_Auto_Update.zip
+### Standalone Node 1.1.6
+- File: `updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip`
+- SHA-256: `e71a5cc69ca96c70df41705429b26289a9b8ac338130b8cc9172d52923e4ca02`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.6_One_Link_Deployment.zip
+- Adds owner-issued one-link deployment and Windows DPAPI protection for the standalone Node Key.
 
-### Plugin Node 1.1.5-plugin
-- File: `updates/plugin/TGC_Invite_Node_Plugin_v1.1.5-plugin_GitHub_Auto_Update.zip`
-- SHA-256: `7a3b8946b9a9880e6784d1f9117899ab79fbc831e41514880091f7abddb1b6f7`
-- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.5-plugin_GitHub_Auto_Update.zip
+### Plugin Node 1.1.6-plugin
+- File: `updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip`
+- SHA-256: `3e1edc731a6104abae3ee54b77d2af1c2a0255dbfaeca638e23382c0c3cb1129`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip
+- Adds owner-issued one-link deployment while retaining the parent Auto Invite app's encrypted Node Key storage.
 
 The plugin package is intended for Seawolf035's heavily expanded fork/build of TitanBCXR/vrchat-auto-invite, not as a guarantee of compatibility with an untouched upstream install.
