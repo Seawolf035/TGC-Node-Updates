@@ -1,8 +1,8 @@
 # TGC Node Updates
 
-Public update files for the TGC distributed invite network.
+Public update files for the TGC distributed invite network and verified Staff Launcher.
 
-The authoritative update feed is `manifest.json`. The standalone node, plugin node, and central launcher read it directly from GitHub. Apps Script is no longer used to publish release metadata.
+The authoritative update feed is `manifest.json`. The standalone node, plugin node, Staff Launcher, and central launcher read it directly from GitHub. Apps Script is no longer used to publish release metadata.
 
 ## Current packages
 
@@ -17,5 +17,12 @@ The authoritative update feed is `manifest.json`. The standalone node, plugin no
 - SHA-256: `3e1edc731a6104abae3ee54b77d2af1c2a0255dbfaeca638e23382c0c3cb1129`
 - Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.6-plugin_One_Link_Deployment.zip
 - Adds owner-issued one-link deployment while retaining the parent Auto Invite app's encrypted Node Key storage.
+
+### Staff Launcher 1.1.1
+- File: `updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip`
+- SHA-256: `1c216b5c02706ef43bd2b7adaff7dbbfb0d7a081e43c01795daea1010eda478c`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.1_GitHub_Updater.zip
+- Adds verified-only GitHub self-updates for the Staff Launcher and its embedded Invite Node.
+- Update installs preserve the Staff Launcher configuration, deployment credentials, Windows DPAPI Node Key, and Invite Node queue database.
 
 The plugin package is intended for Seawolf035's heavily expanded fork/build of TitanBCXR/vrchat-auto-invite, not as a guarantee of compatibility with an untouched upstream install.
