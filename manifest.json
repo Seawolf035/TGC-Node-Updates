@@ -24,11 +24,11 @@
     "staff_launcher": {
       "channel": "staff_launcher",
       "version": "1.1.3",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Installer_Compatibility_Fix.zip",
-      "sha256": "17a0acdfe42cde7a94bb6bc1fd87640d5ac339703122baf0fb3918af0745c8bd",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Auto_Install_Python_Windows.zip",
+      "sha256": "fe31cce1b269e4b6b398545eb20b713a740cbd1544d53d71bc1f537db3bc5e98",
       "policy": "recommended",
-      "notes": "Staff Launcher 1.1.3 relay accepted_event_ids queue fix plus installer compatibility hotfix: Python 3.13 preference and per-install virtual environment.",
-      "published_at": "2026-10-10T20:12:00Z"
+      "notes": "Staff Launcher v1.1.3: relay queue fix plus Windows installer that offers automatic Python 3.13 installation via winget and installs dependencies in a local virtual environment.",
+      "published_at": "2026-10-10T22:54:49Z"
     }
   }
 }
