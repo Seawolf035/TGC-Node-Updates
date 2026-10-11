@@ -1,6 +1,11 @@
 package club.thegamerclub.nodelab;
 
 import android.app.Activity;
+import android.content.ComponentName;
+import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.os.IBinder;
+import rikka.shizuku.Shizuku;
 import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Color;
@@ -35,6 +40,28 @@ public class MainActivity extends Activity {
   private String report="No test run yet.";
   private boolean watching=false, reading=false;
   private int lastJoins=-1;
+  private static final int SHIZUKU_REQUEST=532;
+  private IPrivilegedProbe privilegedProbe;
+  private boolean shizukuBound=false;
+  private final Shizuku.OnRequestPermissionResultListener permissionListener=(requestCode,grantResult)->{
+    if(requestCode!=SHIZUKU_REQUEST)return;
+    runOnUiThread(()->{
+      if(grantResult==PackageManager.PERMISSION_GRANTED)connectShizuku();
+      else show("Shizuku permission was denied. No privileged files were accessed.");
+    });
+  };
+  private final ServiceConnection connection=new ServiceConnection(){
+    @Override public void onServiceConnected(ComponentName name,IBinder service){
+      privilegedProbe=IPrivilegedProbe.Stub.asInterface(service);
+      runOnUiThread(()->show("Shizuku service authorized. Checking live VRChat log and system log..."));
+      runPrivilegedProbe();
+    }
+    @Override public void onServiceDisconnected(ComponentName name){
+      privilegedProbe=null;
+      runOnUiThread(()->show("Shizuku disconnected. Restart Shizuku to test again."));
+    }
+  };
+
   private final Runnable poll=new Runnable(){
     @Override public void run(){
       if(!watching)return;
@@ -48,6 +75,7 @@ public class MainActivity extends Activity {
     getWindow().setStatusBarColor(BG);
     getWindow().setNavigationBarColor(BG);
     createUi();
+    Shizuku.addRequestPermissionResultListener(permissionListener);
     if(Intent.ACTION_SEND.equals(getIntent().getAction()))acceptShare(getIntent());
   }
   private int px(int value){return (int)(value*getResources().getDisplayMetrics().density+.5f);}
@@ -105,7 +133,7 @@ public class MainActivity extends Activity {
     gap(root,7);
     root.addView(label("VRChat log access",26,FG,true));
     gap(root,6);
-    root.addView(label("Experimental test • Android / Quest • v0.1",13,SUB,false));
+    root.addView(label("Experimental test • Android / Quest • v0.2",13,SUB,false));
     gap(root,18);
 
     LinearLayout about=card(root);
@@ -113,13 +141,14 @@ public class MainActivity extends Activity {
     gap(about,8);
     about.addView(label("Can another Android app read VRChat logs, and can we recognize player joins? This app only examines logs you select or tries a read-only folder check.",14,SUB,false));
     gap(about,10);
-    about.addView(label("No internet access. No Discord or VRChat login. No relay uploads.",13,CYAN,true));
+    about.addView(label("No internet or relay traffic. Shizuku access is optional and must be authorized.",13,CYAN,true));
 
     LinearLayout controls=card(root);
     controls.addView(label("Tests",18,FG,true));
     gap(controls,9);
     button(controls,"1   Import an exported log",v->chooseLog());
     button(controls,"2   Probe VRChat folder access",v->probeFolders());
+    button(controls,"3   Test automatic access via Shizuku",v->requestShizukuProbe());
     sourceLabel=label("Selected log: none",13,SUB,false);
     controls.addView(sourceLabel);
     gap(controls,9);
@@ -134,7 +163,7 @@ public class MainActivity extends Activity {
     output.addView(display);
 
     button(root,"Share sanitized report",v->shareReport());
-    root.addView(label("Reports only contain counts and access results, not player names, IDs, private tokens, or raw log text. A successful import does NOT prove background log access.",12,SUB,false));
+    root.addView(label("Reports only contain counts and access results, not player names, IDs, private tokens, or raw log text. Shizuku is experimental and requires explicit authorization; this test does not yet monitor VRChat in the background.",12,SUB,false));
   }
   private void chooseLog(){
     Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -196,6 +225,57 @@ public class MainActivity extends Activity {
       });
     });
   }
+  private void requestShizukuProbe(){
+    try{
+      if(!Shizuku.pingBinder()){
+        show("Shizuku is not running. Install Shizuku, pair it under Wireless Debugging, and tap Start in Shizuku. Then retry this test.");
+        return;
+      }
+      if(Shizuku.isPreV11()){
+        show("Shizuku v11+ is required.");
+        return;
+      }
+      if(Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
+        if(Shizuku.shouldShowRequestPermissionRationale()){
+          show("Shizuku permission denied. Allow TGC Mobile Node Lab in Shizuku settings and retry.");
+          return;
+        }
+        Shizuku.requestPermission(SHIZUKU_REQUEST);
+        show("Waiting for your Shizuku permission decision...");
+        return;
+      }
+      connectShizuku();
+    }catch(RuntimeException exception){
+      show("Cannot contact Shizuku: "+exception.getClass().getSimpleName()+". Check that Shizuku is started.");
+    }
+  }
+  private void connectShizuku(){
+    if(privilegedProbe!=null){runPrivilegedProbe();return;}
+    if(shizukuBound){show("Waiting for Shizuku service connection...");return;}
+    try{
+      shizukuBound=true;
+      Shizuku.UserServiceArgs args=new Shizuku.UserServiceArgs(
+          new ComponentName(this,PrivilegedProbe.class))
+          .daemon(false).processNameSuffix("tgc_mobile_probe").version(1).debuggable(true);
+      Shizuku.bindUserService(args,connection);
+      show("Starting authorized read-only Shizuku service...");
+    }catch(RuntimeException exception){
+      shizukuBound=false;
+      show("Shizuku binding failed: "+exception.getClass().getSimpleName());
+    }
+  }
+  private void runPrivilegedProbe(){
+    final IPrivilegedProbe service=privilegedProbe;
+    if(service==null){show("Shizuku service not connected.");return;}
+    worker.execute(()->{
+      try{
+        String result=service.probe();
+        runOnUiThread(()->show(result));
+      }catch(Exception e){
+        runOnUiThread(()->show("Shizuku probe failed: "+e.getClass().getSimpleName()));
+      }
+    });
+  }
   private void probeFolders(){
     show("Trying read-only access to VRChat log directories...");
     worker.execute(()->{
@@ -228,7 +308,7 @@ public class MainActivity extends Activity {
   }
   private void show(String value){
     display.setText(value);
-    report="TGC Mobile Node Lab v0.1\nOffline, no credentials\n\n"+value;
+    report="TGC Mobile Node Lab v0.2\nOffline, no credentials\n\n"+value;
   }
   private void shareReport(){
     Intent out=new Intent(Intent.ACTION_SEND);
@@ -250,6 +330,7 @@ public class MainActivity extends Activity {
     super.onPause();
   }
   @Override protected void onDestroy(){
+    Shizuku.removeRequestPermissionResultListener(permissionListener);
     main.removeCallbacks(poll);
     worker.shutdown();
     super.onDestroy();
