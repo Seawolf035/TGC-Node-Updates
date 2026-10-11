@@ -1,6 +1,25 @@
 plugins { id 'com.android.application' }
 
+def signingVars = ['TGC_ANDROID_KEYSTORE_FILE', 'TGC_ANDROID_KEYSTORE_PASSWORD', 'TGC_ANDROID_KEY_ALIAS', 'TGC_ANDROID_KEY_PASSWORD']
+def hasReleaseKey = signingVars.every { System.getenv(it) != null && !System.getenv(it).trim().isEmpty() }
+
 android {
+    signingConfigs {
+        if (hasReleaseKey) {
+            companionRelease {
+                storeFile file(System.getenv('TGC_ANDROID_KEYSTORE_FILE'))
+                storePassword System.getenv('TGC_ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('TGC_ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('TGC_ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (hasReleaseKey) signingConfig signingConfigs.companionRelease
+        }
+    }
     namespace 'club.thegamerclub.nodelab'
     compileSdk 35
     defaultConfig {
