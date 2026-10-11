@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
   private void button(LinearLayout parent,String text,View.OnClickListener action){
     Button button=new Button(this);
     button.setText(text);
-    button.setTextAllCaps(false);
+    button.setAllCaps(false);
     button.setTextColor(BG);
     button.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
     button.setBackground(background(CYAN));
