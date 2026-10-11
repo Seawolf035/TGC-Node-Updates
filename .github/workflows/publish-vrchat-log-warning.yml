@@ -1,0 +1,24 @@
+name: Publish VRChat logging warning update
+on:
+  push:
+    paths:
+      - ".release-parts/nodes/vrchat-log-warning/READY"
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test Node health-check releases
+        run: python release-tools/build_vrchat_logging_warning.py
+      - name: Publish packages, hashes and required update manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add             updates/standalone/TGC_Invite_Node_v1.1.10_Required_Update.zip             updates/plugin/TGC_Invite_Node_Plugin_v1.1.10-plugin_Required_Update.zip             updates/staff-launcher/TGC_Staff_Launcher_v1.1.5_Required_Logging_Warning.zip             manifest.json README.md
+          git diff --cached --quiet && exit 0
+          git commit -m "release: required VRChat logging health warning for all Nodes"
+          git push
