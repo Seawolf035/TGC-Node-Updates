@@ -43,6 +43,18 @@ public class MainActivity extends Activity {
   private static final int SHIZUKU_REQUEST=532;
   private IPrivilegedProbe privilegedProbe;
   private boolean shizukuBound=false;
+  private final Shizuku.OnBinderReceivedListener binderReceivedListener=()->{
+    runOnUiThread(()->{
+      if(statusLabel!=null)statusLabel.setText("Shizuku connection received. Ready to request access.");
+    });
+  };
+  private final Shizuku.OnBinderDeadListener binderDeadListener=()->{
+    privilegedProbe=null;
+    shizukuBound=false;
+    runOnUiThread(()->{
+      if(statusLabel!=null)statusLabel.setText("Shizuku connection lost. Restart Shizuku and reopen this app.");
+    });
+  };
   private final Shizuku.OnRequestPermissionResultListener permissionListener=(requestCode,grantResult)->{
     if(requestCode!=SHIZUKU_REQUEST)return;
     runOnUiThread(()->{
@@ -58,7 +70,8 @@ public class MainActivity extends Activity {
     }
     @Override public void onServiceDisconnected(ComponentName name){
       privilegedProbe=null;
-      runOnUiThread(()->show("Shizuku disconnected. Restart Shizuku to test again."));
+      shizukuBound=false;
+      runOnUiThread(()->show("Shizuku service disconnected. Reopen the lab or retry after restarting Shizuku."));
     }
   };
 
@@ -76,6 +89,8 @@ public class MainActivity extends Activity {
     getWindow().setNavigationBarColor(BG);
     createUi();
     Shizuku.addRequestPermissionResultListener(permissionListener);
+    Shizuku.addBinderReceivedListenerSticky(binderReceivedListener);
+    Shizuku.addBinderDeadListener(binderDeadListener);
     if(Intent.ACTION_SEND.equals(getIntent().getAction()))acceptShare(getIntent());
   }
   private int px(int value){return (int)(value*getResources().getDisplayMetrics().density+.5f);}
@@ -133,7 +148,7 @@ public class MainActivity extends Activity {
     gap(root,7);
     root.addView(label("VRChat log access",26,FG,true));
     gap(root,6);
-    root.addView(label("Experimental test • Android / Quest • v0.2",13,SUB,false));
+    root.addView(label("Experimental test • Android / Quest • v0.2.1",13,SUB,false));
     gap(root,18);
 
     LinearLayout about=card(root);
@@ -228,7 +243,7 @@ public class MainActivity extends Activity {
   private void requestShizukuProbe(){
     try{
       if(!Shizuku.pingBinder()){
-        show("Shizuku is not running. Install Shizuku, pair it under Wireless Debugging, and tap Start in Shizuku. Then retry this test.");
+        show("Shizuku connection NOT RECEIVED by this app.\n\nIf Shizuku itself shows 'Running', it is working; the Lab is waiting for its Binder. Force-close and reopen this Lab. If it persists, restart the Shizuku service while leaving the Lab installed.\n\nThis is NOT proof Shizuku is stopped.");
         return;
       }
       if(Shizuku.isPreV11()){
@@ -308,7 +323,7 @@ public class MainActivity extends Activity {
   }
   private void show(String value){
     display.setText(value);
-    report="TGC Mobile Node Lab v0.2\nOffline, no credentials\n\n"+value;
+    report="TGC Mobile Node Lab v0.2.1\nOffline, no credentials\n\n"+value;
   }
   private void shareReport(){
     Intent out=new Intent(Intent.ACTION_SEND);
@@ -331,6 +346,8 @@ public class MainActivity extends Activity {
   }
   @Override protected void onDestroy(){
     Shizuku.removeRequestPermissionResultListener(permissionListener);
+    Shizuku.removeBinderReceivedListener(binderReceivedListener);
+    Shizuku.removeBinderDeadListener(binderDeadListener);
     main.removeCallbacks(poll);
     worker.shutdown();
     super.onDestroy();
