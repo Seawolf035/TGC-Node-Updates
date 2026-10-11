@@ -1,0 +1,24 @@
+name: Repair Node 1.1.9 and release Staff Launcher 1.1.4
+on:
+  push:
+    paths:
+      - ".release-parts/nodes/v1.1.9-compat-staff114/READY"
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build compatible ZIPs, compile and verify packages
+        run: python release-tools/publish_compat_nodes_119_staff114.py
+      - name: Publish required release packages and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add             updates/standalone/TGC_Invite_Node_v1.1.9_Required_Update.zip             updates/plugin/TGC_Invite_Node_Plugin_v1.1.9-plugin_Required_Update.zip             updates/staff-launcher/TGC_Staff_Launcher_v1.1.4_Required_Node_Diagnostics.zip             manifest.json README.md
+          git diff --cached --quiet && exit 0
+          git commit -m "hotfix: make required v1.1.9 update backwards compatible; staff v1.1.4"
+          git push
