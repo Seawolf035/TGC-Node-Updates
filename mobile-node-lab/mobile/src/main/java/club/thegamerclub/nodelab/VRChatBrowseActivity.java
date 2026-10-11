@@ -27,6 +27,7 @@ public final class VRChatBrowseActivity extends Activity {
     }
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
+        if(!StaffGate.unlocked(this)){finish();return;}
         mode=getIntent().getStringExtra("mode");
         if(mode==null)mode="friends_online";
         render();
