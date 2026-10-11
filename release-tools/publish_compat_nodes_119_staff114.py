@@ -56,7 +56,7 @@ for channel, name, entry, version, prefix in (
                   "", f"{channel} import")
     source = once(source, "HOTFIX_REVISION = 0", "HOTFIX_REVISION = 1",
                   f"{channel} revision")
-    source = once(source, prefix, diag + prefix, f"{channel} integration")
+    source = source.replace(prefix, diag + prefix, 1) if channel == "plugin" else once(source, prefix, diag + prefix, f"{channel} integration")
     # Python clears exception targets after an except block. Capture the type before UI scheduling.
     if "f\"Could not generate report: {type(error).__name__}\"" in source:
         source = once(source, "            except Exception as error:\n                def failed():",
