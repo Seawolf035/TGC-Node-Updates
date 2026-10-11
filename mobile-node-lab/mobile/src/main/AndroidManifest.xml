@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <uses-permission android:name="moe.shizuku.manager.permission.API_V23"/>
-<application android:allowBackup="false" android:label="TGC Mobile Node Lab"
+<application android:allowBackup="false" android:label="TGC Staff Companion" android:icon="@drawable/tgc_logo" android:roundIcon="@drawable/tgc_logo"
  android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.Light.NoActionBar">
  <provider android:name="rikka.shizuku.ShizukuProvider"
   android:authorities="${applicationId}.shizuku"
@@ -9,8 +9,10 @@
   android:multiprocess="false"
   android:enabled="true"
   android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"/>
- <activity android:name=".MainActivity" android:exported="true">
+ <activity android:name=".CompanionActivity" android:exported="true">
   <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+ </activity>
+ <activity android:name=".MainActivity" android:exported="true">
   <intent-filter><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/>
    <data android:mimeType="text/plain"/><data android:mimeType="application/octet-stream"/></intent-filter>
  </activity>
