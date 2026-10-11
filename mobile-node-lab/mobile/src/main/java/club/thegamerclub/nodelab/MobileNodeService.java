@@ -59,7 +59,7 @@ public class MobileNodeService extends Service {
       new Intent(this,MobileNodeService.class).setAction(STOP),
       PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     return new Notification.Builder(this,CHANNEL)
-      .setSmallIcon(R.drawable.tgc_logo)
+      .setSmallIcon(android.R.drawable.stat_notify_sync)
       .setContentTitle("TGC Mobile Invite Node")
       .setContentText("Tracking VRChat player joins • staff-only relay")
       .setContentIntent(open).setOngoing(true)
