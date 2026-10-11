@@ -78,7 +78,7 @@ public class CompanionActivity extends Activity {
         LinearLayout titles=column();titles.setPadding(dp(10),0,0,0);
         titles.addView(text("THE GAMER CLUB",13,ACCENT,true));
         titles.addView(text("STAFF COMPANION",20,TEXT,true));
-        titles.addView(text("ANDROID PREVIEW  •  v0.4",11,MUTED,false));
+        titles.addView(text("ANDROID PREVIEW  •  v0.5",11,MUTED,false));
         masthead.addView(titles,new LinearLayout.LayoutParams(0,-2,1f));
 
         LinearLayout nav=new LinearLayout(this);nav.setPadding(dp(10),0,dp(10),dp(10));
@@ -108,7 +108,8 @@ public class CompanionActivity extends Activity {
         welcome.addView(connection);
         refreshConnection();
         LinearLayout engine=section("Live Node", "Automatic VRChat log monitoring, new joins and leaves, and privacy-safe diagnostics.");
-        action(engine,"Open Node controls  →","Start or stop monitoring and view the live report",this::openNode);
+        action(engine,"Deploy Mobile Node  →","Redeem an owner-issued staff setup link",this::openDeploy);
+        action(engine,"Open Node diagnostics","Start or stop local log monitoring",this::openNode);
         LinearLayout tools=section("Quick access","Useful VRChat tools while the full companion API features are being developed.");
         action(tools,"Friends","Open your VRChat friends page",()->openWeb("https://vrchat.com/home/friends"));
         action(tools,"Groups","Open your VRChat groups page",()->openWeb("https://vrchat.com/home/groups"));
@@ -121,12 +122,13 @@ public class CompanionActivity extends Activity {
         LinearLayout c=section("Automatic Invite Node","The v0.3 Shizuku monitor is built in as the current Node engine. It reads original VRChat Mobile logs, with no exports needed.");
         connection=text("Checking Shizuku...",14,ACCENT,true);c.addView(connection);refreshConnection();
         space(c,12);
+        action(c,"Staff Quick Deployment","Paste one-use link, start/stop uploads, view offline queue",this::openDeploy);
         action(c,"Open live tracking controls","Start watcher · View results · Stop watcher",this::openNode);
         action(c,"Diagnose log permissions","Original VRChat folder, read status and logcat probes",this::openNode);
         LinearLayout details=section("Current safety mode",null);
-        note(details,"This preview is read-only. It does not upload player identifiers, install a Node key, request VRChat credentials, or change the existing PC invite system.");
+        note(details,"The Mobile Companion Node can upload sightings after owner-issued deployment. It preserves GM4 membership checks and GM1-only invites. This build is a test release; staff access is enforced by the upgraded relay.");
         space(details,9);
-        note(details,"Once owner-issued staff authentication is added, the app can queue sightings locally and send approved batches to your current TGC relay. GM4 and GM1 will remain responsible for eligibility checks and actual invitations.");
+        note(details,"Sightings are buffered in SQLite and sent through the TGC relay only after staff deployment verification. Stop or unlink the Node from the Staff Deployment screen.");
     }
     private void vrchat(){
         LinearLayout c=section("VRChat","Open the official VRChat web experience without storing a VRChat password in this app.");
@@ -139,14 +141,15 @@ public class CompanionActivity extends Activity {
     }
     private void staff(){
         LinearLayout gate=section("Staff-only access",null);
-        gate.addView(text("NOT AUTHENTICATED",15,GOLD,true));space(gate,11);
-        note(gate,"This is an early development build. Installation does not prove TGC staff membership and does not grant staff access.");
+        gate.addView(text("STAFF VERIFICATION REQUIRED",15,GOLD,true));space(gate,11);
+        note(gate,"Installation alone does not prove TGC staff membership. To use the Node, redeem a single-use owner-issued Mobile Companion link. The relay checks the active roster.");
         space(gate,12);
-        note(gate,"The production Companion will use an owner-issued one-time Quick Deployment link. Backend verification must confirm the Discord account is currently staff and that the associated Node has not been revoked.");
+        note(gate,"The deployment link provides verified credentials. The relay rechecks staff eligibility, and Main Launcher can revoke the deployed Node without erasing historic recruitment credits.");
+        action(gate,"Redeem Staff Quick Deployment  →","Link this device, start or stop the Node",this::openDeploy);
         LinearLayout c=section("Planned staff features",null);
         note(c,"• Verified staff identity and rank\n• Private group moderation shortcuts\n• Recruitment statistics and Node attribution\n• TGC-wide release notifications\n• Logout and access revocation");
         LinearLayout privacy=section("Privacy and integrity",null);
-        note(privacy,"No secrets are embedded in the APK. This preview has no direct network permission; VRChat shortcuts open in your existing browser. Shizuku monitoring requires your explicit authorization.");
+        note(privacy,"No secrets are embedded in the APK. Enrolled credentials are Android Keystore-encrypted. The Node uses HTTPS only for authenticated relay requests. VRChat shortcuts still open in your browser. Shizuku requires your permission.");
     }
     private void refreshConnection(){
         if(connection==null)return;
@@ -159,6 +162,7 @@ public class CompanionActivity extends Activity {
             connection.setTextColor(GOLD);
         }
     }
+    private void openDeploy(){startActivity(new Intent(this,MobileDeployActivity.class));}
     private void openNode(){startActivity(new Intent(this,MainActivity.class));}
     private void openWeb(String url){
         try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}
