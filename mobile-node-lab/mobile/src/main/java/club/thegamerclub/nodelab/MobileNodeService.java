@@ -42,7 +42,7 @@ public final class MobileNodeService extends Service {
   private volatile long lastEventTime=0;
 
   private final Shizuku.OnBinderReceivedListener onBinderReceived=()->{
-    if(running && watcher==null){bound=false;collection.execute(this::connectWatcher);}
+    if(running && watcher==null){bound=false;connectWatcher();}
   };
   private final Shizuku.OnBinderDeadListener onBinderDead=()->{
     watcher=null;bound=false;trackingStarted=false;
