@@ -150,7 +150,7 @@ public class MainActivity extends Activity {
     gap(root,7);
     root.addView(label("VRChat log access",26,FG,true));
     gap(root,6);
-    root.addView(label("Experimental test • Android / Quest • v0.5",13,SUB,false));
+    root.addView(label("Diagnostic tools • Android • v0.5.2",13,SUB,false));
     gap(root,18);
 
     LinearLayout about=card(root);
@@ -246,6 +246,15 @@ public class MainActivity extends Activity {
     });
   }
   private void useShizuku(int action){
+    if(action==ACTION_START || action==ACTION_STOP){
+      android.content.SharedPreferences state=getSharedPreferences("tgc_mobile_node_status",0);
+      boolean active=state.getBoolean("running",false);
+      long heartbeat=state.getLong("service_heartbeat_at",0);
+      if(active && (System.currentTimeMillis()-heartbeat)<30000){
+        show("The deployed Mobile Node is monitoring. Use the Staff Deployment screen to start/stop background tracking, so the lab cannot interrupt live uploads. You can still VIEW the watcher report here.");
+        return;
+      }
+    }
     requestedAction=action;
     requestShizukuProbe();
   }
@@ -280,7 +289,7 @@ public class MainActivity extends Activity {
       shizukuBound=true;
       Shizuku.UserServiceArgs args=new Shizuku.UserServiceArgs(
           new ComponentName(this,PrivilegedProbe.class))
-          .daemon(true).processNameSuffix("tgc_mobile_watch").version(3).debuggable(false);
+          .daemon(true).processNameSuffix("tgc_mobile_watch").version(4).debuggable(false);
       Shizuku.bindUserService(args,connection);
       show("Starting authorized read-only Shizuku service...");
     }catch(RuntimeException exception){
