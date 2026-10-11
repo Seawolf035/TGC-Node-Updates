@@ -36,11 +36,12 @@ STANDALONE_METHOD = '''    def diagnose_tracking(self):
                     output_dir=os.path.join(os.path.expanduser("~"), "Downloads"),
                     sample_seconds=10, watcher_snapshot=snapshot, session_stats=stats)
             except Exception as error:
+                error_type = type(error).__name__
                 def failed():
                     self.diagnostic_btn.config(state=tk.NORMAL)
                     self._log_recent("Tracking diagnostic failed")
                     messagebox.showerror("Tracking Diagnostic",
-                                         f"Could not generate report: {type(error).__name__}")
+                                         f"Could not generate report: {error_type}")
                 self.root.after(0, failed)
                 return
 
@@ -78,11 +79,12 @@ PLUGIN_METHOD = '''    def diagnose_tracking(self):
                     output_dir=os.path.join(os.path.expanduser("~"), "Downloads"),
                     sample_seconds=10, watcher_snapshot=snapshot, session_stats=stats)
             except Exception as error:
+                error_type = type(error).__name__
                 def failed():
                     self.diagnostic_btn.config(state=tk.NORMAL)
                     self._activity("Tracking diagnostic failed")
                     messagebox.showerror("Tracking Diagnostic",
-                                         f"Could not generate report: {type(error).__name__}")
+                                         f"Could not generate report: {error_type}")
                 self._ui(failed)
                 return
 
