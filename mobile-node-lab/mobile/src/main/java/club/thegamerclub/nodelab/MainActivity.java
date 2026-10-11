@@ -87,6 +87,11 @@ public class MainActivity extends Activity {
 
   @Override public void onCreate(Bundle state){
     super.onCreate(state);
+    if(!StaffGate.unlocked(this)){
+      startActivity(new Intent(this,CompanionActivity.class));
+      finish();
+      return;
+    }
     getWindow().setStatusBarColor(BG);
     getWindow().setNavigationBarColor(BG);
     createUi();
@@ -357,6 +362,7 @@ public class MainActivity extends Activity {
   }
   @Override protected void onResume(){
     super.onResume();
+    if(!StaffGate.unlocked(this)){finish();return;}
     watching=true;
     main.removeCallbacks(poll);
     main.postDelayed(poll,10000);
