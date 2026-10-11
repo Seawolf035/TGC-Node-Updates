@@ -280,7 +280,7 @@ public class MainActivity extends Activity {
       shizukuBound=true;
       Shizuku.UserServiceArgs args=new Shizuku.UserServiceArgs(
           new ComponentName(this,PrivilegedProbe.class))
-          .daemon(true).processNameSuffix("tgc_mobile_watch").version(3).debuggable(true);
+          .daemon(true).processNameSuffix("tgc_mobile_watch").version(3).debuggable(false);
       Shizuku.bindUserService(args,connection);
       show("Starting authorized read-only Shizuku service...");
     }catch(RuntimeException exception){
