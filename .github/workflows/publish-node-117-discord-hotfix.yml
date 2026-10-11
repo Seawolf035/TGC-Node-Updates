@@ -1,0 +1,123 @@
+name: Publish Node v1.1.7 Link Discord hotfix
+on:
+  push:
+    paths:
+      - ".release-parts/nodes/v1.1.7-link-discord-hf1/READY"
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch and validate existing v1.1.7 node releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          from datetime import datetime,timezone
+          import zipfile,hashlib,json,re
+          def replace_one(s,old,new,description):
+              count=s.count(old)
+              if count!=1:
+                  raise RuntimeError(f"{description}: expected one occurrence, got {count}")
+              return s.replace(old,new,1)
+          root=Path("updates")
+          channels=[
+            ("standalone","1.1.7","TGC_Invite_Node_v1.1.7_Quick_Deployment_Only.zip","TGC_Invite_Node_v1.1.7_Link_Discord_Removal_Hotfix.zip","tgc_invite_node.py","APP_VERSION","btns"),
+            ("plugin","1.1.7-plugin","TGC_Invite_Node_Plugin_v1.1.7-plugin_Quick_Deployment_Only.zip","TGC_Invite_Node_Plugin_v1.1.7-plugin_Link_Discord_Removal_Hotfix.zip","plugins/distributed_invite_node.py","NODE_VERSION","settings_buttons")]
+          manifest_path=Path("manifest.json")
+          manifest=json.loads(manifest_path.read_text())
+          readme_path=Path("README.md")
+          readme=readme_path.read_text()
+          for channel,version,old_zip,new_zip,source,version_key,button_parent in channels:
+              with zipfile.ZipFile(root/channel/old_zip) as z:
+                  files={name:z.read(name) for name in z.namelist() if not name.endswith("/")}
+              script=files[source].decode("utf-8")
+              button=('        ttk.Button(\n'
+                      f'            {button_parent},\n'
+                      '            text="Link Discord",\n'
+                      '            command=self.generate_discord_link_code,\n'
+                      '        ).pack(side=tk.LEFT, padx=5)\n')
+              script=replace_one(script,button,"","Link Discord button")
+              script=replace_one(script,f'{version_key} = "{version}"\n',
+                                 f'{version_key} = "{version}"\nHOTFIX_REVISION = 1\n',"version")
+              helper=('    def _release_available(self, info):\n'
+                      '        if not isinstance(info, dict):\n'
+                      '            return False\n'
+                      '        version = str(info.get("version") or "").strip()\n'
+                      '        if not version:\n'
+                      '            return False\n'
+                      '        remote = self._version_tuple(version)\n'
+                      f'        installed = self._version_tuple({version_key})\n'
+                      '        if remote != installed:\n'
+                      '            return remote > installed\n'
+                      '        try:\n'
+                      '            return int(info.get("hotfix_revision") or 0) > HOTFIX_REVISION\n'
+                      '        except (TypeError, ValueError):\n'
+                      '            return False\n\n')
+              script=replace_one(script,'    def _apply_release_info(self, release):\n',
+                                 helper+'    def _apply_release_info(self, release):\n',"release helper")
+              script=replace_one(script,f'        available = self._version_tuple(version) > self._version_tuple({version_key})\n',
+                                 '        available = self._release_available(info)\n',"update availability")
+              if channel=="standalone":
+                  script=replace_one(script,'                if not silent and self._version_tuple(str(release.get("version") or "")) <= self._version_tuple(APP_VERSION):\n',
+                                     '                if not silent and not self._release_available(release):\n',"manual check")
+                  script=replace_one(script,'        if not version or self._version_tuple(version) <= self._version_tuple(APP_VERSION):\n',
+                                     '        if not self._release_available(info):\n',"install check")
+                  if "README_NODE.txt" in files:
+                      doc=files["README_NODE.txt"].decode("utf-8")
+                      a=doc.index("DISCORD NODE LINKING (LEGACY / MANUAL SETUP)")
+                      b=doc.index("ONE-CLICK UPDATES",a)
+                      doc=doc[:a]+("DISCORD ATTRIBUTION\n-------------------\n"
+                         "Owner-issued Quick Deployment binds the Node to the selected staff Discord account.\n"
+                         "The Link Discord button is no longer needed. /verifynode is retained for owner recovery.\n\n")+doc[b:]
+                      doc=doc.replace("Advanced/manual fields remain available as a recovery/legacy fallback.",
+                                      "Quick Deployment is the only enrollment option.")
+                      files["README_NODE.txt"]=doc.encode("utf-8")
+              else:
+                  script=replace_one(script,'                release_version = str(release.get("version") or "")\n                if not silent and self._version_tuple(release_version) <= self._version_tuple(NODE_VERSION):\n',
+                                     '                if not silent and not self._release_available(release):\n',"manual check")
+                  script=replace_one(script,'        if not version or self._version_tuple(version) <= self._version_tuple(NODE_VERSION):\n',
+                                     '        if not self._release_available(info):\n',"install check")
+              script=replace_one(script,
+                  '                if info["policy"] in {"recommended", "required"} and self.update_notice_shown_for != version:\n                    self.update_notice_shown_for = version\n',
+                  '                update_id = f"{version}:hotfix{info.get(\'hotfix_revision\', 0)}"\n'
+                  '                if info["policy"] in {"recommended", "required"} and self.update_notice_shown_for != update_id:\n'
+                  '                    self.update_notice_shown_for = update_id\n',"revision notice")
+              compile(script,source,"exec")
+              assert 'text="Link Discord"' not in script and "def generate_discord_link_code" in script
+              assert f'{version_key} = "{version}"' in script and "HOTFIX_REVISION = 1" in script
+              files[source]=script.encode("utf-8")
+              target=root/channel/new_zip
+              with zipfile.ZipFile(target,"w",zipfile.ZIP_DEFLATED) as z:
+                  for name in sorted(files):
+                      z.writestr(name,files[name])
+              with zipfile.ZipFile(target) as z:
+                  assert z.testzip() is None
+              sha=hashlib.sha256(target.read_bytes()).hexdigest()
+              manifest["releases"][channel].update({
+                  "version":version,"url":f"https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/{channel}/{new_zip}",
+                  "sha256":sha,"policy":"required","hotfix_revision":1,
+                  "notes":"Required v1.1.7 hotfix: removes redundant Link Discord button. Owner-issued Quick Deployment already binds staff attribution. Existing v1.1.7 installations must replace the package manually once because the old updater cannot detect same-version hotfixes.",
+                  "published_at":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+              })
+              head="### Standalone Node" if channel=="standalone" else "### Plugin Node"
+              a=readme.index(head)
+              b=readme.find("\n### ",a+4)
+              if b<0:b=readme.index("\nThe plugin package",a)
+              section=readme[a:b]
+              section=section.replace(old_zip,new_zip)
+              section=re.sub(r'(?m)^- SHA-256:.*$',f'- SHA-256: `{sha}`',section)
+              section+="\n- REQUIRED v1.1.7 hotfix: removes Link Discord; Quick Deployment links staff automatically. Existing v1.1.7 must be manually replaced once because the old updater only compares version numbers. Future hotfix revisions are supported.\n"
+              readme=readme[:a]+section+readme[b:]
+              print(channel,version,sha)
+          manifest_path.write_text(json.dumps(manifest,indent=2)+"\n")
+          readme_path.write_text(readme)
+          PY
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add updates/standalone/TGC_Invite_Node_v1.1.7_Link_Discord_Removal_Hotfix.zip updates/plugin/TGC_Invite_Node_Plugin_v1.1.7-plugin_Link_Discord_Removal_Hotfix.zip manifest.json README.md
+          git commit -m "hotfix: remove Link Discord from v1.1.7 nodes (required)"
+          git push
