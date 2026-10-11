@@ -55,6 +55,14 @@ public final class VRChatAccountActivity extends Activity {
             JSONObject session=VRChatSession.load(this);
             if(!session.optString("userId").isEmpty() && !session.optBoolean("needs2fa")){
                 page.addView(label("Saved login: "+session.optString("displayName"),17));
+                action("My in-app profile",()->{
+                    String ownId=session.optString("userId","");
+                    if(!ownId.matches("usr_[0-9a-fA-F-]{36}")){say("Verify account session again.");return;}
+                    startActivity(new Intent(this,VRChatDetailActivity.class)
+                        .putExtra("kind","user").putExtra("id",ownId));
+                });
+                action("Search people",()->browse("search_users"));
+                action("Search worlds",()->browse("search_worlds"));
                 action("View online friends",()->browse("friends_online"));
                 action("View offline friends",()->browse("friends_offline"));
                 action("World favorites",()->browse("worlds"));
