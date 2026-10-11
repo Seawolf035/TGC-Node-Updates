@@ -154,6 +154,30 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
   }
 
 
+  @Override public String getWatchStats(){
+    synchronized(watchLock){
+      JSONObject stats=new JSONObject();
+      try{
+        stats.put("watching",watching);
+        stats.put("polls",pollCount);
+        stats.put("joins",joinCount);
+        stats.put("unique_users",seenUsers.size());
+        stats.put("leaves",leaveCount);
+        stats.put("unrecognized",unrecognized);
+        stats.put("read_errors",errorCount);
+        stats.put("last_error",lastError);
+        stats.put("bytes",readBytes);
+        stats.put("pending",pendingSightings.size());
+        stats.put("rotations",fileSwitches);
+        stats.put("last_check",lastCheck);
+        stats.put("last_append",lastSeenAppend);
+        stats.put("last_modified",lastLogChange);
+        stats.put("source_found",trackedPath!=null);
+      }catch(JSONException ignored){}
+      return stats.toString();
+    }
+  }
+
   @Override public String pendingSightings(int limit) {
     synchronized(watchLock) {
       JSONArray array=new JSONArray();
