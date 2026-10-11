@@ -1,6 +1,14 @@
 package club.thegamerclub.nodelab;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.os.Build;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import org.json.JSONObject;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.ComponentName;
@@ -29,6 +37,7 @@ public class CompanionActivity extends Activity {
         TEXT=0xFFE7F1FB,MUTED=0xFFACC2D6,ACCENT=0xFF56C8F2,GOLD=0xFFFFD071;
     private LinearLayout page;
     private TextView connection;
+    private TextView updateBanner;
     private String tab="HOME";
     private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private GradientDrawable rounded(int background,int radius){
@@ -38,8 +47,13 @@ public class CompanionActivity extends Activity {
         super.onCreate(saved);
         getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
         render("HOME");
+        scheduleUpdateCheck();
     }
-    @Override protected void onResume(){super.onResume();if(connection!=null)refreshConnection();}
+    @Override protected void onResume(){
+        super.onResume();
+        if(connection!=null)refreshConnection();
+        if(updateBanner!=null)renderUpdateBanner();
+    }
     private TextView text(String value,int sp,int color,boolean heavy){
         TextView t=new TextView(this);t.setText(value);t.setTextColor(color);t.setTextSize(sp);
         t.setLineSpacing(dp(2),1.06f);
@@ -67,7 +81,7 @@ public class CompanionActivity extends Activity {
     }
     private void note(LinearLayout c,String value){c.addView(text(value,13,MUTED,false));}
     private void render(String tabName){
-        this.tab=tabName;connection=null;
+        this.tab=tabName;connection=null;updateBanner=null;
         LinearLayout body=column();body.setBackgroundColor(BG);setContentView(body);
         LinearLayout masthead=new LinearLayout(this);masthead.setOrientation(LinearLayout.HORIZONTAL);
         masthead.setGravity(Gravity.CENTER_VERTICAL);masthead.setPadding(dp(18),dp(16),dp(18),dp(13));
@@ -107,6 +121,11 @@ public class CompanionActivity extends Activity {
         connection=text("Checking Shizuku...",14,ACCENT,true);
         welcome.addView(connection);
         refreshConnection();
+        LinearLayout updates=section("Companion updates","Automatic version checks when you open the app.");
+        updateBanner=text("Checking published update status...",13,MUTED,false);
+        updates.addView(updateBanner);
+        renderUpdateBanner();
+        action(updates,"Check / install updates  →","Verified APK download with Android approval",this::openUpdater);
         LinearLayout engine=section("Live Node", "Automatic VRChat log monitoring, new joins and leaves, and privacy-safe diagnostics.");
         action(engine,"Deploy Mobile Node  →","Redeem an owner-issued staff setup link",this::openDeploy);
         action(engine,"Open Node diagnostics","Start or stop local log monitoring",this::openNode);
@@ -152,6 +171,48 @@ public class CompanionActivity extends Activity {
         note(c,"• Verified staff identity and rank\n• Private group moderation shortcuts\n• Recruitment statistics and Node attribution\n• TGC-wide release notifications\n• Logout and access revocation");
         LinearLayout privacy=section("Privacy and integrity",null);
         note(privacy,"No secrets are embedded in the APK. Enrolled credentials are Android Keystore-encrypted. The Node uses HTTPS only for authenticated relay requests. VRChat shortcuts still open in your browser. Shizuku requires your permission.");
+    }
+
+    private void renderUpdateBanner(){
+        if(updateBanner==null)return;
+        SharedPreferences p=getSharedPreferences("tgc_update_feed",0);
+        int code=p.getInt("latest_code",0);
+        String version=p.getString("latest_version","");
+        int current=7; // Companion v0.5.1
+        updateBanner.setText(code>current?"Update available: "+version+" — tap to install":
+          code>0?"Latest release checked: "+version:"Update status not yet checked");
+        updateBanner.setTextColor(code>current?GOLD:MUTED);
+    }
+    private void scheduleUpdateCheck(){
+        SharedPreferences prefs=getSharedPreferences("tgc_update_feed",0);
+        long now=System.currentTimeMillis();
+        if(now-prefs.getLong("last_check",0)<6L*60*60*1000)return;
+        new Thread(()->{
+            HttpURLConnection c=null;
+            try{
+                c=(HttpURLConnection)new URL(MobileUpdaterActivity.FEED).openConnection();
+                c.setConnectTimeout(9000);c.setReadTimeout(10000);
+                c.setInstanceFollowRedirects(false);
+                if(c.getResponseCode()!=200)return;
+                java.io.ByteArrayOutputStream data=new java.io.ByteArrayOutputStream();
+                try(InputStream in=c.getInputStream()){
+                    byte[] buf=new byte[2048];int n;
+                    while((n=in.read(buf))>=0){
+                        if(data.size()+n>32768)return;
+                        data.write(buf,0,n);
+                    }
+                }
+                JSONObject json=new JSONObject(new String(data.toByteArray(),StandardCharsets.UTF_8));
+                if(json.optInt("schema")!=1 || !"mobile_companion".equals(json.optString("channel")))return;
+                int code=json.optInt("version_code",0);
+                if(code<=0)return;
+                prefs.edit().putInt("latest_code",code)
+                  .putString("latest_version",json.optString("version"))
+                  .putLong("last_check",System.currentTimeMillis()).apply();
+                runOnUiThread(this::renderUpdateBanner);
+            }catch(Exception ignored){}
+            finally{if(c!=null)c.disconnect();}
+        },"tgc-release-check").start();
     }
     private void refreshConnection(){
         if(connection==null)return;
