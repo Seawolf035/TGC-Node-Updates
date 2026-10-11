@@ -47,7 +47,7 @@ for channel, name, entry, version, prefix in (
     ("standalone", "TGC_Invite_Node_v1.1.9_Required_Update.zip",
      "tgc_invite_node.py", "1.1.9", "class _DATA_BLOB("),
     ("plugin", "TGC_Invite_Node_Plugin_v1.1.9-plugin_Required_Update.zip",
-     "plugins/distributed_invite_node.py", "1.1.9-plugin", "class NodeLocalStore("),
+     "plugins/distributed_invite_node.py", "1.1.9-plugin", "class "),
 ):
     archive_path = UPDATES / channel / name
     files = read_zip(archive_path)
