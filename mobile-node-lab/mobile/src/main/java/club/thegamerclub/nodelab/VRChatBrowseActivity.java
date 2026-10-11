@@ -1,14 +1,13 @@
 package club.thegamerclub.nodelab;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Button;
+import android.widget.EditText;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.ExecutorService;
@@ -20,6 +19,8 @@ public final class VRChatBrowseActivity extends Activity {
     private String mode="friends_online";
     private LinearLayout page;
     private TextView state;
+    private EditText searchField;
+    private int fixedRows=4;
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private TextView label(String value,int size,int color){
         TextView t=new TextView(this);t.setText(value);t.setTextColor(color);t.setTextSize(size);
@@ -43,11 +44,23 @@ public final class VRChatBrowseActivity extends Activity {
         scroll.addView(page);setContentView(scroll);
         page.addView(label(labelForMode(),23,0xFFE6F4FA));
         page.addView(label("Showing your own VRChat account data, not GM1 or any shared account. Refreshes are manual to respect VRChat's API limits.",12,0xFFB6CDE0));
-        Button refresh=new Button(this);refresh.setText("Refresh");refresh.setAllCaps(false);
+        boolean searchMode="search_users".equals(mode)||"search_worlds".equals(mode);
+        if(searchMode){
+            searchField=new EditText(this);
+            searchField.setTextColor(0xFFFFFFFF);
+            searchField.setHintTextColor(0xFFB4CBDD);
+            searchField.setSingleLine(true);
+            searchField.setHint("search_users".equals(mode)?"Search VRChat players":"Search VRChat worlds");
+            page.addView(searchField);
+        }
+        Button refresh=new Button(this);
+        refresh.setText(searchMode?"Search":"Refresh");
+        refresh.setAllCaps(false);
         page.addView(refresh);refresh.setOnClickListener(v->load());
-        state=label("Loading...",13,0xFF67D1EC);
+        state=label(searchMode?"Enter a name and press Search":"Loading...",13,0xFF67D1EC);
         page.addView(state);
-        load();
+        fixedRows=page.getChildCount();
+        if(!searchMode)load();
     }
     private String labelForMode(){
         switch(mode){
@@ -57,14 +70,21 @@ public final class VRChatBrowseActivity extends Activity {
             case "recent": return "Recent worlds";
             case "groups": return "My groups";
             case "encounters": return "Recently encountered players";
+            case "search_users":return "Search players";
+            case "search_worlds":return "Search worlds";
             default:return "VRChat";
         }
     }
     private long lastFetch=0;
     private void load(){
         if(!StaffGate.unlocked(this)){finish();return;}
-        if(System.currentTimeMillis()-lastFetch<7500){
-            state.setText("Please wait a few seconds before refreshing.");return;
+        if(System.currentTimeMillis()-lastFetch<30000){
+            state.setText("Wait 30 seconds before the next VRChat API request.");return;
+        }
+        final String search=("search_users".equals(mode)||"search_worlds".equals(mode))?
+            searchField.getText().toString().trim():"";
+        if(("search_users".equals(mode)||"search_worlds".equals(mode)) && search.length()<2){
+            state.setText("Enter at least two characters before searching.");return;
         }
         lastFetch=System.currentTimeMillis();
         state.setText("Loading "+labelForMode().toLowerCase()+"...");
@@ -77,6 +97,8 @@ public final class VRChatBrowseActivity extends Activity {
                     case "worlds":data=VRChatApi.worldFavorites(this);break;
                     case "recent":data=VRChatApi.recentWorlds(this);break;
                     case "groups":data=VRChatApi.groups(this);break;
+                    case "search_users":data=VRChatApi.searchUsers(this,search);break;
+                    case "search_worlds":data=VRChatApi.searchWorlds(this,search);break;
                     case "encounters":
                         try(MobileOutbox outbox=new MobileOutbox(this)){data=outbox.recentEncounters(80);}
                         break;
@@ -94,7 +116,7 @@ public final class VRChatBrowseActivity extends Activity {
     private void showItems(JSONArray result){
         if(!StaffGate.unlocked(this)){finish();return;}
         // remove previously drawn rows but retain the header/refresh/status.
-        while(page.getChildCount()>4)page.removeViewAt(4);
+        while(page.getChildCount()>fixedRows)page.removeViewAt(fixedRows);
         state.setText(result.length()+" results");
         if(result.length()==0){
             page.addView(label("Nothing to show yet.",13,0xFFB6CDE0));
@@ -104,26 +126,26 @@ public final class VRChatBrowseActivity extends Activity {
             JSONObject item=result.optJSONObject(i);
             if(item==null)continue;
             String title=item.optString("displayName",item.optString("name","Unknown"));
-            String subtitle="",link=null;
-            if("friends_online".equals(mode)||"friends_offline".equals(mode)){
+            String subtitle="",kind=null,profileId=null;
+            if("friends_online".equals(mode)||"friends_offline".equals(mode)||"search_users".equals(mode)){
                 subtitle=item.optString("statusDescription",item.optString("status",""))+
                   " · "+item.optString("location","unknown location");
                 String id=item.optString("id");
-                if(id.matches("usr_[0-9a-fA-F-]{36}"))link="https://vrchat.com/home/user/"+id;
-            }else if("worlds".equals(mode)||"recent".equals(mode)){
+                if(id.matches("usr_[0-9a-fA-F-]{36}")){kind="user";profileId=id;}
+            }else if("worlds".equals(mode)||"recent".equals(mode)||"search_worlds".equals(mode)){
                 subtitle="Players: "+item.optInt("occupants",0)+" · Capacity: "+item.optInt("capacity",0);
                 String id=item.optString("id");
-                if(id.matches("wrld_[0-9a-fA-F-]{36}"))link="https://vrchat.com/home/world/"+id;
+                if(id.matches("wrld_[0-9a-fA-F-]{36}")){kind="world";profileId=id;}
             }else if("groups".equals(mode)){
                 subtitle=item.optString("shortCode","")+
                   " · "+item.optInt("memberCount",0)+" members";
                 String id=item.optString("groupId",item.optString("id",""));
-                if(id.matches("grp_[0-9a-fA-F-]{36}"))link="https://vrchat.com/home/group/"+id;
+                if(id.matches("grp_[0-9a-fA-F-]{36}")){kind="group";profileId=id;}
             }else if("encounters".equals(mode)){
                 title=item.optString("display_name","Unknown player");
                 subtitle="Seen "+item.optInt("count",0)+" time(s) · "+item.optString("last_seen","?");
                 String id=item.optString("user_id");
-                if(id.matches("usr_[0-9a-fA-F-]{36}"))link="https://vrchat.com/home/user/"+id;
+                if(id.matches("usr_[0-9a-fA-F-]{36}")){kind="user";profileId=id;}
             }
             LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);
             row.setPadding(dp(14),dp(12),dp(14),dp(12));
@@ -131,11 +153,14 @@ public final class VRChatBrowseActivity extends Activity {
             page.addView(row);
             row.addView(label(title,16,0xFFE6F4FA));
             if(subtitle!=null&&!subtitle.trim().isEmpty())row.addView(label(subtitle,12,0xFFAEC5DA));
-            if(link!=null){
-                final String dest=link;
+            if(kind!=null && profileId!=null){
+                final String destKind=kind;
+                final String destId=profileId;
+                row.addView(label("Tap for in-app details  →",12,0xFF67D1EC));
                 row.setOnClickListener(v->{
-                    try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(dest)));}
-                    catch(ActivityNotFoundException ignored){}
+                    if(!StaffGate.unlocked(this)){finish();return;}
+                    startActivity(new Intent(this,VRChatDetailActivity.class)
+                        .putExtra("kind",destKind).putExtra("id",destId));
                 });
             }
         }
