@@ -5,7 +5,10 @@ on:
     branches:
       - experiment/mobile-node-lab
     paths:
-      - 'mobile-node-lab/**'
+      - 'mobile-node-lab/mobile/**'
+      - 'mobile-node-lab/build.gradle'
+      - 'mobile-node-lab/gradle.properties'
+      - 'mobile-node-lab/settings.gradle'
       - '.github/workflows/build-experimental-mobile-apk.yml'
   workflow_dispatch:
 
