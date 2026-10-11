@@ -1,4 +1,4 @@
-name: Build TGC Staff Companion deployable Node APK
+name: Build TGC Staff Companion with verified updates
 
 on:
   push:
@@ -12,9 +12,18 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: tgc-mobile-companion-build
+  cancel-in-progress: true
+
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      SIGN_KEY_B64: ${{ secrets.TGC_ANDROID_RELEASE_KEYSTORE_B64 }}
+      SIGN_STORE_PASS: ${{ secrets.TGC_ANDROID_RELEASE_STORE_PASSWORD }}
+      SIGN_ALIAS: ${{ secrets.TGC_ANDROID_RELEASE_KEY_ALIAS }}
+      SIGN_KEY_PASS: ${{ secrets.TGC_ANDROID_RELEASE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -29,23 +38,70 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Build signed debug APK
+      - name: Assemble diagnostic preview APK
         working-directory: mobile-node-lab
         run: gradle :mobile:assembleDebug --no-daemon --stacktrace
-      - uses: actions/upload-artifact@v4
+      - name: Import encrypted release signer
+        if: env.SIGN_KEY_B64 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$SIGN_KEY_B64" | base64 -d > "$RUNNER_TEMP/tgc-companion-release.jks"
+          chmod 600 "$RUNNER_TEMP/tgc-companion-release.jks"
+      - name: Build stable-key signed release APK
+        if: env.SIGN_KEY_B64 != ''
+        working-directory: mobile-node-lab
+        env:
+          TGC_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/tgc-companion-release.jks
+          TGC_ANDROID_KEYSTORE_PASSWORD: ${{ env.SIGN_STORE_PASS }}
+          TGC_ANDROID_KEY_ALIAS: ${{ env.SIGN_ALIAS }}
+          TGC_ANDROID_KEY_PASSWORD: ${{ env.SIGN_KEY_PASS }}
+        run: gradle :mobile:assembleRelease --no-daemon --stacktrace
+      - name: Upload diagnostic build
+        uses: actions/upload-artifact@v4
         with:
-          name: TGC-Staff-Companion-v0.5-APK
+          name: TGC-Staff-Companion-v0.5.1-Preview
           path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
           if-no-files-found: error
-      - name: Publish APK for direct download
+      - name: Upload stable-key signed release
+        if: env.SIGN_KEY_B64 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-v0.5.1-Signed
+          path: mobile-node-lab/mobile/build/outputs/apk/release/mobile-release.apk
+          if-no-files-found: error
+      - name: Publish APKs and stable-release feed
         shell: bash
+        env:
+          RELEASE_SIGNING_READY: ${{ env.SIGN_KEY_B64 != '' }}
         run: |
           set -euo pipefail
           mkdir -p mobile-node-lab/downloads
           cp mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk \
-             mobile-node-lab/downloads/TGC_Staff_Companion_v0.5_Preview.apk
+            mobile-node-lab/downloads/TGC_Staff_Companion_v0.5.1_Preview.apk
+          if [ -n "$SIGN_KEY_B64" ]; then
+            apk=mobile-node-lab/mobile/build/outputs/apk/release/mobile-release.apk
+            cp "$apk" mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk
+            digest=$(sha256sum "$apk" | cut -d' ' -f1)
+            cat > mobile-node-lab/mobile-update.json <<JSON
+          {
+            "schema": 1,
+            "channel": "mobile_companion",
+            "version": "0.5.1",
+            "version_code": 7,
+            "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
+            "sha256": "$digest",
+            "notes": "TGC Staff Companion 0.5.1. Secure update checker, Shizuku live Node, staff Quick Deployment and offline queue."
+          }
+          JSON
+          fi
           git config user.name "TGC Build Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add mobile-node-lab/downloads/TGC_Staff_Companion_v0.5_Preview.apk
-          git commit -m "build: publish mobile node lab v0.3 APK" || exit 0
+          git add mobile-node-lab/downloads mobile-node-lab/mobile-update.json 2>/dev/null || git add mobile-node-lab/downloads
+          git commit -m "build: publish companion APK [skip ci]" || exit 0
+          git fetch origin experiment/mobile-node-lab
+          git rebase origin/experiment/mobile-node-lab
           git push origin HEAD:experiment/mobile-node-lab
+      - name: Delete signing keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/tgc-companion-release.jks"
