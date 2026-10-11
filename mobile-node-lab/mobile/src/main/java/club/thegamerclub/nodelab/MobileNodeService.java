@@ -10,8 +10,9 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
-import android.os.RemoteException;
+import android.os.Looper;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -20,172 +21,266 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * User-started visible foreground collector.
- * Shizuku reads VRChat data. This app securely stores/retries HTTPS relay submissions.
- * Actual invites and eligibility filters remain exclusively in Main Launcher (GM4/GM1).
+ * Visible user-started VRChat monitoring service.
+ * Shizuku watcher and relay uploader have INDEPENDENT work loops: slow relay
+ * calls never block saving join events. No account auth tokens in logs/status.
  */
-public class MobileNodeService extends Service {
+public final class MobileNodeService extends Service {
   public static final String START="club.thegamerclub.nodelab.START_NODE";
   public static final String STOP="club.thegamerclub.nodelab.STOP_NODE";
   private static final String CHANNEL="tgc_mobile_node";
-  private final ExecutorService jobs=Executors.newSingleThreadExecutor();
-  private volatile boolean running=false,bound=false,shutdown=false;
+  private static final int NOTIFICATION_ID=221, SHIZUKU_VERSION=4;
+  private final ExecutorService collection=Executors.newSingleThreadExecutor();
+  private final ExecutorService upload=Executors.newSingleThreadExecutor();
+  private final Handler handler=new Handler(Looper.getMainLooper());
+  private volatile boolean running=false, bound=false, shuttingDown=false, trackingStarted=false;
   private volatile IPrivilegedProbe watcher;
   private MobileOutbox outbox;
-  private long lastAuth=0;
-  private String lastMessage="Starting...";
+  private volatile long lastAuth=0;
+  private volatile String watcherState="Waiting for Shizuku";
+  private volatile String relayState="Not checked";
+  private volatile long lastEventTime=0;
+
+  private final Shizuku.OnBinderReceivedListener onBinderReceived=()->{
+    if(running && watcher==null){bound=false;collection.execute(this::connectWatcher);}
+  };
+  private final Shizuku.OnBinderDeadListener onBinderDead=()->{
+    watcher=null;bound=false;trackingStarted=false;
+    watcherState="Shizuku stopped / disconnected";
+    persist();
+  };
   private final ServiceConnection connection=new ServiceConnection(){
     @Override public void onServiceConnected(ComponentName name,IBinder service){
       watcher=IPrivilegedProbe.Stub.asInterface(service);
-      try{watcher.startWatching();update("Watcher connected; collecting new joins");}
-      catch(Exception e){update("Cannot start watcher: "+e.getClass().getSimpleName());}
+      bound=true;
+      trackingStarted=false;
+      watcherState="Shizuku connected; starting live watcher";
+      persist();
     }
     @Override public void onServiceDisconnected(ComponentName name){
-      watcher=null;bound=false;update("Shizuku watcher disconnected");
+      watcher=null;bound=false;trackingStarted=false;
+      watcherState="Shizuku watcher disconnected; retrying";
+      persist();
     }
   };
+
   @Override public void onCreate(){
     super.onCreate();
     outbox=new MobileOutbox(this);
-    NotificationManager manager=getSystemService(NotificationManager.class);
-    manager.createNotificationChannel(new NotificationChannel(CHANNEL,"TGC Mobile Invite Node",
-      NotificationManager.IMPORTANCE_LOW));
+    getSystemService(NotificationManager.class).createNotificationChannel(
+      new NotificationChannel(CHANNEL,"TGC Mobile Node",NotificationManager.IMPORTANCE_LOW));
+    Shizuku.addBinderReceivedListenerSticky(onBinderReceived);
+    Shizuku.addBinderDeadListener(onBinderDead);
+  }
+  private Shizuku.UserServiceArgs serviceArgs(){
+    return new Shizuku.UserServiceArgs(new ComponentName(this,PrivilegedProbe.class))
+      .daemon(true).processNameSuffix("tgc_mobile_watch").version(SHIZUKU_VERSION).debuggable(false);
   }
   private Notification notification(){
     PendingIntent open=PendingIntent.getActivity(this,1,
-      new Intent(this,CompanionActivity.class),
+      new Intent(this,MobileDeployActivity.class),
       PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     PendingIntent stop=PendingIntent.getService(this,2,
       new Intent(this,MobileNodeService.class).setAction(STOP),
       PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     return new Notification.Builder(this,CHANNEL)
       .setSmallIcon(android.R.drawable.stat_notify_sync)
-      .setContentTitle("TGC Mobile Invite Node")
-      .setContentText("Tracking VRChat player joins • staff-only relay")
+      .setContentTitle("TGC Mobile Invite Node • monitoring")
+      .setContentText("Background tracking enabled · tap for live status")
       .setContentIntent(open).setOngoing(true)
       .addAction(new Notification.Action.Builder(null,"Stop",stop).build()).build();
   }
   @Override public int onStartCommand(Intent intent,int flags,int startId){
-    if(intent!=null && STOP.equals(intent.getAction())){stopCollection();return START_NOT_STICKY;}
+    if(intent!=null && STOP.equals(intent.getAction())){
+      stopCollection("Stopped by user");
+      return START_NOT_STICKY;
+    }
     try{
-      if(Build.VERSION.SDK_INT>=29){
-        startForeground(221,notification(),
-          android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-      }else{startForeground(221,notification());}
-    }catch(RuntimeException e){
-      update("Foreground service denied: "+e.getClass().getSimpleName());
-      stopSelf();return START_NOT_STICKY;
+      if(Build.VERSION.SDK_INT>=34){
+        startForeground(NOTIFICATION_ID,notification(),
+          android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+      }else{startForeground(NOTIFICATION_ID,notification());}
+    }catch(Exception e){
+      watcherState="Android denied foreground service: "+e.getClass().getSimpleName();
+      running=false;persist();stopSelf();return START_NOT_STICKY;
     }
     if(!running){
-      running=true;
-      jobs.execute(()->runLoop());
+      running=true;shuttingDown=false;
+      watcherState="Foreground service started, waiting for Shizuku";
+      relayState="Waiting to verify deployment";
+      persist();
+      collection.execute(this::collectorLoop);
+      upload.execute(this::relayLoop);
     }
     return START_STICKY;
   }
   private void connectWatcher(){
-    if(bound||watcher!=null)return;
+    if(!running || shuttingDown || bound || watcher!=null)return;
     try{
-      if(!Shizuku.pingBinder() || Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
-        update("Shizuku needs to be running and authorized; use Node Lab");
-        return;
+      if(!Shizuku.pingBinder()){
+        watcherState="Shizuku connection not ready. Open Shizuku and confirm Running.";
+      }else if(Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
+        watcherState="Shizuku is running but TGC Companion is not authorized. Open Node Lab to grant permission.";
+      }else{
+        // Mark bound before sending asynchronous bind to avoid duplicate requests.
+        bound=true;
+        watcherState="Binding Shizuku live watcher...";
+        Shizuku.bindUserService(serviceArgs(),connection);
       }
-      Shizuku.UserServiceArgs args=new Shizuku.UserServiceArgs(
-        new ComponentName(this,PrivilegedProbe.class))
-        .daemon(true).processNameSuffix("tgc_mobile_watch").version(3).debuggable(false);
-      Shizuku.bindUserService(args,connection);
-      bound=true;
-    }catch(Exception e){bound=false;update("Shizuku connect: "+e.getClass().getSimpleName());}
+    }catch(Exception e){
+      bound=false;
+      watcherState="Shizuku binding failed: "+e.getClass().getSimpleName();
+    }
+    persist();
   }
-  private void runLoop(){
-    while(running&&!shutdown){
+
+  private void collectorLoop(){
+    while(running&&!shuttingDown){
       try{
         if(watcher==null)connectWatcher();
         IPrivilegedProbe active=watcher;
-        if(active!=null)saveCapturedEvents(active);
-        MobileCredentials.Record creds=MobileCredentials.load(this);
-        if(creds==null){update("Node not deployed. Paste your staff link first.");}
-        else{
+        if(active!=null){
+          if(!trackingStarted){
+            active.startWatching();
+            trackingStarted=true;
+          }
+          JSONObject stats=new JSONObject(active.getWatchStats());
+          watcherState=stats.optBoolean("watching")?"Watching VRChat output logs":
+            "Shizuku connected but watcher not running";
+          getSharedPreferences("tgc_mobile_node_status",0).edit()
+            .putInt("watch_polls",stats.optInt("polls"))
+            .putInt("watch_joins",stats.optInt("joins"))
+            .putInt("watch_leaves",stats.optInt("leaves"))
+            .putInt("watch_unrecognized",stats.optInt("unrecognized"))
+            .putInt("watch_errors",stats.optInt("read_errors"))
+            .putInt("watch_rotations",stats.optInt("rotations"))
+            .putInt("watch_pending",stats.optInt("pending"))
+            .putLong("watch_bytes",stats.optLong("bytes"))
+            .putLong("last_poll_at",stats.optLong("last_check"))
+            .putLong("last_append_at",stats.optLong("last_append"))
+            .putBoolean("watch_source",stats.optBoolean("source_found"))
+            .apply();
+          captureFromWatcher(active);
+        }
+      }catch(Exception e){
+        watcherState="Watcher error: "+e.getClass().getSimpleName();
+        // The Shizuku binder might have restarted; force clean reconnection.
+        watcher=null;bound=false;trackingStarted=false;
+      }
+      persist();
+      sleep(5000);
+    }
+  }
+  private void captureFromWatcher(IPrivilegedProbe active)throws Exception{
+    JSONArray events=new JSONArray(active.pendingSightings(150));
+    if(events.length()==0)return;
+    // Only ACK events after durable SQLite commit. Invalid entries are not counted.
+    int stored=outbox.insert(events);
+    JSONArray ack=new JSONArray();
+    for(int i=0;i<events.length();i++){
+      JSONObject item=events.optJSONObject(i);
+      if(item!=null){
+        String id=item.optString("event_id","");
+        if(id.matches("mobile_[0-9a-fA-F-]{36}"))ack.put(id);
+      }
+    }
+    active.ackSightings(ack.toString());
+    if(stored>0){
+      getSharedPreferences("tgc_mobile_node_status",0).edit()
+        .putInt("captured_total",getSharedPreferences("tgc_mobile_node_status",0).getInt("captured_total",0)+stored)
+        .putLong("last_capture_at",System.currentTimeMillis()).apply();
+    }
+  }
+  private void relayLoop(){
+    while(running&&!shuttingDown){
+      try{
+        MobileCredentials.Record record=MobileCredentials.load(this);
+        if(record==null){
+          relayState="Not deployed: redeem your owner-issued Mobile Companion link";
+          lastAuth=0;
+        }else{
           if(System.currentTimeMillis()-lastAuth>90000){
-            JSONObject check=MobileRelay.post(creds.url,MobileRelay.authorized(creds,"node_status"));
-            if(!check.optBoolean("verified",false) ||
-                !"mobile_companion".equals(check.optString("client_type"))){
-              throw new SecurityException("Mobile Node not verified");
-            }
-            if(!creds.discordId.equals(check.optString("discord_id"))){
-              throw new SecurityException("Deployment owner mismatch");
+            JSONObject reply=MobileRelay.post(record.url,MobileRelay.authorized(record,"node_status"));
+            if(!reply.optBoolean("verified") ||
+               !"mobile_companion".equals(reply.optString("client_type")) ||
+               !record.discordId.equals(reply.optString("discord_id"))){
+              relayState="Relay did not verify mobile staff deployment";
+              lastAuth=0;
+              persist();
+              sleep(20000);
+              continue;
             }
             lastAuth=System.currentTimeMillis();
           }
-          if(System.currentTimeMillis()-lastAuth<=240000)sendQueued(creds);
+          if(System.currentTimeMillis()-lastAuth<180000){
+            JSONArray batch=outbox.batch(100);
+            if(batch.length()>0){
+              JSONObject request=MobileRelay.authorized(record,"submit_sightings");
+              request.put("sightings",batch);
+              JSONObject result=MobileRelay.post(record.url,request);
+              JSONArray accepted=result.optJSONArray("accepted_event_ids");
+              JSONArray rejected=result.optJSONArray("rejected_event_ids");
+              if(accepted==null && rejected==null){
+                throw new IllegalStateException("Relay did not return event acknowledgments");
+              }
+              JSONArray ack=new JSONArray();
+              int a=0,b=0;
+              if(accepted!=null)for(int i=0;i<accepted.length();i++){ack.put(accepted.optString(i));a++;}
+              if(rejected!=null)for(int i=0;i<rejected.length();i++){ack.put(rejected.optString(i));b++;}
+              outbox.remove(ack);
+              android.content.SharedPreferences p=getSharedPreferences("tgc_mobile_node_status",0);
+              p.edit().putInt("uploaded_total",p.getInt("uploaded_total",0)+a)
+                .putInt("rejected_total",p.getInt("rejected_total",0)+b)
+                .putLong("last_upload_at",System.currentTimeMillis()).apply();
+              relayState="Relay accepted "+a+" events, rejected "+b;
+            }else relayState="Relay authenticated; queue empty";
+          }
         }
       }catch(Exception e){
-        String message=e.getMessage()!=null?e.getMessage():e.getClass().getSimpleName();
-        if(message.length()>130)message=message.substring(0,130);
-        update("Relay: "+message);
-        if(message.matches("(?i).*(revoked|staff ID not|authorization expired|Unknown node|invalid node key|not verified|owner mismatch).*")){
-          update("ACCESS REVOKED / EXPIRED: "+message);
-          running=false;
-          break;
-        }
+        String message=e.getMessage()==null?e.getClass().getSimpleName():e.getMessage();
+        // Never log URLs or credentials from exceptions.
+        if(message.length()>110)message=message.substring(0,110);
+        relayState="Relay/connection issue: "+message;
+        lastAuth=0;
       }
-      try{Thread.sleep(10000);}catch(InterruptedException e){Thread.currentThread().interrupt();break;}
+      persist();
+      sleep(20000);
     }
-    if(!shutdown)stopSelf();
   }
-  private void saveCapturedEvents(IPrivilegedProbe active) throws Exception{
-    String text=active.pendingSightings(150);
-    JSONArray pending=new JSONArray(text);
-    if(pending.length()==0)return;
-    outbox.insert(pending);
-    JSONArray ids=new JSONArray();
-    for(int i=0;i<pending.length();i++){
-      JSONObject e=pending.optJSONObject(i);
-      if(e!=null)ids.put(e.optString("event_id"));
-    }
-    active.ackSightings(ids.toString()); // ACK only after SQLite transaction succeeded.
-    update("Captured "+pending.length()+" new events; queued "+outbox.count());
+  private static void sleep(long duration){
+    try{Thread.sleep(duration);}catch(InterruptedException e){Thread.currentThread().interrupt();}
   }
-  private void sendQueued(MobileCredentials.Record record) throws Exception{
-    JSONArray batch=outbox.batch(100);
-    if(batch.length()==0){
-      update("Connected • queue empty • monitoring");
-      return;
-    }
-    JSONObject payload=MobileRelay.authorized(record,"submit_sightings");
-    payload.put("sightings",batch);
-    JSONObject received=MobileRelay.post(record.url,payload);
-    JSONArray ack=received.optJSONArray("accepted_event_ids");
-    JSONArray rejected=received.optJSONArray("rejected_event_ids");
-    JSONArray removal=new JSONArray();
-    if(ack!=null)for(int i=0;i<ack.length();i++)removal.put(ack.optString(i));
-    if(rejected!=null)for(int i=0;i<rejected.length();i++)removal.put(rejected.optString(i));
-    outbox.remove(removal);
-    update("Relay accepted "+(ack==null?0:ack.length())+" • queued "+outbox.count());
+  private void persist(){
+    try{
+      getSharedPreferences("tgc_mobile_node_status",0).edit()
+        .putBoolean("running",running)
+        .putString("watcher",watcherState)
+        .putString("relay",relayState)
+        .putInt("queue",outbox==null?0:outbox.count())
+        .putLong("service_heartbeat_at",System.currentTimeMillis())
+        .apply();
+    }catch(RuntimeException ignored){}
   }
-  private void update(String value){
-    lastMessage=value;
-    getSharedPreferences("tgc_mobile_node_status",0).edit()
-      .putString("message",value).putLong("at",System.currentTimeMillis())
-      .putBoolean("running",running).apply();
-  }
-  private void stopCollection(){
+  private void stopCollection(String reason){
     running=false;
-    try{if(watcher!=null)watcher.stopWatching();}catch(Exception ignored){}
-    update("Stopped by user • queued "+(outbox==null?0:outbox.count()));
+    watcherState=reason;
+    relayState="Stopped";
+    IPrivilegedProbe active=watcher;
+    if(active!=null){try{active.stopWatching();}catch(Exception ignored){}}
+    persist();
     stopForeground(STOP_FOREGROUND_REMOVE);
     stopSelf();
   }
   @Override public void onDestroy(){
-    shutdown=true;running=false;
-    jobs.shutdownNow();
+    shuttingDown=true;running=false;
+    collection.shutdownNow();upload.shutdownNow();
+    Shizuku.removeBinderReceivedListener(onBinderReceived);
+    Shizuku.removeBinderDeadListener(onBinderDead);
     if(bound){
-      try{
-        Shizuku.UserServiceArgs args=new Shizuku.UserServiceArgs(
-          new ComponentName(this,PrivilegedProbe.class))
-          .daemon(true).processNameSuffix("tgc_mobile_watch").version(3).debuggable(false);
-        Shizuku.unbindUserService(args,connection,false);
-      }catch(Exception ignored){}
+      try{Shizuku.unbindUserService(serviceArgs(),connection,false);}catch(Exception ignored){}
     }
+    watcherState="Background Node service stopped";
+    persist();
     if(outbox!=null)outbox.close();
     super.onDestroy();
   }
