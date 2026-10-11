@@ -140,7 +140,8 @@ public final class CompanionActivity extends Activity {
         if(!StaffGate.unlocked(this)){locked("Deployment needs online verification");return;}
         shell();
         LinearLayout top=card("STAFF VERIFIED","This session is unlocked only while your deployed Node remains valid on the TGC relay.");
-        action(top,"Your VRChat account","Sign in with your own VRChat credentials",()->requiresStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
+        action(top,"Your VRChat account","Sign in, verify your session, or log out",()->requiresStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
+        action(top,"My VRChat profile","View my own account information here in the app",this::openMyProfile);
         LinearLayout features=card("VRChat companion","Native personal-account views and local history. Nothing here uses the GM1 account.");
         action(features,"Online friends","Personal account • current availability",()->openBrowse("friends_online"));
         action(features,"Offline friends","Personal account • offline friends",()->openBrowse("friends_offline"));
@@ -148,6 +149,8 @@ public final class CompanionActivity extends Activity {
         action(features,"Recently visited worlds","Personal account • VRChat recent worlds",()->openBrowse("recent"));
         action(features,"My groups","Personal account • visible group memberships",()->openBrowse("groups"));
         action(features,"Recently encountered","Local Node sightings • up to 30 days",()->openBrowse("encounters"));
+        action(features,"Search VRChat users","Find players by display name inside the app",()->openBrowse("search_users"));
+        action(features,"Search VRChat worlds","Find public worlds without using a browser",()->openBrowse("search_worlds"));
         LinearLayout node=card("TGC Mobile Invite Node","The background tracker continues to use Shizuku and the existing GM4 → GM1 relay pipeline.");
         action(node,"Node status & controls","Watch joins, queue, relay acknowledgments, or stop tracking",
           ()->requiresStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
@@ -155,15 +158,27 @@ public final class CompanionActivity extends Activity {
           ()->requiresStaff(()->startActivity(new Intent(this,MainActivity.class))));
         LinearLayout settings=card("Maintenance",null);
         action(settings,"Check for app updates","Download SHA-256 and signing-verified APK updates",()->startActivity(new Intent(this,MobileUpdaterActivity.class)));
-        action(settings,"Official VRChat website","For features not yet available natively",()->openWeb("https://vrchat.com/home"));
+        action(settings,"VRChat account settings","Personal login and session controls",()->requiresStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
     }
     private void openBrowse(String mode){
         requiresStaff(()->startActivity(new Intent(this,VRChatBrowseActivity.class).putExtra("mode",mode)));
     }
-    private void openWeb(String url){
+    private void openMyProfile(){
         requiresStaff(()->{
-            try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}
-            catch(ActivityNotFoundException e){Toast.makeText(this,"No browser found",Toast.LENGTH_SHORT).show();}
+            try{
+                JSONObject session=VRChatSession.load(this);
+                String id=session.optString("userId","");
+                if(id.matches("usr_[0-9a-fA-F-]{36}")){
+                    startActivity(new Intent(this,VRChatDetailActivity.class)
+                        .putExtra("kind","user").putExtra("id",id));
+                }else{
+                    Toast.makeText(this,"Sign in to your VRChat account first",Toast.LENGTH_LONG).show();
+                    startActivity(new Intent(this,VRChatAccountActivity.class));
+                }
+            }catch(Exception e){
+                Toast.makeText(this,"VRChat login required",Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(this,VRChatAccountActivity.class));
+            }
         });
     }
 }
