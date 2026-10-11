@@ -9,12 +9,15 @@ import org.json.JSONObject;
 
 /** A local SQLite queue to survive disconnects, app restarts and retryable relay errors. */
 public final class MobileOutbox extends SQLiteOpenHelper {
-  public MobileOutbox(Context context){super(context,"tgc_mobile_outbox.sqlite",null,1);}
+  public MobileOutbox(Context context){super(context,"tgc_mobile_outbox.sqlite",null,2);}
   @Override public void onCreate(SQLiteDatabase db){
     db.execSQL("CREATE TABLE IF NOT EXISTS events(event_id TEXT PRIMARY KEY, json TEXT NOT NULL, created_at INTEGER NOT NULL)");
     db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_time ON events(created_at)");
+    db.execSQL("CREATE TABLE IF NOT EXISTS encounters(user_id TEXT PRIMARY KEY, display_name TEXT NOT NULL DEFAULT '', seen_at INTEGER NOT NULL, visits INTEGER NOT NULL DEFAULT 1)");
   }
-  @Override public void onUpgrade(SQLiteDatabase db,int a,int b){}
+  @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion){
+    if(oldVersion<2)db.execSQL("CREATE TABLE IF NOT EXISTS encounters(user_id TEXT PRIMARY KEY, display_name TEXT NOT NULL DEFAULT '', seen_at INTEGER NOT NULL, visits INTEGER NOT NULL DEFAULT 1)");
+  }
   public synchronized int insert(JSONArray events){
     SQLiteDatabase db=getWritableDatabase();
     db.beginTransaction();
@@ -22,6 +25,9 @@ public final class MobileOutbox extends SQLiteOpenHelper {
     try{
       android.database.sqlite.SQLiteStatement statement=db.compileStatement(
         "INSERT OR IGNORE INTO events(event_id,json,created_at) VALUES(?,?,?)");
+      android.database.sqlite.SQLiteStatement encounter=db.compileStatement(
+        "INSERT INTO encounters(user_id,display_name,seen_at,visits) VALUES(?,?,?,1) "+
+        "ON CONFLICT(user_id) DO UPDATE SET display_name=CASE WHEN excluded.display_name != '' THEN excluded.display_name ELSE encounters.display_name END,seen_at=excluded.seen_at,visits=encounters.visits+1");
       for(int i=0;i<events.length();i++){
         JSONObject v=events.optJSONObject(i);
         if(v==null)continue;
@@ -33,10 +39,21 @@ public final class MobileOutbox extends SQLiteOpenHelper {
         statement.bindString(1,id);
         statement.bindString(2,v.toString());
         statement.bindLong(3,System.currentTimeMillis());
-        if(statement.executeInsert()!=-1)stored++;
+        if(statement.executeInsert()!=-1){
+          stored++;
+          encounter.clearBindings();
+          encounter.bindString(1,user);
+          String name=v.optString("display_name","");
+          if(name.length()>180)name=name.substring(0,180);
+          encounter.bindString(2,name);
+          encounter.bindLong(3,System.currentTimeMillis());
+          encounter.executeInsert();
+        }
       }
       // Bound disk use: 15,000 events maximum, preserve newest if excess.
       db.execSQL("DELETE FROM events WHERE event_id IN (SELECT event_id FROM events ORDER BY created_at DESC LIMIT -1 OFFSET 15000)");
+      db.execSQL("DELETE FROM encounters WHERE seen_at < "+(System.currentTimeMillis()-30L*86400000L));
+      db.execSQL("DELETE FROM encounters WHERE user_id IN (SELECT user_id FROM encounters ORDER BY seen_at DESC LIMIT -1 OFFSET 500)");
       db.setTransactionSuccessful();
     }finally{db.endTransaction();}
     return stored;
@@ -69,7 +86,27 @@ public final class MobileOutbox extends SQLiteOpenHelper {
       return c.moveToNext()?c.getInt(0):0;
     }
   }
+  public synchronized JSONArray recentEncounters(int max){
+    JSONArray result=new JSONArray();
+    try(Cursor cursor=getReadableDatabase().rawQuery(
+      "SELECT user_id,display_name,seen_at,visits FROM encounters ORDER BY seen_at DESC LIMIT ?",
+      new String[]{String.valueOf(Math.min(Math.max(1,max),100))})){
+      while(cursor.moveToNext()){
+        JSONObject entry=new JSONObject();
+        try{
+          entry.put("user_id",cursor.getString(0));
+          entry.put("display_name",cursor.getString(1));
+          entry.put("last_seen",new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",java.util.Locale.US)
+            .format(new java.util.Date(cursor.getLong(2))));
+          entry.put("count",cursor.getInt(3));
+          result.put(entry);
+        }catch(org.json.JSONException ignored){}
+      }
+    }
+    return result;
+  }
   public synchronized void wipe(){
     getWritableDatabase().execSQL("DELETE FROM events");
+    getWritableDatabase().execSQL("DELETE FROM encounters");
   }
 }
