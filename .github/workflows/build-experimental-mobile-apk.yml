@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   apk:
@@ -34,6 +34,18 @@ jobs:
         run: gradle :mobile:assembleDebug --no-daemon --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: TGC-Mobile-Node-Lab-v0.1-APK
+          name: TGC-Mobile-Node-Lab-v0.2-APK
           path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
           if-no-files-found: error
+      - name: Publish APK for direct download
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mobile-node-lab/downloads
+          cp mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk \
+             mobile-node-lab/downloads/TGC_Mobile_Node_Lab_v0.2_Shizuku_Probe.apk
+          git config user.name "TGC Build Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add mobile-node-lab/downloads/TGC_Mobile_Node_Lab_v0.2_Shizuku_Probe.apk
+          git commit -m "build: publish mobile node lab v0.2 APK" || exit 0
+          git push origin HEAD:experiment/mobile-node-lab
