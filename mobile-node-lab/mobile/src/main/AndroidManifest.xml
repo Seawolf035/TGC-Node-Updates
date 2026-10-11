@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <uses-permission android:name="moe.shizuku.manager.permission.API_V23"/>
+<uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 <application android:allowBackup="false" android:label="TGC Staff Companion" android:icon="@drawable/tgc_logo" android:roundIcon="@drawable/tgc_logo"
  android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.Light.NoActionBar">
  <provider android:name="rikka.shizuku.ShizukuProvider"
@@ -9,6 +13,9 @@
   android:multiprocess="false"
   android:enabled="true"
   android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"/>
+ <service android:name=".MobileNodeService" android:enabled="true" android:exported="false"
+   android:foregroundServiceType="dataSync"/>
+ <activity android:name=".MobileDeployActivity" android:exported="false"/>
  <activity android:name=".CompanionActivity" android:exported="true">
   <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
  </activity>
