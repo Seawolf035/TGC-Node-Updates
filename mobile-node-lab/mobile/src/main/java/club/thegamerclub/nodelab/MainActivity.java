@@ -40,6 +40,8 @@ public class MainActivity extends Activity {
   private String report="No test run yet.";
   private boolean watching=false, reading=false;
   private int lastJoins=-1;
+  private static final int ACTION_PROBE=0,ACTION_START=1,ACTION_REPORT=2,ACTION_STOP=3;
+  private int requestedAction=ACTION_PROBE;
   private static final int SHIZUKU_REQUEST=532;
   private IPrivilegedProbe privilegedProbe;
   private boolean shizukuBound=false;
@@ -65,8 +67,8 @@ public class MainActivity extends Activity {
   private final ServiceConnection connection=new ServiceConnection(){
     @Override public void onServiceConnected(ComponentName name,IBinder service){
       privilegedProbe=IPrivilegedProbe.Stub.asInterface(service);
-      runOnUiThread(()->show("Shizuku service authorized. Checking live VRChat log and system log..."));
-      runPrivilegedProbe();
+      runOnUiThread(()->show("Shizuku connected. Running the selected test..."));
+      performShizukuAction();
     }
     @Override public void onServiceDisconnected(ComponentName name){
       privilegedProbe=null;
@@ -148,13 +150,13 @@ public class MainActivity extends Activity {
     gap(root,7);
     root.addView(label("VRChat log access",26,FG,true));
     gap(root,6);
-    root.addView(label("Experimental test • Android / Quest • v0.2.1",13,SUB,false));
+    root.addView(label("Experimental test • Android / Quest • v0.3",13,SUB,false));
     gap(root,18);
 
     LinearLayout about=card(root);
     about.addView(label("What we're testing",18,FG,true));
     gap(about,8);
-    about.addView(label("Can another Android app read VRChat logs, and can we recognize player joins? This app only examines logs you select or tries a read-only folder check.",14,SUB,false));
+    about.addView(label("Monitor new VRChat joins and leaves while you switch into VRChat Mobile. The Shizuku watcher runs in a separate authorized process; results are counts only.",14,SUB,false));
     gap(about,10);
     about.addView(label("No internet or relay traffic. Shizuku access is optional and must be authorized.",13,CYAN,true));
 
@@ -163,11 +165,14 @@ public class MainActivity extends Activity {
     gap(controls,9);
     button(controls,"1   Import an exported log",v->chooseLog());
     button(controls,"2   Probe VRChat folder access",v->probeFolders());
-    button(controls,"3   Test automatic access via Shizuku",v->requestShizukuProbe());
+    button(controls,"3   Test automatic access via Shizuku",v->useShizuku(ACTION_PROBE));
+    button(controls,"4   START live watcher (new events only)",v->useShizuku(ACTION_START));
+    button(controls,"5   VIEW live watcher results",v->useShizuku(ACTION_REPORT));
+    button(controls,"6   STOP live watcher",v->useShizuku(ACTION_STOP));
     sourceLabel=label("Selected log: none",13,SUB,false);
     controls.addView(sourceLabel);
     gap(controls,9);
-    statusLabel=label("Live reread: only while this app is visible, every 10 sec",12,SUB,false);
+    statusLabel=label("Import reread: foreground only. Shizuku live watcher: 5-second polling in its authorized process.",12,SUB,false);
     controls.addView(statusLabel);
 
     LinearLayout output=card(root);
@@ -178,7 +183,7 @@ public class MainActivity extends Activity {
     output.addView(display);
 
     button(root,"Share sanitized report",v->shareReport());
-    root.addView(label("Reports only contain counts and access results, not player names, IDs, private tokens, or raw log text. Shizuku is experimental and requires explicit authorization; this test does not yet monitor VRChat in the background.",12,SUB,false));
+    root.addView(label("LIVE TEST: Start watcher, enter a populated VRChat world for 2–3 minutes, then switch back and tap VIEW. The Shizuku process may be terminated by Android; check whether polls increased. No log exports or internet access needed. Stop the watcher after testing.",12,SUB,false));
   }
   private void chooseLog(){
     Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -240,6 +245,10 @@ public class MainActivity extends Activity {
       });
     });
   }
+  private void useShizuku(int action){
+    requestedAction=action;
+    requestShizukuProbe();
+  }
   private void requestShizukuProbe(){
     try{
       if(!Shizuku.pingBinder()){
@@ -265,13 +274,13 @@ public class MainActivity extends Activity {
     }
   }
   private void connectShizuku(){
-    if(privilegedProbe!=null){runPrivilegedProbe();return;}
+    if(privilegedProbe!=null){performShizukuAction();return;}
     if(shizukuBound){show("Waiting for Shizuku service connection...");return;}
     try{
       shizukuBound=true;
       Shizuku.UserServiceArgs args=new Shizuku.UserServiceArgs(
           new ComponentName(this,PrivilegedProbe.class))
-          .daemon(false).processNameSuffix("tgc_mobile_probe").version(1).debuggable(true);
+          .daemon(true).processNameSuffix("tgc_mobile_watch").version(2).debuggable(true);
       Shizuku.bindUserService(args,connection);
       show("Starting authorized read-only Shizuku service...");
     }catch(RuntimeException exception){
@@ -279,15 +288,21 @@ public class MainActivity extends Activity {
       show("Shizuku binding failed: "+exception.getClass().getSimpleName());
     }
   }
-  private void runPrivilegedProbe(){
+  private void performShizukuAction(){
     final IPrivilegedProbe service=privilegedProbe;
     if(service==null){show("Shizuku service not connected.");return;}
+    final int action=requestedAction;
     worker.execute(()->{
       try{
-        String result=service.probe();
+        String result;
+        if(action==ACTION_START)result=service.startWatching();
+        else if(action==ACTION_REPORT)result=service.getWatchReport();
+        else if(action==ACTION_STOP)result=service.stopWatching();
+        else result=service.probe();
         runOnUiThread(()->show(result));
       }catch(Exception e){
-        runOnUiThread(()->show("Shizuku probe failed: "+e.getClass().getSimpleName()));
+        runOnUiThread(()->show("Shizuku operation failed: "+e.getClass().getSimpleName()+
+          "\\nReopen the Lab and retry. If Shizuku's process restarted, monitoring may have reset."));
       }
     });
   }
@@ -323,7 +338,7 @@ public class MainActivity extends Activity {
   }
   private void show(String value){
     display.setText(value);
-    report="TGC Mobile Node Lab v0.2.1\nOffline, no credentials\n\n"+value;
+    report="TGC Mobile Node Lab v0.3\nOffline, no credentials\n\n"+value;
   }
   private void shareReport(){
     Intent out=new Intent(Intent.ACTION_SEND);
@@ -336,12 +351,12 @@ public class MainActivity extends Activity {
     watching=true;
     main.removeCallbacks(poll);
     main.postDelayed(poll,10000);
-    if(statusLabel!=null)statusLabel.setText("Log reread: active while this app is visible (10 sec)");
+    if(statusLabel!=null)statusLabel.setText("Import reread: active. Shizuku watcher runs separately if started.");
   }
   @Override protected void onPause(){
     watching=false;
     main.removeCallbacks(poll);
-    if(statusLabel!=null)statusLabel.setText("Log reread: paused while the app is in background");
+    if(statusLabel!=null)statusLabel.setText("Import reread paused; Shizuku watcher can continue if Android permits.");
     super.onPause();
   }
   @Override protected void onDestroy(){
