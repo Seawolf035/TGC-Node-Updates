@@ -111,6 +111,7 @@ public class CompanionActivity extends Activity {
         action(engine,"Deploy Mobile Node  →","Redeem an owner-issued staff setup link",this::openDeploy);
         action(engine,"Open Node diagnostics","Start or stop local log monitoring",this::openNode);
         LinearLayout tools=section("Quick access","Useful VRChat tools while the full companion API features are being developed.");
+        action(tools,"Check for Companion updates","Download verified releases and open Android installer",this::openUpdater);
         action(tools,"Friends","Open your VRChat friends page",()->openWeb("https://vrchat.com/home/friends"));
         action(tools,"Groups","Open your VRChat groups page",()->openWeb("https://vrchat.com/home/groups"));
         action(tools,"Worlds","Browse VRChat worlds",()->openWeb("https://vrchat.com/home/worlds"));
@@ -123,6 +124,7 @@ public class CompanionActivity extends Activity {
         connection=text("Checking Shizuku...",14,ACCENT,true);c.addView(connection);refreshConnection();
         space(c,12);
         action(c,"Staff Quick Deployment","Paste one-use link, start/stop uploads, view offline queue",this::openDeploy);
+        action(c,"Companion updates","Check/download verified APK updates",this::openUpdater);
         action(c,"Open live tracking controls","Start watcher · View results · Stop watcher",this::openNode);
         action(c,"Diagnose log permissions","Original VRChat folder, read status and logcat probes",this::openNode);
         LinearLayout details=section("Current safety mode",null);
@@ -162,6 +164,7 @@ public class CompanionActivity extends Activity {
             connection.setTextColor(GOLD);
         }
     }
+    private void openUpdater(){startActivity(new Intent(this,MobileUpdaterActivity.class));}
     private void openDeploy(){startActivity(new Intent(this,MobileDeployActivity.class));}
     private void openNode(){startActivity(new Intent(this,MainActivity.class));}
     private void openWeb(String url){
