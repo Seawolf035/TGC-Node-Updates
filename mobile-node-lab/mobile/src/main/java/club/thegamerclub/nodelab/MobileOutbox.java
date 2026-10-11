@@ -25,9 +25,10 @@ public final class MobileOutbox extends SQLiteOpenHelper {
     try{
       android.database.sqlite.SQLiteStatement statement=db.compileStatement(
         "INSERT OR IGNORE INTO events(event_id,json,created_at) VALUES(?,?,?)");
-      android.database.sqlite.SQLiteStatement encounter=db.compileStatement(
-        "INSERT INTO encounters(user_id,display_name,seen_at,visits) VALUES(?,?,?,1) "+
-        "ON CONFLICT(user_id) DO UPDATE SET display_name=CASE WHEN excluded.display_name != '' THEN excluded.display_name ELSE encounters.display_name END,seen_at=excluded.seen_at,visits=encounters.visits+1");
+      android.database.sqlite.SQLiteStatement addEncounter=db.compileStatement(
+        "INSERT OR IGNORE INTO encounters(user_id,display_name,seen_at,visits) VALUES(?,?,?,0)");
+      android.database.sqlite.SQLiteStatement updateEncounter=db.compileStatement(
+        "UPDATE encounters SET display_name=CASE WHEN ? != '' THEN ? ELSE display_name END, seen_at=?,visits=visits+1 WHERE user_id=?");
       for(int i=0;i<events.length();i++){
         JSONObject v=events.optJSONObject(i);
         if(v==null)continue;
@@ -41,13 +42,20 @@ public final class MobileOutbox extends SQLiteOpenHelper {
         statement.bindLong(3,System.currentTimeMillis());
         if(statement.executeInsert()!=-1){
           stored++;
-          encounter.clearBindings();
-          encounter.bindString(1,user);
+          long stamp=System.currentTimeMillis();
           String name=v.optString("display_name","");
           if(name.length()>180)name=name.substring(0,180);
-          encounter.bindString(2,name);
-          encounter.bindLong(3,System.currentTimeMillis());
-          encounter.executeInsert();
+          addEncounter.clearBindings();
+          addEncounter.bindString(1,user);
+          addEncounter.bindString(2,name);
+          addEncounter.bindLong(3,stamp);
+          addEncounter.executeInsert();
+          updateEncounter.clearBindings();
+          updateEncounter.bindString(1,name);
+          updateEncounter.bindString(2,name);
+          updateEncounter.bindLong(3,stamp);
+          updateEncounter.bindString(4,user);
+          updateEncounter.executeUpdateDelete();
         }
       }
       // Bound disk use: 15,000 events maximum, preserve newest if excess.
