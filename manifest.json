@@ -5,23 +5,23 @@
   "releases": {
     "standalone": {
       "channel": "standalone",
-      "version": "1.1.7",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.7_Link_Discord_Removal_Hotfix.zip",
-      "sha256": "2025e76907f9623ac7639a9c625ecf86bc9dcde83f9c21aa743d7d9f81380a24",
+      "version": "1.1.8",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.8_Required_Update.zip",
+      "sha256": "10452713216e16f9ef66875741e9e8152bdb0c61e431687fe31f9c6bf1b1bad7",
       "policy": "required",
-      "notes": "Required v1.1.7 hotfix: removes redundant Link Discord button. Owner-issued Quick Deployment already binds staff attribution. Existing v1.1.7 installations must replace the package manually once because the old updater cannot detect same-version hotfixes.",
-      "published_at": "2026-10-11T14:40:38Z",
-      "hotfix_revision": 1
+      "notes": "Required v1.1.8 upgrade: removes redundant Link Discord button, retains owner-issued Quick Deployment attribution, and supports revision-aware future hotfixes. Existing Node settings, keys, queue and deduplication remain intact.",
+      "published_at": "2026-10-11T14:50:23Z",
+      "hotfix_revision": 0
     },
     "plugin": {
       "channel": "plugin",
-      "version": "1.1.7-plugin",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.7-plugin_Link_Discord_Removal_Hotfix.zip",
-      "sha256": "761f6e1ccd7ba83f860607c5e2703e4e2d1b1dc631e8c3d61c090d7cc92f01df",
+      "version": "1.1.8-plugin",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.8-plugin_Required_Update.zip",
+      "sha256": "65c7b1fd2930b24c96f70aca10144e6a80ae7b2bd7e42eac3bac36caf388c1bc",
       "policy": "required",
-      "notes": "Required v1.1.7 hotfix: removes redundant Link Discord button. Owner-issued Quick Deployment already binds staff attribution. Existing v1.1.7 installations must replace the package manually once because the old updater cannot detect same-version hotfixes.",
-      "published_at": "2026-10-11T14:40:38Z",
-      "hotfix_revision": 1
+      "notes": "Required v1.1.8 upgrade: removes redundant Link Discord button, retains owner-issued Quick Deployment attribution, and supports revision-aware future hotfixes. Existing Node settings, keys, queue and deduplication remain intact.",
+      "published_at": "2026-10-11T14:50:23Z",
+      "hotfix_revision": 0
     },
     "staff_launcher": {
       "channel": "staff_launcher",
