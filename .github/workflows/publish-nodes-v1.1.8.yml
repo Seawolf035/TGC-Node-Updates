@@ -1,0 +1,104 @@
+name: Publish Required Node 1.1.8
+on:
+  push:
+    paths:
+      - ".release-parts/nodes/v1.1.8/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and validate Node 1.1.8 releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile,hashlib,json,ast,re
+          from datetime import datetime,timezone
+          repo=Path("updates")
+          items=[
+              ("standalone","1.1.7","1.1.8","TGC_Invite_Node_v1.1.7_Link_Discord_Removal_Hotfix.zip","TGC_Invite_Node_v1.1.8_Required_Update.zip","tgc_invite_node.py","APP_VERSION"),
+              ("plugin","1.1.7-plugin","1.1.8-plugin","TGC_Invite_Node_Plugin_v1.1.7-plugin_Link_Discord_Removal_Hotfix.zip","TGC_Invite_Node_Plugin_v1.1.8-plugin_Required_Update.zip","plugins/distributed_invite_node.py","NODE_VERSION"),
+          ]
+          manifest_path=Path("manifest.json")
+          manifest=json.loads(manifest_path.read_text())
+          readme_path=Path("README.md")
+          readme=readme_path.read_text()
+          for channel,prev,version,oldname,newname,src,constant in items:
+              with zipfile.ZipFile(repo/channel/oldname) as z:
+                  files={name:z.read(name) for name in z.namelist() if not name.endswith("/")}
+              script=files[src].decode("utf-8")
+              old=f'{constant} = "{prev}"\nHOTFIX_REVISION = 1'
+              if script.count(old)!=1: raise RuntimeError(f"Unexpected {channel} baseline version")
+              script=script.replace(old,f'{constant} = "{version}"\nHOTFIX_REVISION = 0',1)
+              if 'text="Link Discord"' in script: raise RuntimeError(f"Legacy button remains in {channel}")
+              if "def _release_available" not in script or "hotfix_revision" not in script: raise RuntimeError("Hotfix check missing")
+              compile(script,src,"exec")
+              mod=ast.parse(script)
+              cl=next(x for x in mod.body if isinstance(x,ast.ClassDef) and any(isinstance(n,ast.FunctionDef) and n.name=="_release_available" for n in x.body))
+              funcs=[n for n in cl.body if isinstance(n,ast.FunctionDef) and n.name in ("_release_available","_version_tuple")]
+              standalone=ast.Module(body=[ast.ClassDef(name="Check",bases=[],keywords=[],body=funcs,decorator_list=[])],type_ignores=[])
+              namespace={constant:prev,"HOTFIX_REVISION":1,"re":re}
+              exec(compile(ast.fix_missing_locations(standalone),"<checker>","exec"),namespace)
+              checker=namespace["Check"]()
+              if not checker._release_available({"version":version,"hotfix_revision":0}):
+                  raise RuntimeError(f"Old {channel} Node cannot detect required version upgrade")
+              namespace[constant]=version
+              namespace["HOTFIX_REVISION"]=0
+              if checker._release_available({"version":version,"hotfix_revision":0}):
+                  raise RuntimeError("New build thinks it needs itself")
+              if not checker._release_available({"version":version,"hotfix_revision":1}):
+                  raise RuntimeError("Future hotfix detection broken")
+              files[src]=script.encode("utf-8")
+              if channel=="standalone":
+                  for name in ("README_NODE.txt","START_HERE.txt"):
+                      if name in files:
+                          t=files[name].decode("utf-8").replace("v1.1.7","v1.1.8")
+                          t+="\nNode v1.1.8 preserves Quick Deployment and removes the Link Discord button. Future hotfixes are revision-aware.\n"
+                          files[name]=t.encode("utf-8")
+              dst=repo/channel/newname
+              with zipfile.ZipFile(dst,"w",zipfile.ZIP_DEFLATED) as z:
+                  for name,data in sorted(files.items()):
+                      z.writestr(name,data)
+              with zipfile.ZipFile(dst) as z:
+                  if z.testzip() is not None: raise RuntimeError("ZIP checksum failed")
+                  if f'{constant} = "{version}"' not in z.read(src).decode("utf-8"): raise RuntimeError("ZIP version mismatch")
+              sha=hashlib.sha256(dst.read_bytes()).hexdigest()
+              manifest["releases"][channel].update({
+                  "version":version,
+                  "url":f"https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/{channel}/{newname}",
+                  "sha256":sha,
+                  "policy":"required",
+                  "hotfix_revision":0,
+                  "notes":"Required v1.1.8 upgrade: removes redundant Link Discord button, retains owner-issued Quick Deployment attribution, and supports revision-aware future hotfixes. Existing Node settings, keys, queue and deduplication remain intact.",
+                  "published_at":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              })
+              title="### Standalone Node" if channel=="standalone" else "### Plugin Node"
+              a=readme.index(title)
+              b=readme.find("\n### ",a+4)
+              if b<0: b=readme.index("\nThe plugin package",a)
+              section=readme[a:b]
+              section=section.replace("### Standalone Node 1.1.7","### Standalone Node 1.1.8").replace("### Plugin Node 1.1.7-plugin","### Plugin Node 1.1.8-plugin")
+              section=section.replace(oldname,newname)
+              section=re.sub(r'(?m)^- SHA-256:.*$',f'- SHA-256: `{sha}`',section)
+              section=re.sub(r'(?m)^- REQUIRED v1\.1\.7 hotfix:.*$','- REQUIRED v1.1.8 update: removes Link Discord, retains Quick Deployment attribution, and adds future hotfix-revision support. The version bump enables automatic updates from v1.1.7.',section)
+              readme=readme[:a]+section+readme[b:]
+              print(channel,version,sha)
+          manifest_path.write_text(json.dumps(manifest,indent=2)+"\n")
+          readme_path.write_text(readme)
+          PY
+      - name: Commit published release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "TGC Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add updates/standalone/TGC_Invite_Node_v1.1.8_Required_Update.zip updates/plugin/TGC_Invite_Node_Plugin_v1.1.8-plugin_Required_Update.zip manifest.json README.md
+          git diff --cached --quiet && exit 0
+          git commit -m "release: publish required Node 1.1.8 and plugin 1.1.8"
+          git push
