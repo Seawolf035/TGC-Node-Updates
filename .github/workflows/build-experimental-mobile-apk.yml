@@ -81,8 +81,8 @@ jobs:
           set -euo pipefail
           mkdir -p mobile-node-lab/downloads
           gradle_file=mobile-node-lab/mobile/build.gradle
-          version=$(sed -nE "s/^[[:space:]]*versionName '([^']+)'.*/\\1/p" "$gradle_file" | head -n1)
-          version_code=$(sed -nE 's/^[[:space:]]*versionCode ([0-9]+).*/\\1/p' "$gradle_file" | head -n1)
+          version=$(sed -nE "s/^[[:space:]]*versionName '([^']+)'.*/\1/p" "$gradle_file" | head -n1)
+          version_code=$(sed -nE 's/^[[:space:]]*versionCode ([0-9]+).*/\1/p' "$gradle_file" | head -n1)
           test -n "$version" && test -n "$version_code"
           cp mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk \
             "mobile-node-lab/downloads/TGC_Staff_Companion_v${version}_Preview.apk"
@@ -98,7 +98,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "TGC Staff Companion 0.5.1. Secure update checker, Shizuku live Node, staff Quick Deployment and offline queue."
+            "notes": "TGC Staff Companion secure update checker, Shizuku live Node, staff Quick Deployment and offline queue."
           }
           JSON
           fi
