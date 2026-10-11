@@ -63,14 +63,14 @@ jobs:
       - name: Upload diagnostic build
         uses: actions/upload-artifact@v4
         with:
-          name: TGC-Staff-Companion-v0.5.1-Preview
+          name: TGC-Staff-Companion-Preview
           path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
           if-no-files-found: error
       - name: Upload stable-key signed release
         if: env.SIGN_KEY_B64 != ''
         uses: actions/upload-artifact@v4
         with:
-          name: TGC-Staff-Companion-v0.5.1-Signed
+          name: TGC-Staff-Companion-Signed
           path: mobile-node-lab/mobile/build/outputs/apk/release/mobile-release.apk
           if-no-files-found: error
       - name: Publish APKs and stable-release feed
@@ -80,8 +80,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p mobile-node-lab/downloads
+          gradle_file=mobile-node-lab/mobile/build.gradle
+          version=$(sed -nE "s/^[[:space:]]*versionName '([^']+)'.*/\\1/p" "$gradle_file" | head -n1)
+          version_code=$(sed -nE 's/^[[:space:]]*versionCode ([0-9]+).*/\\1/p' "$gradle_file" | head -n1)
+          test -n "$version" && test -n "$version_code"
           cp mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk \
-            mobile-node-lab/downloads/TGC_Staff_Companion_v0.5.1_Preview.apk
+            "mobile-node-lab/downloads/TGC_Staff_Companion_v${version}_Preview.apk"
           if [ -n "$SIGN_KEY_B64" ]; then
             apk=mobile-node-lab/mobile/build/outputs/apk/release/mobile-release.apk
             cp "$apk" mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk
@@ -90,8 +94,8 @@ jobs:
           {
             "schema": 1,
             "channel": "mobile_companion",
-            "version": "0.5.1",
-            "version_code": 7,
+            "version": "$version",
+            "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
             "notes": "TGC Staff Companion 0.5.1. Secure update checker, Shizuku live Node, staff Quick Deployment and offline queue."
