@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "channel": "mobile_companion",
+  "version": "0.5.1",
+  "version_code": 7,
+  "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_v0.5.1_Preview.apk",
+  "sha256": "9e53b3ae07d825bcb75731027fad1a5af4f30cd700c07fde29311c59ee5df52b",
+  "policy": "preview",
+  "notes": "Companion 0.5.1 preview. Signing-key migration is required before in-place upgrades work across builds."
+}
