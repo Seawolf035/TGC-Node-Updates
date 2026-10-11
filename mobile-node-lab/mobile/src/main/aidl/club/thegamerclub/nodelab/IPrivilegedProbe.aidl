@@ -6,4 +6,6 @@ interface IPrivilegedProbe {
     String startWatching();
     String getWatchReport();
     String stopWatching();
+    String pendingSightings(int limit);
+    void ackSightings(String jsonIds);
 }
