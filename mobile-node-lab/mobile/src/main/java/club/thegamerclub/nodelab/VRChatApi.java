@@ -16,7 +16,7 @@ import java.util.Locale;
 /** Personal-account VRChat API client: sessions NEVER go through the TGC relay. */
 public final class VRChatApi {
     private static final String API="https://api.vrchat.cloud/api/1";
-    private static final String AGENT="TGC-Staff-Companion/0.6.0 (Android VRChat companion)";
+    private static final String AGENT="TGC-Staff-Companion/0.7.0 (Android VRChat companion)";
     private VRChatApi(){}
 
     private static final class Response {
@@ -174,6 +174,37 @@ public final class VRChatApi {
     public static JSONArray recentWorlds(Context context)throws Exception{
         JSONObject session=validSession(context);
         return request("GET","/worlds/recent?n=40&offset=0",cookie(session),null,null).array();
+    }
+
+    private static void requireId(String type,String id){
+        String prefix=type.equals("user")?"usr_":type.equals("world")?"wrld_":"grp_";
+        if(id==null||!id.matches(prefix+"[0-9a-fA-F-]{36}"))
+            throw new IllegalArgumentException("Invalid "+type+" ID");
+    }
+    /** Detailed records are always loaded directly from the signed-in staff member's session. */
+    public static JSONObject getUser(Context context,String id)throws Exception{
+        requireId("user",id);
+        return request("GET","/users/"+id,cookie(validSession(context)),null,null).object();
+    }
+    public static JSONObject getWorld(Context context,String id)throws Exception{
+        requireId("world",id);
+        return request("GET","/worlds/"+id,cookie(validSession(context)),null,null).object();
+    }
+    public static JSONObject getGroup(Context context,String id)throws Exception{
+        requireId("group",id);
+        return request("GET","/groups/"+id,cookie(validSession(context)),null,null).object();
+    }
+    public static JSONArray searchUsers(Context context,String query)throws Exception{
+        String value=query.trim();
+        if(value.length()<2||value.length()>80)throw new IllegalArgumentException("Search for 2–80 characters");
+        return request("GET","/users?search="+java.net.URLEncoder.encode(value,"UTF-8")+"&n=40&offset=0",
+            cookie(validSession(context)),null,null).array();
+    }
+    public static JSONArray searchWorlds(Context context,String query)throws Exception{
+        String value=query.trim();
+        if(value.length()<2||value.length()>80)throw new IllegalArgumentException("Search for 2–80 characters");
+        return request("GET","/worlds?search="+java.net.URLEncoder.encode(value,"UTF-8")+"&n=40&offset=0",
+            cookie(validSession(context)),null,null).array();
     }
     public static void logout(Context context){VRChatSession.clear(context);}
 }
