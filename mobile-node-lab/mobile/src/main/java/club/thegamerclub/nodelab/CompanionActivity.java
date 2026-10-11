@@ -178,7 +178,11 @@ public class CompanionActivity extends Activity {
         SharedPreferences p=getSharedPreferences("tgc_update_feed",0);
         int code=p.getInt("latest_code",0);
         String version=p.getString("latest_version","");
-        int current=7; // Companion v0.5.1
+        int current=0;
+        try{
+            PackageInfo installed=getPackageManager().getPackageInfo(getPackageName(),0);
+            current=Build.VERSION.SDK_INT>=28?(int)installed.getLongVersionCode():installed.versionCode;
+        }catch(Exception ignored){}
         updateBanner.setText(code>current?"Update available: "+version+" — tap to install":
           code>0?"Latest release checked: "+version:"Update status not yet checked");
         updateBanner.setTextColor(code>current?GOLD:MUTED);
