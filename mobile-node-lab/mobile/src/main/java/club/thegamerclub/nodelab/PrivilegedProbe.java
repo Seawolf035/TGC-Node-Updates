@@ -8,6 +8,16 @@ import java.io.RandomAccessFile;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -105,6 +115,8 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
   private static final Pattern WATCH_JOIN=Pattern.compile("OnPlayerJoined\\s+.*?\\s+\\((usr_[a-fA-F0-9-]{36})\\)");
   private static final Pattern WATCH_LEAVE=Pattern.compile("OnPlayerLeft\\s+.*?\\s+\\((usr_[a-fA-F0-9-]{36})\\)");
   private final Object watchLock=new Object();
+  private final LinkedHashMap<String, JSONObject> pendingSightings=new LinkedHashMap<>();
+  private int droppedDueToLimit=0;
   private final Set<String> seenUsers=new HashSet<>();
   private volatile boolean watching=false;
   private int generation=0,joinCount=0,leaveCount=0,unrecognized=0,pollCount=0,errorCount=0,fileSwitches=0;
@@ -122,6 +134,7 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
       lastCheck=0;lastLogChange=0;readBytes=0;lastSeenAppend=0;
       joinCount=0;leaveCount=0;unrecognized=0;pollCount=0;errorCount=0;fileSwitches=0;
       seenUsers.clear();
+      // Pending events are retained across watcher restarts until the Android app ACKs them.
       lastError="none";
       File existing=latestVrchatFile();
       trackedPath=existing==null?null:existing.getAbsolutePath();
@@ -140,6 +153,53 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
     synchronized(watchLock){return reportLocked(watching?"Watching":"Stopped");}
   }
 
+
+  @Override public String pendingSightings(int limit) {
+    synchronized(watchLock) {
+      JSONArray array=new JSONArray();
+      int max=Math.max(1,Math.min(200,limit));
+      for(JSONObject event:pendingSightings.values()) {
+        if(array.length()>=max)break;
+        array.put(event);
+      }
+      return array.toString();
+    }
+  }
+
+  @Override public void ackSightings(String jsonIds) {
+    synchronized(watchLock) {
+      try {
+        JSONArray ids=new JSONArray(jsonIds);
+        for(int i=0;i<Math.min(ids.length(),250);i++)pendingSightings.remove(ids.optString(i,""));
+      }catch(JSONException ignored){}
+    }
+  }
+
+  private void captureSighting(String rawLine,String userId){
+    if(pendingSightings.size()>=4000){droppedDueToLimit++;return;}
+    String name="";
+    try{
+      String line=new String(rawLine.getBytes(StandardCharsets.ISO_8859_1),StandardCharsets.UTF_8);
+      int at=line.indexOf("OnPlayerJoined");
+      if(at>=0){
+        String rest=line.substring(at+"OnPlayerJoined".length()).trim();
+        int end=rest.lastIndexOf(" (usr_");
+        if(end>=0)name=rest.substring(0,end).trim();
+      }
+    }catch(RuntimeException ignored){}
+    if(name.length()>180)name=name.substring(0,180);
+    SimpleDateFormat iso=new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",java.util.Locale.US);
+    iso.setTimeZone(TimeZone.getTimeZone("UTC"));
+    JSONObject sighting=new JSONObject();
+    try{
+      String id="mobile_"+UUID.randomUUID().toString();
+      sighting.put("event_id",id);
+      sighting.put("user_id",userId);
+      sighting.put("display_name",name);
+      sighting.put("seen_at",iso.format(new Date()));
+      pendingSightings.put(id,sighting);
+    }catch(JSONException ignored){}
+  }
   @Override public String stopWatching(){
     synchronized(watchLock){
       watching=false;
@@ -165,6 +225,7 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
       "Last checked seconds ago: "+(lastCheck==0?"not yet":Long.toString(Math.max(0,(now-lastCheck)/1000)))+"\n"+
       "Last appended data seconds ago: "+(lastSeenAppend==0?"not yet":Long.toString(Math.max(0,(now-lastSeenAppend)/1000)))+"\n"+
       "Read errors: "+errorCount+" (latest: "+lastError+")\n"+
+      "Pending relay events: "+pendingSightings.size()+"; dropped due to buffer cap: "+droppedDueToLimit+"\n"+
       "\nNo player names, IDs, tokens, or log contents included in this report.\n"+
       "No relay traffic. If polls stop increasing while VRChat is open, the Shizuku watcher did not persist.";
   }
@@ -215,7 +276,7 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
         consumed+=next-position;
         offset=next;
         Matcher join=WATCH_JOIN.matcher(line);
-        if(join.find()){joinCount++;seenUsers.add(join.group(1));}
+        if(join.find()){joinCount++;seenUsers.add(join.group(1));captureSighting(line,join.group(1));}
         else if(line.contains("OnPlayerJoined"))unrecognized++;
         if(WATCH_LEAVE.matcher(line).find())leaveCount++;
       }
