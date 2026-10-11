@@ -1,3 +1,23 @@
+# TGC Staff Companion — Android preview v0.4
+
+An early staff-oriented Android companion based on the proven v0.3 Shizuku live VRChat Mobile log watcher.
+
+**App icon:** user-supplied The Gamer Club artwork, downscaled for Android launcher use.
+
+**Working:** Android native dashboard, the Shizuku Node Lab (Start/View/Stop), live output-log join/leave counts in a separate authorized process, permission diagnostics, official VRChat browser shortcuts for friends/worlds/groups, and a clear Staff section status.
+
+**Not active:** owner-issued staff onboarding, real staff-only access, direct VRChat API integrations, relay uploads, persistent on-boot monitoring, production auto-updates. These require verified backend changes and further tests; do not expose them as active features.
+
+**Privacy:** no INTERNET permission, no VRChat or Discord credentials. The Node Lab only reads VRChat data after the user authorizes Shizuku; no outbound relay. Player IDs stay transient in the watcher's memory for uniqueness accounting. This build is a public preview APK and is not an enforcement mechanism for staff exclusivity.
+
+**Test:** install Shizuku, start via wireless debugging, open Companion > Node > Live Node Controls > START, visit populated VRChat Mobile world, return and VIEW results, then STOP. Validate polls and newly observed joins.
+
+**Installing v0.4 over v0.3:** GitHub Actions uses an ephemeral debug signing key; uninstall the old preview first if signature mismatch occurs.
+
+**Quest:** log access and app survival have not been tested on standalone Quest.
+
+**Code:** Android Java, Gradle 8.10.2, API 35 / min API 26.
+
 # TGC Mobile Node Lab 0.3
 
 Private-data-free test APK for VRChat Mobile / Quest log access. This is a diagnostic, not a deployed Node.
