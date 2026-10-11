@@ -35,7 +35,9 @@ public final class VRChatAccountActivity extends Activity {
         b.setOnClickListener(v->callback.run());return b;
     }
     @Override protected void onCreate(Bundle state){
-        super.onCreate(state);getWindow().setStatusBarColor(0xFF0B1423);render();
+        super.onCreate(state);
+        if(!StaffGate.unlocked(this)){finish();return;}
+        getWindow().setStatusBarColor(0xFF0B1423);render();
     }
     @Override protected void onResume(){
         super.onResume();
