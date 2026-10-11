@@ -5,22 +5,22 @@
   "releases": {
     "standalone": {
       "channel": "standalone",
-      "version": "1.1.8",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.8_Required_Update.zip",
-      "sha256": "10452713216e16f9ef66875741e9e8152bdb0c61e431687fe31f9c6bf1b1bad7",
+      "version": "1.1.9",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.9_Required_Update.zip",
+      "sha256": "b307e9c15d6f7743ee47ab09402c2a0c08d4937949298c61ce17cf3f626a0d7f",
       "policy": "required",
-      "notes": "Required v1.1.8 upgrade: removes redundant Link Discord button, retains owner-issued Quick Deployment attribution, and supports revision-aware future hotfixes. Existing Node settings, keys, queue and deduplication remain intact.",
-      "published_at": "2026-10-11T14:50:23Z",
+      "notes": "Required v1.1.9 update: adds a built-in Diagnose Tracking button that saves a privacy-safe VRChat log report to Downloads. Tracking, Quick Deployment, attribution, encrypted keys, and buffered queues remain unchanged.",
+      "published_at": "2026-10-11T16:04:07Z",
       "hotfix_revision": 0
     },
     "plugin": {
       "channel": "plugin",
-      "version": "1.1.8-plugin",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.8-plugin_Required_Update.zip",
-      "sha256": "65c7b1fd2930b24c96f70aca10144e6a80ae7b2bd7e42eac3bac36caf388c1bc",
+      "version": "1.1.9-plugin",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.9-plugin_Required_Update.zip",
+      "sha256": "c7440d4d85de1d122ee9dd9836f228ab3aebd2bdf1fe1272d746cca15fdadb0a",
       "policy": "required",
-      "notes": "Required v1.1.8 upgrade: removes redundant Link Discord button, retains owner-issued Quick Deployment attribution, and supports revision-aware future hotfixes. Existing Node settings, keys, queue and deduplication remain intact.",
-      "published_at": "2026-10-11T14:50:23Z",
+      "notes": "Required v1.1.9 update: adds a built-in Diagnose Tracking button that saves a privacy-safe VRChat log report to Downloads. Tracking, Quick Deployment, attribution, encrypted keys, and buffered queues remain unchanged.",
+      "published_at": "2026-10-11T16:04:07Z",
       "hotfix_revision": 0
     },
     "staff_launcher": {

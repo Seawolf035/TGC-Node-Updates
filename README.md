@@ -6,25 +6,29 @@ The authoritative update feed is `manifest.json`. The standalone node, plugin no
 
 ## Current packages
 
-### Standalone Node 1.1.8
-- File: `updates/standalone/TGC_Invite_Node_v1.1.8_Required_Update.zip`
-- SHA-256: `10452713216e16f9ef66875741e9e8152bdb0c61e431687fe31f9c6bf1b1bad7`
-- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.8_Required_Update.zip
+### Standalone Node 1.1.9
+- File: `updates/standalone/TGC_Invite_Node_v1.1.9_Required_Update.zip`
+- SHA-256: `b307e9c15d6f7743ee47ab09402c2a0c08d4937949298c61ce17cf3f626a0d7f`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.9_Required_Update.zip
 - Adds owner-issued one-link deployment and Windows DPAPI protection for the standalone Node Key.
 
 - REQUIRED: Quick Deployment only; manual enrollment has been removed.
 
-- REQUIRED v1.1.8 update: removes Link Discord, retains Quick Deployment attribution, and adds future hotfix-revision support. The version bump enables automatic updates from v1.1.7.
+- REQUIRED v1.1.9 update: removes Link Discord, retains Quick Deployment attribution, and adds future hotfix-revision support. The version bump enables automatic updates from v1.1.7.
 
-### Plugin Node 1.1.8-plugin
-- File: `updates/plugin/TGC_Invite_Node_Plugin_v1.1.8-plugin_Required_Update.zip`
-- SHA-256: `65c7b1fd2930b24c96f70aca10144e6a80ae7b2bd7e42eac3bac36caf388c1bc`
-- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.8-plugin_Required_Update.zip
+- REQUIRED v1.1.9: built-in Diagnose Tracking report, launched in background, with privacy-safe summary saved to Downloads.
+
+### Plugin Node 1.1.9-plugin
+- File: `updates/plugin/TGC_Invite_Node_Plugin_v1.1.9-plugin_Required_Update.zip`
+- SHA-256: `c7440d4d85de1d122ee9dd9836f228ab3aebd2bdf1fe1272d746cca15fdadb0a`
+- Direct download: https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.9-plugin_Required_Update.zip
 - Adds owner-issued one-link deployment while retaining the parent Auto Invite app's encrypted Node Key storage.
 
 - REQUIRED: Quick Deployment only; manual enrollment has been removed.
 
 - REQUIRED v1.1.8 update: removes Link Discord, retains Quick Deployment attribution, and adds future hotfix-revision support. The version bump enables automatic updates from v1.1.7.
+
+- REQUIRED v1.1.9: built-in Diagnose Tracking report, launched in background, with privacy-safe summary saved to Downloads.
 
 ### Staff Launcher 1.1.3
 - File: `updates/staff-launcher/TGC_Staff_Launcher_v1.1.3_Auto_Install_Python_Windows.zip`
