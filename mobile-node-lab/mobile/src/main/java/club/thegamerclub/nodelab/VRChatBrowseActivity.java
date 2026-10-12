@@ -28,6 +28,10 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
     private EditText searchField;
     private ResultsAdapter adapter;
     private long lastFetch=0L;
+    private int offset=0;
+    private boolean busy=false,hasMore=false;
+    private String activeQuery="";
+    private Button moreButton,refreshButton;
     private int dp(float n){return CompanionStyle.dp(this,n);}
     private TextView text(String value,int size,int color,boolean bold){
         return CompanionStyle.text(this,value,size,color,bold);
@@ -88,9 +92,9 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         controls.setPadding(dp(16),dp(10),dp(16),dp(10));root.addView(controls);
         count=text(search()?"Enter a name to search":"Loading...",13,CompanionStyle.MUTED,false);
         controls.addView(count,new LinearLayout.LayoutParams(0,-2,1f));
-        Button refresh=CompanionStyle.button(this,search()?"Search":"Refresh",false);
-        controls.addView(refresh,new LinearLayout.LayoutParams(dp(105),dp(42)));
-        refresh.setOnClickListener(v->load());
+        refreshButton=CompanionStyle.button(this,search()?"Search":"Refresh",false);
+        controls.addView(refreshButton,new LinearLayout.LayoutParams(dp(105),dp(42)));
+        refreshButton.setOnClickListener(v->load(true));
 
         RecyclerView list=new RecyclerView(this);
         list.setLayoutManager(new LinearLayoutManager(this));
@@ -99,58 +103,91 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         adapter=new ResultsAdapter();
         list.setAdapter(adapter);
         root.addView(list,new LinearLayout.LayoutParams(-1,0,1f));
-        if(!search())load();
+        moreButton=CompanionStyle.button(this,"Load more",false);
+        LinearLayout.LayoutParams moreP=new LinearLayout.LayoutParams(-1,dp(46));
+        moreP.setMargins(dp(15),dp(4),dp(15),dp(12));
+        root.addView(moreButton,moreP);
+        moreButton.setOnClickListener(v->load(false));
+        updatePaging();
+        if(!search())load(true);
     }
-    private void load(){
+    private boolean paged(){
+        return !"groups".equals(mode)&&!"encounters".equals(mode);
+    }
+    private void updatePaging(){
+        if(moreButton==null)return;
+        moreButton.setVisibility(paged()&&hasMore?View.VISIBLE:View.GONE);
+        moreButton.setEnabled(!busy);
+        refreshButton.setEnabled(!busy);
+    }
+    /** Manual pagination avoids bursts of VRChat requests and keeps long lists usable. */
+    private void load(boolean reset){
         if(!StaffGate.unlocked(this)){finish();return;}
-        if(System.currentTimeMillis()-lastFetch<20_000L){
-            count.setText("Please wait before refreshing.");return;
-        }
-        final String query=search()?searchField.getText().toString().trim():"";
-        if(search()&&query.length()<2){
+        if(busy)return;
+        final String term=search()?searchField.getText().toString().trim():"";
+        if(search()&&term.length()<2){
             count.setText("Enter at least two characters.");return;
         }
+        if(!reset && (!hasMore || !paged()))return;
+        if(System.currentTimeMillis()-lastFetch<12_000L){
+            count.setText("Please wait a moment before requesting another page.");return;
+        }
+        if(reset){
+            offset=0;hasMore=false;activeQuery=term;
+            adapter.replace(new ArrayList<>());
+        }else if(!term.equals(activeQuery)){
+            // A changed search always starts at offset zero.
+            offset=0;activeQuery=term;
+            adapter.replace(new ArrayList<>());
+        }
+        final int requested=offset;
+        final boolean append=requested>0;
         lastFetch=System.currentTimeMillis();
-        count.setText("Loading...");
+        busy=true;updatePaging();
+        count.setText(append?"Loading more results…":"Loading…");
         io.execute(()->{
             try{
                 JSONArray data;
-                switch(mode){
-                    case "friends_online":data=VRChatApi.friends(this,false);break;
-                    case "friends_offline":data=VRChatApi.friends(this,true);break;
-                    case "worlds":data=VRChatApi.worldFavorites(this);break;
-                    case "recent":data=VRChatApi.recentWorlds(this);break;
-                    case "groups":data=VRChatApi.groups(this);break;
-                    case "search_users":data=VRChatApi.searchUsers(this,query);break;
-                    case "search_worlds":data=VRChatApi.searchWorlds(this,query);break;
-                    case "encounters":
-                        try(MobileOutbox outbox=new MobileOutbox(this)){data=outbox.recentEncounters(100);}
-                        break;
-                    default:throw new IllegalArgumentException("Unsupported view");
-                }
+                if(mode.equals("groups"))data=VRChatApi.groups(this);
+                else if(mode.equals("encounters")){
+                    try(MobileOutbox outbox=new MobileOutbox(this)){
+                        data=outbox.recentEncounters(100);
+                    }
+                }else data=VRChatApi.browsePage(this,mode,activeQuery,requested);
                 ArrayList<JSONObject> rows=new ArrayList<>();
                 for(int i=0;i<data.length();i++){
                     JSONObject item=data.optJSONObject(i);if(item==null)continue;
                     if(mode.equals("friends_online")||mode.equals("friends_offline")){
                         String location=item.optString("location","");
-                        String status=item.optString("status","");
+                        String presence=item.optString("status","");
                         boolean offline=location.equalsIgnoreCase("offline")||
-                            status.equalsIgnoreCase("offline");
+                            presence.equalsIgnoreCase("offline");
                         if(mode.equals("friends_online")&&offline)continue;
                         if(mode.equals("friends_offline")&&!offline)continue;
                     }
                     rows.add(item);
                 }
+                final boolean next=paged()&&data.length()==VRChatApi.LIST_PAGE_SIZE &&
+                    requested+VRChatApi.LIST_PAGE_SIZE<=10000;
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
-                    adapter.replace(rows);
-                    count.setText(rows.size()==0?"No results yet":rows.size()+" results");
+                    busy=false;
+                    if(append)adapter.append(rows);
+                    else adapter.replace(rows);
+                    offset=paged()?requested+VRChatApi.LIST_PAGE_SIZE:0;
+                    hasMore=next;
+                    count.setText(adapter.getItemCount()==0?"No results yet":
+                        adapter.getItemCount()+" results"+(hasMore?" · More available":""));
+                    updatePaging();
                 });
             }catch(Exception e){
-                String message=e.getMessage();
-                if(message==null)message="Please try again.";
-                final String error=message.substring(0,Math.min(110,message.length()));
-                runOnUiThread(()->count.setText("Couldn't load: "+error));
+                String message=e.getMessage();if(message==null)message="Please try again.";
+                final String safe=message.substring(0,Math.min(130,message.length()));
+                runOnUiThread(()->{
+                    busy=false;
+                    count.setText("Couldn't load results: "+safe);
+                    updatePaging();
+                });
             }
         });
     }
@@ -203,6 +240,22 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         private final ArrayList<JSONObject> data=new ArrayList<>();
         void replace(ArrayList<JSONObject> newItems){
             data.clear();data.addAll(newItems);notifyDataSetChanged();
+        }
+        void append(ArrayList<JSONObject> newItems){
+            java.util.HashSet<String> known=new java.util.HashSet<>();
+            for(JSONObject obj:data)known.add(key(obj));
+            int added=0;
+            for(JSONObject obj:newItems){
+                String id=key(obj);
+                if(known.add(id)){data.add(obj);added++;}
+            }
+            if(added>0)notifyItemRangeInserted(data.size()-added,added);
+        }
+        private String key(JSONObject item){
+            if(mode.equals("groups"))return item.optString("groupId",item.optString("id",""));
+            if(mode.equals("encounters"))return item.optString("user_id","");
+            String id=item.optString("id","");
+            return id.isEmpty()?item.toString():id;
         }
         @Override public Holder onCreateViewHolder(ViewGroup parent,int type){
             LinearLayout card=new LinearLayout(VRChatBrowseActivity.this);
