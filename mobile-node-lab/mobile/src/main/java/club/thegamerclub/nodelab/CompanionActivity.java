@@ -435,10 +435,8 @@ public final class CompanionActivity extends Activity {
             ()->openFriendHub("log"));
         action(essentials,"◈","Groups","Members and group instances",
             ()->openBrowse("groups"));
-        action(essentials,"♢","Gamer Music 3 code","Read your TGC verification invite",
+        action(essentials,"♢","Verification code","Automatically finds a TGC or Cult invite code",
             this::openInviteCode);
-        action(essentials,"♢","Cult verification code","Read your Gamer Music 2 verification invite",
-            this::openCultCode);
         action(essentials,"⌕","Search people","Find someone on VRChat",
             ()->openBrowse("search_users"));
         updateHomeIndicators();
@@ -594,8 +592,8 @@ public final class CompanionActivity extends Activity {
             ()->needsStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
         action(account,"♜","Staff access","View your linked device",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
-        action(account,"♢","Gamer Music 3 verification","Read and copy a TGC invite code",this::openInviteCode);
-        action(account,"♢","Cult verification","Read and copy a CULT invite code",this::openCultCode);
+        action(account,"♢","Verification code",
+            "Find and copy your TGC or Cult invite code",this::openInviteCode);
         action(account,"✉","Your inbox","Notifications and friend requests",()->openInbox("all"));
         action(account,"◉","Favorite avatars","Browse avatars saved to your VRChat account",this::openAvatars);
         action(account,"✎","Your VRChat notes","View and edit private notes",this::openNotes);
@@ -690,10 +688,6 @@ public final class CompanionActivity extends Activity {
     }
     private void openInviteCode(){
         needsStaff(()->startActivity(new Intent(this,InviteCodeActivity.class)));
-    }
-    private void openCultCode(){
-        needsStaff(()->startActivity(new Intent(this,InviteCodeActivity.class)
-            .putExtra("provider","cult")));
     }
     private void openMyProfile(){
         needsStaff(()->{
