@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed published version before this pass: v0.17.4 (versionCode 37). v0.17.5 is under development until the signed CI pipeline succeeds. Verify the actual GitHub release state before further changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.17.5 (versionCode 38). v0.17.6 is a development update until signed CI succeeds. Verify the actual GitHub build and manifest before later work. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -105,6 +105,12 @@ Last confirmed published version before this pass: v0.17.4 (versionCode 37). v0.
 - Offer an explicit **experimental opt-in** under Companion Settings with a clear Quest incompatibility warning. Opt-in permits manual attempts to launch but does not grant overlay permission or guarantee visibility inside VR.
 - Enforce the same setting in Home, the service's direct start, sticky background recovery and active runtime checks; disabling the preference stops any existing floater and prevents revival.
 - Keep normal Android phone/tablet floating features unchanged. Actual Quest device verification remains pending.
+
+### v0.17.6 — Floating Avatar Picker and Actionable Mini VRCX
+- Replace the floating favorite-avatars screen's one-button-per-avatar immediate action with a status-style workflow: current avatar preview, collapsed VRChat favorite-list selector, image-backed selectable avatar cards, selected preview/details, a separate **Apply selected avatar** step and an inline **Confirm / Cancel** choice. Never apply an avatar merely by tapping its tile.
+- Reuse all remote favorites groups from v0.17.4, deduplicate in the All view, support avatar name/author search and show-more pagination. Update current-avatar UI immediately on successful selection without reloading every list; refuse an Apply if the personal VRChat account changed.
+- Add **All / Online / Offline** friend filters, expandable friend results, visible-instance actions, richer image-backed player profiles and additional Inbox pagination. Keep the actions within the floater.
+- Preserve user-selected Quest floater opt-in, Node tracking, background/recovery behavior, The Gamer Club/Cult verification and personal-account cookie isolation.
 
 ### v0.18 — Universal Search and Reliability
 - Broaden unified search to groups/avatars/collections, caching, accessibility, logging and optional backup/export, followed by controlled group/instance management.
