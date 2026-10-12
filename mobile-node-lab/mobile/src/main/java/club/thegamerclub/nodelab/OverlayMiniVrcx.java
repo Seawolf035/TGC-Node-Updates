@@ -158,7 +158,8 @@ public final class OverlayMiniVrcx {
         status("Loading...");
     }
     private boolean isSearchable(){
-        return screen.equals("mini_players")||screen.equals("mini_friends")||
+        return screen.equals("mini_players")||screen.equals("mini_current")||
+            screen.equals("mini_joins")||screen.equals("mini_friends")||
             screen.equals("mini_log")||screen.equals("mini_activity")||
             screen.equals("mini_worlds")||
             screen.equals("mini_avatars")||screen.equals("mini_groups")||
@@ -167,6 +168,8 @@ public final class OverlayMiniVrcx {
     private String title(){
         switch(screen){
             case "mini_players":return "Player log";
+            case "mini_current":return "Current players";
+            case "mini_joins":return "Join & leave history";
             case "mini_friends":return "Friends & locations";
             case "mini_log":return "Friend log";
             case "mini_activity":return "Activity feed";
@@ -190,6 +193,8 @@ public final class OverlayMiniVrcx {
     private String subtitle(){
         switch(screen){
             case "mini_players":return "People you have met · saved on this phone";
+            case "mini_current":return "Observed since monitoring started · may be incomplete";
+            case "mini_joins":return "Locally recorded joins, leaves and instance changes";
             case "mini_friends":return "Your personal VRChat friends · only visible locations";
             case "mini_log":return "Observed friend changes since logging began";
             case "mini_activity":return "Locally recorded encounters and friend activity";
@@ -284,6 +289,18 @@ public final class OverlayMiniVrcx {
     private interface Done{void accept(Object result);}
     private void load(){
         switch(screen){
+            case "mini_current":
+                execute(()->{
+                    try(MobileOutbox db=new MobileOutbox(ctx)){
+                        return db.currentPlayers(250);
+                    }
+                },result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_joins":
+                execute(()->{
+                    try(MobileOutbox db=new MobileOutbox(ctx)){
+                        return db.recentLocalActivity(300);
+                    }
+                },result->{loaded=(JSONArray)result;drawList();});break;
             case "mini_players":
                 execute(()->{
                     JSONArray data=new JSONArray();
@@ -383,6 +400,8 @@ public final class OverlayMiniVrcx {
         if(list==null||busy)return;
         list.removeAllViews();
         switch(screen){
+            case "mini_current":showCurrentPlayers();break;
+            case "mini_joins":showJoinsAndLeaves();break;
             case "mini_players":showPlayers();break;
             case "mini_friends":showFriends();break;
             case "mini_log":showLog();break;
@@ -403,6 +422,50 @@ public final class OverlayMiniVrcx {
             case "mini_note":showNote();break;
             default:status("Choose a tool.");
         }
+    }
+    private void showCurrentPlayers(){
+        android.content.SharedPreferences status=ctx.getSharedPreferences("tgc_mobile_node_status",0);
+        boolean live=status.getBoolean("running",false)&&
+            System.currentTimeMillis()-status.getLong("service_heartbeat_at",0L)<90_000L;
+        line(list,live?"● Tracking is active":"○ Tracking is paused",
+            "Only players whose joins were detected during this monitoring session are shown. This may not be the complete VRChat instance.",null);
+        int shown=0;
+        for(int i=0;i<loaded.length()&&shown<limit;i++){
+            JSONObject item=loaded.optJSONObject(i);if(item==null)continue;
+            String uid=item.optString("user_id","");
+            String name=item.optString("display_name","");
+            if(name.isEmpty())name=uid;
+            String location=item.optString("location","");
+            if(!matches(name+" "+uid+" "+location))continue;
+            line(list,name,"Joined "+date(item.optLong("time"))+
+                (location.isEmpty()?"":" · "+shortValue(location,65)),
+                validUser(uid)?()->profile(uid):null);
+            shown++;
+        }
+        if(shown==0)line(list,"No observed players",
+            "Start tracking while playing VRChat Mobile to see new joins. Players already there when tracking started may not appear.",null);
+    }
+    private void showJoinsAndLeaves(){
+        int shown=0;
+        for(int i=0;i<loaded.length()&&shown<limit;i++){
+            JSONObject e=loaded.optJSONObject(i);if(e==null)continue;
+            String kind=e.optString("kind","");
+            String id=e.optString("user_id","");
+            String name=e.optString("display_name","");
+            String location=e.optString("location","");
+            if(name.isEmpty())name=id;
+            if(!matches(kind+" "+name+" "+id+" "+location))continue;
+            String label="join".equals(kind)?"Joined":
+                "leave".equals(kind)?"Left":"Changed world";
+            String title="instance".equals(kind)?"World / instance changed":label+" · "+name;
+            line(list,title,date(e.optLong("time"))+
+                (location.isEmpty()?"":" · "+shortValue(location,75)),
+                validUser(id)?()->profile(id):null);
+            shown++;
+        }
+        if(shown==0)line(list,"No recorded join/leave history",
+            "This list starts when tracking is enabled; earlier sessions cannot be reconstructed.",null);
+        if(shown>=limit)button(list,"Show more",false,()->{limit+=65;drawList();});
     }
     private void showPlayers(){
         JSONArray seen=profile.optJSONArray("seen"),recent=profile.optJSONArray("recent");
@@ -425,7 +488,9 @@ public final class OverlayMiniVrcx {
         }
         if(items==0)line(list,"No matching players",
             "Start Mobile Node tracking to collect encounters.",null);
-        button(list,"Captured event feed",false,()->host.navigate("mini_activity"));
+        button(list,"Observed current players",false,()->host.navigate("mini_current"));
+        button(list,"Join & leave history",false,()->host.navigate("mini_joins"));
+        button(list,"Activity feed",false,()->host.navigate("mini_activity"));
     }
     private void showFriends(){
         LinkedHashMap<String,ArrayList<JSONObject>> grouped=new LinkedHashMap<>();
