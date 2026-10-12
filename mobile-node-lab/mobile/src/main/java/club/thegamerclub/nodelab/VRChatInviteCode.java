@@ -341,7 +341,7 @@ public final class VRChatInviteCode {
             if(gm3World&&gm3Direct.isEmpty())gm3Direct=matchCode(notification,0);
             String cultDirect=findCultCode(detail,0);
             if(cultDirect.isEmpty())cultDirect=findCultCode(notification,0);
-            boolean gm3Fresh=gm3World&&(created==0||now-created<=TTL+20_000L);
+            boolean gm3Fresh=gm3World&&(created==0||now-created<TTL);
             boolean cultFresh=created==0||now-created<=CULT_RECENT_WINDOW;
             String tgcInstance=gm3Fresh?findLocation(notification,0):"";
             String cultLocation=cultFresh?findCultLocation(detail,0):"";
@@ -385,7 +385,13 @@ public final class VRChatInviteCode {
             throw new IllegalStateException("Unable to read VRChat invitations");
         }
         // Resolve newest first, deduplicating v1/v2 versions of the same invite.
-        Collections.sort(candidates,(a,b)->Long.compare(b.created,a.created));
+        Collections.sort(candidates,(a,b)->{
+            int age=Long.compare(b.created,a.created);
+            if(age!=0)return age;
+            // The v1 and v2 versions of the same invite may have different
+            // available fields. Prefer a ready code over an unresolved lookup.
+            return Boolean.compare(!b.code.isEmpty(),!a.code.isEmpty());
+        });
         java.util.HashSet<String> seen=new java.util.HashSet<>();
         java.util.HashSet<String> lookedUp=new java.util.HashSet<>();
         int requests=0;
