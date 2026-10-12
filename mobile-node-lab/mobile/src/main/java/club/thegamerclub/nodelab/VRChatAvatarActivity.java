@@ -1,6 +1,9 @@
 package club.thegamerclub.nodelab;
 
 import android.app.AlertDialog;
+import android.widget.EditText;
+import android.text.TextWatcher;
+import android.text.Editable;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -24,7 +27,8 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
     private final ArrayList<JSONObject> avatars=new ArrayList<>();
     private final AvatarAdapter adapter=new AvatarAdapter();
     private TextView status;
-    private Button more;
+    private Button more,refreshButton;
+    private EditText filter;
     private int offset=0;
     private boolean loading=false;
     private int dp(float n){return CompanionStyle.dp(this,n);}
@@ -59,7 +63,20 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
             startActivity(new Intent(this,ExtendedAvatarActivity.class));
         });
         status=text("Loading saved avatars...",13,CompanionStyle.MUTED,false);
-        status.setPadding(dp(17),dp(11),dp(17),dp(12));root.addView(status);
+        status.setPadding(dp(17),dp(11),dp(17),dp(8));root.addView(status);
+        filter=CompanionStyle.input(this,"Search saved avatar names or creators");
+        filter.setSingleLine(true);
+        LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(-1,dp(52));
+        fp.setMargins(dp(14),0,dp(14),dp(10));
+        root.addView(filter,fp);
+        filter.addTextChangedListener(new TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence text,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence text,int start,int before,int count){
+                adapter.rebuild();
+                updateSummary();
+            }
+            @Override public void afterTextChanged(Editable text){}
+        });
         RecyclerView list=new RecyclerView(this);
         list.setLayoutManager(new LinearLayoutManager(this));list.setAdapter(adapter);
         list.setPadding(dp(13),0,dp(13),dp(10));
@@ -68,14 +85,24 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
         LinearLayout.LayoutParams p=CompanionStyle.buttonParams(this);
         p.setMargins(dp(15),0,dp(15),dp(13));root.addView(more,p);
         more.setOnClickListener(v->fetch(true));
-        Button refresh=CompanionStyle.button(this,"Refresh",true);
+        refreshButton=CompanionStyle.button(this,"Refresh",true);
         LinearLayout.LayoutParams rp=CompanionStyle.buttonParams(this);
         rp.setMargins(dp(15),0,dp(15),dp(13));root.addView(refresh,rp);
         refresh.setOnClickListener(v->fetch(false));
     }
+    private void updateSummary(){
+        if(status==null)return;
+        String term=filter==null?"":filter.getText().toString().trim();
+        int showing=adapter.getItemCount();
+        status.setText(term.isEmpty()?
+            avatars.size()+" favorites loaded":
+            showing+" matches from "+avatars.size()+" loaded favorites");
+    }
     private void fetch(boolean append){
         if(loading||!StaffGate.unlocked(this))return;
         loading=true;
+        if(more!=null)more.setEnabled(false);
+        if(refreshButton!=null)refreshButton.setEnabled(false);
         int next=append?offset:0;
         status.setText("Loading saved avatars...");
         worker.execute(()->{
@@ -86,19 +113,24 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
             JSONArray found=data;String issue=error;
             runOnUiThread(()->{
                 loading=false;
+                more.setEnabled(true);
+                refreshButton.setEnabled(true);
                 if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
                 if(found==null){
                     status.setText("Couldn't load avatars: "+issue);return;
                 }
                 if(!append){avatars.clear();offset=0;}
+                java.util.HashSet<String> ids=new java.util.HashSet<>();
+                for(JSONObject old:avatars)ids.add(old.optString("id",""));
                 for(int i=0;i<found.length();i++){
                     JSONObject avatar=found.optJSONObject(i);
-                    if(avatar!=null)avatars.add(avatar);
+                    if(avatar==null)continue;
+                    String id=avatar.optString("id","");
+                    if(!id.isEmpty()&&ids.add(id))avatars.add(avatar);
                 }
                 offset+=found.length();
-                adapter.notifyDataSetChanged();
-                status.setText(avatars.size()+" favorite avatars"+
-                    (avatars.size()==0?" — nothing saved yet":""));
+                adapter.rebuild();
+                updateSummary();
                 more.setVisibility(found.length()==60?View.VISIBLE:View.GONE);
             });
         });
@@ -132,7 +164,7 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
                     })
                     .setPositiveButton("Use this avatar",(d,w)->confirmSelection(id,name))
                     .show();
-                status.setText(avatars.size()+" favorite avatars");
+                updateSummary();
             });
         });
     }
@@ -160,6 +192,18 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
         }
     }
     private final class AvatarAdapter extends RecyclerView.Adapter<Holder>{
+        private final ArrayList<JSONObject> shown=new ArrayList<>();
+        void rebuild(){
+            shown.clear();
+            String search=filter==null?"":filter.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+            for(JSONObject item:avatars){
+                if(search.isEmpty()||
+                    item.optString("name","").toLowerCase(java.util.Locale.ROOT).contains(search)||
+                    item.optString("authorName","").toLowerCase(java.util.Locale.ROOT).contains(search))
+                    shown.add(item);
+            }
+            notifyDataSetChanged();
+        }
         @Override public Holder onCreateViewHolder(ViewGroup parent,int type){
             LinearLayout row=CompanionStyle.card(VRChatAvatarActivity.this);
             row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);
@@ -182,14 +226,14 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
             return new Holder(row,title,author,image);
         }
         @Override public void onBindViewHolder(Holder h,int position){
-            JSONObject item=avatars.get(position);
+            JSONObject item=shown.get(position);
             h.title.setText(item.optString("name","Avatar"));
             h.author.setText("By "+item.optString("authorName","Unknown creator"));
             CompanionImages.load(h.image,CompanionImages.preferred(item,
                 "thumbnailImageUrl","imageUrl"));
             h.itemView.setOnClickListener(v->inspect(item));
         }
-        @Override public int getItemCount(){return avatars.size();}
+        @Override public int getItemCount(){return shown.size();}
     }
     @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
 }
