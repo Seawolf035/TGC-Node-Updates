@@ -800,6 +800,11 @@ public final class FloatingCompanionService extends Service {
         }
     }
     private void showHome(){
+        section(panelContent,"TEXT CHAT");
+        LinearLayout chat=panelCard(panelContent);
+        action(chat,"Type & send to VRChat",true,()->go("mini_chat"));
+        chat.addView(text("Send through VRChat Mobile's local OSC chatbox — no Shizuku or broken in-game keyboard required.",
+            12,CompanionStyle.MUTED,false));
         section(panelContent,"TRACKING");
         LinearLayout node=panelCard(panelContent);
         nodeStatus=text("Checking tracking…",15,CompanionStyle.TEXT,true);
@@ -828,6 +833,9 @@ public final class FloatingCompanionService extends Service {
     }
     private LinearLayout recentRows;
     private void showSocial(){
+        section(panelContent,"IN-GAME COMMUNICATION");
+        LinearLayout chatting=panelCard(panelContent);
+        action(chatting,"Type & send VRChat chatbox text",true,()->go("mini_chat"));
         section(panelContent,"FRIENDS");
         LinearLayout friends=panelCard(panelContent);
         action(friends,"Friends & locations",true,()->go("mini_friends"));
@@ -848,6 +856,11 @@ public final class FloatingCompanionService extends Service {
         action(players,"My VRChat groups",false,()->go("mini_groups"));
     }
     private void showTools(){
+        section(panelContent,"TEXT CHAT");
+        LinearLayout chat=panelCard(panelContent);
+        action(chat,"In-game text chat",true,()->go("mini_chat"));
+        chat.addView(text("Type here and send to VRChat using local OSC. Enable OSC in the VRChat Action Menu first.",
+            12,CompanionStyle.MUTED,false));
         section(panelContent,"YOUR VRCHAT STATUS");
         LinearLayout statusCard=panelCard(panelContent);
         presenceActionLabel=text(presenceDescription,16,CompanionStyle.ACCENT,true);
