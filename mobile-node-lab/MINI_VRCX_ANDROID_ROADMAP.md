@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last signed and published release before the v0.16.1 maintenance pass: v0.16.0 (versionCode 27). v0.16.1 remains a development build until CI confirms signed publication. Verify repository/release state before future changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.16.1 (versionCode 28). v0.16.2 is a development update until the signed CI build succeeds. Verify repository status before continuing. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -37,6 +37,19 @@ Last signed and published release before the v0.16.1 maintenance pass: v0.16.0 (
 - Swipe left/right between Home, Explore, Tracking and Settings with a horizontal threshold that preserves ordinary vertical scrolling and button taps; bottom tabs stay present.
 - Simplify labels across the Home screen and floating tools; move infrastructure terms to Advanced diagnostics while preserving technical functionality.
 - Preserve previous v0.16 group browser functionality and verify in-place signing/updater continuity.
+
+### v0.16.2 — Local VRChat Log History + Clear Shizuku Explanation
+- Shizuku is **optional**, and only allows the existing Mobile Node watcher to read VRChat Mobile logs. Personal account features (friends, notifications, groups, avatars, worlds) do not need Shizuku or a VRChat Mobile installation.
+- The Node's existing Shizuku watcher now exposes a separate **local-only** stream of player join, player leave and observed world/instance changes. No additional privileged log reader or change to the Relay's join-only sightings payload.
+- The Companion uses locally saved activity for a VRCX-like **player list**, chronological **join/leave log**, searchable encounters and links to personal-account player profiles. Surface in the main Companion and the in-game overlay; clearly label that a watcher started mid-session may miss players already in the instance.
+- Versioned SQLite storage retains at most 5,000 local events / 30 days; preserve old events and unsent join sightings through migration.
+- User-facing Tracking explains the dual value of reading logs: the local activity tools and optional contribution of join sightings to the TGC network. Raw VRChat log files and personal session tokens are not uploaded.
+
+### Future — Quest Log Sources (research; not shipped)
+- Investigate whether Quest exposes usable VRChat Mobile logs and how permission boundaries differ from Android phone/Shizuku; **do not assume Shizuku works on Quest**.
+- Reuse the same on-device normalized event types (join, leave, instance) from a future Quest-compatible read-only provider; keep the player list, local history and Node/Relay policy independent of the source implementation.
+- Require real-device feasibility, permission, privacy, performance and update testing before advertising Quest player tracking.
+- Quest users may have different device requirements; personal VRChat account features remain conceptually separate from log tracking.
 
 ### v0.17 — Mobile Convenience and Reliability
 - Persistent Android notifications for supported invites/requests/activity, with battery-conscious refresh.
