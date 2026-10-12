@@ -27,7 +27,8 @@ import org.json.JSONObject;
 /** Staff-facing setup and tracking. Diagnostic details are hidden behind Advanced. */
 public class MobileDeployActivity extends Activity {
   private EditText setup;
-  private TextView status,technicalStatus;
+  private TextView status,technicalStatus,feedback;
+  private Button startControl,stopControl;
   private LinearLayout enrollment,advancedPane;
   private boolean advanced=false;
   private final Handler handler=new Handler(Looper.getMainLooper());
@@ -50,10 +51,11 @@ public class MobileDeployActivity extends Activity {
   private void spacer(LinearLayout l,int n){
     l.addView(new View(this),new LinearLayout.LayoutParams(1,dp(n)));
   }
-  private void action(LinearLayout root,String name,Runnable callback,boolean primary){
+  private Button action(LinearLayout root,String name,Runnable callback,boolean primary){
     Button b=CompanionStyle.button(this,name,primary);
     root.addView(b,CompanionStyle.buttonParams(this));
     b.setOnClickListener(v->callback.run());
+    return b;
   }
   @Override public void onCreate(Bundle state){
     super.onCreate(state);
@@ -100,9 +102,13 @@ public class MobileDeployActivity extends Activity {
     status=title("Checking tracking status...",14);
     status.setTextColor(CompanionStyle.TEXT);
     dashboard.addView(status);
+    spacer(dashboard,9);
+    feedback=title("",13);
+    feedback.setTextColor(CompanionStyle.ACCENT);
+    dashboard.addView(feedback);
     spacer(dashboard,14);
-    action(dashboard,"Start tracking",this::startNode,true);
-    action(dashboard,"Stop tracking",this::stopNode,false);
+    startControl=action(dashboard,"Start tracking",this::startNode,true);
+    stopControl=action(dashboard,"Stop tracking",this::stopNode,false);
     action(dashboard,"Refresh status",this::refresh,false);
 
     advancedPane=CompanionStyle.card(this);
@@ -127,7 +133,7 @@ public class MobileDeployActivity extends Activity {
     if(advanced)refresh();
   }
   private void showStatus(String message){
-    runOnUiThread(()->{if(status!=null)status.setText(message);});
+    runOnUiThread(()->{if(feedback!=null)feedback.setText(message);});
   }
   private void redeem(){
     final String raw=setup.getText().toString().trim();
@@ -219,6 +225,11 @@ public class MobileDeployActivity extends Activity {
           if(isFinishing()||isDestroyed())return;
           enrollment.setVisibility(r==null?View.VISIBLE:View.GONE);
           status.setText(general);
+          if(startControl!=null){
+            startControl.setEnabled(r!=null&&!online);
+            startControl.setText(online?"Tracking is running":"Start tracking");
+          }
+          if(stopControl!=null)stopControl.setEnabled(r!=null&&online);
           if(advanced)technicalStatus.setText(technical);
         });
       }catch(Exception e){showStatus("Status temporarily unavailable. Try refreshing.");}
