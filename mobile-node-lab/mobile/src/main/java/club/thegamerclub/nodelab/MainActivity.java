@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends Activity {
+public class MainActivity extends StaffProtectedActivity {
   private static final int PICK_LOG=41;
   private static final int BG=0xFF101827, SURFACE=0xFF1E2B3E, FG=0xFFE6EFF9, SUB=0xFFB6C5D8, CYAN=0xFF62D4EB;
   private final Handler main=new Handler(Looper.getMainLooper());
