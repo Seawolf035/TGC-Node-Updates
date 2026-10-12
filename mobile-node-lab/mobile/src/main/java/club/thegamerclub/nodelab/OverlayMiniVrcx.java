@@ -75,6 +75,7 @@ public final class OverlayMiniVrcx {
     private EditText search;
     private int limit=65;
     private String inboxFilter="all";
+    private String friendFilter="all";
     private long inboxLastChecked=0L;
     private boolean inboxPartial=false;
     private String inboxError="";
@@ -613,50 +614,78 @@ public final class OverlayMiniVrcx {
         button(list,"Activity feed",false,()->host.navigate("mini_activity"));
     }
     private void showFriends(){
+        chips(list,"All","Online","Offline",
+            ()->{friendFilter="all";limit=65;drawList();},
+            ()->{friendFilter="online";limit=65;drawList();},
+            ()->{friendFilter="offline";limit=65;drawList();});
         LinkedHashMap<String,ArrayList<JSONObject>> grouped=new LinkedHashMap<>();
-        int online=0;
+        int online=0,offline=0,matchingTotal=0;
         for(int i=0;i<loaded.length();i++){
             JSONObject f=loaded.optJSONObject(i);
             if(f==null)continue;
             boolean active=f.optBoolean("isOnline",false);
-            if(active)online++;
+            if(active)online++;else offline++;
+            String name=f.optString("displayName",f.optString("id",""));
             String loc=active?f.optString("location","unknown"):"Offline";
-            if(loc.isEmpty()||loc.equals("private")||loc.equals("unknown"))loc="Private / hidden";
+            if(loc.isEmpty()||loc.equals("private")||loc.equals("unknown"))
+                loc="Private / hidden";
+            if(!matches(name+" "+loc))continue;
+            if("online".equals(friendFilter)&&!active)continue;
+            if("offline".equals(friendFilter)&&active)continue;
+            matchingTotal++;
             if(!grouped.containsKey(loc))grouped.put(loc,new ArrayList<>());
             grouped.get(loc).add(f);
         }
-        list.addView(text(online+" online · "+loaded.length()+" total friends",
-            12,CompanionStyle.ACCENT,false));
+        list.addView(text(online+" online · "+offline+" offline · "+
+            matchingTotal+" matching",12,CompanionStyle.ACCENT,false));
         ArrayList<String> keys=new ArrayList<>(grouped.keySet());
         Collections.sort(keys,(a,b)->{
-            if("Offline".equals(a))return 1;if("Offline".equals(b))return -1;
+            if(a.equals(b))return 0;
+            if("Offline".equals(a))return 1;
+            if("Offline".equals(b))return -1;
             return Integer.compare(grouped.get(b).size(),grouped.get(a).size());
         });
         int shown=0;
         for(String key:keys){
-            ArrayList<JSONObject> group=grouped.get(key);
-            int matching=0;
-            for(JSONObject f:group)
-                if(matches(f.optString("displayName","")+" "+key))matching++;
-            if(matching==0)continue;
             if(shown>=limit)break;
-            LinearLayout c=card(list);
-            String heading=key.startsWith("wrld_")?"Instance: "+shortValue(key,42):key;
-            c.addView(text(heading+" · "+matching,13,CompanionStyle.ACCENT,true));
-            if(key.startsWith("wrld_")&&key.contains(":"))
-                button(c,"Instance info",false,()->location(key));
-            for(JSONObject f:group){
-                String id=f.optString("id","");
-                String name=f.optString("displayName",id);
-                if(!matches(name+" "+key))continue;
-                TextView row=text("› "+shortValue(name,48)+"  •  "+
-                    f.optString("status",""),13,CompanionStyle.TEXT,false);
-                row.setPadding(0,dp(7),0,dp(7));c.addView(row);
-                row.setOnClickListener(v->profile(id));
+            ArrayList<JSONObject> group=grouped.get(key);
+            if(group==null||group.isEmpty())continue;
+            LinearLayout card=card(list);
+            String heading=key.startsWith("wrld_")?
+                "Instance: "+shortValue(key,42):key;
+            card.addView(text(heading+" · "+group.size(),13,
+                CompanionStyle.ACCENT,true));
+            if(key.startsWith("wrld_")&&key.contains(":")){
+                button(card,"Instance details",false,()->location(key));
+                button(card,"Request invite to this instance",false,()->confirm(
+                    "Send yourself an invite to this visible instance?",
+                    ()->write(()->VRChatApi.selfInvite(ctx,key),
+                        "Invite requested")));
             }
-            shown++;
+            for(JSONObject f:group){
+                if(shown>=limit)break;
+                final String uid=f.optString("id","");
+                String name=f.optString("displayName",uid);
+                String message=f.optString("statusDescription","");
+                TextView entry=text("› "+shortValue(name,48)+
+                    "  •  "+VRChatPresenceIndicator.label(f.optString("status",""))+
+                    (message.isEmpty()?"":" · "+shortValue(message,55)),
+                    12,CompanionStyle.TEXT,false);
+                entry.setPadding(0,dp(8),0,dp(8));
+                card.addView(entry);
+                if(validUser(uid)){
+                    entry.setOnClickListener(v->profile(uid));
+                    entry.setContentDescription("View "+name+"'s VRChat profile");
+                }
+                shown++;
+            }
         }
-        if(shown==0)line(list,"No matching friends","Try another filter.",null);
+        if(matchingTotal==0)line(list,"No matching friends",
+            "Try another filter or check your VRChat account.",null);
+        if(matchingTotal>shown)
+            button(list,"Show more friends ("+(matchingTotal-shown)+" remaining)",
+                false,()->{limit+=65;drawList();});
+        button(list,"Refresh friends",false,this::load);
     }
     private void showLog(){
         int seen=0;
@@ -867,7 +896,7 @@ public final class OverlayMiniVrcx {
         if(!inboxError.isEmpty())line(list,
             inboxPartial?"Partial inbox":"Refresh unavailable",
             inboxError,null);
-        for(int i=0;i<Math.min(entries.length(),65);i++){
+        for(int i=0;i<Math.min(entries.length(),limit);i++){
             JSONObject n=entries.optJSONObject(i);if(n==null)continue;
             final boolean modern=n.optBoolean("_modern",false);
             final String id=n.optString("id",""),type=n.optString("type","");
@@ -901,6 +930,9 @@ public final class OverlayMiniVrcx {
         }
         if(entries.length()==0)line(list,"Inbox is empty",
             "Your personal account has no matching notifications.",null);
+        if(entries.length()>limit)
+            button(list,"Show more notifications ("+(entries.length()-limit)+
+                " remaining)",false,()->{limit+=40;drawList();});
     }
     private void showProfile(){
         String id=target;
