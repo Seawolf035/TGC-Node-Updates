@@ -25,8 +25,11 @@ public final class InboxRepository {
         public final boolean partial;
         public final String warning;
         public final long checkedAt;
-        Snapshot(JSONArray items,boolean partial,String warning,long checkedAt){
+        public final int legacyCount,modernCount;
+        Snapshot(JSONArray items,boolean partial,String warning,long checkedAt,
+                 int legacyCount,int modernCount){
             this.items=items;this.partial=partial;this.warning=warning;this.checkedAt=checkedAt;
+            this.legacyCount=legacyCount;this.modernCount=modernCount;
         }
     }
 
@@ -107,7 +110,8 @@ public final class InboxRepository {
         JSONArray result=new JSONArray();
         for(int i=0;i<Math.min(120,sorted.size());i++)result.put(sorted.get(i));
         return new Snapshot(result,legacy==null||modern==null,
-            warning==null?"":warning,System.currentTimeMillis());
+            warning==null?"":warning,System.currentTimeMillis(),
+            legacy==null?0:legacy.length(),modern==null?0:modern.length());
     }
     /** Return a fresh dual-inbox snapshot. A one-endpoint failure is marked partial. */
     public static Snapshot refresh(Context ctx)throws Exception{
