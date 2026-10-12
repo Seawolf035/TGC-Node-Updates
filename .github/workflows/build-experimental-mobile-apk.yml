@@ -71,6 +71,34 @@ jobs:
           TGC_ANDROID_KEY_ALIAS: ${{ env.SIGN_ALIAS }}
           TGC_ANDROID_KEY_PASSWORD: ${{ env.SIGN_KEY_PASS }}
         run: gradle :mobile:assembleRelease --no-daemon --stacktrace
+      - name: Verify permanent signing identity and upgrade compatibility
+        if: env.SIGN_KEY_B64 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          new=mobile-node-lab/mobile/build/outputs/apk/release/mobile-release.apk
+          old=mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk
+          signer="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$signer" verify --verbose "$new"
+          if [ -f "$old" ]; then
+            previous=$("$signer" verify --print-certs "$old" | sed -nE 's/^Signer #1 certificate SHA-256 digest: (.*)$/\1/p' | head -n1)
+            current=$("$signer" verify --print-certs "$new" | sed -nE 's/^Signer #1 certificate SHA-256 digest: (.*)$/\1/p' | head -n1)
+            test -n "$previous" && test -n "$current"
+            if [ "$previous" != "$current" ]; then
+              echo "::error::Signing certificate changed: refusing to publish an incompatible APK."
+              exit 1
+            fi
+            echo "Signed release certificate matches existing published APK."
+          fi
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+          current=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          code=int(re.search(r"versionCode\s+(\d+)",current).group(1))
+          published=json.loads(Path("mobile-node-lab/mobile-update.json").read_text())
+          assert code > int(published["version_code"]), "Release versionCode must increase"
+          print("Upgrade versionCode verified.")
+          PY
       - name: Upload diagnostic build
         uses: actions/upload-artifact@v4
         with:
@@ -109,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "UX refinements: searchable and deduplicated avatar favorites, profile actions moved to the top, simpler non-duplicated home shortcuts, plus the v0.13.0 inbox, search, status and tracking improvements."
+            "notes": "v0.14.0: Friends Locations, persistent searchable Friend Log, combined activity feed, optional Mini VRCX floating bubble, and local Mobile Node log history."
           }
           JSON
           fi
