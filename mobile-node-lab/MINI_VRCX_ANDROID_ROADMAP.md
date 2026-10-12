@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed published version before this pass: v0.16.3 (versionCode 30). v0.16.4 is under development until signed CI succeeds. Verify repository status before continuing. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.16.5 (versionCode 32). v0.17.0 is under development until the signed Android CI pipeline succeeds. Verify repository state before future changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -64,7 +64,21 @@ Last confirmed published version before this pass: v0.16.3 (versionCode 30). v0.
 - Float bubble dot reflects **personal VRChat presence**, not tracking: green Online, blue Join Me, yellow Ask Me, red Busy, gray Offline/unknown. Poll status conservatively using the existing personal VRChat account; keep Node tracking status in its own Home controls.
 - No new Shizuku reader, Node functionality, Relay changes, or Quest support claims. Validate real Cult invites and color changes on-device.
 
-### v0.17 — Mobile Convenience and Reliability
+### v0.16.5 — Community Name Cleanup
+- Display **The Gamer Club** and **Cult of Gamer Music** in the verification-code screens and floating tools instead of internal bot/version names, preserving unchanged TGC/CULT code formats.
+
+### v0.17.0 — Intuitive In-Game Status + More Discovery
+- Floating Status screen: one selected color-coded status choice, a 32-character message editor, one explicit Apply/Confirm step, current status preview and immediate status-dot refresh on server success.
+- Reuse the full Companion's existing account-specific VRChat status presets from inside the floating panel. Load or save a preset locally without switching applications; applying to VRChat remains a separate confirmed action.
+- **Find anything** within the overlay: searchable VRChat people, worlds and locally encountered players, using request-driven server searches and local offline lookups.
+- **Recent worlds** from the personal VRChat account, plus **Your instance** from the existing local join/leave/instance log history (copyable location, observed-player count, world details and self-invite where permitted).
+- Keep routine actions within the overlay; preserve unchanged Node/Shizuku tracking and Relay submissions.
+
+### v0.17.x / v0.18 — Remaining Convenience and Reliability
+- Improved notification refresh, filters and deduplication, user-controlled overlay sizing and positioning, stronger caching and error recovery, status/search accessibility, and backup/export for device-local histories and presets.
+- Full-scale group management and advanced instance tools only after verifying VRChat authorization scopes and safe write workflows.
+
+
 - Persistent Android notifications for supported invites/requests/activity, with battery-conscious refresh.
 - Unified search across friends, players, groups, worlds, avatars and local history.
 - Import/export for local collections and history (exclude session credentials and secrets).
