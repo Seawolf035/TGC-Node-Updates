@@ -125,13 +125,16 @@ public final class CompanionActivity extends Activity {
         }
         gateWorker.execute(()->{
             String failed=null;
+            boolean denied=false;
             try{StaffGate.verifyOnline(this);}
             catch(Exception e){
+                denied=e instanceof SecurityException;
                 String message=e.getMessage();
                 failed=message==null?e.getClass().getSimpleName():
                     message.substring(0,Math.min(120,message.length()));
             }
             final String fail=failed;
+            final boolean hardDenial=denied;
             runOnUiThread(()->{
                 verifying=false;
                 if(isFinishing() || isDestroyed())return;
@@ -139,7 +142,9 @@ public final class CompanionActivity extends Activity {
                 // HTTP failure does NOT clear it until the bounded grace runs out.
                 if(!StaffGate.unlocked(this)){
                     locked(fail==null?"Staff deployment needs verification":
-                        "Staff verification unavailable: "+fail+"\nRetrying automatically. You do not need a new deployment link.");
+                        hardDenial?"Staff access denied: "+fail+"\nCheck your staff deployment with the owner.":
+                        "Staff verification temporarily unavailable: "+fail+
+                        "\nRetrying automatically. No redeployment is needed for a connection outage.");
                 }else if(!showingUnlocked){
                     renderUnlocked();
                 }else if(verificationNotice!=null){
