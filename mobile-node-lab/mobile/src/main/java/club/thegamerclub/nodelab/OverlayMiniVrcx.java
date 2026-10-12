@@ -11,6 +11,7 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -43,7 +44,22 @@ public final class OverlayMiniVrcx {
     private String screen="",target="",kind="";
     private String selectedGroupId="";
     private String avatarGroup="all";
+    private boolean avatarGroupsExpanded=false;
+    private String selectedAvatarId="";
+    private JSONObject selectedAvatarDetails;
+    private boolean selectedAvatarInfoLoading=false;
+    private int selectedAvatarInfoToken=0;
     private AvatarFavoritesRepository.Snapshot favoriteAvatarLists;
+    private JSONObject avatarOwnUser=new JSONObject();
+    private String avatarAccountId="";
+    private static final class AvatarLoad{
+        final AvatarFavoritesRepository.Snapshot favorites;
+        final JSONObject ownUser;
+        final String accountId;
+        AvatarLoad(AvatarFavoritesRepository.Snapshot data,JSONObject user,String account){
+            favorites=data;ownUser=user;accountId=account;
+        }
+    }
     private String searchKind="people";
     private String submittedSearch="";
     private String searchLoadingKind="";
@@ -399,21 +415,43 @@ public final class OverlayMiniVrcx {
                 execute(()->VRChatApi.getInstance(ctx,target),
                     result->{profile=(JSONObject)result;drawList();});break;
             case "mini_avatars":
-                execute(()->AvatarFavoritesRepository.fetch(ctx),
-                    result->{
-                        favoriteAvatarLists=(AvatarFavoritesRepository.Snapshot)result;
-                        if(!"all".equals(avatarGroup)){
-                            boolean found=false;
-                            for(int i=0;i<favoriteAvatarLists.groups.length();i++){
-                                JSONObject group=favoriteAvatarLists.groups.optJSONObject(i);
-                                if(group!=null&&avatarGroup.equals(group.optString("name",""))){
-                                    found=true;break;
-                                }
+                execute(()->{
+                    String account=VRChatSession.load(ctx).optString("userId","");
+                    AvatarFavoritesRepository.Snapshot data=
+                        AvatarFavoritesRepository.fetch(ctx);
+                    JSONObject own=new JSONObject();
+                    try{own=VRChatApi.currentUser(ctx);}
+                    catch(Exception ignored){
+                        // Favorite lists should still work if current-avatar
+                        // metadata is temporarily inaccessible.
+                    }
+                    return new AvatarLoad(data,own,account);
+                },result->{
+                    AvatarLoad data=(AvatarLoad)result;
+                    if(!data.accountId.equals(avatarAccountId)){
+                        selectedAvatarId="";
+                        selectedAvatarDetails=null;
+                        avatarGroup="all";
+                    }
+                    avatarAccountId=data.accountId;
+                    avatarOwnUser=data.ownUser;
+                    favoriteAvatarLists=data.favorites;
+                    if(!"all".equals(avatarGroup)){
+                        boolean found=false;
+                        for(int i=0;i<favoriteAvatarLists.groups.length();i++){
+                            JSONObject group=favoriteAvatarLists.groups.optJSONObject(i);
+                            if(group!=null&&avatarGroup.equals(group.optString("name",""))){
+                                found=true;break;
                             }
-                            if(!found)avatarGroup="all";
                         }
-                        drawList();
-                    });break;
+                        if(!found)avatarGroup="all";
+                    }
+                    if(!selectedAvatarId.isEmpty() &&
+                       findFavoriteAvatar(selectedAvatarId)==null){
+                        selectedAvatarId="";selectedAvatarDetails=null;
+                    }
+                    drawList();
+                });break;
             case "mini_groups":
                 execute(()->VRChatApi.groups(ctx),
                     result->{loaded=(JSONArray)result;drawList();});break;
