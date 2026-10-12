@@ -278,8 +278,7 @@ public final class CompanionActivity extends Activity {
             "Recent players","People you've met","◎",()->openBrowse("encounters"));
         twinActions(quick,"Avatars","Saved and extended","★",this::openAvatars,
             "My status","One-tap status presets","☼",this::openStatus);
-        twinActions(quick,"My status","Presets & presence","☼",this::openStatus,
-            "Avatar library","Favorites & more","★",this::openExtendedAvatars);
+
         page.addView(CompanionStyle.section(this,"DISCOVER"));
         LinearLayout discover=card();
         action(discover,"⌕","Find people","Search players by name",()->openBrowse("search_users"));
