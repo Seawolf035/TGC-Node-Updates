@@ -271,6 +271,8 @@ public final class CompanionActivity extends Activity {
         LinearLayout discover=card();
         action(discover,"⌕","Find people","Search players by name",()->openBrowse("search_users"));
         action(discover,"⌕","Find worlds","Browse and search worlds",()->openBrowse("search_worlds"));
+        action(discover,"★","Extended avatar favorites","More saved avatars • VRC+ only",this::openExtendedAvatars);
+        action(discover,"☼","Status & presets","Change your VRChat presence quickly",this::openStatus);
     }
     private void renderExplore(){
         headline("EXPLORE","Your VRChat","Everything you want to discover, without leaving the app.");
@@ -293,6 +295,7 @@ public final class CompanionActivity extends Activity {
         action(places,"⌕","Find worlds","Search for something new",()->openBrowse("search_worlds"));
         action(places,"◈","My groups","Your VRChat communities",()->openBrowse("groups"));
         action(places,"◉","Favorite avatars","View saved avatars and switch your avatar",this::openAvatars);
+        action(places,"★","Extended avatar favorites","Private categorized avatar collections • VRC+",this::openExtendedAvatars);
     }
     private void renderTracking(){
         headline("ACTIVITY","Player tracking","Capture encounters while you're exploring VRChat.");
@@ -331,6 +334,8 @@ public final class CompanionActivity extends Activity {
         action(account,"✉","Your inbox","Notifications and friend requests",()->openInbox("all"));
         action(account,"◉","Favorite avatars","Browse avatars saved to your VRChat account",this::openAvatars);
         action(account,"✎","Your VRChat notes","View and edit private notes",this::openNotes);
+        action(account,"☼","Status & presets","Edit your status and saved presets",this::openStatus);
+        action(account,"★","Extended avatar favorites","VRC+-only local avatar collections",this::openExtendedAvatars);
         page.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=card();
         action(app,"↓","Check for updates","Keep your Companion up to date",
@@ -360,6 +365,12 @@ public final class CompanionActivity extends Activity {
     private void openInbox(String filter){
         needsStaff(()->startActivity(new Intent(this,VRChatInboxActivity.class)
             .putExtra("filter",filter)));
+    }
+    private void openExtendedAvatars(){
+        needsStaff(()->startActivity(new Intent(this,ExtendedAvatarActivity.class)));
+    }
+    private void openStatus(){
+        needsStaff(()->startActivity(new Intent(this,PresenceActivity.class)));
     }
     private void openAvatars(){
         needsStaff(()->startActivity(new Intent(this,VRChatAvatarActivity.class)));
