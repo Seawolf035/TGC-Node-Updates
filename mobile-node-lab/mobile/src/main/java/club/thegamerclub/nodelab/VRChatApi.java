@@ -16,7 +16,7 @@ import java.util.Locale;
 /** Personal-account VRChat API client: sessions NEVER go through the TGC relay. */
 public final class VRChatApi {
     private static final String API="https://api.vrchat.cloud/api/1";
-    private static final String AGENT="TGC-Staff-Companion/0.7.0 (Android VRChat companion)";
+    private static final String AGENT="TGC-Staff-Companion/0.9.1 (Android VRChat companion)";
     private VRChatApi(){}
 
     private static final class Response {
@@ -185,6 +185,64 @@ public final class VRChatApi {
     public static JSONObject getUser(Context context,String id)throws Exception{
         requireId("user",id);
         return request("GET","/users/"+id,cookie(validSession(context)),null,null).object();
+    }
+    /**
+     * VRChat's modern profile endpoint contains the displayed banner, profile
+     * image and bio. /users/{id} can return a limited user and must NOT be the
+     * only source for the Companion profile page.
+     *
+     * The authenticated user's own /auth/user is also consulted for safe
+     * presence fields. The account response is never logged or persisted.
+     */
+    public static JSONObject getUserProfile(Context context,String id)throws Exception{
+        requireId("user",id);
+        JSONObject session=validSession(context);
+        boolean own=id.equals(session.optString("userId",""));
+        String cookies=cookie(session);
+        JSONObject profile=null,base=null;
+        Exception profileError=null;
+        try{
+            String path="/profile/"+id+"?withGroupsAndWorlds=true"+(own?"&asSelf=true":"");
+            profile=request("GET",path,cookies,null,null).object();
+        }catch(Exception ex){profileError=ex;}
+        try{
+            if(own){
+                // CurrentUser has fields that the ordinary get-user response
+                // omits, notably the owner's own full bio and status.
+                base=request("GET","/auth/user",cookies,null,null).object();
+            }else{
+                base=request("GET","/users/"+id,cookies,null,null).object();
+            }
+        }catch(Exception ex){
+            if(profile==null)throw profileError!=null?profileError:ex;
+        }
+        if(profile==null){
+            if(base==null)throw profileError!=null?profileError:
+                new IllegalStateException("Profile information unavailable");
+            return base;
+        }
+        // The profile response is authoritative for social presentation. Only
+        // supplement fields it lacks, without overwriting a real profile
+        // banner, icon or nonempty bio with avatar fallback fields.
+        if(base!=null){
+            for(String key:new String[]{
+                "status","statusDescription","location","date_joined",
+                "last_login","last_platform","isFriend","friendRequestStatus",
+                "username","dateJoined","lastActivity","userIcon",
+                "profilePicOverride","profilePicOverrideThumbnail",
+                "currentAvatarImageUrl","currentAvatarThumbnailImageUrl",
+                "pronouns","bio","bioLinks","displayName"
+            }){
+                if(!profile.has(key)||profile.isNull(key)||
+                   (profile.optString(key,"").isEmpty() &&
+                    !key.equals("isFriend") && !key.equals("friendRequestStatus"))){
+                    if(base.has(key)&&!base.isNull(key))profile.put(key,base.get(key));
+                }
+            }
+            // Never let a stale user's 'offline' override the signed-in
+            // account's explicitly present status.
+        }
+        return profile;
     }
     /** Groups publicly visible on another user's profile, subject to VRChat privacy. */
     public static JSONArray visibleUserGroups(Context context,String userId)throws Exception{
