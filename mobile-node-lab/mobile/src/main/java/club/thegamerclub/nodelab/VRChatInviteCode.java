@@ -122,7 +122,7 @@ public final class VRChatInviteCode {
         // VRCX reads the *complete location* from ref.details.worldId.
         // It is typically wrld_<uuid>:<instance>~private(...)~nonce(...),
         // not a bare world UUID plus a separate instanceId.
-        for(String field:new String[]{"worldId","worldId","location","instanceId","instanceLocation",
+        for(String field:new String[]{"worldId","location","instanceId","instanceLocation",
                 "targetLocation","worldInstance","joinLocation","link"}){
             String result=instanceLocation(o.optString(field,""));
             if(!result.isEmpty())return result;
