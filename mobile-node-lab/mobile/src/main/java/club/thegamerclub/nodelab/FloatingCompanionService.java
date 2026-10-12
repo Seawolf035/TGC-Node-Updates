@@ -406,6 +406,9 @@ public final class FloatingCompanionService extends Service {
                             dismissPanel();
                         }else togglePanel();
                         return true;
+                    case MotionEvent.ACTION_CANCEL:
+                        if(moved){snapBubbleToEdge();dismissPanel();}
+                        return true;
                     default:return true;
                 }
             }
@@ -518,6 +521,9 @@ public final class FloatingCompanionService extends Service {
         }
     }
     private void showOverlaySettings(){
+        action(panelContent,"‹ Back to tools",false,()->{
+            selectedTab="tools";buildTab();
+        });
         section(panelContent,"FLOATING PANEL SIZE");
         LinearLayout sizes=panelCard(panelContent);
         String selected=OverlayPreferences.size(this);
@@ -794,9 +800,7 @@ public final class FloatingCompanionService extends Service {
         section(panelContent,"YOUR PINNED TOOLS");
         LinearLayout quick=panelCard(panelContent);
         pinnedShortcuts(quick);
-        action(quick,"Customize shortcuts",false,()->{
-            selectedTab="tools";backStack.clear();buildTab();
-        });
+        action(quick,"Customize shortcuts",false,()->go("customize"));
     }
     private LinearLayout recentRows;
     private void showSocial(){
