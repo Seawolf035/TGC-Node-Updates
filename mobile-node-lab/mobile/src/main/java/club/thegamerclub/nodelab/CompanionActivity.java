@@ -345,18 +345,40 @@ public final class CompanionActivity extends Activity {
         compactQuickTile(row,glyphB,nameB,descB,clickB);
     }
     private void homeButtons(LinearLayout parent){
+        // Each status belongs to the action immediately beneath it.
+        // Using paired vertical columns prevents status/button mismatches
+        // across different screen sizes and font scaling.
         LinearLayout actions=new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.TOP);
         parent.addView(actions);
+
+        LinearLayout toolsColumn=stack();
+        LinearLayout.LayoutParams toolsWidth=new LinearLayout.LayoutParams(0,-2,1.4f);
+        toolsWidth.setMargins(0,0,dp(6),0);
+        actions.addView(toolsColumn,toolsWidth);
+        homeOverlayStatus=txt("○ Tools off",12,CompanionStyle.MUTED,false);
+        homeOverlayStatus.setGravity(Gravity.CENTER);
+        toolsColumn.addView(homeOverlayStatus);
+        space(toolsColumn,7);
         android.widget.Button overlay=CompanionStyle.button(this,"Show floating tools",true);
         homeOverlayButton=overlay;
         overlay.setTextSize(12);
-        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(43),1.4f);
-        left.setMargins(0,0,dp(6),0);actions.addView(overlay,left);
-        overlay.setOnClickListener(v->{toggleOverlay();main.postDelayed(this::updateHomeIndicators,650L);});
+        toolsColumn.addView(overlay,new LinearLayout.LayoutParams(-1,dp(43)));
+        overlay.setOnClickListener(v->{
+            toggleOverlay();
+            main.postDelayed(this::updateHomeIndicators,650L);
+        });
+
+        LinearLayout trackingColumn=stack();
+        actions.addView(trackingColumn,new LinearLayout.LayoutParams(0,-2,1f));
+        homeNodeLabel=txt("○ Checking tracking…",12,CompanionStyle.GOLD,true);
+        homeNodeLabel.setGravity(Gravity.CENTER);
+        trackingColumn.addView(homeNodeLabel);
+        space(trackingColumn,7);
         android.widget.Button controls=CompanionStyle.button(this,"Tracking",false);
         controls.setTextSize(12);
-        actions.addView(controls,new LinearLayout.LayoutParams(0,dp(43),1f));
+        trackingColumn.addView(controls,new LinearLayout.LayoutParams(-1,dp(43)));
         controls.setOnClickListener(v->needsStaff(
             ()->startActivity(new Intent(this,MobileDeployActivity.class))));
     }
@@ -372,18 +394,6 @@ public final class CompanionActivity extends Activity {
         LinearLayout hero=card();
         hero.setPadding(dp(14),dp(12),dp(14),dp(12));
         hero.setBackground(CompanionStyle.gradient(this,0xFF1A4159,0xFF15283E,17));
-        LinearLayout status=new LinearLayout(this);
-        status.setGravity(Gravity.CENTER_VERTICAL);
-        hero.addView(status);
-        homeNodeLabel=txt("○ Checking tracking…",13,CompanionStyle.GOLD,true);
-        status.addView(homeNodeLabel,new LinearLayout.LayoutParams(0,-2,1f));
-        homeOverlayStatus=txt("○ Tools off",12,CompanionStyle.MUTED,false);
-        homeOverlayStatus.setGravity(Gravity.END);
-        status.addView(homeOverlayStatus,new LinearLayout.LayoutParams(-2,-2));
-        verificationNotice=txt("Staff access verified",11,CompanionStyle.GOOD,false);
-        verificationNotice.setVisibility(View.GONE); // status is already visible in the app header
-        hero.addView(verificationNotice);
-        space(hero,10);
         homeButtons(hero);
 
         LinearLayout shortcutsHeading=new LinearLayout(this);
