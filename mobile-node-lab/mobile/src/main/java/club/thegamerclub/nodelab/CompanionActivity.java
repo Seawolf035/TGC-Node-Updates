@@ -259,6 +259,7 @@ public final class CompanionActivity extends Activity {
         verificationNotice=txt("Your staff access is up to date",13,CompanionStyle.MUTED,false);
         hero.addView(verificationNotice);space(hero,16);
         action(hero,"☺","Your VRChat profile","View your account and status",this::openMyProfile);
+        action(hero,"♢","Find verification invite","Read and copy the code from Gamer Music 3",this::openInviteCode);
         page.addView(CompanionStyle.section(this,"QUICK ACCESS"));
         LinearLayout quick=card();
         twinActions(quick,"Friends","See who's around","♧",()->openBrowse("friends_online"),
@@ -318,6 +319,7 @@ public final class CompanionActivity extends Activity {
             ()->needsStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
         action(account,"♜","Staff access","View your linked device",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
+        action(account,"♢","Verification invite code","Read your invite and copy its code",this::openInviteCode);
         page.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=card();
         action(app,"↓","Check for updates","Keep your Companion up to date",
@@ -343,6 +345,9 @@ public final class CompanionActivity extends Activity {
     }
     private void openBrowse(String mode){
         needsStaff(()->startActivity(new Intent(this,VRChatBrowseActivity.class).putExtra("mode",mode)));
+    }
+    private void openInviteCode(){
+        needsStaff(()->startActivity(new Intent(this,InviteCodeActivity.class)));
     }
     private void openMyProfile(){
         needsStaff(()->{
