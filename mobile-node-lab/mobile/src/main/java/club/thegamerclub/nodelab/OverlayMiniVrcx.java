@@ -171,10 +171,7 @@ public final class OverlayMiniVrcx {
             search.addTextChangedListener(new android.text.TextWatcher(){
                 public void beforeTextChanged(CharSequence x,int a,int c,int d){}
                 public void onTextChanged(CharSequence x,int start,int before,int count){
-                    if("mini_find".equals(screen)){
-                        if("local".equals(searchKind))load();
-                        else drawList();
-                    }else drawList();
+                    drawList();
                 }
                 public void afterTextChanged(android.text.Editable x){}
             });
@@ -1036,6 +1033,152 @@ public final class OverlayMiniVrcx {
             count++;
         }
         if(count==0)line(list,"No matching users","Try another search.",null);
+    }
+    private void loadGlobalSearch(){
+        if("local".equals(searchKind)){
+            submittedSearch="";
+            execute(()->{
+                try(MobileOutbox db=new MobileOutbox(ctx)){
+                    return db.recentEncounters(100);
+                }
+            },result->{loaded=(JSONArray)result;drawList();});
+            return;
+        }
+        String query=search==null?"":search.getText().toString().trim();
+        if(query.length()<2){
+            submittedSearch="";loaded=new JSONArray();
+            drawList();
+            return;
+        }
+        final String requestedKind=searchKind,requestedQuery=query;
+        submittedSearch=requestedQuery;
+        execute(()->"worlds".equals(requestedKind)?
+            VRChatApi.searchWorlds(ctx,requestedQuery):
+            VRChatApi.searchUsers(ctx,requestedQuery),result->{
+            if(!requestedKind.equals(searchKind))return;
+            loaded=(JSONArray)result;drawList();
+        });
+    }
+    private void showGlobalSearch(){
+        chips(list,"People","Worlds","Seen here",
+            ()->switchGlobalSearch("people"),
+            ()->switchGlobalSearch("worlds"),
+            ()->switchGlobalSearch("local"));
+        list.addView(text("Searching: "+
+            ("worlds".equals(searchKind)?"Worlds":
+             "local".equals(searchKind)?"Local encounters":"People"),
+            12,CompanionStyle.ACCENT,true));
+        if(!"local".equals(searchKind)){
+            if(term().length()<2){
+                line(list,"Enter a name",
+                    "Enter two or more characters above to search VRChat.",null);
+                return;
+            }
+            if(!submittedSearch.equals(search.getText().toString().trim())){
+                line(list,"Ready to search",
+                    "Tap Search below or the keyboard Search key.",null);
+                button(list,"Search "+("worlds".equals(searchKind)?"worlds":"people"),
+                    true,this::load);
+                return;
+            }
+        }
+        int shown=0;
+        for(int i=0;i<loaded.length()&&shown<65;i++){
+            JSONObject item=loaded.optJSONObject(i);if(item==null)continue;
+            String name,id,detail;
+            if("worlds".equals(searchKind)){
+                name=item.optString("name","World");
+                id=item.optString("id","");
+                if(!id.matches("wrld_[0-9a-fA-F-]{36}"))continue;
+                detail=shortValue(item.optString("description",""),110);
+                final String worldId=id;
+                line(list,name,detail,()->world(worldId));
+            }else{
+                id=item.optString("user_id",item.optString("id",""));
+                name=item.optString("display_name",item.optString("displayName",id));
+                if(!validUser(id))continue;
+                if("local".equals(searchKind)&&!matches(name+" "+id))continue;
+                detail="local".equals(searchKind)?
+                    ("Seen "+item.optInt("count",0)+" time(s) · "+
+                    item.optString("last_seen","")):
+                    item.optString("statusDescription",item.optString("status",""));
+                final String userId=id;
+                line(list,name,detail,()->profile(userId));
+            }
+            shown++;
+        }
+        if(shown==0)line(list,"No matches",
+            "Try a different search, or check another category.",null);
+    }
+    private void switchGlobalSearch(String kind){
+        if(kind.equals(searchKind))return;
+        searchKind=kind;
+        submittedSearch="";
+        loaded=new JSONArray();
+        if("local".equals(kind))loadGlobalSearch();
+        else drawList();
+    }
+    private void showRecentWorlds(){
+        int count=0;
+        for(int i=0;i<loaded.length()&&count<65;i++){
+            JSONObject e=loaded.optJSONObject(i);
+            if(e==null)continue;
+            String id=e.optString("id",""),name=e.optString("name","World");
+            if(!id.matches("wrld_[0-9a-fA-F-]{36}"))continue;
+            final String worldId=id;
+            line(list,name,shortValue(e.optString("description",""),100),
+                ()->world(worldId));
+            count++;
+        }
+        if(count==0)line(list,"No recent worlds",
+            "Recent worlds appear here if VRChat makes them available to your account.",null);
+        button(list,"Find another world",false,()->{
+            searchKind="worlds";submittedSearch="";host.navigate("mini_find");
+        });
+    }
+    private void showCurrentInstance(){
+        JSONArray logs=profile.optJSONArray("events");
+        JSONArray present=profile.optJSONArray("players");
+        if(logs==null)logs=new JSONArray();
+        if(present==null)present=new JSONArray();
+        JSONObject recent=null;
+        for(int i=0;i<logs.length();i++){
+            JSONObject e=logs.optJSONObject(i);
+            if(e!=null&&"instance".equals(e.optString("kind",""))){
+                recent=e;break;
+            }
+        }
+        android.content.SharedPreferences state=
+            ctx.getSharedPreferences("tgc_mobile_node_status",0);
+        boolean active=state.getBoolean("running",false)&&
+            System.currentTimeMillis()-state.getLong("service_heartbeat_at",0L)<90_000L;
+        LinearLayout c=card(list);
+        String location=recent==null?"":recent.optString("location","");
+        long at=recent==null?0:recent.optLong("time",0);
+        c.addView(text("Last detected instance",16,CompanionStyle.TEXT,true));
+        if(location.isEmpty()){
+            c.addView(text("No world or instance detected in recent VRChat Mobile logs.",
+                12,CompanionStyle.MUTED,false));
+        }else{
+            c.addView(text(shortValue(location,180),12,CompanionStyle.ACCENT,false));
+            c.addView(text("Observed "+date(at),12,CompanionStyle.MUTED,false));
+            button(c,"Copy location",false,()->copy("instance",location));
+            if(location.startsWith("wrld_")&&location.contains(":")){
+                String worldId=location.split(":",2)[0];
+                button(c,"World details",false,()->world(worldId));
+                button(c,"Request an invite to this instance",false,
+                    ()->confirm("Request an invite to the last detected instance?",
+                        ()->write(()->VRChatApi.selfInvite(ctx,location),"Invite requested")));
+            }
+        }
+        c.addView(text(active?
+            "Tracking active · "+present.length()+" players observed since monitoring started":
+            "Tracking paused · player list may be out of date",
+            12,active?CompanionStyle.GOOD:CompanionStyle.GOLD,false));
+        c.addView(text("This is based on the latest local logs, not a guaranteed live or complete VRChat instance roster.",
+            11,CompanionStyle.MUTED,false));
+        button(c,"Observed player list",true,()->host.navigate("mini_current"));
+        button(c,"Join & leave history",false,()->host.navigate("mini_joins"));
     }
     private void showPresence(){
         LinearLayout c=card(list);
