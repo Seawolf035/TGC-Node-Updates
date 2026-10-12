@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.17.3",
-  "version_code": 36,
+  "version": "0.17.4",
+  "version_code": 37,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "f6871b6904a4d7d9b9154e928f0e5f519924399994ba892aeac415ef5efa0781",
-  "notes": "v0.17.3: Floating panel compact/standard/expanded sizes, 1-6 reorderable pinned Home shortcuts, edge snapping, rotation-safe positioning, optional staff-gated foreground-service recovery, battery-conscious VRChat polling and Background Health diagnostics. Tracking/Relay and opt-in inbox alerts remain independent."
+  "sha256": "b8af47d1d1123253cc4bf72d64fc968f9ebfa2213a8b30ea677e9c87d741e665",
+  "notes": "v0.17.4: Load every server-provided VRChat favorite avatar list, including named/VRC+ group contents, with group selectors in app and floating tools, deduplicated All view, partial-load warnings and legacy fallback. Optional Tracking setup adds official Shizuku download and setup guide links."
 }
