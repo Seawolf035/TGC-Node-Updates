@@ -61,6 +61,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);
         page.setPadding(dp(18),dp(20),dp(18),dp(27));
         scroll.addView(page);setContentView(scroll);
+        CompanionStyle.safeArea(this,scroll);
         Button back=CompanionStyle.button(this,"← Explore",false);
         page.addView(back,new LinearLayout.LayoutParams(dp(122),dp(44)));
         back.setOnClickListener(v->finish());
