@@ -683,8 +683,8 @@ public final class OverlayMiniVrcx {
         heading.addView(text(cult?"Gamer Music 2 · Cult":"Gamer Music 3 · TGC",
             16,CompanionStyle.TEXT,true));
         heading.addView(text(cult?
-            "Start Cult verification in Discord. This screen looks for a CULT-XXXX-XXXX code in your recent private VRChat invite.":
-            "Start verification in Discord. This screen looks for your TGC-XXXX-XXXX code in the private VRChat invite.",
+            "Start Cult verification in Gamer Music 2's Discord first. The floating tools read the resulting private VRChat invite so you can copy the CULT-XXXX-XXXX code back to Discord.":
+            "Start verification in Gamer Music 3's Discord first. The floating tools read the private VRChat invite so you can copy the TGC-XXXX-XXXX code back to Discord.",
             12,CompanionStyle.MUTED,false));
         VRChatInviteCode.Result found=verificationResult;
         if(found==null){
@@ -701,14 +701,14 @@ public final class OverlayMiniVrcx {
             button(heading,"Copy "+(cult?"Cult":"TGC")+" code",true,
                 ()->copy(cult?"Cult verification code":"TGC verification code",code));
             heading.addView(text(cult?
-                "Enter this code into the Gamer Music 2 verification prompt in Discord. Gamer Music 2 controls code expiration.":
-                "Enter this code into Gamer Music 3's verification prompt in Discord. TGC codes expire about 10 minutes after creation.",
+                "Copy and paste this code into your existing Gamer Music 2 Discord verification prompt. Cult controls its expiration.":
+                "Copy and paste this code into your existing Gamer Music 3 Discord verification prompt. TGC codes expire after about 10 minutes.",
                 12,CompanionStyle.MUTED,false));
         }else{
             heading.addView(text(found.message,13,CompanionStyle.GOLD,false));
         }
         heading.addView(text(
-            "This only reads your invitation; it does not verify your account or send anything to Discord.",
+            "Verification starts and finishes in Discord. This tool only reads and copies your invite code; it cannot submit it to Discord.",
             11,CompanionStyle.MUTED,false));
     }
     private void selectVerification(String provider){
