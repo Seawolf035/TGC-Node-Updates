@@ -92,7 +92,7 @@ public final class VRChatInviteCode {
     }
     private static String matchCode(JSONObject o,int depth){
         if(o==null||depth>3)return "";
-        for(String key:new String[]{"displayName","instanceName","name","message","inviteMessage","title"}){
+        for(String key:new String[]{"displayName","instanceName","name","message","inviteMessage","title","worldName"}){
             String found=code(o.optString(key,""));
             if(!found.isEmpty())return found;
         }
