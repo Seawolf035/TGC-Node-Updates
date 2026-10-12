@@ -24,6 +24,17 @@ import java.util.concurrent.Executors;
  */
 public final class CompanionActivity extends Activity {
     private final ExecutorService gateWorker=Executors.newSingleThreadExecutor();
+    private final ExecutorService homeWorker=Executors.newSingleThreadExecutor();
+    private boolean homeLoading=false;
+    private TextView homeNodeLabel,homeOverlayLabel,homeCaptureLabel,homeQueueLabel,homeFriendsLabel,homeRecentLabel;
+    private final Runnable refreshHome=new Runnable(){
+        @Override public void run(){
+            if(!isFinishing()&&!isDestroyed()&&showingUnlocked&&"home".equals(tab)){
+                updateHomeIndicators();loadHomeHistory();
+                main.postDelayed(this,18_000L);
+            }
+        }
+    };
     private final Handler main=new Handler(Looper.getMainLooper());
     private boolean verifying=false,showingUnlocked=false,advanced=false;
     private TextView verificationNotice;
@@ -167,13 +178,18 @@ public final class CompanionActivity extends Activity {
         main.removeCallbacks(refreshGate);
         revalidate();
         main.postDelayed(refreshGate,90_000L);
+        main.removeCallbacks(refreshHome);
+        main.postDelayed(refreshHome,2_000L);
     }
     @Override protected void onPause(){
+        main.removeCallbacks(refreshHome);
         main.removeCallbacks(refreshGate);
         super.onPause();
     }
     @Override protected void onDestroy(){
-        main.removeCallbacks(refreshGate);gateWorker.shutdownNow();super.onDestroy();
+        main.removeCallbacks(refreshGate);
+        main.removeCallbacks(refreshHome);
+        gateWorker.shutdownNow();homeWorker.shutdownNow();super.onDestroy();
     }
     private void locked(String reason){
         showingUnlocked=false;verificationNotice=null;
@@ -248,49 +264,165 @@ public final class CompanionActivity extends Activity {
             return name.isEmpty()?"Welcome back":"Hey, "+name;
         }catch(Exception e){return "Welcome back";}
     }
+    private void metric(LinearLayout parent,String name,String initial,String symbol,int color,
+                        java.util.function.Consumer<TextView> sink){
+        LinearLayout cell=stack();
+        cell.setPadding(dp(13),dp(13),dp(12),dp(14));
+        cell.setBackground(CompanionStyle.shape(this,CompanionStyle.SURFACE,15,CompanionStyle.BORDER));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(110),1f);
+        lp.setMargins(dp(3),0,dp(3),0);parent.addView(cell,lp);
+        cell.addView(txt(symbol,16,color,true));
+        space(cell,6);
+        TextView value=txt(initial,19,CompanionStyle.TEXT,true);
+        value.setSingleLine(true);
+        value.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        cell.addView(value);
+        space(cell,3);
+        TextView label=txt(name,11,CompanionStyle.MUTED,false);
+        label.setMaxLines(2);
+        cell.addView(label);
+        sink.accept(value);
+    }
+    private void homeButtons(LinearLayout parent){
+        LinearLayout actions=new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        parent.addView(actions);
+        android.widget.Button overlay=CompanionStyle.button(this,"Open floating Mini VRCX",true);
+        overlay.setTextSize(12);
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(53),1.45f);
+        left.setMargins(0,0,dp(6),0);actions.addView(overlay,left);
+        overlay.setOnClickListener(v->{toggleOverlay();main.postDelayed(this::updateHomeIndicators,650L);});
+        android.widget.Button controls=CompanionStyle.button(this,"Tracking controls",false);
+        controls.setTextSize(12);
+        actions.addView(controls,new LinearLayout.LayoutParams(0,dp(53),1f));
+        controls.setOnClickListener(v->needsStaff(
+            ()->startActivity(new Intent(this,MobileDeployActivity.class))));
+    }
     private void renderHome(){
-        headline("YOUR SPACE",displayName()+".","Your friends, worlds, and community—all in one place.");
+        headline("YOUR COMMAND CENTER",displayName()+".",
+            "Everything you need for VRChat and TGC in one place.");
         LinearLayout hero=card();
-        hero.setBackground(CompanionStyle.gradient(this,0xFF1B445A,0xFF18283D,19));
-        TextView tag=CompanionStyle.chip(this,"● STAFF VERIFIED",CompanionStyle.GOOD,0xFF193E3C);
-        hero.addView(tag);space(hero,15);
-        android.content.SharedPreferences live=getSharedPreferences("tgc_mobile_node_status",0);
-        long lastPulse=live.getLong("service_heartbeat_at",0L);
-        boolean trackingLive=live.getBoolean("running",false) && lastPulse>0L &&
-            System.currentTimeMillis()-lastPulse<90_000L;
-        hero.addView(CompanionStyle.chip(this,
-            trackingLive?"◉ Player tracking running":"○ Player tracking not running",
-            trackingLive?CompanionStyle.GOOD:CompanionStyle.GOLD,
-            trackingLive?0xFF173B37:0xFF433825));
-        space(hero,15);
-        hero.addView(txt("Ready when you are.",21,CompanionStyle.TEXT,true));
+        hero.setBackground(CompanionStyle.gradient(this,0xFF1A4159,0xFF15283E,20));
+        hero.addView(CompanionStyle.chip(this,"● VERIFIED TGC STAFF",CompanionStyle.GOOD,0xFF173C3A));
+        space(hero,14);
+        hero.addView(txt("Mobile Companion",22,CompanionStyle.TEXT,true));
+        space(hero,4);
+        hero.addView(txt("Keep playing. Stay connected. Manage everything from your phone.",
+            13,CompanionStyle.MUTED,false));
+        space(hero,13);
+        homeNodeLabel=txt("Checking player tracking…",14,CompanionStyle.GOLD,true);
+        hero.addView(homeNodeLabel);
         space(hero,5);
-        verificationNotice=txt("Your staff access is up to date",13,CompanionStyle.MUTED,false);
-        hero.addView(verificationNotice);space(hero,16);
-        action(hero,"☺","Your VRChat profile","View your account and status",this::openMyProfile);
-        action(hero,"♢","Find verification invite","Read and copy the code from Gamer Music 3",this::openInviteCode);
-        action(hero,"✉","Your inbox","Invites, friend requests and notifications",()->openInbox("all"));
+        homeOverlayLabel=txt("Checking floating overlay…",12,CompanionStyle.MUTED,false);
+        hero.addView(homeOverlayLabel);
+        space(hero,7);
+        verificationNotice=txt("Staff access verified",12,CompanionStyle.GOOD,false);
+        hero.addView(verificationNotice);
+        space(hero,17);
+        homeButtons(hero);
+
+        page.addView(CompanionStyle.section(this,"AT A GLANCE"));
+        LinearLayout statsRow=stack();page.addView(statsRow);
+        LinearLayout top=new LinearLayout(this);statsRow.addView(top);
+        metric(top,"Players recorded","—","◎",CompanionStyle.ACCENT,t->homeCaptureLabel=t);
+        metric(top,"Waiting to sync","—","↗",CompanionStyle.GOLD,t->homeQueueLabel=t);
+        space(statsRow,7);
+        LinearLayout bottom=new LinearLayout(this);statsRow.addView(bottom);
+        metric(bottom,"Online friends","—","♧",CompanionStyle.ACCENT,t->homeFriendsLabel=t);
+        metric(bottom,"Floating overlay","—","◉",CompanionStyle.GOOD,t->homeOverlayLabel=t);
+
         page.addView(CompanionStyle.section(this,"QUICK ACCESS"));
         LinearLayout quick=card();
-        twinActions(quick,"Friends","See who's around","♧",()->openBrowse("friends_online"),
-            "Worlds","Find somewhere to go","◇",()->openBrowse("worlds"));
-        twinActions(quick,"Groups","Your communities","◈",()->openBrowse("groups"),
-            "Recent players","People you've met","◎",()->openBrowse("encounters"));
-        twinActions(quick,"Avatars","Saved and extended","★",this::openAvatars,
-            "My status","One-tap status presets","☼",this::openStatus);
+        twinActions(quick,"Friends","See who's online","♧",()->openFriendHub("locations"),
+            "Player Log","Recent encounters","◎",()->openBrowse("encounters"));
+        twinActions(quick,"Your inbox","Invites & requests","✉",()->openInbox("all"),
+            "Your profile","Status & account","☺",this::openMyProfile);
+        twinActions(quick,"Favorite worlds","Explore places","◇",()->openBrowse("worlds"),
+            "Favorite avatars","Your collection","★",this::openAvatars);
 
-        page.addView(CompanionStyle.section(this,"FRIENDS & LIVE TOOLS"));
-        LinearLayout social=card();
-        action(social,"♧","Friends Locations","See which friends are together",()->openFriendHub("locations"));
-        action(social,"◷","Friend Log","Your recorded online, offline, world and status changes",()->openFriendHub("log"));
-        action(social,"↗","Activity Feed","Recent friend changes and player encounters",()->openFriendHub("activity"));
-        action(social,"◉","Floating Mini VRCX","Toggle the chat-bubble overlay for VRChat Mobile",this::toggleOverlay);
-        page.addView(CompanionStyle.section(this,"DISCOVER"));
-        LinearLayout discover=card();
-        action(discover,"⌕","Find people","Search players by name",()->openBrowse("search_users"));
-        action(discover,"⌕","Find worlds","Browse and search worlds",()->openBrowse("search_worlds"));
-        action(discover,"★","Extended avatar favorites","More saved avatars • VRC+ only",this::openExtendedAvatars);
-        action(discover,"☼","Status & presets","Change your VRChat presence quickly",this::openStatus);
+        page.addView(CompanionStyle.section(this,"LATEST ACTIVITY"));
+        LinearLayout recent=card();
+        homeRecentLabel=txt("Loading recent locally captured players…",12,CompanionStyle.MUTED,false);
+        recent.addView(homeRecentLabel);
+        space(recent,8);
+        action(recent,"↗","Open activity feed","Friend changes and recent encounters",
+            ()->openFriendHub("activity"));
+
+        page.addView(CompanionStyle.section(this,"STAFF ESSENTIALS"));
+        LinearLayout essentials=card();
+        action(essentials,"◷","Friend Log","Online, offline and world history",
+            ()->openFriendHub("log"));
+        action(essentials,"◈","Group tools","Groups, members and instance information",
+            ()->openBrowse("groups"));
+        action(essentials,"♢","Verification invite","Find your Gamer Music 3 verification code",
+            this::openInviteCode);
+        action(essentials,"⌕","Search VRChat","Find players without needing a computer",
+            ()->openBrowse("search_users"));
+        updateHomeIndicators();
+        loadHomeHistory();
+    }
+    private boolean homeVisible(){
+        return showingUnlocked&&"home".equals(tab)&&StaffGate.unlocked(this);
+    }
+    private void updateHomeIndicators(){
+        if(!homeVisible())return;
+        android.content.SharedPreferences node=getSharedPreferences("tgc_mobile_node_status",0);
+        boolean running=node.getBoolean("running",false)&&
+            System.currentTimeMillis()-node.getLong("service_heartbeat_at",0L)<90_000L;
+        android.content.SharedPreferences overlay=getSharedPreferences("tgc_overlay",0);
+        boolean overlayRunning=overlay.getBoolean("running",false)&&
+            System.currentTimeMillis()-overlay.getLong("service_heartbeat_at",0L)<35_000L;
+        if(homeNodeLabel!=null){
+            homeNodeLabel.setText(running?"● Player tracking is running":"○ Player tracking is paused");
+            homeNodeLabel.setTextColor(running?CompanionStyle.GOOD:CompanionStyle.GOLD);
+        }
+        if(homeCaptureLabel!=null)
+            homeCaptureLabel.setText(Integer.toString(node.getInt("captured_total",0)));
+        if(homeOverlayLabel!=null)
+            homeOverlayLabel.setText(overlayRunning?"ON":"OFF");
+    }
+    private void loadHomeHistory(){
+        if(!homeVisible()||homeLoading)return;
+        homeLoading=true;
+        homeWorker.execute(()->{
+            int queue=-1,online=-1;
+            String last="No player encounters recorded yet.";
+            try(MobileOutbox box=new MobileOutbox(this)){
+                queue=box.count();
+                org.json.JSONArray events=box.recentTrackedEvents(3);
+                StringBuilder names=new StringBuilder();
+                for(int i=0;i<events.length();i++){
+                    JSONObject e=events.optJSONObject(i);
+                    if(e==null)continue;
+                    String name=e.optString("display_name","");
+                    if(name.isEmpty())name=e.optString("user_id","Unknown player");
+                    if(names.length()>0)names.append("  ·  ");
+                    names.append(name.length()>30?name.substring(0,29)+"…":name);
+                }
+                if(names.length()>0)last=names.toString();
+            }catch(Exception ignored){}
+            try{
+                JSONObject session=VRChatSession.load(this);
+                JSONObject snap=FriendLogStore.snapshot(this,session);
+                online=0;
+                java.util.Iterator<String> ids=snap.keys();
+                while(ids.hasNext()){
+                    JSONObject f=snap.optJSONObject(ids.next());
+                    if(f!=null&&f.optBoolean("online",false))online++;
+                }
+            }catch(Exception ignored){}
+            final int pending=queue,friends=online;
+            final String recent=last;
+            runOnUiThread(()->{
+                homeLoading=false;
+                if(!homeVisible()||isFinishing()||isDestroyed())return;
+                if(homeQueueLabel!=null)homeQueueLabel.setText(
+                    pending<0?"—":Integer.toString(pending));
+                if(homeFriendsLabel!=null)homeFriendsLabel.setText(
+                    friends<0?"—":Integer.toString(friends));
+                if(homeRecentLabel!=null)homeRecentLabel.setText(recent);
+            });
+        });
     }
     private void renderExplore(){
         headline("EXPLORE","Your VRChat","Everything you want to discover, without leaving the app.");
