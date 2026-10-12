@@ -15,7 +15,7 @@ import android.widget.TextView;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** One job: read an already received TGC verification invite and copy its code. */
+/** Read previously requested TGC or Cult VRChat invites; verification starts and ends in Discord. */
 public final class InviteCodeActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -152,12 +152,12 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
         gm3Tab.setEnabled(cult);
         cultTab.setEnabled(!cult);
         intro.setText(cult?
-            "Start Cult verification in Gamer Music 2's Discord. When its private VRChat invite arrives, the CULT-XXXX-XXXX code can appear here.":
-            "Start verification in Gamer Music 3's Discord. When the private VRChat invite arrives, your TGC code appears here.");
+            "Start the verification in Gamer Music 2's Discord first. The Companion then reads your private VRChat invite so you can copy the CULT-XXXX-XXXX code back to Discord.":
+            "Start verification in Gamer Music 3's Discord first. The Companion reads the resulting private VRChat invite so you can copy the TGC code back to Discord.");
         helpText.setText(cult?
             "1. Start the normal Cult verification in Discord.\n"+
             "2. Receive the private invite from Gamer Music 2.\n"+
-            "3. Copy the CULT-XXXX-XXXX code and enter it into the Cult verification prompt.":
+            "3. Copy the CULT-XXXX-XXXX code and paste it into the same Discord verification prompt.":
             "1. Start your normal verification in Discord.\n"+
             "2. Receive the invite sent by Gamer Music 3.\n"+
             "3. Copy the TGC-XXXX-XXXX code and paste it into Discord.");
@@ -219,7 +219,7 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
                     status.setText(("cult".equals(provider)?"Cult":"TGC")+" verification invite found!");
                     copy.setEnabled(true);
                     meta.setText("cult".equals(provider)?
-                        "Enter this code into Gamer Music 2's Cult verification prompt. Its expiration is controlled by the Cult system.":
+                        "Copy the code and paste it into the existing Gamer Music 2 Discord verification prompt. The Cult system controls expiration.":
                         "This code is single-use and expires about 10 minutes after the invite was generated.");
                 }else{
                     code="";
@@ -240,7 +240,7 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
         ClipboardManager mgr=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         if(mgr!=null)mgr.setPrimaryClip(ClipData.newPlainText(
             "cult".equals(provider)?"Cult verification code":"TGC verification code",code));
-        status.setText("Copied. Paste the code into your existing verification prompt in Discord.");
+        status.setText("Copied! Paste it into the same verification prompt you started in Discord. The Companion does not submit the code.");
     }
     @Override protected void onDestroy(){
         active=false;
