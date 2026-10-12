@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.16.5: Verification code screens and floating tools now display The Gamer Club and Cult of Gamer Music as community names. Both TGC/CULT code formats, automatic scanning, and VRChat presence colors are unchanged."
+            "notes": "v0.17.0: New in-overlay VRChat presence picker with color-coded choices, single Apply action, message edit, shared saved presets and instant dot update; search people, worlds and locally seen players; recent worlds and detected instance view. Existing Node and verification flows preserved."
           }
           JSON
           fi
