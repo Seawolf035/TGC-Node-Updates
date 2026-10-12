@@ -12,6 +12,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ImageView;
+import android.text.InputType;
+import android.text.InputFilter;
 import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -95,6 +97,10 @@ public final class OverlayMiniVrcx {
         }
     };
     private boolean canType=false;
+    private String chatDraft="";
+    private String chatNotice="";
+    private boolean chatSound=true;
+    private boolean chatSending=false;
     private String pending="";
     private Runnable pendingAction;
     private final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
@@ -171,7 +177,8 @@ public final class OverlayMiniVrcx {
         TextView heading=text(title(),18,CompanionStyle.TEXT,true);
         heading.setPadding(dp(9),0,0,0);
         bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-        if(!"mini_profile".equals(screen)&&!"mini_note".equals(screen)){
+        if(!"mini_profile".equals(screen)&&!"mini_note".equals(screen)&&
+           !"mini_chat".equals(screen)){
             Button refresh=CompanionStyle.button(ctx,"↻",false);
             bar.addView(refresh,new LinearLayout.LayoutParams(dp(40),dp(40)));
             refresh.setOnClickListener(v->{if(search!=null)search.clearFocus();host.keyboard(false);load();});
@@ -240,6 +247,7 @@ public final class OverlayMiniVrcx {
             case "mini_profile":return "Player profile";
             case "mini_worlds":return "Saved worlds";
             case "mini_avatars":return "Favorite avatars";
+            case "mini_chat":return "In-game text chat";
             case "mini_groups":return "Your groups";
             case "mini_group":return "Group details";
             case "mini_members":return "Group members";
@@ -268,6 +276,7 @@ public final class OverlayMiniVrcx {
             case "mini_verify":return "Read and copy your private invite code without leaving VRChat";
             case "mini_profile":return "Personal VRChat account profile details";
             case "mini_note":return "Notes are saved to your personal VRChat account";
+            case "mini_chat":return "Send directly to VRChat Mobile through local OSC";
             case "mini_presence":return "Choose a status, edit your message, then apply once";
             case "mini_find":return "Search people, worlds or players seen on this phone";
             case "mini_recent":return "Worlds your VRChat account has visited";
@@ -496,6 +505,8 @@ public final class OverlayMiniVrcx {
             case "mini_presence":
                 execute(()->VRChatApi.currentUser(ctx),
                     result->{profile=(JSONObject)result;drawList();});break;
+            case "mini_chat":
+                drawList();break;
             case "mini_note":
                 execute(()->{
                     JSONArray all=new JSONArray();
@@ -540,6 +551,7 @@ public final class OverlayMiniVrcx {
             case "mini_recent":showRecentWorlds();break;
             case "mini_now":showCurrentInstance();break;
             case "mini_presence":showPresence();break;
+            case "mini_chat":showChat();break;
             case "mini_note":showNote();break;
             default:status("Choose a tool.");
         }
@@ -1855,6 +1867,140 @@ public final class OverlayMiniVrcx {
     }
     private void section(LinearLayout parent,String title){
         parent.addView(CompanionStyle.section(ctx,title));
+    }
+    /**
+     * Native Android IME stays focused on the Companion overlay. VRChat Mobile
+     * receives only the explicit local OSC chatbox packet when Send is tapped,
+     * avoiding the currently unreliable VRChat Mobile keyboard.
+     */
+    private void showChat(){
+        LinearLayout info=card(list);
+        info.addView(text("Text chat without VRChat's keyboard",17,
+            CompanionStyle.TEXT,true));
+        info.addView(text(
+            "Type here using your phone's keyboard. Tap Send to place the "+
+            "message in VRChat's in-game chatbox. No Shizuku, PC, or "+
+            "separate VRChat account login is needed for this tool.",
+            12,CompanionStyle.MUTED,false));
+        section(info,"BEFORE FIRST USE");
+        info.addView(text(
+            "In VRChat Mobile, open the Action Menu → OSC and enable OSC. "+
+            "Leave VRChat open under this floating panel. If OSC is off, "+
+            "the app cannot deliver the chat message.",
+            12,CompanionStyle.GOLD,false));
+        LinearLayout compose=card(list);
+        section(compose,"YOUR MESSAGE");
+        EditText entry=CompanionStyle.input(ctx,"Type a message to send in VRChat");
+        entry.setSingleLine(false);
+        entry.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_FLAG_MULTI_LINE|
+            InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        entry.setMinLines(3);
+        entry.setMaxLines(6);
+        entry.setGravity(Gravity.TOP|Gravity.START);
+        entry.setFilters(new InputFilter[]{
+            new InputFilter.LengthFilter(VRChatOscChat.MAX_CHARACTERS)});
+        entry.setText(chatDraft);
+        entry.setSelection(entry.length());
+        entry.setOnFocusChangeListener((v,focused)->host.keyboard(focused));
+        entry.setOnTouchListener((v,event)->{
+            if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN)
+                host.keyboard(true);
+            return false;
+        });
+        compose.addView(entry,new LinearLayout.LayoutParams(-1,-2));
+        TextView counter=text("",12,CompanionStyle.MUTED,false);
+        counter.setGravity(Gravity.END);
+        compose.addView(counter);
+        TextView feedback=text(chatNotice,12,CompanionStyle.ACCENT,false);
+        compose.addView(feedback);
+        Button send=CompanionStyle.button(ctx,"Send to VRChat",true);
+        compose.addView(send,CompanionStyle.buttonParams(ctx));
+        Runnable refreshControls=()->{
+            int count=chatDraft.codePointCount(0,chatDraft.length());
+            counter.setText(count+"/144 characters");
+            send.setEnabled(!chatSending&&!chatDraft.trim().isEmpty());
+            send.setText(chatSending?"Sending…":"Send to VRChat");
+        };
+        entry.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence text,int start,int count,int after){}
+            public void onTextChanged(CharSequence text,int start,int before,int count){
+                chatDraft=text.toString();
+                chatNotice="";
+                feedback.setText("");
+                refreshControls.run();
+            }
+            public void afterTextChanged(android.text.Editable text){}
+        });
+        refreshControls.run();
+        send.setOnClickListener(v->{
+            if(chatSending||!StaffGate.unlocked(ctx)){
+                feedback.setText("Staff access must be verified before sending.");
+                return;
+            }
+            final String message=chatDraft;
+            try{VRChatOscChat.validate(message);}
+            catch(IllegalArgumentException ex){
+                feedback.setText(ex.getMessage());return;
+            }
+            final boolean sfx=chatSound;
+            chatSending=true;
+            refreshControls.run();
+            host.keyboard(false);
+            entry.clearFocus();
+            feedback.setText("Sending to the VRChat OSC listener on this phone…");
+            final int token=revision;
+            io.execute(()->{
+                String error=null;
+                try{VRChatOscChat.send(message,sfx);}
+                catch(Exception ex){
+                    error=ex.getMessage()==null?"Could not send OSC packet":ex.getMessage();
+                }
+                final String problem=error;
+                handler.post(()->{
+                    chatSending=false;
+                    chatNotice=problem==null?
+                        "OSC packet sent locally. Check your VRChat chatbox; "+
+                        "delivery cannot be confirmed by the Companion.":
+                        "Couldn't send: "+problem;
+                    if(token==revision&&root!=null&&"mini_chat".equals(screen)){
+                        feedback.setText(chatNotice);
+                        refreshControls.run();
+                    }
+                });
+            });
+        });
+        button(compose,chatSound?
+            "Chat notification sound: ON":"Chat notification sound: OFF",
+            false,()->{
+                chatSound=!chatSound;
+                // Keep the current draft when changing this setting.
+                drawList();
+            });
+        button(compose,"Copy message (fallback only)",false,()->{
+            if(chatDraft.trim().isEmpty()){
+                feedback.setText("Type something to copy first.");return;
+            }
+            copy("chat draft",chatDraft);
+            feedback.setText("Copied. This does NOT send text to VRChat.");
+        });
+        button(compose,"Clear draft",false,()->{
+            entry.setText("");
+            chatDraft="";
+            feedback.setText("Draft cleared");
+        });
+        LinearLayout help=card(list);
+        help.addView(text("Troubleshooting",15,CompanionStyle.TEXT,true));
+        help.addView(text(
+            "If Send says the packet was transmitted but no message appears, "+
+            "make sure OSC is enabled in VRChat Mobile and you're logged "+
+            "into an instance. This is a local UDP command; VRChat does not "+
+            "acknowledge receipt. The draft stays here so you can retry.",
+            12,CompanionStyle.MUTED,false));
+        help.addView(text(
+            "VRChat chatbox limits: 144 characters, up to 9 lines. "+
+            "Messages are not saved, sent to Discord or uploaded to the Relay.",
+            11,CompanionStyle.MUTED,false));
     }
     private void showNote(){
         LinearLayout c=card(list);
