@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.17.1",
-  "version_code": 34,
+  "version": "0.17.2",
+  "version_code": 35,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "bc128b2f7d797ffc8f7a5c7378691d5fb26b0a1dca210f9bcec5aa71851e5c3d",
-  "notes": "v0.17.1: Correct Home tracking and floating-tools status placement so each indicator sits directly above the matching button, with the existing live status updates and button behavior unchanged."
+  "sha256": "888c0981f2747e81f3bdebb282b6146648cb6a0621e6932e86c70ac4f5d13f9a",
+  "notes": "v0.17.2: Reliable dual-source notifications and invites, unread filters in full/overlay inboxes, refresh and deduplication, copy location and confirmed invite actions, plus optional privacy-minded WorkManager background alerts every 15+ minutes without Shizuku."
 }
