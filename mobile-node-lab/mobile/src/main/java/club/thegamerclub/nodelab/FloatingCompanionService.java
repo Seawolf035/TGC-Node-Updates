@@ -481,6 +481,12 @@ public final class FloatingCompanionService extends Service {
             ()->go("mini_worlds"),()->go("mini_groups"));
         paired(personal,"Search players","Friends & locations",
             ()->mini.findUser(),()->go("mini_friends"));
+        section(panelContent,"VERIFICATION");
+        LinearLayout codes=panelCard(panelContent);
+        paired(codes,"Gamer Music 3","Cult",
+            ()->mini.verification("gm3"),()->mini.verification("cult"));
+        codes.addView(text("Read and copy codes from private VRChat invites without leaving your game.",
+            12,CompanionStyle.MUTED,false));
         section(panelContent,"PLAYER INFORMATION");
         LinearLayout player=panelCard(panelContent);
         paired(player,"Player list","Join / leave log",
