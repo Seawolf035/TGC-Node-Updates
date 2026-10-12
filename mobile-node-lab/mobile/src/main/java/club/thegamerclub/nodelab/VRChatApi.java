@@ -176,6 +176,19 @@ public final class VRChatApi {
         return request("GET","/worlds/recent?n=40&offset=0",cookie(session),null,null).array();
     }
 
+    /** Apply only the signed-in user's status and status message; other profile fields are untouched. */
+    public static JSONObject updatePresence(Context context,String status,String description)throws Exception{
+        if(!status.matches("active|ask me|busy|join me|offline"))
+            throw new IllegalArgumentException("Invalid VRChat status");
+        if(description==null||description.length()>32)
+            throw new IllegalArgumentException("VRChat status message must be 32 characters or less");
+        JSONObject session=validSession(context);
+        String userId=session.optString("userId","");
+        requireId("user",userId);
+        JSONObject body=new JSONObject().put("status",status).put("statusDescription",description);
+        return request("PUT","/users/"+userId,cookie(session),null,body).object();
+    }
+
     /** A single bounded VRChat page; caller controls when to request the next page. */
     public static final int LIST_PAGE_SIZE=60;
     public static JSONArray browsePage(Context context,String mode,String query,int offset)throws Exception{
