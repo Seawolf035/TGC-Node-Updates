@@ -89,6 +89,7 @@ public final class FloatingCompanionService extends Service {
     private volatile int oscLiveGeneration=0;
     private String oscLiveAccountId="",oscLiveLastError="",oscLiveLastText="";
     private long oscLiveLastAt=0L;
+    private volatile long oscLiveStartedElapsed=0L;
     private final Runnable oscLiveTick=new Runnable(){
         @Override public void run(){
             if(!oscLiveActive)return;
@@ -123,7 +124,16 @@ public final class FloatingCompanionService extends Service {
                     }else if(!oscLiveActive||epoch!=oscLiveGeneration){
                         return;
                     }else{
-                        value=OscControlStore.statusLine(FloatingCompanionService.this);
+                        // Refresh interval and rotation interval are independent.
+                        int count=OscControlStore.liveSlotCount(FloatingCompanionService.this);
+                        int slot=0;
+                        if(count>1){
+                            long elapsed=Math.max(0L,
+                                android.os.SystemClock.elapsedRealtime()-oscLiveStartedElapsed);
+                            int interval=OscControlStore.rotationInterval(FloatingCompanionService.this);
+                            slot=(int)((elapsed/(1000L*interval))%count);
+                        }
+                        value=OscControlStore.liveChatboxAt(FloatingCompanionService.this,slot);
                         if(!oscLiveActive||epoch!=oscLiveGeneration)return;
                         VRChatOscChat.sendLive(value);
                     }
@@ -166,9 +176,11 @@ public final class FloatingCompanionService extends Service {
             String account=VRChatSession.load(this).optString("userId","");
             if(!account.matches("usr_[0-9a-fA-F-]{36}"))
                 throw new SecurityException("Sign in to personal VRChat first.");
-            OscControlStore.statusLine(this); // Validate configured components.
+            OscControlStore.statusLine(this); // Preserve legacy default chatbox.
+            // Named profiles are validated before they are saved.
             stopOscLive();
             oscLiveAccountId=account;
+            oscLiveStartedElapsed=android.os.SystemClock.elapsedRealtime();
             oscLiveIntervalSeconds=seconds;
             oscLiveActive=true;
             oscLiveLastError="";
@@ -189,7 +201,13 @@ public final class FloatingCompanionService extends Service {
     }
     private String oscLiveSummary(){
         if(!oscLiveActive)return "OFF · Only sends when you press Send";
-        String label="ON · Every "+oscLiveIntervalSeconds+" seconds";
+        String label="ON · Refresh every "+oscLiveIntervalSeconds+" seconds";
+        try{
+            int slots=OscControlStore.liveSlotCount(this);
+            if(slots>1)
+                label+=" · Rotating "+slots+" chatboxes every "+
+                    OscControlStore.rotationInterval(this)+"s";
+        }catch(Exception ignored){}
         if(oscLiveLastAt>0)
             label+=" · Last sent "+DateFormat.getTimeInstance(
                 DateFormat.SHORT).format(new Date(oscLiveLastAt));
