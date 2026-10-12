@@ -89,7 +89,7 @@ public class MobileDeployActivity extends Activity {
     info.addView(title("What does Shizuku do?",16));
     spacer(info,6);
     TextView purpose=title(
-        "Shizuku is only used to let the Mobile Node read VRChat Mobile's log files. The same logs power your in-app player list, join/leave history and instance changes, like desktop VRCX. No second log reader is needed.",13);
+        "Shizuku is an Android utility that, with your permission, lets apps use certain restricted system features. Here it is only used to let the Mobile Node read VRChat Mobile's log files. The same logs power your player list, join/leave history and instance changes, like desktop VRCX.",13);
     purpose.setTextColor(CompanionStyle.MUTED);info.addView(purpose);
     spacer(info,9);
     TextView sharing=title(
