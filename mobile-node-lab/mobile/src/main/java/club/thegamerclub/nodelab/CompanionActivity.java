@@ -38,6 +38,7 @@ public final class CompanionActivity extends Activity {
     };
     private final Handler main=new Handler(Looper.getMainLooper());
     private boolean verifying=false,showingUnlocked=false,advanced=false;
+    private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
     private TextView verificationNotice;
     private LinearLayout page,root;
     private String tab="home";
@@ -198,6 +199,7 @@ public final class CompanionActivity extends Activity {
         super.onCreate(saved);
         if(saved!=null){tab=saved.getString("tab","home");advanced=saved.getBoolean("advanced",false);}
         locked("Checking your staff access...");
+        InboxAlertSettings.restore(this);
     }
     @Override protected void onSaveInstanceState(Bundle out){
         out.putString("tab",tab);out.putBoolean("advanced",advanced);
@@ -609,6 +611,29 @@ public final class CompanionActivity extends Activity {
         action(account,"✎","Your VRChat notes","View and edit private notes",this::openNotes);
         action(account,"☼","Status & presets","Edit your status and saved presets",this::openStatus);
         action(account,"★","Extended avatar favorites","VRC+-only local avatar collections",this::openExtendedAvatars);
+        page.addView(CompanionStyle.section(this,"VRCHAT NOTIFICATIONS"));
+        LinearLayout inboxSettings=card();
+        boolean optedIn=InboxAlertSettings.enabled(this);
+        boolean allowed=InboxAlertSettings.permissionGranted(this);
+        inboxSettings.addView(txt(optedIn?
+            allowed?"● Inbox alerts enabled":"○ Inbox alerts need Android permission":
+            "○ Inbox alerts are off",15,
+            optedIn&&allowed?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        space(inboxSettings,7);
+        inboxSettings.addView(txt(
+            "Optional alerts for new VRChat invites and friend requests. "+
+            "Checks about every 15 minutes while connected; Android may delay updates "+
+            "to save battery. No Shizuku or mobile VRChat installation required.",
+            12,CompanionStyle.MUTED,false));
+        space(inboxSettings,8);
+        action(inboxSettings,"✉",optedIn?"Turn off inbox alerts":"Enable inbox alerts",
+            optedIn?"Stop background checks and alerts":
+            "Enable notification permission and background checks",
+            this::toggleInboxAlerts);
+        if(optedIn&&!allowed)
+            action(inboxSettings,"↗","Allow Android notifications",
+                "Grant notification access for new invites and requests",
+                this::requestInboxNotificationPermission);
         page.addView(CompanionStyle.section(this,"FLOATING TOOLS"));
         LinearLayout floating=card();
         action(floating,"◉","Floating tools",
@@ -637,6 +662,53 @@ public final class CompanionActivity extends Activity {
             action(extra,"⌘","Tracking diagnostics","Troubleshooting tools",
                 ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
         }
+    }
+    private void toggleInboxAlerts(){
+        if(!StaffGate.unlocked(this)){revalidate();return;}
+        if(InboxAlertSettings.enabled(this)){
+            InboxAlertSettings.setEnabled(this,false);
+            Toast.makeText(this,"VRChat inbox alerts turned off",Toast.LENGTH_SHORT).show();
+            renderUnlocked();return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Enable VRChat inbox alerts?")
+            .setMessage("The Companion can check your personal VRChat invites and requests "+
+                "about every 15 minutes in the background. "+
+                "Android may delay checks to protect battery life. "+
+                "Notification text won't reveal invite messages or send information to TGC.")
+            .setNegativeButton("Not now",null)
+            .setPositiveButton("Enable",(dialog,which)->{
+                if(!InboxAlertSettings.permissionGranted(this)){
+                    requestInboxNotificationPermission();
+                }else{
+                    InboxAlertSettings.setEnabled(this,true);
+                    Toast.makeText(this,"Inbox alerts enabled",Toast.LENGTH_SHORT).show();
+                    renderUnlocked();
+                }
+            }).show();
+    }
+    private void requestInboxNotificationPermission(){
+        if(android.os.Build.VERSION.SDK_INT>=33 &&
+            !InboxAlertSettings.permissionGranted(this)){
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                NOTIFICATION_PERMISSION_REQUEST);
+        }else{
+            InboxAlertSettings.setEnabled(this,true);
+            Toast.makeText(this,"Inbox alerts enabled",Toast.LENGTH_SHORT).show();
+            renderUnlocked();
+        }
+    }
+    @Override public void onRequestPermissionsResult(
+        int requestCode,String[] permissions,int[] grantResults){
+        super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        if(requestCode!=NOTIFICATION_PERMISSION_REQUEST)return;
+        if(InboxAlertSettings.permissionGranted(this)){
+            InboxAlertSettings.setEnabled(this,true);
+            Toast.makeText(this,"Inbox alerts enabled",Toast.LENGTH_SHORT).show();
+        }else{
+            Toast.makeText(this,"Notification permission was not granted",Toast.LENGTH_LONG).show();
+        }
+        if(StaffGate.unlocked(this))renderUnlocked();
     }
     private void openPlayerLog(String tab){
         needsStaff(()->startActivity(new Intent(this,PlayerActivityLogActivity.class)
