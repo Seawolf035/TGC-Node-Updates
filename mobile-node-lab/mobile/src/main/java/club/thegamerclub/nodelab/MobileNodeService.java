@@ -204,12 +204,16 @@ public final class MobileNodeService extends Service {
             if(!reply.optBoolean("verified") ||
                !"mobile_companion".equals(reply.optString("client_type")) ||
                !record.discordId.equals(reply.optString("discord_id"))){
+              StaffGate.lock();
               relayState="Relay did not verify mobile staff deployment";
               lastAuth=0;
               persist();
               sleep(20000);
               continue;
             }
+            // Reuse this independent live staff approval to keep the Companion
+            // unlocked while VRChat Mobile occupies the foreground.
+            StaffGate.confirmRelayApproval(record,reply);
             lastAuth=System.currentTimeMillis();
           }
           if(System.currentTimeMillis()-lastAuth<180000){
