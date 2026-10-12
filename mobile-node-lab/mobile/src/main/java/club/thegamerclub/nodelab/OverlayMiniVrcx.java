@@ -51,8 +51,14 @@ public final class OverlayMiniVrcx {
     private EditText search;
     private int limit=65;
     private String inboxFilter="all";
-    private String verificationProvider="gm3";
     private VRChatInviteCode.Result verificationResult;
+    private final Runnable verificationTick=new Runnable(){
+        @Override public void run(){
+            if(root==null||!"mini_verify".equals(screen))return;
+            refreshVerification();
+            handler.postDelayed(this,45_000L);
+        }
+    };
     private boolean canType=false;
     private String pending="";
     private Runnable pendingAction;
@@ -63,6 +69,7 @@ public final class OverlayMiniVrcx {
         return CompanionStyle.text(ctx,s,n,color,bold);
     }
     public void close(){
+        handler.removeCallbacks(verificationTick);
         revision++;root=null;list=null;search=null;pendingAction=null;
         host.keyboard(false);
     }
@@ -76,10 +83,7 @@ public final class OverlayMiniVrcx {
         }
     }
     public void findUser(){host.navigate("mini_search");}
-    public void verification(String provider){
-        verificationProvider="cult".equals(provider)?"cult":"gm3";
-        host.navigate("mini_verify");
-    }
+    public void verification(){host.navigate("mini_verify");}
     public void note(String userId){
         if(validUser(userId)){target=userId;kind="note";host.navigate("mini_note");}
     }
@@ -109,6 +113,8 @@ public final class OverlayMiniVrcx {
         if("mini_verify".equals(page))verificationResult=null;
         drawFrame();
         load();
+        if("mini_verify".equals(page))
+            handler.postDelayed(verificationTick,45_000L);
     }
     private void drawFrame(){
         if(root==null)return;
@@ -339,19 +345,7 @@ public final class OverlayMiniVrcx {
                     return result;
                 },result->{profile=(JSONObject)result;drawList();});break;
             case "mini_verify":
-                final String selected=verificationProvider;
-                execute(()->{
-                    try{
-                        return "cult".equals(selected)?
-                            VRChatInviteCode.scanCult(ctx):VRChatInviteCode.scan(ctx);
-                    }catch(Exception error){
-                        String note=error instanceof SecurityException?
-                            "Your VRChat session may have expired. Sign in again in the Companion.":
-                            "VRChat invites are temporarily unavailable. Try again shortly.";
-                        return new VRChatInviteCode.Result("",note,0,false,0L);
-                    }
-                },result->{
-                    if(!selected.equals(verificationProvider))return;
+                execute(()->VRChatInviteCode.scanLatest(ctx),result->{
                     verificationResult=(VRChatInviteCode.Result)result;
                     drawList();
                 });
@@ -676,46 +670,69 @@ public final class OverlayMiniVrcx {
         return "";
     }
     private void showVerification(){
-        boolean cult="cult".equals(verificationProvider);
-        chips(list,"Gamer Music 3","Cult","Check again",
-            ()->selectVerification("gm3"),()->selectVerification("cult"),this::load);
         LinearLayout heading=card(list);
-        heading.addView(text(cult?"Gamer Music 2 · Cult":"Gamer Music 3 · TGC",
-            16,CompanionStyle.TEXT,true));
-        heading.addView(text(cult?
-            "Start Cult verification in Gamer Music 2's Discord first. The floating tools read the resulting private VRChat invite so you can copy the CULT-XXXX-XXXX code back to Discord.":
-            "Start verification in Gamer Music 3's Discord first. The floating tools read the private VRChat invite so you can copy the TGC-XXXX-XXXX code back to Discord.",
+        heading.addView(text("Automatic invite code",16,CompanionStyle.TEXT,true));
+        heading.addView(text(
+            "Start verification in Gamer Music 3 or Gamer Music 2's Discord. "
+            +"The latest available TGC-XXXX-XXXX or CULT-XXXX-XXXX code will appear here automatically.",
             12,CompanionStyle.MUTED,false));
         VRChatInviteCode.Result found=verificationResult;
         if(found==null){
-            heading.addView(text("Checking recent invites…",14,CompanionStyle.MUTED,false));
-            return;
-        }
-        if(!found.code.isEmpty()){
-            TextView label=text(found.code,22,CompanionStyle.ACCENT,true);
+            heading.addView(text("Checking recent invites…",13,CompanionStyle.MUTED,false));
+        }else if(!found.code.isEmpty()){
+            String service="cult".equals(found.provider)?"Gamer Music 2 · Cult":"Gamer Music 3 · TGC";
+            heading.addView(text(service,12,CompanionStyle.ACCENT,true));
+            TextView label=text(found.code,21,CompanionStyle.GOOD,true);
             label.setGravity(Gravity.CENTER);
             label.setPadding(0,dp(12),0,dp(12));
             label.setBackground(CompanionStyle.shape(ctx,CompanionStyle.RAISED,12,0));
             heading.addView(label);
-            final String code=found.code;
-            button(heading,"Copy "+(cult?"Cult":"TGC")+" code",true,
-                ()->copy(cult?"Cult verification code":"TGC verification code",code));
-            heading.addView(text(cult?
-                "Copy and paste this code into your existing Gamer Music 2 Discord verification prompt. Cult controls its expiration.":
-                "Copy and paste this code into your existing Gamer Music 3 Discord verification prompt. TGC codes expire after about 10 minutes.",
+            String value=found.code;
+            button(heading,"Copy code",true,()->copy("verification code",value));
+            heading.addView(text(
+                "Paste this code into the same "+("cult".equals(found.provider)?"Cult":"TGC")+
+                " verification prompt you started in Discord.",
                 12,CompanionStyle.MUTED,false));
         }else{
             heading.addView(text(found.message,13,CompanionStyle.GOLD,false));
         }
+        button(heading,"Check again",false,this::refreshVerification);
         heading.addView(text(
-            "Verification starts and finishes in Discord. This tool only reads and copies your invite code; it cannot submit it to Discord.",
+            "Code detection is automatic. Verification starts and finishes in Discord; "
+            +"this tool only reads and copies VRChat invite codes.",
             11,CompanionStyle.MUTED,false));
     }
-    private void selectVerification(String provider){
-        if(verificationProvider.equals(provider))return;
-        verificationProvider=provider;
-        verificationResult=null;
-        load();
+    /** Scan in the background without hiding the previously displayed code. */
+    private void refreshVerification(){
+        if(root==null||!"mini_verify".equals(screen)||busy||
+            !StaffGate.unlocked(ctx))return;
+        busy=true;
+        final int token=revision;
+        io.execute(()->{
+            VRChatInviteCode.Result result=null;
+            String error=null;
+            try{result=VRChatInviteCode.scanLatest(ctx);}
+            catch(Exception e){
+                error=e instanceof SecurityException?
+                    "Sign in to your personal VRChat account in the Companion first.":
+                    "Couldn't refresh VRChat invites. Please try again.";
+            }
+            final VRChatInviteCode.Result found=result;
+            final String problem=error;
+            handler.post(()->{
+                if(token!=revision||root==null||!"mini_verify".equals(screen)||
+                    !StaffGate.unlocked(ctx))return;
+                busy=false;
+                if(problem!=null){
+                    if(verificationResult==null||verificationResult.code.isEmpty())
+                        verificationResult=new VRChatInviteCode.Result("",problem,0,false,0L);
+                    // Preserve existing codes on a transient network failure.
+                }else if(found!=null){
+                    verificationResult=found;
+                }
+                drawList();
+            });
+        });
     }
     private void showInbox(){
         chips(list,"All","Invites","Friends",
