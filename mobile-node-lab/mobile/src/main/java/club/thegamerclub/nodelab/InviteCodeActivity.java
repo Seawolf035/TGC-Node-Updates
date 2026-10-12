@@ -89,7 +89,7 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
         root.addView(text("Verification code",26,CompanionStyle.TEXT,true));
         space(root,10);
         root.addView(text(
-            "Start verification in Gamer Music 3 or Gamer Music 2's Discord. "
+            "Start verification in The Gamer Club's Discord or Cult of Gamer Music's Discord. "
                 +"This page automatically finds whichever TGC or Cult invite arrives.",
             14,CompanionStyle.MUTED,false));
         space(root,16);
@@ -174,7 +174,7 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
                         return;
                     }
                     providerLabel.setText("cult".equals(provider)?
-                        "Gamer Music 2 · Cult":"Gamer Music 3 · TGC");
+                        "Cult of Gamer Music":"The Gamer Club");
                     codeText.setText(code);
                     codeText.setTextColor(CompanionStyle.GOOD);
                     copy.setEnabled(true);
