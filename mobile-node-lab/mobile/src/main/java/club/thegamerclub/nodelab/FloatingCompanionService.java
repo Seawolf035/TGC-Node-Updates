@@ -101,6 +101,8 @@ public final class FloatingCompanionService extends Service {
     private final Runnable refreshTick=new Runnable(){
         @Override public void run(){
             if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
+            getSharedPreferences("tgc_overlay",0).edit()
+                .putLong("service_heartbeat_at",System.currentTimeMillis()).apply();
             refreshStatus();
             if(panelVisible && "home".equals(selectedTab))loadRecentEvents();
             handler.postDelayed(this,12_000L);
@@ -149,7 +151,9 @@ public final class FloatingCompanionService extends Service {
         }catch(Exception e){
             stopSelf();return START_NOT_STICKY;
         }
-        getSharedPreferences("tgc_overlay",0).edit().putBoolean("running",true).apply();
+        getSharedPreferences("tgc_overlay",0).edit()
+            .putBoolean("running",true)
+            .putLong("service_heartbeat_at",System.currentTimeMillis()).apply();
         handler.removeCallbacks(validate);
         handler.postDelayed(validate,1500L);
         handler.removeCallbacks(friendTick);
@@ -591,7 +595,8 @@ public final class FloatingCompanionService extends Service {
             try{wm.removeView(bubble);}catch(Exception ignored){}
             bubble=null;statusDot=null;
         }
-        getSharedPreferences("tgc_overlay",0).edit().putBoolean("running",false).apply();
+        getSharedPreferences("tgc_overlay",0).edit()
+            .putBoolean("running",false).putLong("service_heartbeat_at",0L).apply();
         super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent){return null;}
