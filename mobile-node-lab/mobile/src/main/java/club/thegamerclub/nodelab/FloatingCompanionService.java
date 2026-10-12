@@ -59,11 +59,13 @@ public final class FloatingCompanionService extends Service {
     private FrameLayout bubble;
     private View statusDot;
     private LinearLayout panel, panelContent;
+    private ScrollView panelScroller;
     private WindowManager.LayoutParams bubbleParams;
     private TextView nodeStatus, nodeStats, recentStatus, presenceLabel,presenceActionLabel;
     private String presenceStatus="";
     private String presenceDescription="VRChat: checking status…";
     private boolean presenceBusy=false;
+    private long presenceChangedAt=0L;
     private Button trackingToggle;
     private String selectedTab="home", statusNote="";
     private boolean verifying=false, friendBusy=false, eventBusy=false, pendingStop=false;
@@ -114,6 +116,7 @@ public final class FloatingCompanionService extends Service {
             if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
             if(!presenceBusy){
                 presenceBusy=true;
+                final long requestStarted=System.currentTimeMillis();
                 presenceWorker.execute(()->{
                     String value="",description="VRChat: unavailable";
                     try{
@@ -132,7 +135,8 @@ public final class FloatingCompanionService extends Service {
                     final String updated=value,display=description;
                     handler.post(()->{
                         presenceBusy=false;
-                        if(!StaffGate.unlocked(FloatingCompanionService.this))return;
+                        if(!StaffGate.unlocked(FloatingCompanionService.this)||
+                            requestStarted<presenceChangedAt)return;
                         presenceStatus=updated;
                         presenceDescription=display;
                         refreshPresenceDot();
@@ -166,6 +170,7 @@ public final class FloatingCompanionService extends Service {
             @Override public void back(){goBack();}
             @Override public void keyboard(boolean enabled){setOverlayKeyboard(enabled);}
             @Override public void onPresenceChanged(String updated){
+                presenceChangedAt=System.currentTimeMillis();
                 presenceStatus=updated;
                 presenceDescription="VRChat: "+VRChatPresenceIndicator.label(updated);
                 refreshPresenceDot();
@@ -385,6 +390,7 @@ public final class FloatingCompanionService extends Service {
         tab(tabs,"Tools","tools");
 
         ScrollView scroll=new ScrollView(this);
+        panelScroller=scroll;
         scroll.setFillViewport(false);
         scroll.setClipToPadding(false);
         container.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
@@ -432,12 +438,21 @@ public final class FloatingCompanionService extends Service {
         // Stop in-overlay periodic lookups when navigating away from a detail page.
         if(mini!=null)mini.close();
         panelContent.removeAllViews();
+        presenceActionLabel=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;recentStatus=null;
         switch(selectedTab){
             case "social":showSocial();break;
             case "tools":showTools();break;
             case "home":showHome();break;
             default:mini.show(panelContent,selectedTab);break;
+        }
+        // Each in-overlay page should start at its header, not inherit the
+        // previous page's scroll offset (especially on a small phone).
+        if(panelScroller!=null){
+            ScrollView current=panelScroller;
+            current.post(()->{
+                if(panelScroller==current)current.scrollTo(0,0);
+            });
         }
     }
     private void go(String destination){
@@ -725,7 +740,7 @@ public final class FloatingCompanionService extends Service {
             try{wm.removeView(panel);}catch(Exception ignored){}
         }
         if(mini!=null)mini.close();
-        panel=null;panelContent=null;recentRows=null;recentStatus=null;
+        panel=null;panelContent=null;panelScroller=null;recentRows=null;recentStatus=null;
         presenceLabel=null;presenceActionLabel=null;
         panelParams=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;
