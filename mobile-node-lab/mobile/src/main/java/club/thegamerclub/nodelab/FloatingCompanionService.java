@@ -5,9 +5,10 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -18,17 +19,25 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
+import androidx.core.content.ContextCompat;
+import org.json.JSONArray;
 import org.json.JSONObject;
+import rikka.shizuku.Shizuku;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Optional draggable Mini VRCX launcher above VRChat Mobile.
- * It NEVER opens Shizuku or parses logs: those belong exclusively to MobileNodeService.
- * A separate visible foreground-service notification lets users stop it at any time.
+ * Optional Mini VRCX window. Uses the exact Companion application icon.
+ * The only VRChat log reader is MobileNodeService: this service reads existing
+ * local history and starts/stops THAT service using its existing actions.
  */
 public final class FloatingCompanionService extends Service {
     public static final String ACTION_START="club.thegamerclub.nodelab.OVERLAY_START";
@@ -38,62 +47,19 @@ public final class FloatingCompanionService extends Service {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final ExecutorService verifier=Executors.newSingleThreadExecutor();
     private final ExecutorService friendWorker=Executors.newSingleThreadExecutor();
-    private boolean friendBusy=false;
-    private final Runnable friendTick=new Runnable(){
-        @Override public void run(){
-            if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
-            if(!friendBusy){
-                friendBusy=true;
-                friendWorker.execute(()->{
-                    try{
-                        JSONObject session=VRChatSession.load(FloatingCompanionService.this);
-                        FriendLogStore.account(session);
-                        FriendLogStore.observe(FloatingCompanionService.this,session,
-                            VRChatApi.friendSnapshot(FloatingCompanionService.this));
-                    }catch(Exception ignored){
-                        // VRChat login, offline state or rate limits: preserve the last complete snapshot.
-                    }finally{
-                        handler.post(()->friendBusy=false);
-                    }
-                });
-            }
-            handler.postDelayed(this,150_000L);
-        }
-    };
+    private final ExecutorService eventsWorker=Executors.newSingleThreadExecutor();
     private WindowManager wm;
-    private View bubble,panel;
+    private FrameLayout bubble;
+    private View statusDot;
+    private LinearLayout panel, panelContent;
     private WindowManager.LayoutParams bubbleParams;
-    private boolean verifying=false;
-    private TextView tracking,liveEvents;
-    private final ExecutorService feedWorker=Executors.newSingleThreadExecutor();
-    private boolean feedBusy=false;
-    private final Runnable feedTick=new Runnable(){
-        @Override public void run(){
-            if(panel!=null&&liveEvents!=null&&StaffGate.unlocked(FloatingCompanionService.this)&&!feedBusy){
-                feedBusy=true;
-                feedWorker.execute(()->{
-                    StringBuilder result=new StringBuilder();
-                    try(MobileOutbox outbox=new MobileOutbox(FloatingCompanionService.this)){
-                        org.json.JSONArray recent=outbox.recentTrackedEvents(3);
-                        for(int i=0;i<recent.length();i++){
-                            org.json.JSONObject e=recent.optJSONObject(i);
-                            if(e==null)continue;
-                            if(result.length()>0)result.append("\n");
-                            result.append("• ").append(e.optString("display_name",e.optString("user_id","Player")));
-                        }
-                    }catch(Exception ignored){}
-                    final String display=result.length()==0?
-                        "No captured player events yet. Start Mobile Node tracking to populate this feed.":
-                        result.toString();
-                    handler.post(()->{
-                        feedBusy=false;
-                        if(liveEvents!=null)liveEvents.setText(display);
-                    });
-                });
-            }
-            handler.postDelayed(this,20_000L);
-        }
-    };
+    private TextView nodeStatus, nodeStats, recentStatus;
+    private Button trackingToggle;
+    private String selectedTab="home", statusNote="";
+    private boolean verifying=false, friendBusy=false, eventBusy=false, pendingStop=false;
+    private boolean panelVisible=false;
+    private long lastPanelRefresh=0L;
+
     private final Runnable validate=new Runnable(){
         @Override public void run(){
             if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
@@ -108,92 +74,146 @@ public final class FloatingCompanionService extends Service {
                     });
                 });
             }
-            updateStatus();
             handler.postDelayed(this,90_000L);
         }
     };
-    private int dp(float n){return CompanionStyle.dp(this,n);}
+
+    private final Runnable friendTick=new Runnable(){
+        @Override public void run(){
+            if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
+            if(!friendBusy){
+                friendBusy=true;
+                friendWorker.execute(()->{
+                    try{
+                        JSONObject session=VRChatSession.load(FloatingCompanionService.this);
+                        FriendLogStore.account(session);
+                        FriendLogStore.observe(FloatingCompanionService.this,session,
+                            VRChatApi.friendSnapshot(FloatingCompanionService.this));
+                    }catch(Exception ignored){
+                        // Preserve the previous complete snapshot during auth/network failures.
+                    }finally{handler.post(()->friendBusy=false);}
+                });
+            }
+            handler.postDelayed(this,150_000L);
+        }
+    };
+
+    private final Runnable refreshTick=new Runnable(){
+        @Override public void run(){
+            if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
+            refreshStatus();
+            if(panelVisible && "home".equals(selectedTab))loadRecentEvents();
+            handler.postDelayed(this,12_000L);
+        }
+    };
+
+    private int dp(float size){return CompanionStyle.dp(this,size);}
+    private TextView text(String value,int size,int color,boolean bold){
+        return CompanionStyle.text(this,value,size,color,bold);
+    }
     @Override public void onCreate(){
         super.onCreate();
         wm=(WindowManager)getSystemService(WINDOW_SERVICE);
-        NotificationManager n=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        n.createNotificationChannel(new NotificationChannel(CHANNEL,"TGC floating Companion",
-            NotificationManager.IMPORTANCE_LOW));
+        NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        manager.createNotificationChannel(new NotificationChannel(CHANNEL,
+            "TGC floating Companion",NotificationManager.IMPORTANCE_LOW));
     }
     private Notification notice(){
-        Intent open=new Intent(this,CompanionActivity.class);
-        PendingIntent launch=PendingIntent.getActivity(this,11,open,
+        PendingIntent open=PendingIntent.getActivity(this,11,
+            new Intent(this,CompanionActivity.class),
             PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Intent stop=new Intent(this,FloatingCompanionService.class).setAction(ACTION_STOP);
-        PendingIntent close=PendingIntent.getService(this,12,stop,
+        PendingIntent close=PendingIntent.getService(this,12,
+            new Intent(this,FloatingCompanionService.class).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         return new Notification.Builder(this,CHANNEL)
             .setSmallIcon(R.drawable.tgc_logo)
-            .setContentTitle("TGC Mini VRCX bubble")
-            .setContentText("Tap the floating bubble to open quick tools")
-            .setContentIntent(launch)
+            .setContentTitle("TGC Mini VRCX")
+            .setContentText("Floating quick tools are enabled")
+            .setContentIntent(open).setOngoing(true)
             .addAction(new Notification.Action.Builder(null,"Hide bubble",close).build())
-            .setOngoing(true).build();
+            .build();
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId){
-        if(intent!=null&&ACTION_STOP.equals(intent.getAction())){
+        if(intent!=null && ACTION_STOP.equals(intent.getAction())){
             stopSelf();return START_NOT_STICKY;
         }
         if(!StaffGate.unlocked(this)||!Settings.canDrawOverlays(this)){
             stopSelf();return START_NOT_STICKY;
         }
-        startForeground(NOTICE,notice());
-        if(bubble==null){
-            try{showBubble();}
-            catch(Exception e){stopSelf();return START_NOT_STICKY;}
+        try{
+            if(Build.VERSION.SDK_INT>=34)
+                startForeground(NOTICE,notice(),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            else startForeground(NOTICE,notice());
+            if(bubble==null)showBubble();
+        }catch(Exception e){
+            stopSelf();return START_NOT_STICKY;
         }
         getSharedPreferences("tgc_overlay",0).edit().putBoolean("running",true).apply();
-        handler.removeCallbacks(validate);handler.postDelayed(validate,1500L);
-        handler.removeCallbacks(friendTick);handler.postDelayed(friendTick,3000L);
-        handler.removeCallbacks(feedTick);handler.postDelayed(feedTick,4000L);
+        handler.removeCallbacks(validate);
+        handler.postDelayed(validate,1500L);
+        handler.removeCallbacks(friendTick);
+        handler.postDelayed(friendTick,3000L);
+        handler.removeCallbacks(refreshTick);
+        handler.postDelayed(refreshTick,600L);
         return START_NOT_STICKY;
     }
     private WindowManager.LayoutParams params(int width,int height){
-        WindowManager.LayoutParams p=new WindowManager.LayoutParams(
-            width,height,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT);
+        WindowManager.LayoutParams p=new WindowManager.LayoutParams(width,height,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,PixelFormat.TRANSLUCENT);
         p.gravity=Gravity.TOP|Gravity.START;
         return p;
     }
+    private int screenWidth(){return getResources().getDisplayMetrics().widthPixels;}
+    private int screenHeight(){return getResources().getDisplayMetrics().heightPixels;}
+
     private void showBubble(){
-        TextView b=CompanionStyle.text(this,"TGC",15,CompanionStyle.BG,true);
-        b.setGravity(Gravity.CENTER);
-        b.setContentDescription("Open TGC Mini VRCX overlay");
-        b.setBackground(CompanionStyle.shape(this,CompanionStyle.ACCENT,50,CompanionStyle.BORDER));
-        bubble=b;
-        bubbleParams=params(dp(58),dp(58));
-        int width=getResources().getDisplayMetrics().widthPixels;
-        int height=getResources().getDisplayMetrics().heightPixels;
-        bubbleParams.x=Math.max(0,Math.min(width-dp(60),
-            getSharedPreferences("tgc_overlay",0).getInt("x",width-dp(80))));
-        bubbleParams.y=Math.max(dp(28),Math.min(height-dp(110),
+        FrameLayout circle=new FrameLayout(this);
+        circle.setContentDescription("TGC Companion. Tap to expand, hold and drag to move.");
+        circle.setBackground(CompanionStyle.shape(this,CompanionStyle.SURFACE,45,CompanionStyle.ACCENT));
+        circle.setElevation(dp(9));
+        ImageView logo=new ImageView(this);
+        // The actual app icon, not substitute text or an unrelated image.
+        logo.setImageResource(R.drawable.tgc_logo);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        logo.setPadding(dp(7),dp(7),dp(7),dp(7));
+        circle.addView(logo,new FrameLayout.LayoutParams(-1,-1));
+        View led=new View(this);
+        led.setBackground(CompanionStyle.shape(this,CompanionStyle.GOLD,10,CompanionStyle.SURFACE));
+        FrameLayout.LayoutParams indicator=new FrameLayout.LayoutParams(dp(13),dp(13),
+            Gravity.BOTTOM|Gravity.END);
+        indicator.setMargins(0,0,dp(2),dp(2));
+        circle.addView(led,indicator);
+        bubble=circle;statusDot=led;
+        bubbleParams=params(dp(60),dp(60));
+        bubbleParams.x=Math.max(0,Math.min(screenWidth()-dp(60),
+            getSharedPreferences("tgc_overlay",0).getInt("x",screenWidth()-dp(82))));
+        bubbleParams.y=Math.max(dp(25),Math.min(screenHeight()-dp(82),
             getSharedPreferences("tgc_overlay",0).getInt("y",dp(165))));
-        b.setOnTouchListener(new View.OnTouchListener(){
-            private float downX,downY;private int firstX,firstY;private boolean dragged;
-            @Override public boolean onTouch(View v,MotionEvent e){
-                switch(e.getActionMasked()){
+        circle.setOnTouchListener(new View.OnTouchListener(){
+            private float startX,startY;
+            private int initialX,initialY;
+            private boolean moved;
+            @Override public boolean onTouch(View v,MotionEvent event){
+                switch(event.getActionMasked()){
                     case MotionEvent.ACTION_DOWN:
-                        downX=e.getRawX();downY=e.getRawY();
-                        firstX=bubbleParams.x;firstY=bubbleParams.y;dragged=false;
-                        return true;
+                        startX=event.getRawX();startY=event.getRawY();
+                        initialX=bubbleParams.x;initialY=bubbleParams.y;
+                        moved=false;return true;
                     case MotionEvent.ACTION_MOVE:
-                        int dx=Math.round(e.getRawX()-downX),dy=Math.round(e.getRawY()-downY);
-                        if(Math.abs(dx)>dp(7)||Math.abs(dy)>dp(7))dragged=true;
-                        if(dragged){
-                            bubbleParams.x=Math.max(0,Math.min(width-dp(60),firstX+dx));
-                            bubbleParams.y=Math.max(dp(25),Math.min(height-dp(75),firstY+dy));
-                            wm.updateViewLayout(bubble,bubbleParams);
+                        int dx=Math.round(event.getRawX()-startX);
+                        int dy=Math.round(event.getRawY()-startY);
+                        if(Math.abs(dx)>dp(7)||Math.abs(dy)>dp(7))moved=true;
+                        if(moved){
+                            bubbleParams.x=Math.max(0,Math.min(screenWidth()-dp(60),initialX+dx));
+                            bubbleParams.y=Math.max(dp(25),Math.min(screenHeight()-dp(82),initialY+dy));
+                            if(bubble!=null)wm.updateViewLayout(bubble,bubbleParams);
                         }
                         return true;
                     case MotionEvent.ACTION_UP:
-                        if(dragged){
+                        if(moved){
                             getSharedPreferences("tgc_overlay",0).edit()
                                 .putInt("x",bubbleParams.x).putInt("y",bubbleParams.y).apply();
                             dismissPanel();
@@ -203,80 +223,373 @@ public final class FloatingCompanionService extends Service {
                 }
             }
         });
-        wm.addView(b,bubbleParams);
+        wm.addView(circle,bubbleParams);
+    }
+    private LinearLayout vertical(){
+        LinearLayout out=new LinearLayout(this);
+        out.setOrientation(LinearLayout.VERTICAL);
+        return out;
+    }
+    private void inset(LinearLayout root,int amount){
+        root.setPadding(dp(amount),dp(amount),dp(amount),dp(amount));
+    }
+    private LinearLayout panelCard(LinearLayout parent){
+        LinearLayout box=vertical();
+        inset(box,12);
+        box.setBackground(CompanionStyle.shape(this,CompanionStyle.SURFACE,15,
+            CompanionStyle.BORDER));
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
+        p.setMargins(0,0,0,dp(10));
+        parent.addView(box,p);
+        return box;
+    }
+    private void section(LinearLayout parent,String title){
+        parent.addView(CompanionStyle.section(this,title));
+    }
+    private Button action(LinearLayout parent,String label,boolean primary,Runnable runnable){
+        Button b=CompanionStyle.button(this,label,primary);
+        parent.addView(b,CompanionStyle.buttonParams(this));
+        b.setOnClickListener(v->runnable.run());
+        return b;
+    }
+    private void paired(LinearLayout parent,String left,String right,
+                        Runnable leftClick,Runnable rightClick){
+        LinearLayout line=new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        parent.addView(line,new LinearLayout.LayoutParams(-1,-2));
+        smallAction(line,left,leftClick);
+        smallAction(line,right,rightClick);
+    }
+    private void smallAction(LinearLayout parent,String label,Runnable click){
+        Button b=CompanionStyle.button(this,label,false);
+        b.setTextSize(12);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(43),1);
+        p.setMargins(dp(2),dp(2),dp(2),dp(8));
+        parent.addView(b,p);
+        b.setOnClickListener(v->click.run());
     }
     private void togglePanel(){
         if(panel!=null){dismissPanel();return;}
         if(!StaffGate.unlocked(this)){stopSelf();return;}
-        LinearLayout frame=CompanionStyle.card(this);
-        frame.setElevation(dp(8));
+        LinearLayout container=vertical();
+        container.setElevation(dp(14));
+        container.setBackground(CompanionStyle.shape(this,CompanionStyle.BG,19,
+            CompanionStyle.BORDER));
+        panel=container;panelVisible=true;
+
+        LinearLayout header=vertical();
+        header.setPadding(dp(14),dp(13),dp(14),dp(10));
+        header.setBackground(CompanionStyle.gradient(this,0xFF20425B,CompanionStyle.SURFACE,19));
+        container.addView(header);
+        LinearLayout bar=new LinearLayout(this);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        header.addView(bar);
+        ImageView mark=new ImageView(this);
+        mark.setImageResource(R.drawable.tgc_logo);
+        mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        bar.addView(mark,new LinearLayout.LayoutParams(dp(40),dp(40)));
+        LinearLayout labels=vertical();
+        labels.setPadding(dp(10),0,0,0);
+        bar.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
+        labels.addView(text("TGC STAFF COMPANION",10,CompanionStyle.ACCENT,true));
+        labels.addView(text("Mini VRCX",19,CompanionStyle.TEXT,true));
+        Button collapse=CompanionStyle.button(this,"−",false);
+        collapse.setContentDescription("Collapse overlay");
+        bar.addView(collapse,new LinearLayout.LayoutParams(dp(43),dp(39)));
+        collapse.setOnClickListener(v->dismissPanel());
+
+        LinearLayout tabs=new LinearLayout(this);
+        tabs.setPadding(dp(12),dp(7),dp(12),dp(3));
+        container.addView(tabs);
+        tab(tabs,"Home","home");
+        tab(tabs,"Social","social");
+        tab(tabs,"Tools","tools");
+
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(false);
-        scroll.addView(frame);
-        panel=scroll;
-        TextView title=CompanionStyle.text(this,"MINI VRCX · QUICK TOOLS",14,
-            CompanionStyle.ACCENT,true);
-        frame.addView(title);
-        tracking=CompanionStyle.text(this,"Checking Mobile Node…",13,CompanionStyle.MUTED,false);
-        tracking.setPadding(0,dp(9),0,dp(9));frame.addView(tracking);
-        frame.addView(CompanionStyle.section(this,"LATEST MOBILE LOG EVENTS"));
-        liveEvents=CompanionStyle.text(this,"Loading recent captured players…",
-            12,CompanionStyle.MUTED,false);
-        frame.addView(liveEvents);
-        addButton(frame,"Friends by location",FriendHubActivity.class,"locations");
-        addButton(frame,"Friend log",FriendHubActivity.class,"log");
-        addButton(frame,"Activity feed",FriendHubActivity.class,"activity");
-        addButton(frame,"Notifications",VRChatInboxActivity.class,"");
-        addButton(frame,"Recently seen players",VRChatBrowseActivity.class,"encounters");
-        addButton(frame,"Full Companion",CompanionActivity.class,"");
-        Button close=CompanionStyle.button(this,"Close bubble",false);
-        frame.addView(close,CompanionStyle.buttonParams(this));
-        close.setOnClickListener(v->stopSelf());
-        int width=getResources().getDisplayMetrics().widthPixels;
-        int height=getResources().getDisplayMetrics().heightPixels;
-        WindowManager.LayoutParams p=params(Math.min(dp(315),width-dp(24)),
-            Math.min(dp(485),height-dp(135)));
-        p.x=Math.max(dp(8),Math.min(width-Math.min(dp(315),width-dp(24))-dp(8),bubbleParams.x));
-        p.y=Math.max(dp(28),Math.min(height-dp(530),bubbleParams.y+dp(66)));
-        try{wm.addView(panel,p);updateStatus();handler.post(feedTick);}
-        catch(Exception e){panel=null;tracking=null;liveEvents=null;}
+        scroll.setClipToPadding(false);
+        container.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        panelContent=vertical();
+        panelContent.setPadding(dp(13),dp(4),dp(13),dp(8));
+        scroll.addView(panelContent);
+        buildTab();
+
+        LinearLayout bottom=new LinearLayout(this);
+        bottom.setPadding(dp(11),dp(5),dp(11),dp(9));
+        container.addView(bottom);
+        smallAction(bottom,"Full Companion",()->open(CompanionActivity.class,null,null));
+        smallAction(bottom,"Hide bubble",this::stopSelf);
+
+        int width=Math.min(dp(352),screenWidth()-dp(20));
+        int height=Math.min(dp(555),screenHeight()-dp(118));
+        WindowManager.LayoutParams p=params(width,height);
+        p.x=Math.max(dp(8),Math.min(screenWidth()-width-dp(8),bubbleParams.x));
+        int possibleTop=bubbleParams.y+dp(65);
+        if(possibleTop+height>screenHeight()-dp(20))possibleTop=bubbleParams.y-height-dp(7);
+        p.y=Math.max(dp(25),Math.min(screenHeight()-height-dp(25),possibleTop));
+        try{
+            wm.addView(container,p);
+            refreshStatus();loadRecentEvents();
+        }catch(Exception e){
+            dismissPanel();
+            Toast.makeText(this,"Unable to display overlay panel",Toast.LENGTH_SHORT).show();
+        }
     }
-    private void addButton(LinearLayout parent,String label,Class<?> destination,String mode){
-        Button b=CompanionStyle.button(this,label,false);
-        parent.addView(b,CompanionStyle.buttonParams(this));
+    private void tab(LinearLayout container,String title,String key){
+        Button b=CompanionStyle.button(this,title,key.equals(selectedTab));
+        b.setTextSize(12);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(39),1);
+        p.setMargins(dp(2),0,dp(2),0);
+        container.addView(b,p);
         b.setOnClickListener(v->{
-            if(!StaffGate.unlocked(this)){stopSelf();return;}
-            Intent open=new Intent(this,destination).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            if(destination==FriendHubActivity.class)open.putExtra("tab",mode);
-            if(destination==VRChatBrowseActivity.class)open.putExtra("mode",mode);
-            if(destination==VRChatInboxActivity.class)open.putExtra("filter","all");
-            try{startActivity(open);dismissPanel();}
-            catch(Exception ignored){dismissPanel();}
+            if(key.equals(selectedTab))return;
+            selectedTab=key;pendingStop=false;
+            dismissPanel();togglePanel();
         });
     }
-    private void updateStatus(){
-        if(tracking==null)return;
-        android.content.SharedPreferences p=getSharedPreferences("tgc_mobile_node_status",0);
-        long pulse=p.getLong("service_heartbeat_at",0);
-        boolean active=p.getBoolean("running",false)&&pulse>0&&
-            System.currentTimeMillis()-pulse<90_000L;
-        tracking.setText(active?"● Mobile Node tracking active":"○ Mobile Node tracking paused");
-        tracking.setTextColor(active?CompanionStyle.GOOD:CompanionStyle.GOLD);
+    private void buildTab(){
+        if(panelContent==null)return;
+        panelContent.removeAllViews();
+        nodeStatus=null;nodeStats=null;trackingToggle=null;recentStatus=null;
+        switch(selectedTab){
+            case "social":showSocial();break;
+            case "tools":showTools();break;
+            default:showHome();break;
+        }
+    }
+    private void showHome(){
+        section(panelContent,"MOBILE NODE");
+        LinearLayout node=panelCard(panelContent);
+        nodeStatus=text("Checking tracking…",15,CompanionStyle.TEXT,true);
+        node.addView(nodeStatus);
+        nodeStats=text("Reading local status…",12,CompanionStyle.MUTED,false);
+        nodeStats.setPadding(0,dp(8),0,dp(5));
+        node.addView(nodeStats);
+        trackingToggle=action(node,"Start tracking",true,this::toggleTracking);
+        paired(node,"Node settings","Refresh",()->
+            open(MobileDeployActivity.class,null,null),()->{refreshStatus();loadRecentEvents();});
+
+        section(panelContent,"RECENTLY ENCOUNTERED");
+        LinearLayout recent=panelCard(panelContent);
+        recentStatus=text("Loading captured player events…",12,CompanionStyle.MUTED,false);
+        recent.addView(recentStatus);
+        // A small, bounded dynamic region. No second log parser or tracker is created.
+        recentRows=vertical();recent.addView(recentRows);
+        action(recent,"All recent players",false,()->
+            open(VRChatBrowseActivity.class,"mode","encounters"));
+
+        section(panelContent,"QUICK ACCESS");
+        LinearLayout quick=panelCard(panelContent);
+        paired(quick,"Friends locations","Friend log",
+            ()->open(FriendHubActivity.class,"tab","locations"),
+            ()->open(FriendHubActivity.class,"tab","log"));
+        paired(quick,"Inbox","Activity feed",
+            ()->open(VRChatInboxActivity.class,"filter","all"),
+            ()->open(FriendHubActivity.class,"tab","activity"));
+    }
+    private LinearLayout recentRows;
+    private void showSocial(){
+        section(panelContent,"FRIENDS");
+        LinearLayout friends=panelCard(panelContent);
+        action(friends,"Friends by location",false,()->
+            open(FriendHubActivity.class,"tab","locations"));
+        paired(friends,"Online friends","Offline friends",
+            ()->open(VRChatBrowseActivity.class,"mode","friends_online"),
+            ()->open(VRChatBrowseActivity.class,"mode","friends_offline"));
+        paired(friends,"Friend log","Activity feed",
+            ()->open(FriendHubActivity.class,"tab","log"),
+            ()->open(FriendHubActivity.class,"tab","activity"));
+        section(panelContent,"MESSAGES");
+        LinearLayout communication=panelCard(panelContent);
+        paired(communication,"All notifications","Invitations",
+            ()->open(VRChatInboxActivity.class,"filter","all"),
+            ()->open(VRChatInboxActivity.class,"filter","invite"));
+        action(communication,"Friend requests",false,()->
+            open(VRChatInboxActivity.class,"filter","friend"));
+        section(panelContent,"DISCOVERY");
+        LinearLayout discovery=panelCard(panelContent);
+        paired(discovery,"Player search","Groups",
+            ()->open(VRChatBrowseActivity.class,"mode","search_users"),
+            ()->open(VRChatBrowseActivity.class,"mode","groups"));
+    }
+    private void showTools(){
+        section(panelContent,"PERSONAL VRCX");
+        LinearLayout accounts=panelCard(panelContent);
+        paired(accounts,"My account","Status & presets",
+            ()->open(VRChatAccountActivity.class,null,null),
+            ()->open(PresenceActivity.class,null,null));
+        paired(accounts,"Favorite avatars","Saved worlds",
+            ()->open(VRChatAvatarActivity.class,null,null),
+            ()->open(VRChatBrowseActivity.class,"mode","worlds"));
+        paired(accounts,"Extended avatars","World search",
+            ()->open(ExtendedAvatarActivity.class,null,null),
+            ()->open(VRChatBrowseActivity.class,"mode","search_worlds"));
+        paired(accounts,"Private notes","Verification invite",
+            ()->open(VRChatNotesActivity.class,null,null),
+            ()->open(InviteCodeActivity.class,null,null));
+        section(panelContent,"INSTANCE & NODE");
+        LinearLayout instance=panelCard(panelContent);
+        paired(instance,"Recent players","Recent worlds",
+            ()->open(VRChatBrowseActivity.class,"mode","encounters"),
+            ()->open(VRChatBrowseActivity.class,"mode","recent"));
+        action(instance,"Tracking controls & Shizuku setup",false,
+            ()->open(MobileDeployActivity.class,null,null));
+    }
+    private void open(Class<?> destination,String parameter,String value){
+        if(!StaffGate.unlocked(this)){stopSelf();return;}
+        Intent intent=new Intent(this,destination).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if(parameter!=null)intent.putExtra(parameter,value);
+        try{startActivity(intent);dismissPanel();}
+        catch(Exception error){
+            Toast.makeText(this,"Could not open "+destination.getSimpleName(),
+                Toast.LENGTH_SHORT).show();
+        }
+    }
+    private boolean nodeRunning(){
+        android.content.SharedPreferences pref=getSharedPreferences("tgc_mobile_node_status",0);
+        long heartbeat=pref.getLong("service_heartbeat_at",0);
+        return pref.getBoolean("running",false) && heartbeat>0 &&
+            System.currentTimeMillis()-heartbeat<90_000L;
+    }
+    private void toggleTracking(){
+        if(!StaffGate.unlocked(this)){stopSelf();return;}
+        if(nodeRunning()){
+            if(!pendingStop){
+                pendingStop=true;
+                statusNote="Tap again to confirm stopping tracking.";
+                if(trackingToggle!=null)trackingToggle.setText("Confirm stop tracking");
+                handler.postDelayed(()->{
+                    if(pendingStop){pendingStop=false;refreshStatus();}
+                },8000L);
+                return;
+            }
+            pendingStop=false;
+            try{
+                startService(new Intent(this,MobileNodeService.class).setAction(MobileNodeService.STOP));
+                statusNote="Stopping tracking…";
+            }catch(Exception error){statusNote="Unable to stop tracking. Open Node settings.";}
+        }else{
+            pendingStop=false;
+            try{
+                if(MobileCredentials.load(this)==null){
+                    statusNote="Link this device in Node settings first.";
+                    open(MobileDeployActivity.class,null,null);return;
+                }
+                if(!Shizuku.pingBinder()||
+                    Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
+                    statusNote="Shizuku needs to be running and authorized. Open Node settings.";
+                    if(nodeStatus!=null)nodeStatus.setText(statusNote);
+                    // Permission requests must come from the existing Activity, never this service.
+                    open(MobileDeployActivity.class,null,null);return;
+                }
+                if(Build.VERSION.SDK_INT>=33 &&
+                    checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                        !=PackageManager.PERMISSION_GRANTED){
+                    statusNote="Enable Companion notifications in Android settings for reliable tracking.";
+                    open(MobileDeployActivity.class,null,null);return;
+                }
+                ContextCompat.startForegroundService(this,
+                    new Intent(this,MobileNodeService.class).setAction(MobileNodeService.START));
+                statusNote="Starting tracking…";
+            }catch(Exception error){
+                statusNote="Unable to start: "+error.getClass().getSimpleName();
+            }
+        }
+        refreshStatus();
+        handler.postDelayed(this::refreshStatus,2200L);
+    }
+    private void refreshStatus(){
+        if(statusDot!=null){
+            statusDot.setBackground(CompanionStyle.shape(this,
+                nodeRunning()?CompanionStyle.GOOD:CompanionStyle.GOLD,12,CompanionStyle.SURFACE));
+        }
+        if(nodeStatus==null)return;
+        boolean live=nodeRunning();
+        android.content.SharedPreferences pref=getSharedPreferences("tgc_mobile_node_status",0);
+        String watcher=pref.getString("watcher","");
+        String label=live?"● Tracking active":"○ Tracking stopped or reconnecting";
+        nodeStatus.setText(label);
+        nodeStatus.setTextColor(live?CompanionStyle.GOOD:CompanionStyle.GOLD);
+        if(trackingToggle!=null){
+            trackingToggle.setText(pendingStop?"Confirm stop tracking":
+                live?"Stop tracking":"Start tracking");
+        }
+        if(nodeStats!=null){
+            nodeStats.setText("Players: "+pref.getInt("captured_total",0)+
+                "  ·  Uploaded: "+pref.getInt("uploaded_total",0)+
+                "\n"+(watcher.isEmpty()?"Status available in Node settings":
+                    watcher.length()>95?watcher.substring(0,95)+"…":watcher)+
+                (statusNote.isEmpty()?"":"\n"+statusNote));
+        }
+    }
+    private void loadRecentEvents(){
+        if(!panelVisible||!"home".equals(selectedTab)||eventBusy)return;
+        eventBusy=true;
+        eventsWorker.execute(()->{
+            JSONArray events=new JSONArray();
+            int pending=-1;
+            try(MobileOutbox db=new MobileOutbox(this)){
+                events=db.recentTrackedEvents(5);
+                pending=db.count();
+            }catch(Exception ignored){}
+            final JSONArray entries=events;
+            final int queue=pending;
+            handler.post(()->{
+                eventBusy=false;
+                if(!panelVisible||recentRows==null||recentStatus==null||
+                    !StaffGate.unlocked(this))return;
+                recentRows.removeAllViews();
+                recentStatus.setText(queue<0?"Local history unavailable":
+                    "Pending uploads: "+queue+
+                    (entries.length()==0?" · No recorded encounters yet":""));
+                for(int i=0;i<entries.length();i++){
+                    JSONObject event=entries.optJSONObject(i);
+                    if(event==null)continue;
+                    String id=event.optString("user_id","");
+                    String name=event.optString("display_name","");
+                    if(name.trim().isEmpty())name="VRChat player";
+                    if(name.length()>38)name=name.substring(0,38)+"…";
+                    final String uid=id;
+                    TextView item=text("›  "+name,13,CompanionStyle.TEXT,false);
+                    item.setPadding(dp(8),dp(9),dp(8),dp(9));
+                    item.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,10,0));
+                    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+                    lp.setMargins(0,dp(3),0,dp(3));recentRows.addView(item,lp);
+                    item.setOnClickListener(v->{
+                        if(uid.matches("usr_[0-9a-fA-F-]{36}"))
+                            open(VRChatDetailActivity.class,"kind","user",uid);
+                        else open(VRChatBrowseActivity.class,"mode","encounters");
+                    });
+                }
+                lastPanelRefresh=System.currentTimeMillis();
+            });
+        });
+    }
+    private void open(Class<?> destination,String paramA,String valueA,String userId){
+        if(!StaffGate.unlocked(this)){stopSelf();return;}
+        Intent intent=new Intent(this,destination).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if(paramA!=null)intent.putExtra(paramA,valueA);
+        if(userId!=null)intent.putExtra("id",userId);
+        try{startActivity(intent);dismissPanel();}
+        catch(Exception e){Toast.makeText(this,"Could not open profile",Toast.LENGTH_SHORT).show();}
     }
     private void dismissPanel(){
+        panelVisible=false;
         if(panel!=null){
             try{wm.removeView(panel);}catch(Exception ignored){}
-            panel=null;tracking=null;
         }
+        panel=null;panelContent=null;recentRows=null;recentStatus=null;
+        nodeStatus=null;nodeStats=null;trackingToggle=null;
     }
     @Override public void onDestroy(){
         handler.removeCallbacks(validate);
         handler.removeCallbacks(friendTick);
-        handler.removeCallbacks(feedTick);
-        verifier.shutdownNow();friendWorker.shutdownNow();feedWorker.shutdownNow();dismissPanel();
+        handler.removeCallbacks(refreshTick);
+        verifier.shutdownNow();friendWorker.shutdownNow();eventsWorker.shutdownNow();
+        dismissPanel();
         if(bubble!=null){
             try{wm.removeView(bubble);}catch(Exception ignored){}
-            bubble=null;
+            bubble=null;statusDot=null;
         }
         getSharedPreferences("tgc_overlay",0).edit().putBoolean("running",false).apply();
         super.onDestroy();
