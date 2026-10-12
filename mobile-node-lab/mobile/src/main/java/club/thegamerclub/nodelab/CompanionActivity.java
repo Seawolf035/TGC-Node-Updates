@@ -111,8 +111,15 @@ public final class CompanionActivity extends Activity {
         }
         int next=position+direction;
         if(next<0||next>=pages.length)return;
-        tab=pages[next];
-        renderUnlocked();
+        // Apply after the touch event finishes; replacing the entire View tree
+        // during dispatch can cancel taps or trigger vendor-specific touch crashes.
+        final String expectedTab=tab,nextTab=pages[next];
+        main.post(()->{
+            if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
+            if(!tab.equals(expectedTab))return;
+            tab=nextTab;
+            renderUnlocked();
+        });
     }
     private void bottomBar(){
         LinearLayout nav=new LinearLayout(this);nav.setGravity(Gravity.CENTER_VERTICAL);
