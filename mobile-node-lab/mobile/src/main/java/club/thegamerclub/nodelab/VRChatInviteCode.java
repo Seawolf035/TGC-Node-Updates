@@ -308,7 +308,7 @@ public final class VRChatInviteCode {
         }
         if(matches.isEmpty())
             return new Result("",
-                "No recent Cult verification invite found. Request an invite through Gamer Music 2's existing verification flow, then return here.",
+                "No recent Cult verification invite found. Start verification through Cult of Gamer Music's Discord, then return here.",
                 0,true,0L);
         return new Result("",
             "Invites found, but a Cult verification code was not available in their accessible details. You can also read the instance name in VRChat.",
@@ -399,7 +399,7 @@ public final class VRChatInviteCode {
             if(!seen.add(invite.key))continue;
             if(!invite.code.isEmpty()){
                 return new Result(invite.code,
-                    "New "+(invite.code.startsWith("CULT-")?"Cult":"Gamer Music 3")+
+                    "New "+(invite.code.startsWith("CULT-")?"Cult of Gamer Music":"The Gamer Club")+
                         " verification code found",
                     candidates.size(),true,invite.created);
             }
