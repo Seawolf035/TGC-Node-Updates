@@ -89,7 +89,8 @@ public final class FloatingCompanionService extends Service {
     private volatile int oscLiveGeneration=0;
     private String oscLiveAccountId="",oscLiveLastError="",oscLiveLastText="";
     private long oscLiveLastAt=0L;
-    private volatile long oscLiveStartedElapsed=0L;
+    private volatile long oscLiveSwitchElapsed=0L;
+    private volatile int oscLiveCurrentSlot=0;
     private final Runnable oscLiveTick=new Runnable(){
         @Override public void run(){
             if(!oscLiveActive)return;
@@ -126,14 +127,23 @@ public final class FloatingCompanionService extends Service {
                     }else{
                         // Refresh interval and rotation interval are independent.
                         int count=OscControlStore.liveSlotCount(FloatingCompanionService.this);
-                        int slot=0;
+                        long now=android.os.SystemClock.elapsedRealtime();
                         if(count>1){
-                            long elapsed=Math.max(0L,
-                                android.os.SystemClock.elapsedRealtime()-oscLiveStartedElapsed);
                             int interval=OscControlStore.rotationInterval(FloatingCompanionService.this);
-                            slot=(int)((elapsed/(1000L*interval))%count);
+                            // Advance one slot per actual send at most. When the
+                            // refresh interval is slower than the rotation period,
+                            // no profiles are silently skipped.
+                            if(oscLiveCurrentSlot>=count)oscLiveCurrentSlot=0;
+                            if(now-oscLiveSwitchElapsed>=1000L*interval){
+                                oscLiveCurrentSlot=(oscLiveCurrentSlot+1)%count;
+                                oscLiveSwitchElapsed=now;
+                            }
+                        }else{
+                            oscLiveCurrentSlot=0;
+                            oscLiveSwitchElapsed=now;
                         }
-                        value=OscControlStore.liveChatboxAt(FloatingCompanionService.this,slot);
+                        value=OscControlStore.liveChatboxAt(FloatingCompanionService.this,
+                            oscLiveCurrentSlot);
                         if(!oscLiveActive||epoch!=oscLiveGeneration)return;
                         VRChatOscChat.sendLive(value);
                     }
@@ -180,7 +190,8 @@ public final class FloatingCompanionService extends Service {
             // Named profiles are validated before they are saved.
             stopOscLive();
             oscLiveAccountId=account;
-            oscLiveStartedElapsed=android.os.SystemClock.elapsedRealtime();
+            oscLiveCurrentSlot=0;
+            oscLiveSwitchElapsed=android.os.SystemClock.elapsedRealtime();
             oscLiveIntervalSeconds=seconds;
             oscLiveActive=true;
             oscLiveLastError="";
