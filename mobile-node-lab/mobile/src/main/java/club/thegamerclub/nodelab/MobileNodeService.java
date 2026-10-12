@@ -141,9 +141,12 @@ public final class MobileNodeService extends Service {
         IPrivilegedProbe active=watcher;
         if(active!=null){
           if(!trackingStarted){
+            // Preserve the local observed roster if we simply reconnect to an
+            // already-running watcher. Clear it only when starting a new log session.
+            boolean alreadyWatching=new JSONObject(active.getWatchStats())
+                .optBoolean("watching",false);
             active.startWatching();
-            // New watcher sessions cannot know people who joined before monitoring.
-            outbox.resetCurrentPlayers();
+            if(!alreadyWatching)outbox.resetCurrentPlayers();
             trackingStarted=true;
           }
           JSONObject stats=new JSONObject(active.getWatchStats());
