@@ -967,6 +967,93 @@ public final class OverlayMiniVrcx {
         String name=profile.optString("name",profile.optString("instanceName",""));
         if(!name.isEmpty())c.addView(text(name,13,CompanionStyle.ACCENT,false));
     }
+    private JSONObject findFavoriteAvatar(String id){
+        if(id==null||id.isEmpty()||favoriteAvatarLists==null)return null;
+        JSONArray groups=favoriteAvatarLists.groups;
+        for(int i=0;i<groups.length();i++){
+            JSONObject group=groups.optJSONObject(i);
+            if(group==null)continue;
+            JSONArray entries=group.optJSONArray("avatars");
+            if(entries==null)continue;
+            for(int j=0;j<entries.length();j++){
+                JSONObject avatar=entries.optJSONObject(j);
+                if(avatar!=null&&id.equals(avatar.optString("id","")))
+                    return avatar;
+            }
+        }
+        return null;
+    }
+    private String avatarGroupTitle(){
+        if("all".equals(avatarGroup))return "All favorite lists";
+        if(favoriteAvatarLists==null)return avatarGroup;
+        JSONArray groups=favoriteAvatarLists.groups;
+        for(int i=0;i<groups.length();i++){
+            JSONObject group=groups.optJSONObject(i);
+            if(group!=null&&avatarGroup.equals(group.optString("name","")))
+                return group.optString("displayName",avatarGroup);
+        }
+        return "All favorite lists";
+    }
+    private void chooseAvatarGroup(String key){
+        if(key.equals(avatarGroup)){
+            avatarGroupsExpanded=false;
+            drawList();return;
+        }
+        avatarGroup=key;
+        avatarGroupsExpanded=false;
+        limit=18;
+        selectedAvatarId="";
+        selectedAvatarDetails=null;
+        selectedAvatarInfoToken++;
+        drawList();
+        host.scrollToTop();
+    }
+    private void chooseAvatar(String id){
+        if(!id.matches("avtr_[0-9a-fA-F-]{36}"))return;
+        if(!selectedAvatarId.equals(id)){
+            selectedAvatarId=id;
+            selectedAvatarDetails=null;
+            selectedAvatarInfoToken++;
+        }
+        drawList();
+        host.scrollToTop();
+    }
+    private ImageView avatarPicture(JSONObject avatar,int size){
+        ImageView picture=new ImageView(ctx);
+        picture.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        picture.setBackground(CompanionStyle.shape(
+            ctx,CompanionStyle.RAISED,10,CompanionStyle.BORDER));
+        picture.setClipToOutline(true);
+        if(avatar!=null)CompanionImages.load(picture,CompanionImages.preferred(
+            avatar,"thumbnailImageUrl","imageUrl","currentAvatarThumbnailImageUrl",
+            "currentAvatarImageUrl"));
+        return picture;
+    }
+    private void loadSelectedAvatarInfo(String avatarId){
+        if(selectedAvatarInfoLoading||!avatarId.equals(selectedAvatarId))return;
+        selectedAvatarInfoLoading=true;
+        final int sequence=++selectedAvatarInfoToken,token=revision;
+        message("Loading avatar details…");
+        io.execute(()->{
+            JSONObject details=null;
+            String error="";
+            try{details=VRChatApi.avatar(ctx,avatarId);}
+            catch(Exception ex){error="VRChat couldn't load additional avatar details.";}
+            final JSONObject info=details;
+            final String issue=error;
+            handler.post(()->{
+                selectedAvatarInfoLoading=false;
+                if(token!=revision||root==null||!"mini_avatars".equals(screen)||
+                   !selectedAvatarId.equals(avatarId)||
+                   sequence!=selectedAvatarInfoToken)return;
+                if(info!=null){
+                    selectedAvatarDetails=info;
+                    drawList();
+                    host.scrollToTop();
+                }else message(issue);
+            });
+        });
+    }
     private void showAvatars(){
         AvatarFavoritesRepository.Snapshot snapshot=favoriteAvatarLists;
         if(snapshot==null){
@@ -975,33 +1062,177 @@ public final class OverlayMiniVrcx {
             return;
         }
         JSONArray groups=snapshot.groups;
+        LinearLayout current=card(list);
+        section(current,"CURRENT VRCHAT AVATAR");
+        String active=avatarOwnUser.optString("currentAvatar","");
+        JSONObject activeFavorite=findFavoriteAvatar(active);
+        String currentName=activeFavorite==null?
+            (active.isEmpty()?"Current avatar not reported by VRChat":
+                "Current avatar isn't in the loaded favorites"):
+            activeFavorite.optString("name","Avatar");
+        LinearLayout currentRow=new LinearLayout(ctx);
+        currentRow.setGravity(Gravity.CENTER_VERTICAL);
+        current.addView(currentRow);
+        ImageView currentImage=avatarPicture(activeFavorite!=null?
+            activeFavorite:avatarOwnUser,58);
+        currentRow.addView(currentImage,
+            new LinearLayout.LayoutParams(dp(58),dp(58)));
+        LinearLayout currentText=new LinearLayout(ctx);
+        currentText.setOrientation(LinearLayout.VERTICAL);
+        currentText.setPadding(dp(10),0,0,0);
+        currentRow.addView(currentText,new LinearLayout.LayoutParams(0,-2,1f));
+        currentText.addView(text(shortValue(currentName,62),14,
+            CompanionStyle.TEXT,true));
+        if(!active.isEmpty())currentText.addView(text(
+            shortValue(active,46),11,CompanionStyle.MUTED,false));
+        else currentText.addView(text(
+            "You can still browse and choose a favorite.",11,CompanionStyle.MUTED,false));
+
         LinearLayout picker=card(list);
         picker.addView(text(groups.length()+" VRChat favorite list"+
             (groups.length()==1?"":"s")+" · "+snapshot.uniqueAvatars+
             " unique avatars",13,CompanionStyle.ACCENT,true));
         if(!snapshot.warning.isEmpty())
             picker.addView(text(snapshot.warning,12,CompanionStyle.GOLD,false));
-        button(picker,("all".equals(avatarGroup)?"✓ ":"")+"All avatar lists",false,()->{
-            avatarGroup="all";limit=65;drawList();
-        });
-        // Display every group returned by VRChat, including VRC+ slots and
-        // renamed groups. The labels are obtained from VRChat, not guessed.
-        for(int i=0;i<groups.length();i++){
-            JSONObject group=groups.optJSONObject(i);
-            if(group==null)continue;
-            String key=group.optString("name","");
-            String display=group.optString("displayName",key);
-            JSONArray entries=group.optJSONArray("avatars");
-            String count=group.optString("error","").isEmpty()?
-                (entries==null?0:entries.length())+" loaded":"Unavailable";
-            button(picker,(avatarGroup.equals(key)?"✓ ":"")+
-                shortValue(display,36)+" · "+count,false,()->{
-                avatarGroup=key;limit=65;drawList();
+        button(picker,"List: "+shortValue(avatarGroupTitle(),36)+
+            (avatarGroupsExpanded?"  ▴":"  ▾"),false,()->{
+                avatarGroupsExpanded=!avatarGroupsExpanded;
+                drawList();
             });
+        if(avatarGroupsExpanded){
+            button(picker,("all".equals(avatarGroup)?"✓ ":"")+
+                "All favorite lists",false,()->chooseAvatarGroup("all"));
+            // The group names are the exact labels VRChat returned.
+            for(int i=0;i<groups.length();i++){
+                JSONObject group=groups.optJSONObject(i);
+                if(group==null)continue;
+                String key=group.optString("name","");
+                String display=group.optString("displayName",key);
+                JSONArray items=group.optJSONArray("avatars");
+                String count=group.optString("error","").isEmpty()?
+                    (items==null?0:items.length())+" avatars":"Unavailable";
+                button(picker,(avatarGroup.equals(key)?"✓ ":"")+
+                    shortValue(display,33)+" · "+count,false,
+                    ()->chooseAvatarGroup(key));
+            }
         }
-        if(groups.length()==0)
+        if(!selectedAvatarId.isEmpty()){
+            JSONObject chosen=selectedAvatarDetails!=null?
+                selectedAvatarDetails:findFavoriteAvatar(selectedAvatarId);
+            if(chosen==null){
+                selectedAvatarId="";
+                selectedAvatarDetails=null;
+            }else{
+                final String avatarId=selectedAvatarId;
+                String name=chosen.optString("name","Avatar");
+                LinearLayout selection=card(list);
+                selection.setBackground(CompanionStyle.shape(
+                    ctx,CompanionStyle.RAISED,13,CompanionStyle.ACCENT));
+                selection.addView(text("SELECTED AVATAR",12,
+                    CompanionStyle.ACCENT,true));
+                LinearLayout preview=new LinearLayout(ctx);
+                preview.setGravity(Gravity.CENTER_VERTICAL);
+                selection.addView(preview);
+                preview.addView(avatarPicture(chosen,104),
+                    new LinearLayout.LayoutParams(dp(104),dp(104)));
+                LinearLayout details=new LinearLayout(ctx);
+                details.setPadding(dp(12),0,0,0);
+                details.setOrientation(LinearLayout.VERTICAL);
+                preview.addView(details,new LinearLayout.LayoutParams(0,-2,1f));
+                details.addView(text(shortValue(name,70),17,
+                    CompanionStyle.TEXT,true));
+                details.addView(text("By "+
+                    shortValue(chosen.optString("authorName","Unknown creator"),60),
+                    12,CompanionStyle.MUTED,false));
+                if(avatarId.equals(active)){
+                    details.addView(text("● Currently in use",12,
+                        CompanionStyle.GOOD,true));
+                }else{
+                    details.addView(text("Not applied yet",12,
+                        CompanionStyle.GOLD,true));
+                }
+                String description=chosen.optString("description","");
+                if(!description.isEmpty()){
+                    selection.addView(text(shortValue(description,240),
+                        12,CompanionStyle.MUTED,false));
+                }
+                if(selectedAvatarDetails!=null){
+                    selection.addView(text(
+                        "Release: "+selectedAvatarDetails.optString(
+                            "releaseStatus","Unknown")+
+                        " · Version: "+selectedAvatarDetails.optInt("version",0),
+                        11,CompanionStyle.MUTED,false));
+                }
+                LinearLayout controls=new LinearLayout(ctx);
+                controls.setOrientation(LinearLayout.VERTICAL);
+                selection.addView(controls);
+                if(!avatarId.equals(active)){
+                    Button apply=CompanionStyle.button(ctx,"Apply selected avatar",true);
+                    controls.addView(apply,CompanionStyle.buttonParams(ctx));
+                    LinearLayout approval=new LinearLayout(ctx);
+                    approval.setOrientation(LinearLayout.VERTICAL);
+                    controls.addView(approval);
+                    approval.setVisibility(View.GONE);
+                    apply.setOnClickListener(v->{
+                        host.keyboard(false);
+                        if(approval.getVisibility()==View.VISIBLE){
+                            approval.setVisibility(View.GONE);return;
+                        }
+                        approval.removeAllViews();
+                        approval.addView(text(
+                            "Switch your personal VRChat account to "+name+"?",
+                            12,CompanionStyle.GOLD,true));
+                        button(approval,"Confirm avatar change",true,()->{
+                            approval.setVisibility(View.GONE);
+                            write(()->{
+                                String now=VRChatSession.load(ctx)
+                                    .optString("userId","");
+                                if(!now.equals(avatarAccountId)||
+                                   !now.matches("usr_[0-9a-fA-F-]{36}"))
+                                    throw new SecurityException(
+                                        "VRChat account changed. Refresh favorites first.");
+                                VRChatApi.selectAvatar(ctx,avatarId);
+                            },"Avatar changed",()->{
+                                try{avatarOwnUser.put("currentAvatar",avatarId);}
+                                catch(Exception ignored){}
+                            });
+                        });
+                        button(approval,"Cancel",false,
+                            ()->approval.setVisibility(View.GONE));
+                        approval.setVisibility(View.VISIBLE);
+                    });
+                }else{
+                    selection.addView(text(
+                        "This is already your current VRChat avatar.",
+                        12,CompanionStyle.GOOD,false));
+                }
+                button(controls,
+                    selectedAvatarDetails==null?
+                        "View full avatar details":"Refresh full details",
+                    false,()->loadSelectedAvatarInfo(avatarId));
+                button(controls,"Copy avatar ID",false,
+                    ()->copy("avatar ID",avatarId));
+                button(controls,"Clear selection",false,()->{
+                    selectedAvatarId="";
+                    selectedAvatarDetails=null;
+                    selectedAvatarInfoToken++;
+                    drawList();
+                });
+            }
+        }else{
+            LinearLayout hint=card(list);
+            hint.addView(text("Tap an avatar to preview it",
+                14,CompanionStyle.TEXT,true));
+            hint.addView(text(
+                "Browsing won't switch your avatar. Choose one below, then Apply and Confirm.",
+                12,CompanionStyle.MUTED,false));
+        }
+
+        if(groups.length()==0){
             line(list,"No avatar favorite lists",
                 "VRChat did not return any favorite avatar groups for your account.",null);
+        }
+        section(list,"FAVORITES · "+shortValue(avatarGroupTitle(),48));
         java.util.HashSet<String> seen=new java.util.HashSet<>();
         int total=0,shown=0;
         for(int i=0;i<groups.length();i++){
@@ -1012,47 +1243,64 @@ public final class OverlayMiniVrcx {
             JSONArray avatars=group.optJSONArray("avatars");
             if(avatars==null)continue;
             for(int j=0;j<avatars.length();j++){
-                JSONObject a=avatars.optJSONObject(j);if(a==null)continue;
-                String name=a.optString("name","Avatar"),id=a.optString("id","");
+                JSONObject avatar=avatars.optJSONObject(j);
+                if(avatar==null)continue;
+                String name=avatar.optString("name","Avatar");
+                String author=avatar.optString("authorName","");
+                String id=avatar.optString("id","");
                 if(!id.matches("avtr_[0-9a-fA-F-]{36}"))continue;
-                if(!seen.add(id)||!matches(name+" "+id+" "+a.optString("authorName","")))
-                    continue;
+                if(!seen.add(id)||!matches(name+" "+author+" "+id))continue;
                 total++;
                 if(shown>=limit)continue;
-                LinearLayout card=card(list);
-                card.addView(text(shortValue(name,55),15,CompanionStyle.TEXT,true));
-                card.addView(text("By "+shortValue(a.optString("authorName","Unknown creator"),55),
-                    12,CompanionStyle.MUTED,false));
+                boolean picked=id.equals(selectedAvatarId);
+                boolean isCurrent=id.equals(active);
+                LinearLayout tile=card(list);
+                if(picked)tile.setBackground(CompanionStyle.shape(ctx,
+                    CompanionStyle.RAISED,12,CompanionStyle.ACCENT));
+                LinearLayout tileRow=new LinearLayout(ctx);
+                tileRow.setGravity(Gravity.CENTER_VERTICAL);
+                tile.addView(tileRow);
+                tileRow.addView(avatarPicture(avatar,60),
+                    new LinearLayout.LayoutParams(dp(60),dp(60)));
+                LinearLayout info=new LinearLayout(ctx);
+                info.setPadding(dp(10),0,0,0);
+                info.setOrientation(LinearLayout.VERTICAL);
+                tileRow.addView(info,new LinearLayout.LayoutParams(0,-2,1f));
+                info.addView(text(shortValue(name,65),14,CompanionStyle.TEXT,true));
+                info.addView(text(shortValue(
+                    (isCurrent?"● In use · ":"")+
+                    (picked?"✓ Selected · ":"")+
+                    "By "+(author.isEmpty()?"Unknown creator":author),75),
+                    11,isCurrent?CompanionStyle.GOOD:CompanionStyle.MUTED,false));
                 if("all".equals(avatarGroup)){
-                    card.addView(text(shortValue(group.optString("displayName",""),50),
-                        11,CompanionStyle.ACCENT,false));
+                    info.addView(text(shortValue(
+                        group.optString("displayName",""),45),10,
+                        CompanionStyle.ACCENT,false));
                 }
-                String info=a.optString("description","");
-                if(!info.isEmpty())card.addView(text(shortValue(info,105),
-                    12,CompanionStyle.MUTED,false));
-                button(card,"Select avatar",false,()->confirm(
-                    "Switch your VRChat avatar to "+name+"?",
-                    ()->write(()->VRChatApi.selectAvatar(ctx,id),"Avatar selected")));
-                button(card,"Copy avatar ID",false,()->copy("avatar ID",id));
+                tile.addView(text(picked?"✓ Selected · Tap to preview":"Tap to preview ›",
+                    11,CompanionStyle.ACCENT,false));
+                tile.setOnClickListener(v->chooseAvatar(id));
                 shown++;
             }
         }
+        list.addView(text(total+" matching favorites"+
+            (total>shown?" · "+shown+" shown":""),12,
+            CompanionStyle.ACCENT,false));
         if(total==0){
             JSONObject group=null;
             for(int i=0;i<groups.length();i++){
                 JSONObject candidate=groups.optJSONObject(i);
-                if(candidate!=null&&avatarGroup.equals(candidate.optString("name",""))){
-                    group=candidate;break;
-                }
+                if(candidate!=null&&avatarGroup.equals(
+                   candidate.optString("name",""))){group=candidate;break;}
             }
             line(list,"No avatars in this view",
                 group!=null&&!group.optString("error","").isEmpty()?
                     "VRChat couldn't load this list. Try Refresh.":
                     "Choose another list or change your search.",null);
-        }else if(total>shown){
-            button(list,"Show more avatars ("+(total-shown)+" remaining)",false,
-                ()->{limit+=65;drawList();});
         }
+        if(total>shown)button(list,
+            "Show more avatars ("+(total-shown)+" remaining)",false,
+            ()->{limit+=18;drawList();});
         button(list,"Refresh all favorite lists",false,this::load);
     }
     private void showGroups(){
