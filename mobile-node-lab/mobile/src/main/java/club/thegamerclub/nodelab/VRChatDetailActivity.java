@@ -264,6 +264,8 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         else if(!location.isEmpty() && !location.startsWith("wrld_"))
             detail(statusCard,"Location",location);
 
+        // Keep the actions people use most within the first screen of a profile.
+        showUserActions(user);
         kicker("ABOUT");
         LinearLayout bio=box();
         String content=user.optString("bio","").trim();
@@ -323,7 +325,6 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         detail(details,"Last platform",user.optString("last_platform",""));
         detail(details,"Last login",user.optString("last_login",""));
         showProfileExtras(user);
-        showUserActions(user);
     }
     private interface PersonalAction{void execute()throws Exception;}
     private void confirmedAction(String title,String explanation,PersonalAction task){
