@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last signed and published release before this development pass: v0.15.0 (versionCode 26). v0.16.0 is under development until CI confirms signed publication. Verify repository/release state before future changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last signed and published release before the v0.16.1 maintenance pass: v0.16.0 (versionCode 27). v0.16.1 remains a development build until CI confirms signed publication. Verify repository/release state before future changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -31,6 +31,12 @@ Last signed and published release before this development pass: v0.15.0 (version
 - **Group member tools inside overlay:** group member listing and server-side name search, member profile lookup, visible group instances and read-only group bans. Respect personal account permissions.
 - Retain existing in-overlay profiles, invites, notes, presence, avatars and group browsing. Extend instead of duplicating services.
 - Still pending for later releases: broad instance creation, group post/event editing, permission-changing moderation, exhaustive mutual friends, and further account profile customization. Explicitly validate APIs and authorization before shipping.
+
+### v0.16.1 — Compact Homepage and Gesture Navigation
+- Promote Quick Access above the detailed metrics, reduce the greeting and oversized status card, and tighten the native shortcut tiles.
+- Swipe left/right between Home, Explore, Tracking and Settings with a horizontal threshold that preserves ordinary vertical scrolling and button taps; bottom tabs stay present.
+- Simplify labels across the Home screen and floating tools; move infrastructure terms to Advanced diagnostics while preserving technical functionality.
+- Preserve previous v0.16 group browser functionality and verify in-place signing/updater continuity.
 
 ### v0.17 — Mobile Convenience and Reliability
 - Persistent Android notifications for supported invites/requests/activity, with battery-conscious refresh.
