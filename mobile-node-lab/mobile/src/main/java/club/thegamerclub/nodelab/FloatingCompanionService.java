@@ -51,6 +51,7 @@ public final class FloatingCompanionService extends Service {
     private final ExecutorService verifier=Executors.newSingleThreadExecutor();
     private final ExecutorService friendWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService eventsWorker=Executors.newSingleThreadExecutor();
+    private final ExecutorService presenceWorker=Executors.newSingleThreadExecutor();
     private WindowManager wm;
     private WindowManager.LayoutParams panelParams;
     private OverlayMiniVrcx mini;
@@ -59,7 +60,10 @@ public final class FloatingCompanionService extends Service {
     private View statusDot;
     private LinearLayout panel, panelContent;
     private WindowManager.LayoutParams bubbleParams;
-    private TextView nodeStatus, nodeStats, recentStatus;
+    private TextView nodeStatus, nodeStats, recentStatus, presenceLabel;
+    private String presenceStatus="";
+    private String presenceDescription="VRChat: checking status…";
+    private boolean presenceBusy=false;
     private Button trackingToggle;
     private String selectedTab="home", statusNote="";
     private boolean verifying=false, friendBusy=false, eventBusy=false, pendingStop=false;
@@ -104,6 +108,41 @@ public final class FloatingCompanionService extends Service {
         }
     };
 
+    /** VRChat account polling is independent of Shizuku and the Mobile Node. */
+    private final Runnable presenceTick=new Runnable(){
+        @Override public void run(){
+            if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
+            if(!presenceBusy){
+                presenceBusy=true;
+                presenceWorker.execute(()->{
+                    String value="",description="VRChat: unavailable";
+                    try{
+                        JSONObject session=VRChatSession.load(FloatingCompanionService.this);
+                        if(session.optString("auth","").isEmpty()||
+                            session.optBoolean("needs2fa",false)){
+                            description="VRChat: not signed in";
+                        }else{
+                            JSONObject user=VRChatApi.currentUser(FloatingCompanionService.this);
+                            value=user.optString("status","");
+                            description="VRChat: "+VRChatPresenceIndicator.label(value);
+                        }
+                    }catch(Exception ignored){
+                        description="VRChat: unavailable";
+                    }
+                    final String updated=value,display=description;
+                    handler.post(()->{
+                        presenceBusy=false;
+                        if(!StaffGate.unlocked(FloatingCompanionService.this))return;
+                        presenceStatus=updated;
+                        presenceDescription=display;
+                        refreshPresenceDot();
+                    });
+                });
+            }
+            // Avoid excessive VRChat account API calls while a game is running.
+            handler.postDelayed(this,75_000L);
+        }
+    };
     private final Runnable refreshTick=new Runnable(){
         @Override public void run(){
             if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
@@ -171,6 +210,8 @@ public final class FloatingCompanionService extends Service {
         handler.postDelayed(friendTick,3000L);
         handler.removeCallbacks(refreshTick);
         handler.postDelayed(refreshTick,600L);
+        handler.removeCallbacks(presenceTick);
+        handler.post(presenceTick);
         return START_NOT_STICKY;
     }
     private WindowManager.LayoutParams params(int width,int height){
@@ -208,12 +249,14 @@ public final class FloatingCompanionService extends Service {
             Gravity.CENTER);
         circle.addView(logo,imageParams);
         View led=new View(this);
-        led.setBackground(CompanionStyle.shape(this,CompanionStyle.GOLD,10,CompanionStyle.SURFACE));
+        led.setBackground(CompanionStyle.shape(this,
+            VRChatPresenceIndicator.GRAY,10,CompanionStyle.SURFACE));
         FrameLayout.LayoutParams indicator=new FrameLayout.LayoutParams(dp(13),dp(13),
             Gravity.BOTTOM|Gravity.END);
         indicator.setMargins(0,0,dp(2),dp(2));
         circle.addView(led,indicator);
         bubble=circle;statusDot=led;
+        refreshPresenceDot();
         bubbleParams=params(dp(60),dp(60));
         bubbleParams.x=Math.max(0,Math.min(screenWidth()-dp(60),
             getSharedPreferences("tgc_overlay",0).getInt("x",screenWidth()-dp(82))));
@@ -320,6 +363,8 @@ public final class FloatingCompanionService extends Service {
         bar.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
         labels.addView(text("TGC STAFF COMPANION",10,CompanionStyle.ACCENT,true));
         labels.addView(text("Floating tools",19,CompanionStyle.TEXT,true));
+        presenceLabel=text(presenceDescription,11,CompanionStyle.MUTED,false);
+        labels.addView(presenceLabel);
         Button collapse=CompanionStyle.button(this,"−",false);
         collapse.setContentDescription("Collapse overlay");
         bar.addView(collapse,new LinearLayout.LayoutParams(dp(43),dp(39)));
@@ -377,6 +422,8 @@ public final class FloatingCompanionService extends Service {
     }
     private void buildTab(){
         if(panelContent==null)return;
+        // Stop in-overlay periodic lookups when navigating away from a detail page.
+        if(mini!=null)mini.close();
         panelContent.removeAllViews();
         nodeStatus=null;nodeStats=null;trackingToggle=null;recentStatus=null;
         switch(selectedTab){
@@ -483,9 +530,13 @@ public final class FloatingCompanionService extends Service {
             ()->mini.findUser(),()->go("mini_friends"));
         section(panelContent,"VERIFICATION");
         LinearLayout codes=panelCard(panelContent);
-        paired(codes,"Gamer Music 3","Cult",
-            ()->mini.verification("gm3"),()->mini.verification("cult"));
-        codes.addView(text("Read and copy codes from private VRChat invites without leaving your game.",
+        action(codes,"Verification code",false,()->mini.verification());
+        codes.addView(text("Automatically detects the latest TGC or Cult code from your VRChat invites.",
+            12,CompanionStyle.MUTED,false));
+        section(panelContent,"YOUR VRCHAT STATUS");
+        LinearLayout presenceInfo=panelCard(panelContent);
+        presenceInfo.addView(text(
+            "The bubble dot reflects your VRChat account: green = Online, blue = Join Me, yellow = Ask Me, red = Busy. Gray = Offline or unavailable. Tracking status is shown on Home.",
             12,CompanionStyle.MUTED,false));
         section(panelContent,"PLAYER INFORMATION");
         LinearLayout player=panelCard(panelContent);
@@ -565,11 +616,19 @@ public final class FloatingCompanionService extends Service {
         refreshStatus();
         handler.postDelayed(this::refreshStatus,2200L);
     }
-    private void refreshStatus(){
+    private void refreshPresenceDot(){
         if(statusDot!=null){
             statusDot.setBackground(CompanionStyle.shape(this,
-                nodeRunning()?CompanionStyle.GOOD:CompanionStyle.GOLD,12,CompanionStyle.SURFACE));
+                VRChatPresenceIndicator.color(presenceStatus),12,CompanionStyle.SURFACE));
+            statusDot.setContentDescription(presenceDescription);
         }
+        if(bubble!=null){
+            bubble.setContentDescription("TGC floating tools. "+presenceDescription+
+                ". Tap to expand; drag to move.");
+        }
+        if(presenceLabel!=null)presenceLabel.setText(presenceDescription);
+    }
+    private void refreshStatus(){
         if(nodeStatus==null)return;
         boolean live=nodeRunning();
         android.content.SharedPreferences pref=getSharedPreferences("tgc_mobile_node_status",0);
@@ -647,6 +706,7 @@ public final class FloatingCompanionService extends Service {
         }
         if(mini!=null)mini.close();
         panel=null;panelContent=null;recentRows=null;recentStatus=null;
+        presenceLabel=null;
         panelParams=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;
     }
@@ -654,7 +714,9 @@ public final class FloatingCompanionService extends Service {
         handler.removeCallbacks(validate);
         handler.removeCallbacks(friendTick);
         handler.removeCallbacks(refreshTick);
+        handler.removeCallbacks(presenceTick);
         verifier.shutdownNow();friendWorker.shutdownNow();eventsWorker.shutdownNow();
+        presenceWorker.shutdownNow();
         dismissPanel();if(mini!=null)mini.shutdown();
         if(bubble!=null){
             try{wm.removeView(bubble);}catch(Exception ignored){}
