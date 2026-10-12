@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.13.0",
-  "version_code": 22,
+  "version": "0.13.1",
+  "version_code": 23,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "b7decf1d44ffe51ad949780555c5c4e741528cd2a936c28bd0505b8040fc27d0",
-  "notes": "Major usability update: reliable inbox and avatar action menus, visible notification filters, keyboard search, live local list filtering, one-tap status presets, intuitive tracking controls and profile sharing."
+  "sha256": "7a3b4c2a714f1a62fee4e42be50247e6a27aa733e58515e72d2d591109b47927",
+  "notes": "UX refinements: searchable and deduplicated avatar favorites, profile actions moved to the top, simpler non-duplicated home shortcuts, plus the v0.13.0 inbox, search, status and tracking improvements."
 }
