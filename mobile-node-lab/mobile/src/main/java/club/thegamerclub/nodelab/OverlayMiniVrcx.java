@@ -938,28 +938,72 @@ public final class OverlayMiniVrcx {
         String id=target;
         LinearLayout info=card(list);
         String name=profile.optString("displayName","VRChat user");
-        info.addView(text(name,18,CompanionStyle.TEXT,true));
-        info.addView(text("Status: "+profile.optString("status","Unknown")+
-            "\n"+profile.optString("statusDescription",""),
-            13,CompanionStyle.MUTED,false));
+        LinearLayout header=new LinearLayout(ctx);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        info.addView(header);
+        ImageView portrait=new ImageView(ctx);
+        portrait.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        portrait.setClipToOutline(true);
+        portrait.setBackground(CompanionStyle.shape(
+            ctx,CompanionStyle.RAISED,11,CompanionStyle.BORDER));
+        CompanionImages.load(portrait,CompanionImages.preferred(profile,
+            "profilePicOverrideThumbnail","userIcon",
+            "currentAvatarThumbnailImageUrl","currentAvatarImageUrl"));
+        header.addView(portrait,new LinearLayout.LayoutParams(dp(72),dp(72)));
+        LinearLayout details=new LinearLayout(ctx);
+        details.setPadding(dp(11),0,0,0);
+        details.setOrientation(LinearLayout.VERTICAL);
+        header.addView(details,new LinearLayout.LayoutParams(0,-2,1f));
+        details.addView(text(shortValue(name,60),17,CompanionStyle.TEXT,true));
+        String presence=profile.optString("status","");
+        details.addView(text(VRChatPresenceIndicator.label(presence),12,
+            VRChatPresenceIndicator.color(presence),true));
+        String statusText=profile.optString("statusDescription","");
+        if(!statusText.isEmpty())details.addView(
+            text(shortValue(statusText,150),12,CompanionStyle.MUTED,false));
+        boolean friend=profile.optBoolean("isFriend",false);
+        String requestState=profile.optString("friendRequestStatus","")
+            .toLowerCase(Locale.US);
+        info.addView(text(friend?"✓ Already friends":
+            requestState.contains("outgoing")?"Friend request pending":
+            requestState.contains("incoming")?"Incoming friend request":
+            "Not currently friends",12,
+            friend?CompanionStyle.GOOD:CompanionStyle.MUTED,false));
         String bio=profile.optString("bio","");
-        if(!bio.isEmpty())info.addView(text(shortValue(bio,1000),
-            13,CompanionStyle.TEXT,false));
+        if(!bio.isEmpty()){
+            section(info,"BIO");
+            info.addView(text(shortValue(bio,1000),
+                13,CompanionStyle.TEXT,false));
+        }
         String loc=profile.optString("location","");
-        if(!loc.isEmpty())info.addView(text("Location: "+shortValue(loc,150),
-            12,CompanionStyle.MUTED,false));
+        if(!loc.isEmpty()){
+            section(info,"LOCATION");
+            info.addView(text(shortValue(loc,150),
+                12,CompanionStyle.MUTED,false));
+            if(loc.startsWith("wrld_")&&loc.contains(":")){
+                button(info,"View visible instance",false,()->location(loc));
+                button(info,"Copy visible instance",false,
+                    ()->copy("instance location",loc));
+            }
+        }
+        section(info,"ACTIONS");
+        button(info,"View / write personal note",false,()->note(id));
+        if(!friend&&!requestState.contains("outgoing")&&
+           !requestState.contains("incoming")){
+            button(info,"Send friend request",false,()->confirm(
+                "Send a friend request to "+name+"?",
+                ()->write(()->VRChatApi.sendFriendRequest(ctx,id),
+                    "Friend request sent")));
+        }
+        if(friend){
+            button(info,"Request an invite from this friend",true,()->confirm(
+                "Ask "+name+" for a VRChat invite?",
+                ()->write(()->VRChatApi.requestInvite(ctx,id),"Invite requested")));
+        }
         button(info,"Copy player ID",false,()->copy("player ID",id));
         button(info,"Copy VRChat profile link",false,
             ()->copy("profile link","https://vrchat.com/home/user/"+id));
-        if(loc.startsWith("wrld_")&&loc.contains(":"))
-            button(info,"Location details",false,()->location(loc));
-        button(info,"View / write personal note",false,()->note(id));
-        button(info,"Send friend request",false,()->confirm(
-            "Send a friend request to "+name+"?",
-            ()->write(()->VRChatApi.sendFriendRequest(ctx,id),"Friend request sent")));
-        button(info,"Request an invite",false,()->confirm(
-            "Request an invite from "+name+"?",
-            ()->write(()->VRChatApi.requestInvite(ctx,id),"Invite requested")));
+        button(info,"Refresh profile",false,this::load);
     }
     private void showWorlds(){
         int shown=0;
