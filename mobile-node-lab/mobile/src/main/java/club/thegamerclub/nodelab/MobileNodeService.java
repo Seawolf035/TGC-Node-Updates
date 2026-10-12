@@ -142,6 +142,8 @@ public final class MobileNodeService extends Service {
         if(active!=null){
           if(!trackingStarted){
             active.startWatching();
+            // New watcher sessions cannot know people who joined before monitoring.
+            outbox.resetCurrentPlayers();
             trackingStarted=true;
           }
           JSONObject stats=new JSONObject(active.getWatchStats());
@@ -161,6 +163,7 @@ public final class MobileNodeService extends Service {
             .putBoolean("watch_source",stats.optBoolean("source_found"))
             .apply();
           captureFromWatcher(active);
+          captureLocalActivity(active);
         }
       }catch(Exception e){
         watcherState="Watcher error: "+e.getClass().getSimpleName();
@@ -190,6 +193,28 @@ public final class MobileNodeService extends Service {
         .putInt("captured_total",getSharedPreferences("tgc_mobile_node_status",0).getInt("captured_total",0)+stored)
         .putLong("last_capture_at",System.currentTimeMillis()).apply();
     }
+  }
+  /** Local-only VRCX activity: never included in the Node's Relay payload. */
+  private void captureLocalActivity(IPrivilegedProbe active)throws Exception{
+    JSONArray observed=new JSONArray(active.pendingActivity(150));
+    if(observed.length()==0)return;
+    int saved=outbox.insertLocalActivity(observed);
+    JSONArray ack=new JSONArray();
+    for(int i=0;i<observed.length();i++){
+      JSONObject item=observed.optJSONObject(i);
+      if(item==null)continue;
+      String id=item.optString("event_id","");
+      String kind=item.optString("kind","");
+      String uid=item.optString("user_id","");
+      if(id.matches("local_[0-9a-fA-F-]{36}") &&
+        ("instance".equals(kind) ||
+        (("join".equals(kind)||"leave".equals(kind)) &&
+          uid.matches("usr_[0-9a-fA-F-]{36}"))))ack.put(id);
+    }
+    // ACK only after durable SQLite commit; retries deduplicate by event_id.
+    active.ackActivity(ack.toString());
+    if(saved>0)getSharedPreferences("tgc_mobile_node_status",0).edit()
+      .putLong("last_local_activity_at",System.currentTimeMillis()).apply();
   }
   private void relayLoop(){
     while(running&&!shuttingDown){
