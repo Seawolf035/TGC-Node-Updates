@@ -9,13 +9,14 @@ import org.json.JSONObject;
 
 /** A local SQLite queue to survive disconnects, app restarts and retryable relay errors. */
 public final class MobileOutbox extends SQLiteOpenHelper {
-  public MobileOutbox(Context context){super(context,"tgc_mobile_outbox.sqlite",null,3);}
+  public MobileOutbox(Context context){super(context,"tgc_mobile_outbox.sqlite",null,4);}
   @Override public void onCreate(SQLiteDatabase db){
     db.execSQL("CREATE TABLE IF NOT EXISTS events(event_id TEXT PRIMARY KEY, json TEXT NOT NULL, created_at INTEGER NOT NULL)");
     db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_time ON events(created_at)");
     db.execSQL("CREATE TABLE IF NOT EXISTS encounters(user_id TEXT PRIMARY KEY, display_name TEXT NOT NULL DEFAULT '', seen_at INTEGER NOT NULL, visits INTEGER NOT NULL DEFAULT 1)");
     db.execSQL("CREATE TABLE IF NOT EXISTS event_history(event_id TEXT PRIMARY KEY, json TEXT NOT NULL, seen_at INTEGER NOT NULL)");
     db.execSQL("CREATE INDEX IF NOT EXISTS idx_history_time ON event_history(seen_at)");
+    createLocalActivity(db);
   }
   @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion){
     if(oldVersion<2)db.execSQL("CREATE TABLE IF NOT EXISTS encounters(user_id TEXT PRIMARY KEY, display_name TEXT NOT NULL DEFAULT '', seen_at INTEGER NOT NULL, visits INTEGER NOT NULL DEFAULT 1)");
@@ -23,6 +24,13 @@ public final class MobileOutbox extends SQLiteOpenHelper {
       db.execSQL("CREATE TABLE IF NOT EXISTS event_history(event_id TEXT PRIMARY KEY, json TEXT NOT NULL, seen_at INTEGER NOT NULL)");
       db.execSQL("CREATE INDEX IF NOT EXISTS idx_history_time ON event_history(seen_at)");
     }
+    if(oldVersion<4)createLocalActivity(db);
+  }
+  /** Local-only VRCX event history, intentionally distinct from Relay uploads. */
+  private static void createLocalActivity(SQLiteDatabase db){
+    db.execSQL("CREATE TABLE IF NOT EXISTS local_activity(event_id TEXT PRIMARY KEY,kind TEXT NOT NULL,user_id TEXT NOT NULL DEFAULT '',display_name TEXT NOT NULL DEFAULT '',location TEXT NOT NULL DEFAULT '',event_at INTEGER NOT NULL)");
+    db.execSQL("CREATE INDEX IF NOT EXISTS idx_local_activity_time ON local_activity(event_at)");
+    db.execSQL("CREATE TABLE IF NOT EXISTS active_players(user_id TEXT PRIMARY KEY,display_name TEXT NOT NULL DEFAULT '',location TEXT NOT NULL DEFAULT '',joined_at INTEGER NOT NULL)");
   }
   public synchronized int insert(JSONArray events){
     SQLiteDatabase db=getWritableDatabase();
@@ -80,6 +88,98 @@ public final class MobileOutbox extends SQLiteOpenHelper {
       db.setTransactionSuccessful();
     }finally{db.endTransaction();}
     return stored;
+  }
+  /**
+   * Locally recorded join/leave/instance events are NEVER queued for the Relay.
+   * Insert and active-player state transitions are atomic; duplicate binder retries
+   * cannot alter join counts or player presence.
+   */
+  public synchronized int insertLocalActivity(JSONArray events){
+    SQLiteDatabase db=getWritableDatabase();
+    db.beginTransaction();
+    int inserted=0;
+    try{
+      android.database.sqlite.SQLiteStatement put=db.compileStatement(
+        "INSERT OR IGNORE INTO local_activity(event_id,kind,user_id,display_name,location,event_at) VALUES(?,?,?,?,?,?)");
+      android.database.sqlite.SQLiteStatement present=db.compileStatement(
+        "INSERT OR REPLACE INTO active_players(user_id,display_name,location,joined_at) VALUES(?,?,?,?)");
+      android.database.sqlite.SQLiteStatement left=db.compileStatement(
+        "DELETE FROM active_players WHERE user_id=?");
+      for(int i=0;i<events.length();i++){
+        JSONObject e=events.optJSONObject(i);
+        if(e==null)continue;
+        String id=e.optString("event_id","");
+        String kind=e.optString("kind","");
+        String user=e.optString("user_id","");
+        String name=e.optString("display_name","");
+        String location=e.optString("location","");
+        long time=e.optLong("time",System.currentTimeMillis());
+        if(!id.matches("local_[0-9a-fA-F-]{36}") ||
+            !("join".equals(kind)||"leave".equals(kind)||"instance".equals(kind)))continue;
+        if(!"instance".equals(kind)&&!user.matches("usr_[0-9a-fA-F-]{36}"))continue;
+        if(name.length()>180)name=name.substring(0,180);
+        if(location.length()>220)location=location.substring(0,220);
+        long now=System.currentTimeMillis();
+        if(time<=0||time>now+300_000L||time<now-2L*86400000L)time=now;
+        put.clearBindings();
+        put.bindString(1,id);put.bindString(2,kind);
+        put.bindString(3,user);put.bindString(4,name);
+        put.bindString(5,location);put.bindLong(6,time);
+        if(put.executeInsert()==-1)continue;
+        inserted++;
+        if("instance".equals(kind)){
+          db.execSQL("DELETE FROM active_players");
+        }else if("join".equals(kind)){
+          present.clearBindings();
+          present.bindString(1,user);present.bindString(2,name);
+          present.bindString(3,location);present.bindLong(4,time);
+          present.executeInsert();
+        }else{
+          left.clearBindings();left.bindString(1,user);
+          left.executeUpdateDelete();
+        }
+      }
+      db.execSQL("DELETE FROM local_activity WHERE event_at < "+(System.currentTimeMillis()-30L*86400000L));
+      db.execSQL("DELETE FROM local_activity WHERE event_id IN (SELECT event_id FROM local_activity ORDER BY event_at DESC LIMIT -1 OFFSET 5000)");
+      db.setTransactionSuccessful();
+    }finally{db.endTransaction();}
+    return inserted;
+  }
+  /** Reset a stale player list when a new log watcher session begins. History remains. */
+  public synchronized void resetCurrentPlayers(){
+    getWritableDatabase().execSQL("DELETE FROM active_players");
+  }
+  public synchronized JSONArray currentPlayers(int max){
+    JSONArray out=new JSONArray();
+    try(Cursor c=getReadableDatabase().rawQuery(
+      "SELECT user_id,display_name,location,joined_at FROM active_players ORDER BY joined_at DESC LIMIT ?",
+      new String[]{String.valueOf(Math.max(1,Math.min(max,250)))})){
+      while(c.moveToNext()){
+        JSONObject row=new JSONObject();
+        try{row.put("user_id",c.getString(0)).put("display_name",c.getString(1))
+          .put("location",c.getString(2)).put("time",c.getLong(3));
+          out.put(row);
+        }catch(Exception ignored){}
+      }
+    }
+    return out;
+  }
+  public synchronized JSONArray recentLocalActivity(int max){
+    JSONArray out=new JSONArray();
+    try(Cursor c=getReadableDatabase().rawQuery(
+      "SELECT kind,user_id,display_name,location,event_at FROM local_activity ORDER BY event_at DESC LIMIT ?",
+      new String[]{String.valueOf(Math.max(1,Math.min(max,300)))})){
+      while(c.moveToNext()){
+        JSONObject item=new JSONObject();
+        try{
+          item.put("kind",c.getString(0)).put("user_id",c.getString(1))
+            .put("display_name",c.getString(2)).put("location",c.getString(3))
+            .put("time",c.getLong(4));
+          out.put(item);
+        }catch(Exception ignored){}
+      }
+    }
+    return out;
   }
   public synchronized JSONArray batch(int limit){
     JSONArray out=new JSONArray();
@@ -164,5 +264,7 @@ public final class MobileOutbox extends SQLiteOpenHelper {
     getWritableDatabase().execSQL("DELETE FROM events");
     getWritableDatabase().execSQL("DELETE FROM encounters");
     getWritableDatabase().execSQL("DELETE FROM event_history");
+    getWritableDatabase().execSQL("DELETE FROM local_activity");
+    getWritableDatabase().execSQL("DELETE FROM active_players");
   }
 }
