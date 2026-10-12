@@ -85,8 +85,8 @@ public final class MobileNodeService extends Service {
       PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     return new Notification.Builder(this,CHANNEL)
       .setSmallIcon(android.R.drawable.stat_notify_sync)
-      .setContentTitle("TGC Mobile Invite Node • monitoring")
-      .setContentText("Background tracking enabled · tap for live status")
+      .setContentTitle("TGC Companion • Player tracking")
+      .setContentText("Tracking is on · tap to view your activity")
       .setContentIntent(open).setOngoing(true)
       .addAction(new Notification.Action.Builder(null,"Stop",stop).build()).build();
   }
