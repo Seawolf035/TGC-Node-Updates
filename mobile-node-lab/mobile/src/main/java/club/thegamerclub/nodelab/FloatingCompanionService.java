@@ -194,6 +194,14 @@ public final class FloatingCompanionService extends Service {
                 presenceDescription="VRChat: "+VRChatPresenceIndicator.label(updated);
                 refreshPresenceDot();
             }
+            @Override public void scrollToTop(){
+                if(panelScroller!=null){
+                    final ScrollView target=panelScroller;
+                    target.post(()->{
+                        if(panelScroller==target)target.smoothScrollTo(0,0);
+                    });
+                }
+            }
         });
         NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
         manager.createNotificationChannel(new NotificationChannel(CHANNEL,
