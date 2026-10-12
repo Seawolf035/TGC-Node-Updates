@@ -1,0 +1,44 @@
+name: Validate rotating chatboxes (debug only)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.17.9-rotating-chatboxes
+    paths:
+      - "mobile-node-lab/mobile/**"
+      - "mobile-node-lab/build.gradle"
+      - "mobile-node-lab/gradle.properties"
+      - "mobile-node-lab/settings.gradle"
+      - ".github/workflows/check-mobile-rotating-chatboxes.yml"
+  workflow_dispatch:
+
+# Validation only. No signer, no release manifest, no published APK.
+permissions:
+  contents: read
+
+jobs:
+  compile-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile and assemble a diagnostic debug build
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - name: Upload diagnostic build for CI review
+        uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-0.17.9-rotation-debug-CI
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
