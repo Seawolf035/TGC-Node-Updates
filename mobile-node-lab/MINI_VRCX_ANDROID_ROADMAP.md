@@ -18,6 +18,8 @@ Last confirmed Android release: v0.13.1 (versionCode 23). Verify repository/rele
 - Reuse the **existing** live log reader/tracking service and database; no second log reader. Overlay dismissal must not stop tracking.
 - Android overlay permission, foreground-service requirements, security gates, battery/performance and VRChat foreground detection.
 
+- **Friend Log (new v0.14 requirement):** a searchable, persistent chronological record of observed friend online/offline transitions, location changes, status changes and friend-list additions/removals where detectable; show timestamps, names and profile links, filtering by friend/event, deduplicate repeated polls, and label unknown/unobserved periods accurately. Keep it distinct from the general activity feed. Store account-scoped local history and never claim complete history before monitoring began.
+
 ### v0.15 — History and Collections
 - Searchable player encounter history with first/last seen, worlds, repeated encounters and observed name changes.
 - World and instance visit history from locally observed logs; clarify when history cannot be reconstructed.
