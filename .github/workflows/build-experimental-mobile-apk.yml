@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.17.4: Load every server-provided VRChat favorite avatar list, including named/VRC+ group contents, with group selectors in app and floating tools, deduplicated All view, partial-load warnings and legacy fallback. Optional Tracking setup adds official Shizuku download and setup guide links."
+            "notes": "v0.17.5: Detect Meta Quest hardware; floating tools are disabled by default there but can be explicitly enabled experimentally in Settings. Block overlay launch and sticky recovery unless Quest opt-in is enabled, without changing phone behavior or other Companion features."
           }
           JSON
           fi
