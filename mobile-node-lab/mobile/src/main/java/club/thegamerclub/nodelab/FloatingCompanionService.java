@@ -60,7 +60,7 @@ public final class FloatingCompanionService extends Service {
     private View statusDot;
     private LinearLayout panel, panelContent;
     private WindowManager.LayoutParams bubbleParams;
-    private TextView nodeStatus, nodeStats, recentStatus, presenceLabel;
+    private TextView nodeStatus, nodeStats, recentStatus, presenceLabel,presenceActionLabel;
     private String presenceStatus="";
     private String presenceDescription="VRChat: checking status…";
     private boolean presenceBusy=false;
@@ -165,6 +165,11 @@ public final class FloatingCompanionService extends Service {
             @Override public void navigate(String page){go(page);}
             @Override public void back(){goBack();}
             @Override public void keyboard(boolean enabled){setOverlayKeyboard(enabled);}
+            @Override public void onPresenceChanged(String updated){
+                presenceStatus=updated;
+                presenceDescription="VRChat: "+VRChatPresenceIndicator.label(updated);
+                refreshPresenceDot();
+            }
         });
         NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
         manager.createNotificationChannel(new NotificationChannel(CHANNEL,
@@ -363,8 +368,10 @@ public final class FloatingCompanionService extends Service {
         bar.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
         labels.addView(text("TGC STAFF COMPANION",10,CompanionStyle.ACCENT,true));
         labels.addView(text("Floating tools",19,CompanionStyle.TEXT,true));
-        presenceLabel=text(presenceDescription,11,CompanionStyle.MUTED,false);
+        presenceLabel=text(presenceDescription+"  ·  Edit ›",11,CompanionStyle.ACCENT,false);
+        presenceLabel.setPadding(0,dp(4),0,dp(4));
         labels.addView(presenceLabel);
+        presenceLabel.setOnClickListener(v->go("mini_presence"));
         Button collapse=CompanionStyle.button(this,"−",false);
         collapse.setContentDescription("Collapse overlay");
         bar.addView(collapse,new LinearLayout.LayoutParams(dp(43),dp(39)));
@@ -495,8 +502,10 @@ public final class FloatingCompanionService extends Service {
         LinearLayout quick=panelCard(panelContent);
         paired(quick,"Friends locations","Friend log",
             ()->go("mini_friends"),()->go("mini_log"));
-        paired(quick,"Inbox","Activity feed",
-            ()->mini.inbox("all"),()->go("mini_activity"));
+        paired(quick,"Inbox","Find anything",
+            ()->mini.inbox("all"),()->mini.findAnything());
+        paired(quick,"Your instance","Activity feed",
+            ()->go("mini_now"),()->go("mini_activity"));
     }
     private LinearLayout recentRows;
     private void showSocial(){
@@ -509,8 +518,8 @@ public final class FloatingCompanionService extends Service {
         LinearLayout communication=panelCard(panelContent);
         paired(communication,"All notifications","Invitations",
             ()->mini.inbox("all"),()->mini.inbox("invite"));
-        paired(communication,"Friend requests","Search players",
-            ()->mini.inbox("friend"),()->mini.findUser());
+        paired(communication,"Friend requests","Find anything",
+            ()->mini.inbox("friend"),()->mini.findAnything());
         section(panelContent,"PLAYER TOOLS");
         LinearLayout players=panelCard(panelContent);
         paired(players,"Player list","Join / leave log",
@@ -520,23 +529,30 @@ public final class FloatingCompanionService extends Service {
         action(players,"My VRChat groups",false,()->go("mini_groups"));
     }
     private void showTools(){
-        section(panelContent,"ACCOUNT — NO APP SWITCH");
+        section(panelContent,"YOUR VRCHAT STATUS");
+        LinearLayout statusCard=panelCard(panelContent);
+        presenceActionLabel=text(presenceDescription,16,CompanionStyle.ACCENT,true);
+        statusCard.addView(presenceActionLabel);
+        action(statusCard,"Change status or message",true,()->go("mini_presence"));
+        statusCard.addView(text("Pick a color, edit your message, apply once. Your saved presets work here too.",
+            12,CompanionStyle.MUTED,false));
+        section(panelContent,"YOUR ACCOUNT");
         LinearLayout personal=panelCard(panelContent);
-        paired(personal,"Status & presets","Favorite avatars",
-            ()->go("mini_presence"),()->go("mini_avatars"));
-        paired(personal,"Saved worlds","My groups",
-            ()->go("mini_worlds"),()->go("mini_groups"));
-        paired(personal,"Search players","Friends & locations",
-            ()->mini.findUser(),()->go("mini_friends"));
+        paired(personal,"Favorite avatars","Saved worlds",
+            ()->go("mini_avatars"),()->go("mini_worlds"));
+        paired(personal,"Recent worlds","Current instance",
+            ()->go("mini_recent"),()->go("mini_now"));
+        paired(personal,"Find anything","My groups",
+            ()->mini.findAnything(),()->go("mini_groups"));
         section(panelContent,"VERIFICATION");
         LinearLayout codes=panelCard(panelContent);
         action(codes,"Verification code",false,()->mini.verification());
         codes.addView(text("Automatically detects the latest TGC or Cult code from your VRChat invites.",
             12,CompanionStyle.MUTED,false));
-        section(panelContent,"YOUR VRCHAT STATUS");
+        section(panelContent,"STATUS COLORS");
         LinearLayout presenceInfo=panelCard(panelContent);
         presenceInfo.addView(text(
-            "The bubble dot reflects your VRChat account: green = Online, blue = Join Me, yellow = Ask Me, red = Busy. Gray = Offline or unavailable. Tracking status is shown on Home.",
+            "● Green Online  ·  ● Blue Join Me  ·  ● Yellow Ask Me  ·  ● Red Busy  ·  ● Gray Offline/unknown",
             12,CompanionStyle.MUTED,false));
         section(panelContent,"PLAYER INFORMATION");
         LinearLayout player=panelCard(panelContent);
@@ -626,7 +642,11 @@ public final class FloatingCompanionService extends Service {
             bubble.setContentDescription("TGC floating tools. "+presenceDescription+
                 ". Tap to expand; drag to move.");
         }
-        if(presenceLabel!=null)presenceLabel.setText(presenceDescription);
+        if(presenceLabel!=null)presenceLabel.setText(presenceDescription+"  ·  Edit ›");
+        if(presenceActionLabel!=null){
+            presenceActionLabel.setText(presenceDescription);
+            presenceActionLabel.setTextColor(VRChatPresenceIndicator.color(presenceStatus));
+        }
     }
     private void refreshStatus(){
         if(nodeStatus==null)return;
@@ -706,7 +726,7 @@ public final class FloatingCompanionService extends Service {
         }
         if(mini!=null)mini.close();
         panel=null;panelContent=null;recentRows=null;recentStatus=null;
-        presenceLabel=null;
+        presenceLabel=null;presenceActionLabel=null;
         panelParams=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;
     }
