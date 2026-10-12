@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.17.8",
-  "version_code": 41,
+  "version": "0.17.9",
+  "version_code": 42,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "354e321d93e26aec6b66d03b68b4e7ce49a487518d783aff1f08f0a9b39428e4",
-  "notes": "v0.17.8: Dedicated OSC tab with Live Chatbox continuous local OSC status broadcasts (5/10/15/30 sec, off by default), custom text/time/battery preview, manual-chat priority, Start/Stop confirmation, account-scoped saved phrases, typing indicators and explicit avatar Bool/Int/Float parameter controls. Stops with floating service; no Node/Shizuku/Relay dependency."
+  "sha256": "1fe1f80789d804b942397991d6bd25775e8869e2b289a11f01ed651beb84708a",
+  "notes": "v0.17.9: Add account-scoped rotating Live Chatbox profiles (8 additional, each with custom text, time and battery), optional 15/30/60/120-second switching independent of 5/10/15/30-second refresh. Preserve v0.17.8 manual priority, explicit broadcast Start/Stop, OSC parameter controls, credentials, and Node/Relay separation."
 }
