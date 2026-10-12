@@ -19,7 +19,9 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import org.json.JSONObject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -35,6 +37,29 @@ public final class FloatingCompanionService extends Service {
     private static final int NOTICE=223;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final ExecutorService verifier=Executors.newSingleThreadExecutor();
+    private final ExecutorService friendWorker=Executors.newSingleThreadExecutor();
+    private boolean friendBusy=false;
+    private final Runnable friendTick=new Runnable(){
+        @Override public void run(){
+            if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
+            if(!friendBusy){
+                friendBusy=true;
+                friendWorker.execute(()->{
+                    try{
+                        JSONObject session=VRChatSession.load(FloatingCompanionService.this);
+                        FriendLogStore.account(session);
+                        FriendLogStore.observe(FloatingCompanionService.this,session,
+                            VRChatApi.friendSnapshot(FloatingCompanionService.this));
+                    }catch(Exception ignored){
+                        // VRChat login, offline state or rate limits: preserve the last complete snapshot.
+                    }finally{
+                        handler.post(()->friendBusy=false);
+                    }
+                });
+            }
+            handler.postDelayed(this,150_000L);
+        }
+    };
     private WindowManager wm;
     private View bubble,panel;
     private WindowManager.LayoutParams bubbleParams;
@@ -89,9 +114,13 @@ public final class FloatingCompanionService extends Service {
             stopSelf();return START_NOT_STICKY;
         }
         startForeground(NOTICE,notice());
-        if(bubble==null)showBubble();
+        if(bubble==null){
+            try{showBubble();}
+            catch(Exception e){stopSelf();return START_NOT_STICKY;}
+        }
         getSharedPreferences("tgc_overlay",0).edit().putBoolean("running",true).apply();
         handler.removeCallbacks(validate);handler.postDelayed(validate,1500L);
+        handler.removeCallbacks(friendTick);handler.postDelayed(friendTick,3000L);
         return START_NOT_STICKY;
     }
     private WindowManager.LayoutParams params(int width,int height){
@@ -151,7 +180,10 @@ public final class FloatingCompanionService extends Service {
         if(!StaffGate.unlocked(this)){stopSelf();return;}
         LinearLayout frame=CompanionStyle.card(this);
         frame.setElevation(dp(8));
-        panel=frame;
+        ScrollView scroll=new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.addView(frame);
+        panel=scroll;
         TextView title=CompanionStyle.text(this,"MINI VRCX · QUICK TOOLS",14,
             CompanionStyle.ACCENT,true);
         frame.addView(title);
@@ -169,10 +201,10 @@ public final class FloatingCompanionService extends Service {
         int width=getResources().getDisplayMetrics().widthPixels;
         int height=getResources().getDisplayMetrics().heightPixels;
         WindowManager.LayoutParams p=params(Math.min(dp(315),width-dp(24)),
-            WindowManager.LayoutParams.WRAP_CONTENT);
+            Math.min(dp(485),height-dp(135)));
         p.x=Math.max(dp(8),Math.min(width-Math.min(dp(315),width-dp(24))-dp(8),bubbleParams.x));
         p.y=Math.max(dp(28),Math.min(height-dp(530),bubbleParams.y+dp(66)));
-        try{wm.addView(frame,p);updateStatus();}
+        try{wm.addView(panel,p);updateStatus();}
         catch(Exception e){panel=null;tracking=null;}
     }
     private void addButton(LinearLayout parent,String label,Class<?> destination,String mode){
@@ -205,7 +237,8 @@ public final class FloatingCompanionService extends Service {
     }
     @Override public void onDestroy(){
         handler.removeCallbacks(validate);
-        verifier.shutdownNow();dismissPanel();
+        handler.removeCallbacks(friendTick);
+        verifier.shutdownNow();friendWorker.shutdownNow();dismissPanel();
         if(bubble!=null){
             try{wm.removeView(bubble);}catch(Exception ignored){}
             bubble=null;
