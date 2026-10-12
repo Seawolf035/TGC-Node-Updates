@@ -19,6 +19,10 @@ public final class VRChatInviteCode {
     // Exactly matches the one-time code produced by Gamer Music 3's launcher.
     private static final Pattern CODE=Pattern.compile(
         "(?i)\\bTGC-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}\\b");
+    // Gamer Music 2 / Cult uses its own distinct verification-code namespace.
+    private static final Pattern CULT_CODE=Pattern.compile(
+        "(?i)\\bCULT-[A-Z0-9]{4}-[A-Z0-9]{4}\\b");
+    private static final long CULT_RECENT_WINDOW=60L*60_000L;
     private static final Pattern LOCATION=Pattern.compile(
         "(?i)(wrld_[0-9a-f-]{36}):([^\\s\"'<>]+)");
     private static final String WORLD="wrld_a7a3e90e-ba93-4bb3-88fa-25747dcea477";
@@ -147,6 +151,157 @@ public final class VRChatInviteCode {
             }
         }
         return "";
+    }
+
+    private static String cultCode(String text){
+        if(text==null)return "";
+        Matcher matcher=CULT_CODE.matcher(text);
+        return matcher.find()?matcher.group().toUpperCase(Locale.US):"";
+    }
+    private static String findCultCode(JSONObject data,int depth){
+        if(data==null||depth>4)return "";
+        for(String key:new String[]{
+                "displayName","instanceName","name","message",
+                "inviteMessage","title","worldName"}){
+            String value=cultCode(data.optString(key,""));
+            if(!value.isEmpty())return value;
+        }
+        java.util.Iterator<String> iterator=data.keys();
+        while(iterator.hasNext()){
+            Object value=data.opt(iterator.next());
+            if(value instanceof JSONObject){
+                String found=findCultCode((JSONObject)value,depth+1);
+                if(!found.isEmpty())return found;
+            }else if(value instanceof String && ((String)value).startsWith("{")){
+                try{
+                    String found=findCultCode(new JSONObject((String)value),depth+1);
+                    if(!found.isEmpty())return found;
+                }catch(Exception ignored){}
+            }
+        }
+        return "";
+    }
+    private static String cultInstanceLocation(String text){
+        if(text==null)return "";
+        Matcher matcher=LOCATION.matcher(text);
+        if(matcher.find()){
+            String instance=matcher.group(2).replaceAll("[,.;]*$","");
+            // An opaque private instance ID; never synthesize one.
+            if(instance.length()<=512 && instance.matches("[A-Za-z0-9_~().,-]+"))
+                return matcher.group(1)+":"+instance;
+        }
+        return "";
+    }
+    private static String findCultLocation(JSONObject data,int depth){
+        if(data==null||depth>4)return "";
+        for(String key:new String[]{
+                "worldId","location","instanceLocation","targetLocation",
+                "worldInstance","joinLocation","link"}){
+            String found=cultInstanceLocation(data.optString(key,""));
+            if(!found.isEmpty())return found;
+        }
+        java.util.Iterator<String> iterator=data.keys();
+        while(iterator.hasNext()){
+            Object value=data.opt(iterator.next());
+            if(value instanceof JSONObject){
+                String found=findCultLocation((JSONObject)value,depth+1);
+                if(!found.isEmpty())return found;
+            }else if(value instanceof String){
+                String raw=(String)value;
+                if(raw.startsWith("{")){
+                    try{
+                        String found=findCultLocation(new JSONObject(raw),depth+1);
+                        if(!found.isEmpty())return found;
+                    }catch(Exception ignored){}
+                }else{
+                    String found=cultInstanceLocation(raw);
+                    if(!found.isEmpty())return found;
+                }
+            }
+        }
+        return "";
+    }
+    private static void acceptCult(JSONArray input,ArrayList<Invite> matches){
+        if(input==null)return;
+        long now=System.currentTimeMillis();
+        for(int i=0;i<input.length();i++){
+            JSONObject notification=input.optJSONObject(i);
+            if(notification==null)continue;
+            String type=notification.optString("type","").toLowerCase(Locale.US);
+            // An arbitrary message in the inbox must never become a verification code.
+            if(!type.equals("invite") && !type.endsWith(".invite") &&
+                !type.equals("invitev2"))continue;
+            long at=date(notification);
+            if(at>0 && (at>now+60_000L || now-at>CULT_RECENT_WINDOW))continue;
+            JSONObject detail=details(notification);
+            Invite invite=new Invite();
+            invite.raw=notification;
+            invite.details=detail;
+            invite.created=at;
+            invite.code=findCultCode(detail,0);
+            if(invite.code.isEmpty())invite.code=findCultCode(notification,0);
+            invite.location=findCultLocation(detail,0);
+            if(invite.location.isEmpty())invite.location=findCultLocation(notification,0);
+            // Ignore regular invitations that have neither a Cult code nor an
+            // instance location. An ordinary invite is not a verification request.
+            if(!invite.code.isEmpty()||!invite.location.isEmpty())
+                matches.add(invite);
+        }
+    }
+    /**
+     * Cult verification is separate from Gamer Music 3. The code lives in a
+     * VRChat private-invite instance name; a Cult-formatted code embedded in
+     * the invite itself is also accepted. We do not know or infer a Cult world
+     * UUID, expiry duration, or any backend verification authority.
+     *
+     * Reads only: this never starts or completes Discord verification.
+     */
+    public static Result scanCult(Context context)throws Exception{
+        ArrayList<Invite> matches=new ArrayList<>();
+        boolean read=false;
+        Exception lastError=null;
+        try{
+            acceptCult(VRChatApi.inviteNotifications(context),matches);
+            read=true;
+        }catch(Exception ex){lastError=ex;}
+        try{
+            acceptCult(VRChatApi.inviteNotificationsV2(context),matches);
+            read=true;
+        }catch(Exception ex){if(lastError==null)lastError=ex;}
+        if(!read){
+            if(lastError!=null)throw lastError;
+            throw new IllegalStateException("VRChat invite inbox unavailable");
+        }
+        Collections.sort(matches,(a,b)->Long.compare(b.created,a.created));
+        for(Invite invite:matches){
+            if(!invite.code.isEmpty()){
+                return new Result(invite.code,
+                    "Cult verification code found in your VRChat invite",
+                    matches.size(),true,invite.created);
+            }
+            String location=invite.location;
+            int colon=location.indexOf(':');
+            if(colon<=0)continue;
+            try{
+                JSONObject instance=VRChatApi.invitedInstance(context,
+                    location.substring(0,colon),location.substring(colon+1));
+                // The *custom instance name* is authoritative, not a world title.
+                String found=cultCode(instance.optString("displayName",""));
+                if(!found.isEmpty())
+                    return new Result(found,
+                        "Cult verification code found in your invited instance",
+                        matches.size(),true,invite.created);
+            }catch(Exception ignored){
+                // VRChat may restrict access to a private instance.
+            }
+        }
+        if(matches.isEmpty())
+            return new Result("",
+                "No recent Cult verification invite found. Request an invite through Gamer Music 2's existing verification flow, then return here.",
+                0,true,0L);
+        return new Result("",
+            "Invites found, but a Cult verification code was not available in their accessible details. You can also read the instance name in VRChat.",
+            matches.size(),true,0L);
     }
     private static void accept(JSONArray notifications,ArrayList<Invite> matches){
         if(notifications==null)return;
