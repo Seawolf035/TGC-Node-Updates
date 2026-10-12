@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.16.0",
-  "version_code": 27,
+  "version": "0.16.1",
+  "version_code": 28,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "b3c10dd062d9d07256d1a40a5cb9a8ad653da4a7b5cd6cc23f41beff8fba0248",
-  "notes": "v0.16.0: Redesigned native Companion homepage with staff and tracking status, overlay controls, recent activity and stats; Mini VRCX adds group member directory/search, group instances and permission-aware read-only bans."
+  "sha256": "b249031095ec3dd8506c9b7f6b5c7084b995672cc976fdd7c3853b79d14060fe",
+  "notes": "v0.16.1: Compact homepage with Quick Access above statistics, swipe navigation between Home/Explore/Tracking/Settings, shorter status panel, cleaner icons, and plain-language floating tools labels."
 }
