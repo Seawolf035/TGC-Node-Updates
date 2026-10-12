@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.Drawable;
@@ -69,6 +70,7 @@ public final class FloatingCompanionService extends Service {
     private String presenceDescription="VRChat: checking status…";
     private boolean presenceBusy=false;
     private long presenceChangedAt=0L;
+    private long lastPresenceFetch=0L,lastFriendFetch=0L;
     private Button trackingToggle;
     private String selectedTab="home", statusNote="";
     private boolean verifying=false, friendBusy=false, eventBusy=false, pendingStop=false;
@@ -104,6 +106,7 @@ public final class FloatingCompanionService extends Service {
             if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
             if(!friendBusy){
                 friendBusy=true;
+                lastFriendFetch=System.currentTimeMillis();
                 friendWorker.execute(()->{
                     try{
                         JSONObject session=VRChatSession.load(FloatingCompanionService.this);
@@ -125,6 +128,7 @@ public final class FloatingCompanionService extends Service {
             if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
             if(!presenceBusy){
                 presenceBusy=true;
+                lastPresenceFetch=System.currentTimeMillis();
                 final long requestStarted=System.currentTimeMillis();
                 presenceWorker.execute(()->{
                     String value="",description="VRChat: unavailable";
@@ -677,6 +681,17 @@ public final class FloatingCompanionService extends Service {
         try{
             panelParams=p;
             wm.addView(container,p);
+            // Refresh stale account data on return from a long collapsed session,
+            // but don't spam VRChat when users quickly open/close the bubble.
+            long now=System.currentTimeMillis();
+            if(now-lastPresenceFetch>75_000L){
+                handler.removeCallbacks(presenceTick);
+                handler.post(presenceTick);
+            }
+            if(now-lastFriendFetch>150_000L){
+                handler.removeCallbacks(friendTick);
+                handler.post(friendTick);
+            }
             refreshStatus();loadRecentEvents();
         }catch(Exception e){
             dismissPanel();
@@ -1007,6 +1022,15 @@ public final class FloatingCompanionService extends Service {
         presenceLabel=null;presenceActionLabel=null;
         panelParams=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;
+    }
+    @Override public void onConfigurationChanged(Configuration newConfig){
+        super.onConfigurationChanged(newConfig);
+        // Orientation, split screen and resolution changes can otherwise leave
+        // an overlay outside the touchable display area.
+        handler.post(()->{
+            if(bubble!=null)snapBubbleToEdge();
+            if(panel!=null)resizePanel();
+        });
     }
     @Override public void onDestroy(){
         if(restoreRunnable[0]!=null)handler.removeCallbacks(restoreRunnable[0]);
