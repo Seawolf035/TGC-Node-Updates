@@ -91,6 +91,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(17),dp(17),dp(17),dp(28));
         scroll.addView(content);setContentView(scroll);
+        CompanionStyle.safeArea(this,scroll);
         Button back=CompanionStyle.button(this,"← Back",false);
         content.addView(back,new LinearLayout.LayoutParams(dp(110),dp(44)));
         back.setOnClickListener(v->finish());
