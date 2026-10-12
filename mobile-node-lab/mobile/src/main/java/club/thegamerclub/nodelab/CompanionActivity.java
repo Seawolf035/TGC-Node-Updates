@@ -279,6 +279,12 @@ public final class CompanionActivity extends Activity {
         twinActions(quick,"Avatars","Saved and extended","★",this::openAvatars,
             "My status","One-tap status presets","☼",this::openStatus);
 
+        page.addView(CompanionStyle.section(this,"FRIENDS & LIVE TOOLS"));
+        LinearLayout social=card();
+        action(social,"♧","Friends Locations","See which friends are together",()->openFriendHub("locations"));
+        action(social,"◷","Friend Log","Your recorded online, offline, world and status changes",()->openFriendHub("log"));
+        action(social,"↗","Activity Feed","Recent friend changes and player encounters",()->openFriendHub("activity"));
+        action(social,"◉","Floating Mini VRCX","Toggle the chat-bubble overlay for VRChat Mobile",this::toggleOverlay);
         page.addView(CompanionStyle.section(this,"DISCOVER"));
         LinearLayout discover=card();
         action(discover,"⌕","Find people","Search players by name",()->openBrowse("search_users"));
@@ -299,6 +305,9 @@ public final class CompanionActivity extends Activity {
         action(people,"◌","Offline friends","Find friends who aren't online",()->openBrowse("friends_offline"));
         action(people,"⌕","Find people","Search VRChat users",()->openBrowse("search_users"));
         action(people,"◎","Recent players","People you've encountered",()->openBrowse("encounters"));
+        action(people,"♧","Friends Locations","Friends grouped by their visible instances",()->openFriendHub("locations"));
+        action(people,"◷","Friend Log","Search recorded changes over time",()->openFriendHub("log"));
+        action(people,"↗","Activity Feed","Observed activity while monitoring",()->openFriendHub("activity"));
         action(people,"✎","Private VRChat notes","Notes saved to your VRChat account",this::openNotes);
         page.addView(CompanionStyle.section(this,"PLACES & COMMUNITY"));
         LinearLayout places=card();
@@ -348,6 +357,12 @@ public final class CompanionActivity extends Activity {
         action(account,"✎","Your VRChat notes","View and edit private notes",this::openNotes);
         action(account,"☼","Status & presets","Edit your status and saved presets",this::openStatus);
         action(account,"★","Extended avatar favorites","VRC+-only local avatar collections",this::openExtendedAvatars);
+        page.addView(CompanionStyle.section(this,"MOBILE OVERLAY"));
+        LinearLayout floating=card();
+        action(floating,"◉","Floating Mini VRCX bubble",
+            "Open quick tools over VRChat Mobile; requires Android overlay permission",this::toggleOverlay);
+        floating.addView(txt("The bubble is optional. Stopping it never stops the Mobile Node.",
+            12,CompanionStyle.MUTED,false));
         page.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=card();
         action(app,"↓","Check for updates","Keep your Companion up to date",
@@ -370,6 +385,38 @@ public final class CompanionActivity extends Activity {
             action(extra,"⌘","Tracking diagnostics","Troubleshooting tools",
                 ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
         }
+    }
+    private void openFriendHub(String tab){
+        needsStaff(()->startActivity(new Intent(this,FriendHubActivity.class).putExtra("tab",tab)));
+    }
+    private void toggleOverlay(){
+        needsStaff(()->{
+            if(getSharedPreferences("tgc_overlay",0).getBoolean("running",false)){
+                stopService(new Intent(this,FloatingCompanionService.class));
+                Toast.makeText(this,"Floating Companion disabled",Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if(!android.provider.Settings.canDrawOverlays(this)){
+                new android.app.AlertDialog.Builder(this)
+                    .setTitle("Allow the Mini VRCX bubble")
+                    .setMessage("Android needs permission to display this optional overlay on top of VRChat Mobile. After granting permission, return here and tap Floating Mini VRCX again.")
+                    .setNegativeButton("Cancel",null)
+                    .setPositiveButton("Open settings",(dialog,which)->{
+                        Intent allow=new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:"+getPackageName()));
+                        startActivity(allow);
+                    }).show();
+                return;
+            }
+            try{
+                androidx.core.content.ContextCompat.startForegroundService(this,
+                    new Intent(this,FloatingCompanionService.class)
+                        .setAction(FloatingCompanionService.ACTION_START));
+                Toast.makeText(this,"Floating Companion enabled",Toast.LENGTH_SHORT).show();
+            }catch(Exception e){
+                Toast.makeText(this,"Could not start overlay: "+e.getMessage(),Toast.LENGTH_LONG).show();
+            }
+        });
     }
     private void openBrowse(String mode){
         needsStaff(()->startActivity(new Intent(this,VRChatBrowseActivity.class).putExtra("mode",mode)));
