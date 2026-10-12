@@ -3,6 +3,7 @@ package club.thegamerclub.nodelab;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -294,6 +295,64 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         detail(details,"Last platform",user.optString("last_platform",""));
         detail(details,"Last login",user.optString("last_login",""));
         showProfileExtras(user);
+        showUserActions(user);
+    }
+    private interface PersonalAction{void execute()throws Exception;}
+    private void confirmedAction(String title,String explanation,PersonalAction task){
+        new AlertDialog.Builder(this).setTitle(title)
+            .setMessage(explanation+" This action affects your personal VRChat account.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Continue",(dialog,which)->{
+                if(!StaffGate.unlocked(this)){finish();return;}
+                Toast.makeText(this,"Sending request...",Toast.LENGTH_SHORT).show();
+                io.execute(()->{
+                    String result;
+                    try{task.execute();result="Request sent successfully.";}
+                    catch(Exception ex){result="VRChat declined: "+ex.getMessage();}
+                    final String message=result;
+                    runOnUiThread(()->Toast.makeText(this,message,Toast.LENGTH_LONG).show());
+                });
+            }).show();
+    }
+    private void showUserActions(JSONObject person){
+        String theirs=id;
+        String mine="";
+        try{mine=VRChatSession.load(this).optString("userId","");}
+        catch(Exception ignored){}
+        if(theirs.equals(mine))return;
+        kicker("INTERACT");
+        LinearLayout actionCard=box();
+        Button friendship=CompanionStyle.button(this,"Send friend request",false);
+        actionCard.addView(friendship,CompanionStyle.buttonParams(this));
+        friendship.setOnClickListener(v->confirmedAction("Send friend request?",
+            "Ask to become friends with "+person.optString("displayName","this player")+".",
+            ()->VRChatApi.sendFriendRequest(this,theirs)));
+        Button requestInvite=CompanionStyle.button(this,"Request an invite",true);
+        actionCard.addView(requestInvite,CompanionStyle.buttonParams(this));
+        requestInvite.setOnClickListener(v->confirmedAction("Request an invite?",
+            "Ask this player to invite you to their VRChat instance.",
+            ()->VRChatApi.requestInvite(this,theirs)));
+        String loc=person.optString("location","");
+        try{
+            VRChatApi.normalizeLocation(loc);
+            Button instance=CompanionStyle.button(this,"View current instance",false);
+            actionCard.addView(instance,CompanionStyle.buttonParams(this));
+            instance.setOnClickListener(v->startActivity(
+                new Intent(this,VRChatInstanceActivity.class).putExtra("location",loc)));
+        }catch(Exception ignored){}
+        io.execute(()->{
+            try{
+                JSONObject result=VRChatApi.getFriendStatus(this,theirs);
+                boolean friends=result.optBoolean("isFriend",false);
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
+                    friendship.setVisibility(friends?View.GONE:View.VISIBLE);
+                    requestInvite.setVisibility(friends?View.VISIBLE:View.GONE);
+                });
+            }catch(Exception ignored){
+                // Leave the options visible; VRChat enforces account permissions.
+            }
+        });
     }
     /** Show only items supplied by VRChat's publicly visible profile. */
     private void showProfileExtras(JSONObject user){
