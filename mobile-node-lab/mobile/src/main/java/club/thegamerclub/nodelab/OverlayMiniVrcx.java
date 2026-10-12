@@ -1301,22 +1301,32 @@ public final class OverlayMiniVrcx {
         LinearLayout presetBox=card(list);
         presetBox.addView(text("Presets saved in the full Companion also work here.",
             12,CompanionStyle.MUTED,false));
-        JSONArray presets=readStatusPresets(accountId);
-        if(presets.length()==0){
-            presetBox.addView(text("No presets saved yet.",12,CompanionStyle.MUTED,false));
-        }
-        for(int i=0;i<Math.min(30,presets.length());i++){
-            JSONObject row=presets.optJSONObject(i);if(row==null)continue;
-            String name=row.optString("title","Preset");
-            String status=row.optString("status","active");
-            String message=row.optString("description","");
-            if(!java.util.Arrays.asList(states).contains(status))continue;
-            button(presetBox,shortValue(name,26)+" · "+
-                VRChatPresenceIndicator.label(status),false,()->{
-                    chosen[0]=status;paint.run();input.setText(message);
-                    confirmBox.setVisibility(View.GONE);
-                });
-        }
+        LinearLayout savedRows=new LinearLayout(ctx);
+        savedRows.setOrientation(LinearLayout.VERTICAL);
+        presetBox.addView(savedRows);
+        Runnable showSaved=()->{
+            savedRows.removeAllViews();
+            JSONArray presets=readStatusPresets(accountId);
+            if(presets.length()==0){
+                savedRows.addView(text("No presets saved yet.",
+                    12,CompanionStyle.MUTED,false));
+            }
+            for(int i=0;i<Math.min(30,presets.length());i++){
+                JSONObject row=presets.optJSONObject(i);if(row==null)continue;
+                String name=row.optString("title","Preset");
+                String state=row.optString("status","active");
+                String savedMessage=row.optString("description","");
+                if(!java.util.Arrays.asList(states).contains(state))continue;
+                button(savedRows,shortValue(name,26)+" · "+
+                    VRChatPresenceIndicator.label(state),false,()->{
+                        chosen[0]=state;
+                        paint.run();
+                        input.setText(savedMessage);
+                        confirmBox.setVisibility(View.GONE);
+                    });
+            }
+        };
+        showSaved.run();
         section(presetBox,"SAVE THIS COMBINATION");
         EditText presetName=CompanionStyle.input(ctx,"Preset name");
         presetName.setFilters(new android.text.InputFilter[]{
@@ -1348,7 +1358,8 @@ public final class OverlayMiniVrcx {
                 ctx.getSharedPreferences("tgc_vrcx_presets",0).edit()
                     .putString("status_presets_"+accountId,updated.toString()).apply();
                 presetName.setText("");presetName.clearFocus();host.keyboard(false);
-                message("Preset saved. Reopen Status to see it in your list.");
+                showSaved.run();
+                message("Preset saved on this phone.");
             }catch(Exception e){message("Unable to save preset");}
         });
     }
