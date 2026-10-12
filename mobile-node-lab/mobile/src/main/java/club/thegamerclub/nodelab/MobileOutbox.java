@@ -113,6 +113,22 @@ public final class MobileOutbox extends SQLiteOpenHelper {
     }
     return result;
   }
+  /** Private, local encounter summary for one player profile. */
+  public synchronized JSONObject encounter(String userId){
+    if(userId==null||!userId.matches("usr_[0-9a-fA-F-]{36}"))return null;
+    try(Cursor c=getReadableDatabase().rawQuery(
+        "SELECT display_name,seen_at,visits FROM encounters WHERE user_id=?",
+        new String[]{userId})){
+      if(!c.moveToFirst())return null;
+      JSONObject entry=new JSONObject();
+      entry.put("display_name",c.getString(0));
+      entry.put("last_seen",new java.text.SimpleDateFormat(
+        "MMM d, yyyy 'at' h:mm a",java.util.Locale.getDefault())
+        .format(new java.util.Date(c.getLong(1))));
+      entry.put("count",c.getInt(2));
+      return entry;
+    }catch(Exception ignored){return null;}
+  }
   public synchronized void wipe(){
     getWritableDatabase().execSQL("DELETE FROM events");
     getWritableDatabase().execSQL("DELETE FROM encounters");
