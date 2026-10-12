@@ -61,7 +61,19 @@ public final class StaffGate {
             }
             throw e;
         }
-        if(!result.optBoolean("verified",false) ||
+        confirmRelayApproval(creds,result);
+        return result;
+    }
+    /**
+     * The already-running foreground Node performs its own authenticated
+     * node_status check every ~90 seconds. Successful replies can extend the
+     * same process-local staff grant while VRChat is foregrounded.
+     * There is no extra network request and no authorization from cached data.
+     */
+    public static synchronized void confirmRelayApproval(MobileCredentials.Record creds,
+                                                          JSONObject result){
+        if(creds==null || result==null ||
+           !result.optBoolean("verified",false) ||
            !"mobile_companion".equals(result.optString("client_type")) ||
            !creds.discordId.equals(result.optString("discord_id"))){
             lock();
@@ -70,7 +82,6 @@ public final class StaffGate {
         verifiedNode=creds.nodeId;
         verifiedDiscord=creds.discordId;
         approvedElapsed=SystemClock.elapsedRealtime();
-        return result;
     }
     private static boolean isDefiniteDenial(Exception e){
         // The Apps Script API often returns errors inside JSON with HTTP 200.
