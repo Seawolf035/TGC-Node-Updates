@@ -38,6 +38,7 @@ public final class CompanionActivity extends Activity {
     };
     private final Handler main=new Handler(Looper.getMainLooper());
     private boolean verifying=false,showingUnlocked=false,advanced=false;
+    private boolean foreground=false;
     private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
     private TextView verificationNotice;
     private LinearLayout page,root;
@@ -207,6 +208,7 @@ public final class CompanionActivity extends Activity {
     }
     @Override protected void onResume(){
         super.onResume();
+        foreground=true;
         main.removeCallbacks(refreshGate);
         revalidate();
         main.postDelayed(refreshGate,90_000L);
@@ -214,6 +216,7 @@ public final class CompanionActivity extends Activity {
         main.postDelayed(refreshHome,2_000L);
     }
     @Override protected void onPause(){
+        foreground=false;
         main.removeCallbacks(refreshHome);
         main.removeCallbacks(refreshGate);
         super.onPause();
@@ -273,8 +276,33 @@ public final class CompanionActivity extends Activity {
                         "Reconnecting • your access remains active");
                     verificationNotice.setTextColor(error==null?CompanionStyle.GOOD:CompanionStyle.GOLD);
                 }
+                if(StaffGate.unlocked(this))maybeRestoreFloatingTools();
             });
         });
+    }
+    /**
+     * Work around interrupted overlay processes only while this Activity is in
+     * the foreground; never bypass Android's background-start limits.
+     * User opt-in and a newly approved staff grant are mandatory.
+     */
+    private void maybeRestoreFloatingTools(){
+        if(!foreground||!OverlayPreferences.recover(this)||
+            !OverlayPreferences.desired(this)||!StaffGate.unlocked(this)||
+            !android.provider.Settings.canDrawOverlays(this))return;
+        android.content.SharedPreferences prefs=getSharedPreferences("tgc_overlay",0);
+        long now=System.currentTimeMillis(),heartbeat=prefs.getLong("service_heartbeat_at",0);
+        if(prefs.getBoolean("running",false)&&heartbeat>0&&now-heartbeat<35_000L)
+            return;
+        long last=prefs.getLong("last_foreground_restore_attempt",0);
+        if(last>0&&now-last<120_000L)return;
+        prefs.edit().putLong("last_foreground_restore_attempt",now).apply();
+        try{
+            androidx.core.content.ContextCompat.startForegroundService(this,
+                new Intent(this,FloatingCompanionService.class)
+                    .setAction(FloatingCompanionService.ACTION_RESTORE));
+        }catch(Exception ignored){
+            // Android may refuse a start when the app moves to background.
+        }
     }
     private void needsStaff(Runnable next){
         if(!StaffGate.unlocked(this)){locked("Checking your staff access...");revalidate();return;}
@@ -640,6 +668,27 @@ public final class CompanionActivity extends Activity {
             "Keep your tools available while playing VRChat",this::toggleOverlay);
         floating.addView(txt("Turning this off won't stop player tracking.",
             12,CompanionStyle.MUTED,false));
+        space(floating,10);
+        action(floating,"◫","Floating panel size",
+            "Current: "+("compact".equals(OverlayPreferences.size(this))?"Compact":
+                "expanded".equals(OverlayPreferences.size(this))?"Expanded":"Standard"),
+            this::chooseOverlaySize);
+        action(floating,"↔","Snap bubble to edge",
+            OverlayPreferences.snap(this)?"Enabled":"Disabled",
+            ()->{
+                OverlayPreferences.setSnap(this,!OverlayPreferences.snap(this));
+                renderUnlocked();
+            });
+        action(floating,"↻","Background recovery",
+            OverlayPreferences.recover(this)?
+                "On: best-effort recovery after Android interrupts the floater":
+                "Off: the floater stays closed if Android stops it",
+            this::toggleOverlayRecovery);
+        floating.addView(txt(
+            "Recovery is optional. It can restart the floating tools only when "+
+            "Android permits it and staff access can be reverified. It doesn't "+
+            "force-start after an Android force-stop or bypass battery restrictions.",
+            12,CompanionStyle.MUTED,false));
         page.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=card();
         action(app,"↓","Check for updates","Keep your Companion up to date",
@@ -710,6 +759,56 @@ public final class CompanionActivity extends Activity {
         }
         if(StaffGate.unlocked(this))renderUnlocked();
     }
+    private void chooseOverlaySize(){
+        if(!StaffGate.unlocked(this))return;
+        String[] labels={"Compact","Standard","Expanded"};
+        String[] values={"compact","standard","expanded"};
+        int selected=0;
+        for(int i=0;i<values.length;i++){
+            if(values[i].equals(OverlayPreferences.size(this)))selected=i;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Floating panel size")
+            .setSingleChoiceItems(labels,selected,(dialog,which)->{
+                OverlayPreferences.setSize(this,values[which]);
+                dialog.dismiss();
+                Toast.makeText(this,"Size saved. Reopen the floating panel to apply.",
+                    Toast.LENGTH_SHORT).show();
+                renderUnlocked();
+            })
+            .setNegativeButton("Cancel",null).show();
+    }
+    private void toggleOverlayRecovery(){
+        if(!StaffGate.unlocked(this))return;
+        boolean enable=!OverlayPreferences.recover(this);
+        if(!enable){
+            OverlayPreferences.setRecover(this,false);
+            updateOverlayRecoveryMode();
+            renderUnlocked();return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Allow floating tools to recover?")
+            .setMessage("If Android interrupts the floating service, the Companion "+
+                "may try to restore it after rechecking your staff access online. "+
+                "Android can still delay or block background service starts, and "+
+                "a force-stopped app will not restart automatically. "+
+                "The player-tracking Node works independently.")
+            .setNegativeButton("Not now",null)
+            .setPositiveButton("Enable",(d,w)->{
+                OverlayPreferences.setRecover(this,true);
+                updateOverlayRecoveryMode();renderUnlocked();
+            }).show();
+    }
+    private void updateOverlayRecoveryMode(){
+        android.content.SharedPreferences prefs=getSharedPreferences("tgc_overlay",0);
+        boolean live=prefs.getBoolean("running",false)&&
+            System.currentTimeMillis()-prefs.getLong("service_heartbeat_at",0L)<35_000L;
+        if(live){
+            try{startService(new Intent(this,FloatingCompanionService.class)
+                .setAction(FloatingCompanionService.ACTION_START));}
+            catch(Exception ignored){}
+        }
+    }
     private void openPlayerLog(String tab){
         needsStaff(()->startActivity(new Intent(this,PlayerActivityLogActivity.class)
             .putExtra("tab",tab)));
@@ -723,7 +822,13 @@ public final class CompanionActivity extends Activity {
             boolean overlayActive=overlayState.getBoolean("running",false) &&
                 System.currentTimeMillis()-overlayState.getLong("service_heartbeat_at",0L)<35_000L;
             if(overlayActive){
-                stopService(new Intent(this,FloatingCompanionService.class));
+                try{
+                    startService(new Intent(this,FloatingCompanionService.class)
+                        .setAction(FloatingCompanionService.ACTION_STOP));
+                }catch(Exception ignored){
+                    OverlayPreferences.setDesired(this,false);
+                    stopService(new Intent(this,FloatingCompanionService.class));
+                }
                 Toast.makeText(this,"Floating tools hidden",Toast.LENGTH_SHORT).show();
                 return;
             }
