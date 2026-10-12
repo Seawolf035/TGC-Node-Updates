@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.7.2",
-  "version_code": 12,
+  "version": "0.8.0",
+  "version_code": 13,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "95e6d8f579aa63886396ffb19b3e851612e5a79b9bb221471ae804e8fc64bf05",
+  "sha256": "86f25dd97470e3594b7297a032a39bd9c1bdb546db81ad2e63a71e4f14f5f0ce",
   "notes": "TGC Staff Companion secure update checker, Shizuku live Node, staff Quick Deployment and offline queue."
 }
