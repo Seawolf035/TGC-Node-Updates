@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.17.5",
-  "version_code": 38,
+  "version": "0.17.6",
+  "version_code": 39,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "2a2769172793465b7c02e5856985f12f1ca1e76361f59621b392f4b0dea5d946",
-  "notes": "v0.17.5: Detect Meta Quest hardware; floating tools are disabled by default there but can be explicitly enabled experimentally in Settings. Block overlay launch and sticky recovery unless Quest opt-in is enabled, without changing phone behavior or other Companion features."
+  "sha256": "152b286bd7d8f2d4fedd59ca896442368c09ffca2095e1ec6082c6e6fd51482e",
+  "notes": "v0.17.6: Upgrade floating Mini VRCX avatar favorites to a status-style picker: current avatar, list dropdown, thumbnail cards, selected preview, detail lookup and one confirmed Apply action. Add online/offline friend filters, quick instance invites, richer player profiles and show-more pagination for inbox and friends. Node, Quest gating and verification unchanged."
 }
