@@ -101,6 +101,7 @@ public final class OverlayMiniVrcx {
     private String chatNotice="";
     private boolean chatSound=true;
     private boolean chatSending=false;
+    private boolean oscParameterSending=false;
     private String oscPresetType="bool";
     private String oscStatusNote="";
     private boolean oscStatusSending=false;
@@ -1906,6 +1907,220 @@ public final class OverlayMiniVrcx {
     }
     private void section(LinearLayout parent,String title){
         parent.addView(CompanionStyle.section(ctx,title));
+    }
+    private void oscTextEntry(EditText input){
+        input.setOnFocusChangeListener((v,focus)->host.keyboard(focus));
+        input.setOnTouchListener((v,event)->{
+            if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN)
+                host.keyboard(true);
+            return false;
+        });
+    }
+    /** Saved phrases are private, account-scoped and never sent automatically. */
+    private void showOscPresets(){
+        LinearLayout intro=card(list);
+        intro.addView(text("Quick phrases",17,CompanionStyle.TEXT,true));
+        intro.addView(text(
+            "Save up to 24 messages. Use a phrase to load it into the chat "+
+            "composer; you still have to tap Send to transmit anything.",
+            12,CompanionStyle.MUTED,false));
+        JSONArray phrases;
+        try{phrases=OscControlStore.phrases(ctx);}
+        catch(Exception error){
+            line(list,"Personal VRChat login required",
+                "Sign in to your account in the Companion first.",null);
+            return;
+        }
+        section(list,"YOUR SAVED PHRASES");
+        if(phrases.length()==0)
+            line(list,"No saved phrases",
+                "Use the form below to create your first quick phrase.",null);
+        for(int i=0;i<phrases.length();i++){
+            JSONObject item=phrases.optJSONObject(i);if(item==null)continue;
+            String name=item.optString("name","");
+            String value=item.optString("text","");
+            if(name.isEmpty()||value.isEmpty())continue;
+            LinearLayout c=card(list);
+            c.addView(text(shortValue(name,70),15,CompanionStyle.TEXT,true));
+            c.addView(text(shortValue(value,200),12,CompanionStyle.MUTED,false));
+            button(c,"Use in chat composer",true,()->{
+                chatDraft=value;
+                host.navigate("mini_chat");
+            });
+            button(c,"Delete phrase",false,()->confirm(
+                "Delete saved phrase “"+shortValue(name,50)+"”?",
+                ()->{
+                    try{
+                        OscControlStore.deletePhrase(ctx,name);
+                        drawList();
+                    }catch(Exception e){message("Couldn't remove phrase: "+e.getMessage());}
+                }));
+        }
+        section(list,"SAVE A NEW PHRASE");
+        LinearLayout add=card(list);
+        EditText label=CompanionStyle.input(ctx,"Phrase name (e.g. Hello)");
+        label.setSingleLine(true);
+        label.setFilters(new InputFilter[]{new InputFilter.LengthFilter(40)});
+        oscTextEntry(label);
+        add.addView(label,new LinearLayout.LayoutParams(-1,dp(43)));
+        EditText phrase=CompanionStyle.input(ctx,"Chatbox message (144 characters max)");
+        phrase.setSingleLine(false);
+        phrase.setMinLines(2);
+        phrase.setMaxLines(4);
+        phrase.setFilters(new InputFilter[]{
+            new InputFilter.LengthFilter(VRChatOscChat.MAX_CHARACTERS)});
+        phrase.setText(chatDraft);
+        oscTextEntry(phrase);
+        add.addView(phrase,new LinearLayout.LayoutParams(-1,-2));
+        button(add,"Save this phrase",true,()->{
+            if(!StaffGate.unlocked(ctx))return;
+            try{
+                OscControlStore.savePhrase(ctx,label.getText().toString(),
+                    phrase.getText().toString());
+                host.keyboard(false);
+                phrase.clearFocus();
+                drawList();
+                message("Phrase saved on this device.");
+            }catch(Exception ex){label.setError(ex.getMessage());}
+        });
+        button(add,"Open chat composer",false,()->host.navigate("mini_chat"));
+    }
+    private void sendOscParameter(String name,String type,String value,
+                                  TextView feedback){
+        if(!StaffGate.unlocked(ctx))return;
+        if(oscParameterSending){
+            feedback.setText("Another OSC parameter is being sent.");return;
+        }
+        oscParameterSending=true;
+        feedback.setText("Sending local OSC parameter…");
+        final int token=revision;
+        io.execute(()->{
+            String error=null;
+            try{VRChatOscChat.sendParameter(name,type,value);}
+            catch(Exception e){error=e.getMessage()==null?
+                "Could not send OSC parameter":e.getMessage();}
+            final String problem=error;
+            handler.post(()->{
+                oscParameterSending=false;
+                if(token!=revision||root==null||
+                   !"mini_osc_parameters".equals(screen))return;
+                feedback.setText(problem==null?
+                    "Parameter packet sent locally. Avatar response cannot be confirmed.":
+                    "Couldn't send: "+problem);
+            });
+        });
+    }
+    private void showOscParameters(){
+        LinearLayout intro=card(list);
+        intro.addView(text("Avatar OSC parameters",17,
+            CompanionStyle.TEXT,true));
+        intro.addView(text(
+            "Control parameters in your CURRENT VRChat avatar. Add the exact "+
+            "parameter name from its OSC configuration. These are local "+
+            "one-shot actions, not background automation.",
+            12,CompanionStyle.MUTED,false));
+        JSONArray saved;
+        try{saved=OscControlStore.parameters(ctx);}
+        catch(Exception ex){
+            line(list,"Personal VRChat login required",
+                "Sign in to your VRChat account first.",null);return;
+        }
+        section(list,"SAVED PARAMETER CONTROLS");
+        if(saved.length()==0)
+            line(list,"No parameter controls yet",
+                "Add a Bool, Int or Float control below.",null);
+        for(int i=0;i<saved.length();i++){
+            JSONObject item=saved.optJSONObject(i);if(item==null)continue;
+            final String name=item.optString("name","");
+            final String type=item.optString("type","");
+            if(!name.matches("[A-Za-z_][A-Za-z0-9_]{0,63}"))continue;
+            LinearLayout box=card(list);
+            box.addView(text(name+" · "+type.toUpperCase(Locale.US),
+                14,CompanionStyle.TEXT,true));
+            TextView feedback=text("Not sent",11,CompanionStyle.MUTED,false);
+            if("bool".equals(type)){
+                LinearLayout row=new LinearLayout(ctx);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                box.addView(row);
+                Button on=CompanionStyle.button(ctx,"TRUE / ON",false);
+                Button off=CompanionStyle.button(ctx,"FALSE / OFF",false);
+                row.addView(on,new LinearLayout.LayoutParams(0,dp(44),1f));
+                row.addView(off,new LinearLayout.LayoutParams(0,dp(44),1f));
+                on.setOnClickListener(v->sendOscParameter(name,type,"true",feedback));
+                off.setOnClickListener(v->sendOscParameter(name,type,"false",feedback));
+            }else if("int".equals(type)||"float".equals(type)){
+                EditText value=CompanionStyle.input(ctx,
+                    "int".equals(type)?"Enter 0–255":"Enter -1.0 to 1.0");
+                value.setSingleLine(true);
+                value.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|
+                    android.text.InputType.TYPE_NUMBER_FLAG_SIGNED|
+                    ("float".equals(type)?
+                        android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:0));
+                oscTextEntry(value);
+                value.setText("0");
+                box.addView(value,new LinearLayout.LayoutParams(-1,dp(43)));
+                button(box,"Send "+name,false,()->{
+                    host.keyboard(false);
+                    value.clearFocus();
+                    sendOscParameter(name,type,value.getText().toString(),feedback);
+                });
+            }
+            box.addView(feedback);
+            button(box,"Remove parameter control",false,()->confirm(
+                "Remove saved OSC parameter “"+name+"”? No value will be sent.",
+                ()->{
+                    try{OscControlStore.deleteParameter(ctx,name);drawList();}
+                    catch(Exception ex){message("Couldn't remove: "+ex.getMessage());}
+                }));
+        }
+        section(list,"ADD PARAMETER");
+        LinearLayout add=card(list);
+        EditText name=CompanionStyle.input(ctx,"Exact avatar parameter name");
+        name.setSingleLine(true);
+        name.setFilters(new InputFilter[]{new InputFilter.LengthFilter(64)});
+        oscTextEntry(name);
+        add.addView(name,new LinearLayout.LayoutParams(-1,dp(43)));
+        add.addView(text("TYPE",12,CompanionStyle.ACCENT,true));
+        LinearLayout types=new LinearLayout(ctx);
+        types.setOrientation(LinearLayout.HORIZONTAL);
+        add.addView(types);
+        String[] options={"bool","int","float"};
+        ArrayList<Button> picks=new ArrayList<>();
+        for(String option:options){
+            Button choice=CompanionStyle.button(ctx,option.toUpperCase(Locale.US),
+                oscPresetType.equals(option));
+            types.addView(choice,new LinearLayout.LayoutParams(0,dp(45),1f));
+            picks.add(choice);
+        }
+        Runnable paint=()->{
+            for(int i=0;i<options.length;i++){
+                Button choice=picks.get(i);
+                choice.setText((oscPresetType.equals(options[i])?"✓ ":"")+
+                    options[i].toUpperCase(Locale.US));
+            }
+        };
+        for(int i=0;i<options.length;i++){
+            final String option=options[i];
+            picks.get(i).setOnClickListener(v->{oscPresetType=option;paint.run();});
+        }
+        paint.run();
+        button(add,"Save parameter control",true,()->{
+            if(!StaffGate.unlocked(ctx))return;
+            try{
+                OscControlStore.saveParameter(ctx,name.getText().toString(),
+                    oscPresetType);
+                host.keyboard(false);
+                name.clearFocus();
+                drawList();
+                message("Parameter control saved. No OSC value was sent.");
+            }catch(Exception ex){name.setError(ex.getMessage());}
+        });
+        section(list,"IMPORTANT");
+        line(list,"Only supported avatar parameters work",
+            "The avatar must use the exact parameter name and type. OSC "+
+            "does not acknowledge commands; an unsupported parameter is "+
+            "silently ignored by VRChat. Only the button you tap sends a value.",
+            null);
     }
     /**
      * Native Android IME stays focused on the Companion overlay. VRChat Mobile
