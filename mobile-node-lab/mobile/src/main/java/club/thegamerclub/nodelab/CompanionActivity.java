@@ -260,6 +260,7 @@ public final class CompanionActivity extends Activity {
         hero.addView(verificationNotice);space(hero,16);
         action(hero,"☺","Your VRChat profile","View your account and status",this::openMyProfile);
         action(hero,"♢","Find verification invite","Read and copy the code from Gamer Music 3",this::openInviteCode);
+        action(hero,"✉","Your inbox","Invites, friend requests and notifications",()->openInbox("all"));
         page.addView(CompanionStyle.section(this,"QUICK ACCESS"));
         LinearLayout quick=card();
         twinActions(quick,"Friends","See who's around","♧",()->openBrowse("friends_online"),
@@ -273,6 +274,11 @@ public final class CompanionActivity extends Activity {
     }
     private void renderExplore(){
         headline("EXPLORE","Your VRChat","Everything you want to discover, without leaving the app.");
+        page.addView(CompanionStyle.section(this,"MESSAGES & INVITES"));
+        LinearLayout messages=card();
+        action(messages,"✉","Notifications","All incoming VRChat notifications",()->openInbox("all"));
+        action(messages,"➜","World invites","Received instance invitations",()->openInbox("invite"));
+        action(messages,"☺","Friend requests","See and respond to friend requests",()->openInbox("friend"));
         page.addView(CompanionStyle.section(this,"PEOPLE"));
         LinearLayout people=card();
         action(people,"☺","Online friends","See who's around now",()->openBrowse("friends_online"));
@@ -285,6 +291,7 @@ public final class CompanionActivity extends Activity {
         action(places,"↺","Recently visited","Worlds you've explored",()->openBrowse("recent"));
         action(places,"⌕","Find worlds","Search for something new",()->openBrowse("search_worlds"));
         action(places,"◈","My groups","Your VRChat communities",()->openBrowse("groups"));
+        action(places,"◉","Favorite avatars","View saved avatars and switch your avatar",this::openAvatars);
     }
     private void renderTracking(){
         headline("ACTIVITY","Player tracking","Capture encounters while you're exploring VRChat.");
@@ -320,6 +327,8 @@ public final class CompanionActivity extends Activity {
         action(account,"♜","Staff access","View your linked device",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
         action(account,"♢","Verification invite code","Read your invite and copy its code",this::openInviteCode);
+        action(account,"✉","Your inbox","Notifications and friend requests",()->openInbox("all"));
+        action(account,"◉","Favorite avatars","Browse avatars saved to your VRChat account",this::openAvatars);
         page.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=card();
         action(app,"↓","Check for updates","Keep your Companion up to date",
@@ -345,6 +354,13 @@ public final class CompanionActivity extends Activity {
     }
     private void openBrowse(String mode){
         needsStaff(()->startActivity(new Intent(this,VRChatBrowseActivity.class).putExtra("mode",mode)));
+    }
+    private void openInbox(String filter){
+        needsStaff(()->startActivity(new Intent(this,VRChatInboxActivity.class)
+            .putExtra("filter",filter)));
+    }
+    private void openAvatars(){
+        needsStaff(()->startActivity(new Intent(this,VRChatAvatarActivity.class)));
     }
     private void openInviteCode(){
         needsStaff(()->startActivity(new Intent(this,InviteCodeActivity.class)));
