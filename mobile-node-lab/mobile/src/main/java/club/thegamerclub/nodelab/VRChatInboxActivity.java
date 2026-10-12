@@ -1,6 +1,8 @@
 package club.thegamerclub.nodelab;
 
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -306,6 +308,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
                 if(kind.equals("seen"))VRChatApi.markNotificationSeen(this,e.id,e.modern);
                 else if(kind.equals("hide"))VRChatApi.dismissNotification(this,e.id,e.modern);
                 else if(kind.equals("accept")&&!e.modern)VRChatApi.acceptFriendRequest(this,e.id);
+                else if(kind.equals("selfInvite"))VRChatApi.selfInvite(this,e.location);
                 else throw new IllegalArgumentException("Unsupported notification action");
             }catch(Exception ex){
                 error=ex.getMessage();if(error==null)error="Action unavailable";
@@ -317,9 +320,10 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
                 if(fail!=null){
                     status.setText("Could not update: "+fail);return;
                 }
-                status.setText("Updated successfully");
+                status.setText(kind.equals("selfInvite")?
+                    "Requested an invite to this location":"Updated successfully");
                 if(kind.equals("seen"))e.seen=true;
-                else entries.remove(e);
+                else if(!kind.equals("selfInvite"))entries.remove(e);
                 adapter.rebuild();
                 updateStatus();
             });
@@ -332,6 +336,15 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
             options.add("View invited instance");
             actions.add(()->startActivity(new Intent(this,VRChatInstanceActivity.class)
                 .putExtra("location",e.location)));
+            options.add("Copy instance location");
+            actions.add(()->{
+                ClipboardManager clip=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                if(clip!=null)
+                    clip.setPrimaryClip(ClipData.newPlainText("VRChat location",e.location));
+                status.setText("Instance location copied");
+            });
+            options.add("Request an invite to this location");
+            actions.add(()->action(e,"Request self-invite",()->perform(e,"selfInvite")));
         }
         if(e.sender.matches("usr_[0-9a-fA-F-]{36}")){
             options.add("View sender profile");
