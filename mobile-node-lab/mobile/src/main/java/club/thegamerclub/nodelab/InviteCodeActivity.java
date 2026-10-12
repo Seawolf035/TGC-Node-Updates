@@ -20,7 +20,10 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private final Handler handler=new Handler(Looper.getMainLooper());
     private boolean active=false,reading=false,found=false;
-    private TextView status,codeText,meta;
+    private String provider="gm3";
+    private int scanGeneration=0;
+    private TextView status,codeText,meta,intro,helpText;
+    private Button gm3Tab,cultTab;
     private Button copy;
     private String code="";
     private long lastScan=0L,expiresAt=0L;
@@ -34,7 +37,9 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
                 codeText.setText("— — — —");
                 status.setText("That invite code has expired. Waiting for a new one...");
             }
-            if(!found)scan();
+            // Cult expiration depends on Gamer Music 2; do not invent a 10-minute rule.
+            if(!found || ("cult".equals(provider) &&
+                System.currentTimeMillis()-lastScan>=180_000L))scan();
             handler.postDelayed(this,45_000L);
         }
     };
@@ -53,6 +58,8 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
     @Override protected void onCreate(Bundle saved){
         super.onCreate(saved);
         if(!StaffGate.unlocked(this)){finish();return;}
+        String initial=getIntent().getStringExtra("provider");
+        if("cult".equals(initial))provider="cult";
         render();
     }
     @Override protected void onResume(){
@@ -85,11 +92,25 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
         back.setOnClickListener(v->finish());
         gap(root,18);
         root.addView(CompanionStyle.section(this,"ACCOUNT VERIFICATION"));
-        root.addView(text("Your invite code",27,CompanionStyle.TEXT,true));
+        root.addView(text("Your verification code",25,CompanionStyle.TEXT,true));
         gap(root,10);
-        root.addView(text("Open the verification request in Discord as usual. Once Gamer Music 3 sends your private world invite, your code will appear here.",
-            14,CompanionStyle.MUTED,false));
-        gap(root,21);
+        intro=text("",14,CompanionStyle.MUTED,false);
+        root.addView(intro);
+        gap(root,14);
+        LinearLayout providers=new LinearLayout(this);
+        root.addView(providers,new LinearLayout.LayoutParams(-1,-2));
+        gm3Tab=CompanionStyle.button(this,"Gamer Music 3",true);
+        cultTab=CompanionStyle.button(this,"Gamer Music 2 · Cult",false);
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(49),1f);
+        left.setMargins(0,0,dp(5),0);
+        providers.addView(gm3Tab,left);
+        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(49),1f);
+        right.setMargins(dp(5),0,0,0);
+        providers.addView(cultTab,right);
+        gm3Tab.setTextSize(12);cultTab.setTextSize(12);
+        gm3Tab.setOnClickListener(v->selectProvider("gm3"));
+        cultTab.setOnClickListener(v->selectProvider("cult"));
+        gap(root,14);
 
         LinearLayout card=CompanionStyle.card(this);
         root.addView(card,CompanionStyle.cardParams(this));
@@ -119,25 +140,58 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
         root.addView(help,CompanionStyle.cardParams(this));
         help.addView(text("How it works",17,CompanionStyle.TEXT,true));
         gap(help,9);
-        help.addView(text("1. Start your normal staff verification in Discord.\n"+
-            "2. Receive the invite sent by Gamer Music 3.\n"+
-            "3. Copy the code from here and paste it into Discord.",
-            14,CompanionStyle.MUTED,false));
+        helpText=text("",14,CompanionStyle.MUTED,false);
+        help.addView(helpText);
         gap(help,11);
-        help.addView(text("The Companion only reads the invitation. It does not start or complete verification for you.",
+        help.addView(text("The Companion only reads your VRChat invite. Verification is still completed in Discord.",
             12,CompanionStyle.MUTED,false));
+        updateModeLabels();
+    }
+    private void updateModeLabels(){
+        boolean cult="cult".equals(provider);
+        gm3Tab.setEnabled(cult);
+        cultTab.setEnabled(!cult);
+        intro.setText(cult?
+            "Start Cult verification in Gamer Music 2's Discord. When its private VRChat invite arrives, the CULT-XXXX-XXXX code can appear here.":
+            "Start verification in Gamer Music 3's Discord. When the private VRChat invite arrives, your TGC code appears here.");
+        helpText.setText(cult?
+            "1. Start the normal Cult verification in Discord.\n"+
+            "2. Receive the private invite from Gamer Music 2.\n"+
+            "3. Copy the CULT-XXXX-XXXX code and enter it into the Cult verification prompt.":
+            "1. Start your normal verification in Discord.\n"+
+            "2. Receive the invite sent by Gamer Music 3.\n"+
+            "3. Copy the TGC-XXXX-XXXX code and paste it into Discord.");
+        meta.setText(cult?
+            "Code availability and expiration are controlled by Gamer Music 2.":
+            "Gamer Music 3 codes expire after 10 minutes.");
+    }
+    private void selectProvider(String selected){
+        if(provider.equals(selected))return;
+        provider=selected;
+        scanGeneration++;
+        found=false;
+        code="";expiresAt=0L;lastScan=0L;
+        codeText.setText("— — — —");
+        codeText.setTextColor(CompanionStyle.ACCENT);
+        copy.setEnabled(false);
+        status.setText("Checking recent "+("cult".equals(provider)?"Cult":"TGC")+" VRChat invites…");
+        updateModeLabels();
+        scan();
     }
     private void scan(){
         if(!active || reading || !StaffGate.unlocked(this))return;
         long now=System.currentTimeMillis();
         if(now-lastScan<20_000L)return;
         lastScan=now;
+        final String requestedProvider=provider;
+        final int requestGeneration=scanGeneration;
         reading=true;
         if(!found)status.setText("Checking your recent VRChat invites...");
         io.execute(()->{
             VRChatInviteCode.Result result=null;
             String error=null;
-            try{result=VRChatInviteCode.scan(this);}
+            try{result="cult".equals(requestedProvider)?
+                VRChatInviteCode.scanCult(this):VRChatInviteCode.scan(this);}
             catch(Exception e){
                 error=e instanceof SecurityException?
                     "Your VRChat login may have expired. Sign in again under Settings → My VRChat account.":
@@ -148,18 +202,25 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
             runOnUiThread(()->{
                 reading=false;
                 if(!active||isFinishing()||isDestroyed())return;
+                if(requestGeneration!=scanGeneration || !provider.equals(requestedProvider)){
+                    // An old provider's in-flight scan must never appear in the other tab.
+                    scan();return;
+                }
                 if(!StaffGate.unlocked(this)){finish();return;}
                 if(failure!=null){status.setText(failure);return;}
                 if(outcome==null)return;
                 if(!outcome.code.isEmpty()){
                     code=outcome.code;
                     found=true;
-                    expiresAt=outcome.createdAt>0L?outcome.createdAt+10L*60_000L:0L;
+                    expiresAt="gm3".equals(provider)&&outcome.createdAt>0L?
+                        outcome.createdAt+10L*60_000L:0L;
                     codeText.setText(code);
                     codeText.setTextColor(CompanionStyle.GOOD);
-                    status.setText("Verification invite found!");
+                    status.setText(("cult".equals(provider)?"Cult":"TGC")+" verification invite found!");
                     copy.setEnabled(true);
-                    meta.setText("This code is single-use and expires about 10 minutes after the invite was generated.");
+                    meta.setText("cult".equals(provider)?
+                        "Enter this code into Gamer Music 2's Cult verification prompt. Its expiration is controlled by the Cult system.":
+                        "This code is single-use and expires about 10 minutes after the invite was generated.");
                 }else{
                     code="";
                     found=false;
@@ -167,7 +228,9 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
                     codeText.setTextColor(CompanionStyle.ACCENT);
                     copy.setEnabled(false);
                     status.setText(outcome.message);
-                    meta.setText("The Companion checks again while this screen is open.");
+                    meta.setText("cult".equals(provider)?
+                        "The Companion checks Cult invites while this screen is open.":
+                        "The Companion checks TGC invites while this screen is open.");
                 }
             });
         });
@@ -175,7 +238,8 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
     private void copy(){
         if(code.isEmpty()||!StaffGate.unlocked(this))return;
         ClipboardManager mgr=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-        if(mgr!=null)mgr.setPrimaryClip(ClipData.newPlainText("TGC verification code",code));
+        if(mgr!=null)mgr.setPrimaryClip(ClipData.newPlainText(
+            "cult".equals(provider)?"Cult verification code":"TGC verification code",code));
         status.setText("Copied. Paste the code into your existing verification prompt in Discord.");
     }
     @Override protected void onDestroy(){
