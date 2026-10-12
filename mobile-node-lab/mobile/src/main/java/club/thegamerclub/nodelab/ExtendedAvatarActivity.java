@@ -1,6 +1,8 @@
 package club.thegamerclub.nodelab;
 
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -182,7 +184,19 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
         TextView hint=text("Save an avatar by ID or copy it from normal VRChat favorites. This does not use a VRChat favorite slot.",
             13,CompanionStyle.MUTED,false);
         form.addView(hint);
+        Button paste=CompanionStyle.button(this,"Paste avatar link or ID",false);
+        form.addView(paste,CompanionStyle.buttonParams(this));
         EditText avatar=CompanionStyle.input(this,"avtr_...");
+        paste.setOnClickListener(v->{
+            ClipboardManager manager=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+            if(manager==null||!manager.hasPrimaryClip())return;
+            ClipData clip=manager.getPrimaryClip();
+            if(clip==null||clip.getItemCount()==0)return;
+            String pasted=clip.getItemAt(0).coerceToText(this).toString();
+            java.util.regex.Matcher m=java.util.regex.Pattern.compile("avtr_[0-9a-fA-F-]{36}").matcher(pasted);
+            if(m.find()){avatar.setText(m.group());avatar.setSelection(avatar.length());}
+            else avatar.setError("Clipboard doesn't contain a VRChat avatar ID");
+        });
         avatar.setText(preset==null?"":preset);
         LinearLayout.LayoutParams field=new LinearLayout.LayoutParams(-1,dp(55));
         field.topMargin=dp(11);form.addView(avatar,field);
@@ -264,16 +278,30 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
         String id=avatar.optString("id","");
         String name=avatar.optString("name","Avatar");
         String[] actions={"Use this avatar","Move to a category","Remove from Extended Favorites"};
-        new AlertDialog.Builder(this).setTitle(name)
-            .setMessage("By "+avatar.optString("authorName","Unknown")+
-                "\n\n"+avatar.optString("description","")+
-                "\n\nOnly your local extended bookmark is managed here.")
-            .setItems(actions,(d,selected)->{
-                if(selected==0)confirmUse(id,name);
-                else if(selected==1)promptMove(id);
+        LinearLayout sheet=new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(17),dp(5),dp(17),dp(7));
+        String summary="By "+avatar.optString("authorName","Unknown creator");
+        String description=avatar.optString("description","");
+        if(!description.isEmpty())summary+="\n\n"+description;
+        TextView details=text(summary,14,CompanionStyle.MUTED,false);
+        details.setTextIsSelectable(true);
+        sheet.addView(details);
+        sheet.addView(new View(this),new LinearLayout.LayoutParams(1,dp(12)));
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(name)
+            .setView(sheet).setNegativeButton("Close",null).create();
+        for(int i=0;i<actions.length;i++){
+            final int selection=i;
+            Button option=CompanionStyle.button(this,actions[i],i==0);
+            sheet.addView(option,CompanionStyle.buttonParams(this));
+            option.setOnClickListener(v->{
+                dialog.dismiss();
+                if(selection==0)confirmUse(id,name);
+                else if(selection==1)promptMove(id);
                 else confirmRemove(avatar);
-            })
-            .setNegativeButton("Close",null).show();
+            });
+        }
+        dialog.show();
     }
     private void confirmUse(String id,String name){
         new AlertDialog.Builder(this)
