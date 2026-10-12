@@ -254,6 +254,15 @@ public final class CompanionActivity extends Activity {
         hero.setBackground(CompanionStyle.gradient(this,0xFF1B445A,0xFF18283D,19));
         TextView tag=CompanionStyle.chip(this,"● STAFF VERIFIED",CompanionStyle.GOOD,0xFF193E3C);
         hero.addView(tag);space(hero,15);
+        android.content.SharedPreferences live=getSharedPreferences("tgc_mobile_node_status",0);
+        long lastPulse=live.getLong("service_heartbeat_at",0L);
+        boolean trackingLive=live.getBoolean("running",false) && lastPulse>0L &&
+            System.currentTimeMillis()-lastPulse<90_000L;
+        hero.addView(CompanionStyle.chip(this,
+            trackingLive?"◉ Player tracking running":"○ Player tracking not running",
+            trackingLive?CompanionStyle.GOOD:CompanionStyle.GOLD,
+            trackingLive?0xFF173B37:0xFF433825));
+        space(hero,15);
         hero.addView(txt("Ready when you are.",21,CompanionStyle.TEXT,true));
         space(hero,5);
         verificationNotice=txt("Your staff access is up to date",13,CompanionStyle.MUTED,false);
@@ -267,6 +276,8 @@ public final class CompanionActivity extends Activity {
             "Worlds","Find somewhere to go","◇",()->openBrowse("worlds"));
         twinActions(quick,"Groups","Your communities","◈",()->openBrowse("groups"),
             "Recent players","People you've met","◎",()->openBrowse("encounters"));
+        twinActions(quick,"My status","Presets & presence","☼",this::openStatus,
+            "Avatar library","Favorites & more","★",this::openExtendedAvatars);
         page.addView(CompanionStyle.section(this,"DISCOVER"));
         LinearLayout discover=card();
         action(discover,"⌕","Find people","Search players by name",()->openBrowse("search_users"));
