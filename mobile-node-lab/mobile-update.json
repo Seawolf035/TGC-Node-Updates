@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.11.0",
-  "version_code": 20,
+  "version": "0.12.0",
+  "version_code": 21,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "f43c77b4b8d4f15a3cbd3993912d4edad942c2939a656a8c4c2d388cfd111f45",
-  "notes": "Mini VRCX update: personal VRChat notes with account sync, player-profile note editing, and paginated friends, world and search lists."
+  "sha256": "ed194a4f48de8b5e8d112edd48f7974aca124ed58e3a728c0d4aed7cae0aa239",
+  "notes": "Mini VRCX update: VRC+-only extended local avatar collections with categories, plus personal VRChat status editor and reusable presets."
 }
