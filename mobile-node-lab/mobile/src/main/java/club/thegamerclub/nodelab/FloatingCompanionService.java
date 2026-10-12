@@ -80,6 +80,122 @@ public final class FloatingCompanionService extends Service {
     private static final int MAX_RESTORE_ATTEMPTS=3;
     private final Runnable[] restoreRunnable=new Runnable[1];
     private long lastPanelRefresh=0L;
+    // Live Chatbox is OFF by default and deliberately not persisted as "on".
+    // It uses this already-authorized floating foreground service while its
+    // bubble exists, even when the panel is collapsed.
+    private volatile boolean oscLiveActive=false;
+    private boolean oscLiveBusy=false;
+    private int oscLiveIntervalSeconds=10,oscLiveGeneration=0;
+    private String oscLiveAccountId="",oscLiveLastError="",oscLiveLastText="";
+    private long oscLiveLastAt=0L;
+    private final Runnable oscLiveTick=new Runnable(){
+        @Override public void run(){
+            if(!oscLiveActive)return;
+            if(!StaffGate.unlocked(FloatingCompanionService.this)||
+                !OverlayPreferences.desired(FloatingCompanionService.this)||
+                !QuestDevice.canRunOverlay(FloatingCompanionService.this)){
+                stopOscLive();
+                return;
+            }
+            // A manual chat message wins; allow it to stay visible long enough
+            // to be read before resuming the periodic status line.
+            if(VRChatOscChat.sinceManualChatMs()<20_000L){
+                handler.postDelayed(this,5_000L);
+                return;
+            }
+            if(oscLiveBusy){
+                handler.postDelayed(this,2_500L);
+                return;
+            }
+            oscLiveBusy=true;
+            final int epoch=oscLiveGeneration;
+            final String owner=oscLiveAccountId;
+            eventsWorker.execute(()->{
+                String error=null,value=null;
+                boolean accountChanged=false;
+                try{
+                    String account=VRChatSession.load(FloatingCompanionService.this)
+                        .optString("userId","");
+                    if(!owner.equals(account)||
+                        !account.matches("usr_[0-9a-fA-F-]{36}")){
+                        accountChanged=true;
+                    }else if(!oscLiveActive||epoch!=oscLiveGeneration){
+                        return;
+                    }else{
+                        value=OscControlStore.statusLine(FloatingCompanionService.this);
+                        if(!oscLiveActive||epoch!=oscLiveGeneration)return;
+                        VRChatOscChat.sendLive(value);
+                    }
+                }catch(Exception e){
+                    error=e.getMessage()==null?"Unable to send OSC status":e.getMessage();
+                }
+                final String problem=error,output=value;
+                final boolean invalidAccount=accountChanged;
+                handler.post(()->{
+                    if(epoch!=oscLiveGeneration)return;
+                    oscLiveBusy=false;
+                    if(invalidAccount){
+                        oscLiveLastError="VRChat account changed. Live Chatbox stopped.";
+                        stopOscLive();
+                        return;
+                    }
+                    if(problem!=null)oscLiveLastError=problem;
+                    else if(output!=null){
+                        oscLiveLastError="";
+                        oscLiveLastText=output;
+                        oscLiveLastAt=System.currentTimeMillis();
+                    }
+                    if(oscLiveActive)
+                        handler.postDelayed(oscLiveTick,
+                            oscLiveIntervalSeconds*1000L);
+                });
+            });
+        }
+    };
+    private void startOscLive(int seconds){
+        if(!StaffGate.unlocked(this)||!OverlayPreferences.desired(this)||
+           !QuestDevice.canRunOverlay(this)){
+            Toast.makeText(this,"Unlock staff access before starting OSC",
+                Toast.LENGTH_LONG).show();
+            return;
+        }
+        if(seconds!=5&&seconds!=10&&seconds!=15&&seconds!=30)
+            seconds=10;
+        try{
+            String account=VRChatSession.load(this).optString("userId","");
+            if(!account.matches("usr_[0-9a-fA-F-]{36}"))
+                throw new SecurityException("Sign in to personal VRChat first.");
+            OscControlStore.statusLine(this); // Validate configured components.
+            stopOscLive();
+            oscLiveAccountId=account;
+            oscLiveIntervalSeconds=seconds;
+            oscLiveActive=true;
+            oscLiveLastError="";
+            handler.post(oscLiveTick);
+            updateForegroundText("Live OSC Chatbox · every "+seconds+" seconds");
+        }catch(Exception e){
+            Toast.makeText(this,"Live Chatbox unavailable: "+e.getMessage(),
+                Toast.LENGTH_LONG).show();
+        }
+    }
+    private void stopOscLive(){
+        oscLiveActive=false;
+        oscLiveGeneration++;
+        handler.removeCallbacks(oscLiveTick);
+        oscLiveBusy=false;
+        if(!stoppingExplicitly)
+            updateForegroundText("Floating tools ready");
+    }
+    private String oscLiveSummary(){
+        if(!oscLiveActive)return "OFF · Only sends when you press Send";
+        String label="ON · Every "+oscLiveIntervalSeconds+" seconds";
+        if(oscLiveLastAt>0)
+            label+=" · Last sent "+DateFormat.getTimeInstance(
+                DateFormat.SHORT).format(new Date(oscLiveLastAt));
+        if(!oscLiveLastError.isEmpty())label+=" · Last error: "+oscLiveLastError;
+        return label;
+    }
+
 
     private final Runnable validate=new Runnable(){
         @Override public void run(){
@@ -194,6 +310,10 @@ public final class FloatingCompanionService extends Service {
                 presenceDescription="VRChat: "+VRChatPresenceIndicator.label(updated);
                 refreshPresenceDot();
             }
+            @Override public boolean isOscLiveActive(){return oscLiveActive;}
+            @Override public String oscLiveDescription(){return oscLiveSummary();}
+            @Override public void oscStartLive(int seconds){startOscLive(seconds);}
+            @Override public void oscStopLive(){stopOscLive();}
             @Override public void scrollToTop(){
                 if(panelScroller!=null){
                     final ScrollView target=panelScroller;
@@ -255,6 +375,7 @@ public final class FloatingCompanionService extends Service {
     }
     private void stopRequestedByUser(){
         stoppingExplicitly=true;
+        stopOscLive();
         OverlayPreferences.setDesired(this,false);
         handler.removeCallbacks(validate);
         handler.removeCallbacks(friendTick);
@@ -864,9 +985,11 @@ public final class FloatingCompanionService extends Service {
         action(chat,"Compose & send chat text",true,()->go("mini_chat"));
         action(chat,"Saved quick phrases",false,()->go("mini_osc_presets"));
 
-        section(panelContent,"LIVE INFORMATION");
+        section(panelContent,"LIVE CHATBOX");
         LinearLayout line=panelCard(panelContent);
-        action(line,"Time / battery status line",true,()->go("mini_osc_status"));
+        line.addView(text(oscLiveSummary(),12,
+            oscLiveActive?CompanionStyle.GOOD:CompanionStyle.MUTED,false));
+        action(line,"Configure / start Live Chatbox",true,()->go("mini_osc_status"));
         line.addView(text("Build an optional chatbox line using a custom message, current time and phone battery level. Sending is user-controlled.",
             12,CompanionStyle.MUTED,false));
 
@@ -1127,6 +1250,7 @@ public final class FloatingCompanionService extends Service {
         });
     }
     @Override public void onDestroy(){
+        stopOscLive();
         if(restoreRunnable[0]!=null)handler.removeCallbacks(restoreRunnable[0]);
         handler.removeCallbacks(validate);
         handler.removeCallbacks(friendTick);
