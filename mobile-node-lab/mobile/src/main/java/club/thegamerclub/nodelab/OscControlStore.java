@@ -125,9 +125,9 @@ public final class OscControlStore {
         prefs(ctx).edit().putBoolean(key(ctx,"typing_auto"),enabled).apply();
     }
     public static int liveInterval(Context ctx){
-        int seconds=prefs(ctx).getInt(key(ctx,"live_interval_seconds"),10);
+        int seconds=prefs(ctx).getInt(key(ctx,"live_interval_seconds"),5);
         return seconds==5||seconds==10||seconds==15||seconds==30?
-            seconds:10;
+            seconds:5;
     }
     public static void setLiveInterval(Context ctx,int seconds){
         if(seconds!=5&&seconds!=10&&seconds!=15&&seconds!=30)
