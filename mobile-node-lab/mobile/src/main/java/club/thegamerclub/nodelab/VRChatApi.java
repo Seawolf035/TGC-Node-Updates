@@ -232,6 +232,37 @@ public final class VRChatApi {
         }
         return request("GET",location,cookie(validSession(context)),null,null).array();
     }
+    /**
+     * Complete normalized friend snapshot across online and offline paginated feeds.
+     * Never return a partial list: the observation store treats missing IDs as removals.
+     * Monitoring is opt-in, foreground or overlay-driven; avoid high-frequency API use.
+     */
+    public static JSONArray friendSnapshot(Context context)throws Exception{
+        JSONObject session=validSession(context);
+        JSONArray combined=new JSONArray();
+        java.util.HashSet<String> seen=new java.util.HashSet<>();
+        for(boolean offline:new boolean[]{false,true}){
+            boolean complete=false;
+            for(int offset=0;offset<=9960;offset+=60){
+                JSONArray page=request("GET","/auth/user/friends?n=60&offline="+offline+
+                    "&offset="+offset,cookie(session),null,null).array();
+                if(page.length()>60)throw new IllegalStateException("Unexpected VRChat friend page size");
+                for(int i=0;i<page.length();i++){
+                    JSONObject friend=page.optJSONObject(i);
+                    if(friend==null)continue;
+                    String uid=friend.optString("id","");
+                    if(!uid.startsWith("usr_")||!seen.add(uid))continue;
+                    JSONObject normalized=new JSONObject(friend.toString());
+                    normalized.put("isOnline",!offline);
+                    combined.put(normalized);
+                }
+                if(page.length()<60){complete=true;break;}
+            }
+            if(!complete)throw new IllegalStateException("Friend list exceeds safe pagination limit");
+        }
+        return combined;
+    }
+
     /** VRChat's private notes, saved to the authenticated VRChat account (not the TGC relay). */
     public static JSONArray userNotes(Context context,int offset)throws Exception{
         if(offset<0||offset>10000||offset%100!=0)
