@@ -392,7 +392,7 @@ public final class CompanionActivity extends Activity {
         compactQuickPair(quick,"♧","Friends","Who is online",()->openFriendHub("locations"),
             "◎","Players","Recent encounters",()->openBrowse("encounters"));
         compactQuickPair(quick,"✉","Inbox","Invites & requests",()->openInbox("all"),
-            "☺","My profile","Your account",this::openMyProfile);
+            "◉","My profile","Your account",this::openMyProfile);
         compactQuickPair(quick,"◇","Worlds","Your favorites",()->openBrowse("worlds"),
             "★","Avatars","Your collection",this::openAvatars);
 
@@ -511,10 +511,10 @@ public final class CompanionActivity extends Activity {
         LinearLayout messages=card();
         action(messages,"✉","Notifications","All incoming VRChat notifications",()->openInbox("all"));
         action(messages,"➜","World invites","Received instance invitations",()->openInbox("invite"));
-        action(messages,"☺","Friend requests","See and respond to friend requests",()->openInbox("friend"));
+        action(messages,"◉","Friend requests","See and respond to friend requests",()->openInbox("friend"));
         page.addView(CompanionStyle.section(this,"PEOPLE"));
         LinearLayout people=card();
-        action(people,"☺","Online friends","See who's around now",()->openBrowse("friends_online"));
+        action(people,"♧","Online friends","See who's around now",()->openBrowse("friends_online"));
         action(people,"◌","Offline friends","Find friends who aren't online",()->openBrowse("friends_offline"));
         action(people,"⌕","Find people","Search VRChat users",()->openBrowse("search_users"));
         action(people,"◎","Recent players","People you've encountered",()->openBrowse("encounters"));
@@ -560,7 +560,7 @@ public final class CompanionActivity extends Activity {
         headline("PREFERENCES","Settings","Your account, device and Companion.");
         page.addView(CompanionStyle.section(this,"YOUR ACCOUNT"));
         LinearLayout account=card();
-        action(account,"☺","My VRChat account","Profile, sign-in and sign-out",
+        action(account,"◉","My VRChat account","Profile, sign-in and sign-out",
             ()->needsStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
         action(account,"♜","Staff access","View your linked device",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
