@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.17.2",
-  "version_code": 35,
+  "version": "0.17.3",
+  "version_code": 36,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "888c0981f2747e81f3bdebb282b6146648cb6a0621e6932e86c70ac4f5d13f9a",
-  "notes": "v0.17.2: Reliable dual-source notifications and invites, unread filters in full/overlay inboxes, refresh and deduplication, copy location and confirmed invite actions, plus optional privacy-minded WorkManager background alerts every 15+ minutes without Shizuku."
+  "sha256": "f6871b6904a4d7d9b9154e928f0e5f519924399994ba892aeac415ef5efa0781",
+  "notes": "v0.17.3: Floating panel compact/standard/expanded sizes, 1-6 reorderable pinned Home shortcuts, edge snapping, rotation-safe positioning, optional staff-gated foreground-service recovery, battery-conscious VRChat polling and Background Health diagnostics. Tracking/Relay and opt-in inbox alerts remain independent."
 }
