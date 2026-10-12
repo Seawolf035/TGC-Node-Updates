@@ -39,6 +39,10 @@ public final class OverlayMiniVrcx {
         void keyboard(boolean focus);
         void onPresenceChanged(String status);
         void scrollToTop();
+        boolean isOscLiveActive();
+        String oscLiveDescription();
+        void oscStartLive(int intervalSeconds);
+        void oscStopLive();
     }
     private final Service ctx;
     private final Host host;
@@ -105,18 +109,7 @@ public final class OverlayMiniVrcx {
     private String oscPresetType="bool";
     private String oscStatusNote="";
     private boolean oscStatusSending=false;
-    private boolean liveStatusEnabled=false;
-    private static final long LIVE_STATUS_INTERVAL_MS=120_000L;
-    private TextView oscStatusFeedback;
     private boolean typingActive=false;
-    private final Runnable oscStatusTick=new Runnable(){
-        @Override public void run(){
-            if(!liveStatusEnabled||root==null||
-               !"mini_osc_status".equals(screen)||!StaffGate.unlocked(ctx))return;
-            sendOscStatus(true);
-            handler.postDelayed(this,LIVE_STATUS_INTERVAL_MS);
-        }
-    };
     private String pending="";
     private Runnable pendingAction;
     private final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
@@ -128,10 +121,7 @@ public final class OverlayMiniVrcx {
     public void close(){
         handler.removeCallbacks(verificationTick);
         handler.removeCallbacks(inboxTick);
-        handler.removeCallbacks(oscStatusTick);
-        liveStatusEnabled=false;
-        oscStatusFeedback=null;
-        if(typingActive){
+         if(typingActive){
             typingActive=false;
             io.execute(()->{
                 try{VRChatOscChat.sendTyping(false);}
@@ -2009,6 +1999,198 @@ public final class OverlayMiniVrcx {
                     "Couldn't send: "+problem);
             });
         });
+    }
+    /** This configures live sending in FloatingCompanionService, not in this page. */
+    private void showOscStatus(){
+        LinearLayout intro=card(list);
+        intro.addView(text("Live Chatbox",18,CompanionStyle.TEXT,true));
+        intro.addView(text("Like MagicChatbox: keep a short status line visible "+
+            "above your avatar while you play VRChat Mobile. You control "+
+            "what goes into it and when it starts.",
+            12,CompanionStyle.MUTED,false));
+        intro.addView(text(
+            "Requires OSC enabled in VRChat. Uses local UDP on this phone; "+
+            "there is no server receipt or guaranteed in-game display.",
+            12,CompanionStyle.GOLD,false));
+        boolean signedIn=true;
+        String prefix="";
+        int interval=10;
+        boolean time=true,battery=false;
+        try{
+            prefix=OscControlStore.prefix(ctx);
+            interval=OscControlStore.liveInterval(ctx);
+            time=OscControlStore.includeTime(ctx);
+            battery=OscControlStore.includeBattery(ctx);
+        }catch(Exception ex){signedIn=false;}
+        if(!signedIn){
+            line(list,"Sign in to your personal VRChat account",
+                "Live Chatbox preferences belong to that account.",null);
+            return;
+        }
+        section(list,"LIVE BROADCAST");
+        LinearLayout live=card(list);
+        boolean running=host.isOscLiveActive();
+        live.addView(text(running?"● BROADCASTING":"○ NOT BROADCASTING",
+            16,running?CompanionStyle.GOOD:CompanionStyle.MUTED,true));
+        live.addView(text(host.oscLiveDescription(),12,
+            running?CompanionStyle.ACCENT:CompanionStyle.MUTED,false));
+        live.addView(text(
+            "When on, this continues while you collapse the panel or switch "+
+            "to another floating tab. It stops when you tap Stop, hide the "+
+            "floating bubble, or the floating service ends.",
+            12,CompanionStyle.MUTED,false));
+        if(running)button(live,"Stop Live Chatbox",true,()->{
+            host.oscStopLive();
+            drawList();
+        });
+        section(list,"CONTENT");
+        LinearLayout content=card(list);
+        content.addView(text("Custom text",13,CompanionStyle.ACCENT,true));
+        EditText message=CompanionStyle.input(ctx,"Optional status text (up to 90 characters)");
+        message.setSingleLine(false);
+        message.setMinLines(2);
+        message.setMaxLines(3);
+        message.setFilters(new InputFilter[]{new InputFilter.LengthFilter(90)});
+        message.setText(prefix);
+        oscTextEntry(message);
+        content.addView(message,new LinearLayout.LayoutParams(-1,-2));
+        TextView note=text("Change the content, then Save or Start to apply.",
+            11,CompanionStyle.MUTED,false);
+        content.addView(note);
+        final boolean[] flags={time,battery};
+        Button clock=CompanionStyle.button(ctx,
+            "Time: "+(flags[0]?"ON":"OFF"),false);
+        Button charge=CompanionStyle.button(ctx,
+            "Phone battery: "+(flags[1]?"ON":"OFF"),false);
+        content.addView(clock,CompanionStyle.buttonParams(ctx));
+        content.addView(charge,CompanionStyle.buttonParams(ctx));
+        TextView preview=text("",13,CompanionStyle.TEXT,true);
+        preview.setPadding(0,dp(8),0,dp(6));
+        content.addView(preview);
+        Runnable updatePreview=()->{
+            try{
+                OscControlStore.setPrefix(ctx,message.getText().toString());
+                OscControlStore.setIncludeTime(ctx,flags[0]);
+                OscControlStore.setIncludeBattery(ctx,flags[1]);
+                String line=OscControlStore.statusLine(ctx);
+                preview.setText("Preview: "+line);
+                note.setText("Preferences saved locally. Live sends use the latest values.");
+                return;
+            }catch(Exception ex){
+                preview.setText("Preview unavailable: "+ex.getMessage());
+            }
+        };
+        // Do not save on every keystroke. Only these explicit buttons commit it.
+        clock.setOnClickListener(v->{
+            flags[0]=!flags[0];
+            clock.setText("Time: "+(flags[0]?"ON":"OFF"));
+            note.setText("Tap Save / Preview or Start to apply.");
+        });
+        charge.setOnClickListener(v->{
+            flags[1]=!flags[1];
+            charge.setText("Phone battery: "+(flags[1]?"ON":"OFF"));
+            note.setText("Tap Save / Preview or Start to apply.");
+        });
+        try{preview.setText("Preview: "+OscControlStore.statusLine(ctx));}
+        catch(Exception ex){preview.setText("Enter text or enable an information field.");}
+        button(content,"Save settings & preview",false,()->{
+            host.keyboard(false);message.clearFocus();updatePreview.run();
+        });
+
+        section(list,"UPDATE SPEED");
+        LinearLayout intervalCard=card(list);
+        intervalCard.addView(text(
+            "Repeat the line periodically to keep the chatbox visible. "+
+            "Slower updates save battery and reduce chatbox interruptions.",
+            12,CompanionStyle.MUTED,false));
+        final int[] selected={interval};
+        LinearLayout speeds=new LinearLayout(ctx);
+        speeds.setOrientation(LinearLayout.HORIZONTAL);
+        intervalCard.addView(speeds);
+        int[] seconds={5,10,15,30};
+        ArrayList<Button> options=new ArrayList<>();
+        for(int n:seconds){
+            Button choice=CompanionStyle.button(ctx,n+"s",false);
+            choice.setTextSize(12);
+            speeds.addView(choice,new LinearLayout.LayoutParams(0,dp(45),1f));
+            options.add(choice);
+        }
+        Runnable paint=()->{
+            for(int i=0;i<seconds.length;i++)
+                options.get(i).setText((seconds[i]==selected[0]?"✓ ":"")+
+                    seconds[i]+" sec");
+        };
+        for(int i=0;i<seconds.length;i++){
+            final int value=seconds[i];
+            options.get(i).setOnClickListener(v->{
+                selected[0]=value;paint.run();
+                try{OscControlStore.setLiveInterval(ctx,value);}
+                catch(Exception ex){note.setText(ex.getMessage());}
+            });
+        }
+        paint.run();
+        TextView feedback=text("",12,CompanionStyle.GOLD,false);
+        intervalCard.addView(feedback);
+        button(intervalCard,running?"Update Live Chatbox":"Start Live Chatbox",true,
+            ()->{
+                if(!StaffGate.unlocked(ctx))return;
+                host.keyboard(false);message.clearFocus();
+                try{
+                    OscControlStore.setPrefix(ctx,message.getText().toString());
+                    OscControlStore.setIncludeTime(ctx,flags[0]);
+                    OscControlStore.setIncludeBattery(ctx,flags[1]);
+                    OscControlStore.setLiveInterval(ctx,selected[0]);
+                    OscControlStore.statusLine(ctx); // validate now
+                }catch(Exception ex){
+                    feedback.setText("Cannot start: "+ex.getMessage());return;
+                }
+                confirm("Start continuous OSC Chatbox updates every "+
+                    selected[0]+" seconds? It will run while the floating "+
+                    "service stays active, even when its panel is collapsed.",
+                    ()->{
+                        host.oscStartLive(selected[0]);
+                        drawList();
+                    });
+            });
+        button(intervalCard,"Send this status once",false,()->{
+            if(!StaffGate.unlocked(ctx)||oscStatusSending)return;
+            host.keyboard(false);message.clearFocus();
+            String line;
+            try{
+                OscControlStore.setPrefix(ctx,message.getText().toString());
+                OscControlStore.setIncludeTime(ctx,flags[0]);
+                OscControlStore.setIncludeBattery(ctx,flags[1]);
+                line=OscControlStore.statusLine(ctx);
+            }catch(Exception ex){feedback.setText(ex.getMessage());return;}
+            oscStatusSending=true;
+            final int token=revision;
+            feedback.setText("Transmitting one OSC chatbox packet…");
+            io.execute(()->{
+                String error=null;
+                try{VRChatOscChat.send(line,false);}
+                catch(Exception ex){error=ex.getMessage();}
+                final String issue=error;
+                handler.post(()->{
+                    oscStatusSending=false;
+                    if(token!=revision||root==null||
+                       !"mini_osc_status".equals(screen))return;
+                    feedback.setText(issue==null?
+                        "Packet sent locally. Verify it appears in VRChat.":
+                        "Couldn't send: "+issue);
+                });
+            });
+        });
+        section(list,"SAFETY");
+        line(list,"Manual chat takes priority",
+            "After you manually send a regular chatbox message, Live Chatbox "+
+            "pauses for about 20 seconds before resuming. Live updates are "+
+            "sent silently without notification sounds.",
+            null);
+        line(list,"No background launch or hidden startup",
+            "Live Chatbox always starts OFF. It does not start itself after "+
+            "reboots or service restarts, and cannot override Quest overlay "+
+            "restrictions, staff access or Android battery controls.",
+            null);
     }
     private void showOscParameters(){
         LinearLayout intro=card(list);
