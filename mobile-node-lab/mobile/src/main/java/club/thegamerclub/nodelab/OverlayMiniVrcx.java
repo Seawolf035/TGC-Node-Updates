@@ -109,6 +109,7 @@ public final class OverlayMiniVrcx {
     private String oscPresetType="bool";
     private String oscStatusNote="";
     private boolean oscStatusSending=false;
+    private String oscEditingChatbox="";
     private boolean typingActive=false;
     private String pending="";
     private Runnable pendingAction;
@@ -195,6 +196,7 @@ public final class OverlayMiniVrcx {
         bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
         if(!"mini_profile".equals(screen)&&!"mini_note".equals(screen)&&
            !"mini_chat".equals(screen)&&!"mini_osc_status".equals(screen)&&
+           !"mini_osc_rotation".equals(screen)&&
            !"mini_osc_presets".equals(screen)&&
            !"mini_osc_parameters".equals(screen)){
             Button refresh=CompanionStyle.button(ctx,"↻",false);
@@ -268,6 +270,7 @@ public final class OverlayMiniVrcx {
             case "mini_chat":return "In-game text chat";
             case "mini_osc_presets":return "OSC quick phrases";
             case "mini_osc_status":return "OSC status line";
+            case "mini_osc_rotation":return "Rotating chatboxes";
             case "mini_osc_parameters":return "Avatar OSC controls";
             case "mini_groups":return "Your groups";
             case "mini_group":return "Group details";
@@ -300,6 +303,7 @@ public final class OverlayMiniVrcx {
             case "mini_chat":return "Send directly to VRChat Mobile through local OSC";
             case "mini_osc_presets":return "Reusable messages · nothing sends until you tap Send";
             case "mini_osc_status":return "Custom text, clock and battery via chatbox OSC";
+            case "mini_osc_rotation":return "Saved chatboxes · automatic timed switching";
             case "mini_osc_parameters":return "Typed OSC writes to your current avatar";
             case "mini_presence":return "Choose a status, edit your message, then apply once";
             case "mini_find":return "Search people, worlds or players seen on this phone";
@@ -532,6 +536,7 @@ public final class OverlayMiniVrcx {
             case "mini_chat":
             case "mini_osc_presets":
             case "mini_osc_status":
+            case "mini_osc_rotation":
             case "mini_osc_parameters":
                 drawList();break;
             case "mini_note":
@@ -581,6 +586,7 @@ public final class OverlayMiniVrcx {
             case "mini_chat":showChat();break;
             case "mini_osc_presets":showOscPresets();break;
             case "mini_osc_status":showOscStatus();break;
+            case "mini_osc_rotation":showOscRotation();break;
             case "mini_osc_parameters":showOscParameters();break;
             case "mini_note":showNote();break;
             default:status("Choose a tool.");
@@ -2097,6 +2103,22 @@ public final class OverlayMiniVrcx {
             host.keyboard(false);message.clearFocus();updatePreview.run();
         });
 
+        section(list,"ROTATING CHATBOXES");
+        LinearLayout rotating=card(list);
+        try{
+            int extra=OscControlStore.chatboxes(ctx).length();
+            boolean on=OscControlStore.rotationEnabled(ctx);
+            rotating.addView(text((on?"● Rotating ":"○ Rotation OFF · ")+
+                extra+" saved additional chatbox"+(extra==1?"":"es"),
+                13,on?CompanionStyle.GOOD:CompanionStyle.MUTED,true));
+            rotating.addView(text(
+                "Keep this default status, and add named messages to switch between. "+
+                "Switching speed is independent of the refresh speed below.",
+                12,CompanionStyle.MUTED,false));
+        }catch(Exception ignored){}
+        button(rotating,"Manage rotating chatboxes",false,
+            ()->host.navigate("mini_osc_rotation"));
+
         section(list,"UPDATE SPEED");
         LinearLayout intervalCard=card(list);
         intervalCard.addView(text(
@@ -2203,6 +2225,190 @@ public final class OverlayMiniVrcx {
             "reboots or service restarts, and cannot override Quest overlay "+
             "restrictions, staff access or Android battery controls.",
             null);
+    }
+    /** Rotation settings are local to the signed-in personal VRChat account.
+     * All broadcast starts and staff/Quest checks stay in FloatingCompanionService.
+     */
+    private void showOscRotation(){
+        JSONArray saved;
+        boolean rotating;
+        int seconds;
+        try{
+            saved=OscControlStore.chatboxes(ctx);
+            rotating=OscControlStore.rotationEnabled(ctx);
+            seconds=OscControlStore.rotationInterval(ctx);
+        }catch(Exception e){
+            line(list,"Personal VRChat sign-in required",
+                "Saved chatboxes are separated by your personal account.",null);
+            return;
+        }
+        LinearLayout intro=card(list);
+        intro.addView(text("Rotating Live Chatboxes",18,CompanionStyle.TEXT,true));
+        intro.addView(text(
+            "Your existing Live Chatbox is always the first slot. Add up to "+
+            "8 more named messages and optionally switch between them. "+
+            "Nothing is transmitted by editing or saving.",
+            12,CompanionStyle.MUTED,false));
+        intro.addView(text(
+            "Each message can have its own clock and battery fields. "+
+            "Your normal 5/10/15/30-second refresh stays unchanged.",
+            12,CompanionStyle.MUTED,false));
+
+        section(list,"ROTATION");
+        LinearLayout settings=card(list);
+        settings.addView(text(rotating?"● AUTO-SWITCH ON":"○ AUTO-SWITCH OFF",
+            15,rotating?CompanionStyle.GOOD:CompanionStyle.MUTED,true));
+        settings.addView(text(
+            "Saved per VRChat account, but actual broadcasting always starts OFF "+
+            "and still requires Start Live Chatbox and confirmation.",
+            12,CompanionStyle.MUTED,false));
+        button(settings,rotating?"Disable automatic switching":
+            "Enable automatic switching",true,()->{
+            try{
+                OscControlStore.setRotationEnabled(ctx,!OscControlStore.rotationEnabled(ctx));
+                drawList();
+            }catch(Exception e){message(e.getMessage());}
+        });
+        settings.addView(text("Switch to next chatbox after:",13,
+            CompanionStyle.ACCENT,true));
+        LinearLayout switchTimes=new LinearLayout(ctx);
+        switchTimes.setOrientation(LinearLayout.HORIZONTAL);
+        settings.addView(switchTimes);
+        int[] times={15,30,60,120};
+        for(int value:times){
+            Button choice=CompanionStyle.button(ctx,
+                (seconds==value?"✓ ":"")+(value==120?"2m":value+"s"),seconds==value);
+            choice.setTextSize(12);
+            switchTimes.addView(choice,new LinearLayout.LayoutParams(0,dp(43),1f));
+            choice.setOnClickListener(v->{
+                try{OscControlStore.setRotationInterval(ctx,value);drawList();}
+                catch(Exception e){message(e.getMessage());}
+            });
+        }
+
+        section(list,"YOUR CHATBOXES");
+        LinearLayout defaultBox=card(list);
+        defaultBox.addView(text("1 · Default Live Chatbox",14,CompanionStyle.TEXT,true));
+        try{
+            defaultBox.addView(text(OscControlStore.statusLine(ctx),12,
+                CompanionStyle.MUTED,false));
+        }catch(Exception e){
+            defaultBox.addView(text("Configure the default Live Chatbox first.",
+                12,CompanionStyle.GOLD,false));
+        }
+        button(defaultBox,"Edit default Live Chatbox",false,
+            ()->host.navigate("mini_osc_status"));
+        for(int i=0;i<saved.length();i++){
+            JSONObject item=saved.optJSONObject(i);
+            if(item==null)continue;
+            String name=item.optString("name","");
+            String value=item.optString("text","");
+            boolean clock=item.optBoolean("time",false);
+            boolean battery=item.optBoolean("battery",false);
+            LinearLayout entry=card(list);
+            entry.addView(text((i+2)+" · "+name,14,CompanionStyle.TEXT,true));
+            try{
+                entry.addView(text(OscControlStore.previewChatbox(ctx,value,clock,battery),
+                    12,CompanionStyle.MUTED,false));
+            }catch(Exception e){
+                entry.addView(text("Preview unavailable: "+e.getMessage(),
+                    12,CompanionStyle.GOLD,false));
+            }
+            button(entry,"Edit "+name,false,()->{
+                oscEditingChatbox=name;
+                drawList();
+            });
+            button(entry,"Remove "+name,false,()->confirm(
+                "Delete chatbox “"+name+"”? The default Live Chatbox remains intact.",
+                ()->{
+                    try{
+                        OscControlStore.deleteChatbox(ctx,name);
+                        if(name.equals(oscEditingChatbox))oscEditingChatbox="";
+                        drawList();
+                    }catch(Exception e){message(e.getMessage());}
+                }));
+        }
+
+        section(list,oscEditingChatbox.isEmpty()?"ADD CHATBOX":"EDIT CHATBOX");
+        JSONObject editing=null;
+        for(int i=0;i<saved.length();i++){
+            JSONObject row=saved.optJSONObject(i);
+            if(row!=null&&oscEditingChatbox.equals(row.optString("name",""))){
+                editing=row;break;
+            }
+        }
+        LinearLayout editor=card(list);
+        editor.addView(text("Name",13,CompanionStyle.ACCENT,true));
+        EditText nameInput=CompanionStyle.input(ctx,"Example: Staff status");
+        nameInput.setSingleLine(true);
+        nameInput.setFilters(new InputFilter[]{new InputFilter.LengthFilter(40)});
+        if(editing!=null)nameInput.setText(editing.optString("name",""));
+        oscTextEntry(nameInput);
+        editor.addView(nameInput,new LinearLayout.LayoutParams(-1,dp(43)));
+        editor.addView(text("Message",13,CompanionStyle.ACCENT,true));
+        EditText messageInput=CompanionStyle.input(ctx,"Text shown in VRChat (up to 90 characters)");
+        messageInput.setSingleLine(false);
+        messageInput.setMinLines(2);
+        messageInput.setMaxLines(3);
+        messageInput.setFilters(new InputFilter[]{new InputFilter.LengthFilter(90)});
+        if(editing!=null)messageInput.setText(editing.optString("text",""));
+        oscTextEntry(messageInput);
+        editor.addView(messageInput,new LinearLayout.LayoutParams(-1,-2));
+        final boolean[] flags={
+            editing!=null&&editing.optBoolean("time",false),
+            editing!=null&&editing.optBoolean("battery",false)
+        };
+        Button timeButton=CompanionStyle.button(ctx,"Time: "+(flags[0]?"ON":"OFF"),false);
+        Button batteryButton=CompanionStyle.button(ctx,
+            "Phone battery: "+(flags[1]?"ON":"OFF"),false);
+        editor.addView(timeButton,CompanionStyle.buttonParams(ctx));
+        editor.addView(batteryButton,CompanionStyle.buttonParams(ctx));
+        TextView preview=text("Preview not sent",12,CompanionStyle.MUTED,false);
+        editor.addView(preview);
+        Runnable refresh=()->{
+            try{
+                preview.setText("Preview: "+OscControlStore.previewChatbox(ctx,
+                    messageInput.getText().toString(),flags[0],flags[1]));
+            }catch(Exception e){preview.setText("Preview unavailable: "+e.getMessage());}
+        };
+        timeButton.setOnClickListener(v->{
+            flags[0]=!flags[0];timeButton.setText("Time: "+(flags[0]?"ON":"OFF"));
+            refresh.run();
+        });
+        batteryButton.setOnClickListener(v->{
+            flags[1]=!flags[1];
+            batteryButton.setText("Phone battery: "+(flags[1]?"ON":"OFF"));
+            refresh.run();
+        });
+        if(editing!=null)refresh.run();
+        button(editor,"Preview (no send)",false,()->{
+            host.keyboard(false);messageInput.clearFocus();nameInput.clearFocus();
+            refresh.run();
+        });
+        button(editor,editing==null?"Save new chatbox":"Save changes",true,()->{
+            if(!StaffGate.unlocked(ctx))return;
+            try{
+                OscControlStore.saveChatbox(ctx,oscEditingChatbox,
+                    nameInput.getText().toString(),messageInput.getText().toString(),
+                    flags[0],flags[1]);
+                oscEditingChatbox="";
+                host.keyboard(false);
+                drawList();
+            }catch(Exception e){message("Cannot save: "+e.getMessage());}
+        });
+        if(editing!=null)button(editor,"Cancel editing",false,()->{
+            oscEditingChatbox="";
+            host.keyboard(false);
+            drawList();
+        });
+        section(list,"BROADCAST SAFETY");
+        line(list,"Manual messages still take priority",
+            "Manual chats pause Live Chatbox for about 20 seconds. "+
+            "Rotating messages remain silent, stop with the floating service, "+
+            "and never start themselves after a restart.",null);
+        line(list,"No network dependency",
+            "Rotation uses the existing local VRChat OSC sender only. "+
+            "It never uploads chat content or profiles to TGC's Relay.",null);
     }
     private void showOscParameters(){
         LinearLayout intro=card(list);
