@@ -124,6 +124,16 @@ public final class OscControlStore {
     public static void setTypingAuto(Context ctx,boolean enabled){
         prefs(ctx).edit().putBoolean(key(ctx,"typing_auto"),enabled).apply();
     }
+    public static int liveInterval(Context ctx){
+        int seconds=prefs(ctx).getInt(key(ctx,"live_interval_seconds"),10);
+        return seconds==5||seconds==10||seconds==15||seconds==30?
+            seconds:10;
+    }
+    public static void setLiveInterval(Context ctx,int seconds){
+        if(seconds!=5&&seconds!=10&&seconds!=15&&seconds!=30)
+            throw new IllegalArgumentException("Choose a 5, 10, 15 or 30 second interval.");
+        prefs(ctx).edit().putInt(key(ctx,"live_interval_seconds"),seconds).apply();
+    }
     public static String statusLine(Context ctx){
         StringBuilder result=new StringBuilder();
         String prefix=prefix(ctx).trim();
