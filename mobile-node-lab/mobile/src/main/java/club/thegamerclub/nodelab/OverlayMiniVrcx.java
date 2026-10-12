@@ -1228,7 +1228,7 @@ public final class OverlayMiniVrcx {
                             },"Avatar changed",()->{
                                 try{avatarOwnUser.put("currentAvatar",avatarId);}
                                 catch(Exception ignored){}
-                            });
+                            },false);
                         });
                         button(approval,"Cancel",false,
                             ()->approval.setVisibility(View.GONE));
@@ -1851,6 +1851,9 @@ public final class OverlayMiniVrcx {
         write(action,success,null);
     }
     private void write(Action action,String success,Runnable onSuccess){
+        write(action,success,onSuccess,true);
+    }
+    private void write(Action action,String success,Runnable onSuccess,boolean reload){
         if(!StaffGate.unlocked(ctx)||writing)return;
         writing=true;
         final int token=revision;
@@ -1865,7 +1868,15 @@ public final class OverlayMiniVrcx {
                 if(token!=revision||root==null||!StaffGate.unlocked(ctx))return;
                 if(problem==null){
                     if(onSuccess!=null)onSuccess.run();
-                    message(success);load();
+                    if(reload){
+                        message(success);
+                        load();
+                    }else{
+                        // Avoid refetching every favorite group after selecting
+                        // an avatar; update the preview/current selection now.
+                        drawList();
+                        message(success);
+                    }
                 }else message("Action failed: "+shortValue(problem,110));
             });
         });
