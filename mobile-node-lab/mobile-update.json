@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.8.0",
-  "version_code": 13,
+  "version": "0.9.0",
+  "version_code": 14,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "86f25dd97470e3594b7297a032a39bd9c1bdb546db81ad2e63a71e4f14f5f0ce",
-  "notes": "TGC Staff Companion secure update checker, Shizuku live Node, staff Quick Deployment and offline queue."
+  "sha256": "51afb7f1e73ff4c4d450ca8968c1fc1266908f7eef28340eb812e7158ccdc3ca",
+  "notes": "A refreshed Mini VRCX interface with full bios, richer profiles, friend and world images, smoother scrolling and improved phone screen sizing."
 }
