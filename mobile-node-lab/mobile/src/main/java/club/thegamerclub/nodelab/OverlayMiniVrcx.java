@@ -34,6 +34,7 @@ public final class OverlayMiniVrcx {
         void navigate(String page);
         void back();
         void keyboard(boolean focus);
+        void onPresenceChanged(String status);
     }
     private final Service ctx;
     private final Host host;
@@ -41,6 +42,10 @@ public final class OverlayMiniVrcx {
     private LinearLayout root;
     private String screen="",target="",kind="";
     private String selectedGroupId="";
+    private String searchKind="people";
+    private String submittedSearch="";
+    private String searchLoadingKind="";
+    private String editingStatus="active";
     private int memberOffset=0,banOffset=0;
     private int revision=0;
     private String lastError="";
@@ -83,6 +88,7 @@ public final class OverlayMiniVrcx {
         }
     }
     public void findUser(){host.navigate("mini_search");}
+    public void findAnything(){searchKind="people";submittedSearch="";host.navigate("mini_find");}
     public void verification(){host.navigate("mini_verify");}
     public void note(String userId){
         if(validUser(userId)){target=userId;kind="note";host.navigate("mini_note");}
@@ -147,9 +153,12 @@ public final class OverlayMiniVrcx {
                 return false;
             });
             search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-            if("mini_search".equals(screen)||"mini_members".equals(screen)){
+            if("mini_search".equals(screen)||"mini_members".equals(screen)||
+                "mini_find".equals(screen)){
                 search.setHint("mini_members".equals(screen)?
-                    "Search member name (3+ letters)":"Search user (2+ letters)");
+                    "Search member name (3+ letters)":
+                    "mini_find".equals(screen)?"Search people, worlds or local players":
+                    "Search user (2+ letters)");
                 search.setSingleLine(true);
                 search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
                 search.setOnEditorActionListener((v,action,event)->{
@@ -161,7 +170,12 @@ public final class OverlayMiniVrcx {
             }
             search.addTextChangedListener(new android.text.TextWatcher(){
                 public void beforeTextChanged(CharSequence x,int a,int c,int d){}
-                public void onTextChanged(CharSequence x,int start,int before,int count){drawList();}
+                public void onTextChanged(CharSequence x,int start,int before,int count){
+                    if("mini_find".equals(screen)){
+                        if("local".equals(searchKind))load();
+                        else drawList();
+                    }else drawList();
+                }
                 public void afterTextChanged(android.text.Editable x){}
             });
         }else search=null;
@@ -176,7 +190,8 @@ public final class OverlayMiniVrcx {
             screen.equals("mini_log")||screen.equals("mini_activity")||
             screen.equals("mini_worlds")||
             screen.equals("mini_avatars")||screen.equals("mini_groups")||
-            screen.equals("mini_search")||screen.equals("mini_members");
+            screen.equals("mini_search")||screen.equals("mini_members")||
+            screen.equals("mini_find");
     }
     private String title(){
         switch(screen){
@@ -197,6 +212,9 @@ public final class OverlayMiniVrcx {
             case "mini_instances":return "Group instances";
             case "mini_bans":return "Group bans";
             case "mini_search":return "Search users";
+            case "mini_find":return "Find anything";
+            case "mini_recent":return "Recent worlds";
+            case "mini_now":return "Your instance";
             case "mini_world":return "World details";
             case "mini_instance":return "Instance details";
             case "mini_presence":return "Your status";
@@ -216,7 +234,10 @@ public final class OverlayMiniVrcx {
             case "mini_verify":return "Read and copy your private invite code without leaving VRChat";
             case "mini_profile":return "Personal VRChat account profile details";
             case "mini_note":return "Notes are saved to your personal VRChat account";
-            case "mini_presence":return "Change your personal status without leaving VRChat";
+            case "mini_presence":return "Choose a status, edit your message, then apply once";
+            case "mini_find":return "Search people, worlds or players seen on this phone";
+            case "mini_recent":return "Worlds your VRChat account has visited";
+            case "mini_now":return "Instance detected from local VRChat Mobile logs";
             default:return "Use these tools without leaving VRChat";
         }
     }
@@ -395,6 +416,20 @@ public final class OverlayMiniVrcx {
                 if(term().length()<2){status("Enter at least two characters, then tap Search.");break;}
                 execute(()->VRChatApi.searchUsers(ctx,search.getText().toString().trim()),
                     result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_find":
+                loadGlobalSearch();break;
+            case "mini_recent":
+                execute(()->VRChatApi.recentWorlds(ctx),
+                    result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_now":
+                execute(()->{
+                    JSONObject result=new JSONObject();
+                    try(MobileOutbox db=new MobileOutbox(ctx)){
+                        result.put("events",db.recentLocalActivity(300));
+                        result.put("players",db.currentPlayers(250));
+                    }
+                    return result;
+                },result->{profile=(JSONObject)result;drawList();});break;
             case "mini_worlds":
                 execute(()->VRChatApi.browsePage(ctx,"worlds","",0),
                     result->{loaded=(JSONArray)result;drawList();});break;
@@ -441,6 +476,9 @@ public final class OverlayMiniVrcx {
             case "mini_instances":showGroupInstances();break;
             case "mini_bans":showBans();break;
             case "mini_search":showSearch();break;
+            case "mini_find":showGlobalSearch();break;
+            case "mini_recent":showRecentWorlds();break;
+            case "mini_now":showCurrentInstance();break;
             case "mini_presence":showPresence();break;
             case "mini_note":showNote();break;
             default:status("Choose a tool.");
