@@ -58,6 +58,17 @@ public class MobileDeployActivity extends Activity {
     b.setOnClickListener(v->callback.run());
     return b;
   }
+  private void openShizukuLink(String url){
+    try{
+      startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url))
+          .addCategory(Intent.CATEGORY_BROWSABLE));
+    }catch(Exception e){
+      new AlertDialog.Builder(this)
+          .setTitle("Open Shizuku website")
+          .setMessage("Open this address in a browser: "+url)
+          .setPositiveButton("OK",null).show();
+    }
+  }
   @Override public void onCreate(Bundle state){
     super.onCreate(state);
     getWindow().setStatusBarColor(CompanionStyle.BG);
@@ -122,6 +133,8 @@ public class MobileDeployActivity extends Activity {
     Button infoToggle=CompanionStyle.button(this,
         helpExpanded?"▴ Hide Shizuku explanation":"ⓘ What is Shizuku? (optional)  ▾",false);
     info.addView(infoToggle,CompanionStyle.buttonParams(this));
+    action(info,"Download Shizuku • official website",()->openShizukuLink(
+        "https://shizuku.rikka.app/download/"),false);
 
     LinearLayout infoDetails=new LinearLayout(this);
     infoDetails.setOrientation(LinearLayout.VERTICAL);
@@ -145,6 +158,8 @@ public class MobileDeployActivity extends Activity {
         "Player join sightings may also be sent to the TGC network if tracking is enabled. Your complete raw log files are not uploaded. Quest support is planned for investigation, not available yet.",12);
     sharing.setTextColor(CompanionStyle.MUTED);
     infoDetails.addView(sharing);
+    action(infoDetails,"How to set up Shizuku",()->openShizukuLink(
+        "https://shizuku.rikka.app/guide/setup/"),false);
     action(infoDetails,"Hide explanation",()->{
       helpExpanded=false;
       infoDetails.setVisibility(View.GONE);
