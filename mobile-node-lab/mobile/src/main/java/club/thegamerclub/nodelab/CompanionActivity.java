@@ -41,7 +41,7 @@ public final class CompanionActivity extends Activity {
             if(!isFinishing()){
                 // Always check the live relay again: this will enforce revocations.
                 revalidate();
-                main.postDelayed(this,45000);
+                main.postDelayed(this,90000);
             }
         }
     };
@@ -96,7 +96,7 @@ public final class CompanionActivity extends Activity {
         super.onResume();
         main.removeCallbacks(refreshGate);
         revalidate();
-        main.postDelayed(refreshGate,45000);
+        main.postDelayed(refreshGate,90000);
     }
     @Override protected void onPause(){main.removeCallbacks(refreshGate);super.onPause();}
     @Override protected void onDestroy(){
