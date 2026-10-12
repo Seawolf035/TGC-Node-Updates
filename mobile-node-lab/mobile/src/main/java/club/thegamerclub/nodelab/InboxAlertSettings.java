@@ -8,7 +8,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.HashSet;
 import java.util.Locale;
 import androidx.core.content.ContextCompat;
 import androidx.work.Constraints;
@@ -82,8 +81,13 @@ public final class InboxAlertSettings {
         public final int newUnread,invites,friends;
         Changes(int n,int i,int f){newUnread=n;invites=i;friends=f;}
     }
-    /** This stores *only* hashed IDs; never raw messages or VRChat cookies. */
-    public static synchronized Changes remember(Context ctx,JSONArray items)throws Exception{
+    /**
+     * Stores only account-scoped hashes, never raw notifications or VRChat
+     * credentials. Each endpoint is baselined independently, so a legacy API
+     * outage cannot cause an alert flood when it recovers.
+     */
+    public static synchronized Changes remember(
+        Context ctx,InboxRepository.Snapshot snapshot)throws Exception{
         JSONObject session=VRChatSession.load(ctx);
         String account=session.optString("userId","");
         if(!account.matches("usr_[0-9a-fA-F-]{36}"))
@@ -91,27 +95,29 @@ public final class InboxAlertSettings {
         String accountHash=hash(account);
         android.content.SharedPreferences prefs=ctx.getSharedPreferences(PREF,0);
         boolean sameAccount=accountHash.equals(prefs.getString("account",""));
-        HashSet<String> known=new HashSet<>();
+        boolean legacySeeded=sameAccount&&prefs.getBoolean("legacy_seeded",false);
+        boolean modernSeeded=sameAccount&&prefs.getBoolean("modern_seeded",false);
+        java.util.LinkedHashSet<String> known=new java.util.LinkedHashSet<>();
         if(sameAccount){
-            JSONArray old;
-            try{old=new JSONArray(prefs.getString("known","[]"));}
-            catch(Exception e){old=new JSONArray();}
-            for(int i=0;i<old.length();i++)known.add(old.optString(i,""));
+            JSONArray previous;
+            try{previous=new JSONArray(prefs.getString("known","[]"));}
+            catch(Exception e){previous=new JSONArray();}
+            for(int i=0;i<previous.length();i++){
+                String key=previous.optString(i,"");
+                if(!key.isEmpty())known.add(key);
+            }
         }
         int added=0,invites=0,friends=0;
-        // Preserve the entire bounded account-specific ID history, preventing
-        // old invites from alerting repeatedly across partial API responses.
-        JSONArray merged=new JSONArray();
-        for(String prior:known)if(!prior.isEmpty())merged.put(prior);
-        for(int i=0;i<items.length();i++){
-            JSONObject item=items.optJSONObject(i);
+        for(int i=0;i<snapshot.items.length();i++){
+            JSONObject item=snapshot.items.optJSONObject(i);
             if(item==null)continue;
             String id=item.optString("id","");
             if(id.isEmpty())continue;
             String key=hash(id);
             if(known.add(key)){
-                merged.put(key);
-                if(sameAccount&&!item.optBoolean("seen",false)){
+                boolean eligible=item.optBoolean("_modern",false)?
+                    modernSeeded:legacySeeded;
+                if(sameAccount&&eligible&&!item.optBoolean("seen",false)){
                     added++;
                     String type=item.optString("type","").toLowerCase(Locale.US);
                     if(type.contains("invite"))invites++;
@@ -119,13 +125,16 @@ public final class InboxAlertSettings {
                 }
             }
         }
-        // Keep max 500 hashes. The initial/account-switch observation establishes
-        // a baseline: it must not alert for old pending requests.
         JSONArray bounded=new JSONArray();
-        int first=Math.max(0,merged.length()-500);
-        for(int i=first;i<merged.length();i++)bounded.put(merged.optString(i,""));
+        int skip=Math.max(0,known.size()-500),index=0;
+        for(String key:known){
+            if(index++>=skip)bounded.put(key);
+        }
         prefs.edit().putString("account",accountHash)
-            .putString("known",bounded.toString()).apply();
-        return new Changes(sameAccount?added:0,sameAccount?invites:0,sameAccount?friends:0);
+            .putString("known",bounded.toString())
+            .putBoolean("legacy_seeded",legacySeeded||snapshot.legacyAvailable)
+            .putBoolean("modern_seeded",modernSeeded||snapshot.modernAvailable)
+            .apply();
+        return new Changes(added,invites,friends);
     }
 }
