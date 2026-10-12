@@ -25,6 +25,7 @@
    android:grantUriPermissions="true">
   <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/tgc_update_paths"/>
  </provider>
+ <activity android:name=".InviteCodeActivity" android:exported="false"/>
  <activity android:name=".VRChatAccountActivity" android:exported="false"/>
  <activity android:name=".VRChatBrowseActivity" android:exported="false"/>
  <activity android:name=".VRChatDetailActivity" android:exported="false"/>
