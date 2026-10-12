@@ -119,7 +119,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         lastRefresh=System.currentTimeMillis();
         io.execute(()->{
             try{
-                JSONObject result=kind.equals("user")?VRChatApi.getUser(this,id):
+                JSONObject result=kind.equals("user")?VRChatApi.getUserProfile(this,id):
                     kind.equals("world")?VRChatApi.getWorld(this,id):VRChatApi.getGroup(this,id);
                 JSONObject encountered=null;
                 if(kind.equals("user")){
@@ -144,15 +144,18 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
     private void show(JSONObject item,JSONObject local){
         status.setVisibility(View.GONE);
         String title=item.optString("displayName",item.optString("name","Unknown"));
+        // VRChat's 2026 profile art uses *different* banner and icon fields.
+        // The avatar image must never replace an explicitly configured banner.
         String hero=kind.equals("user")?
-            CompanionImages.preferred(item,"currentAvatarImageUrl","profilePicOverride",
-                "currentAvatarThumbnailImageUrl","userIcon"):
+            CompanionImages.preferred(item,"bannerUrl","bannerCustomUrl",
+                "profilePicOverride"):
             kind.equals("world")?
                 CompanionImages.preferred(item,"imageUrl","thumbnailImageUrl"):
                 CompanionImages.preferred(item,"bannerUrl","iconUrl");
         String portrait=kind.equals("user")?
-            CompanionImages.preferred(item,"userIcon","profilePicOverride",
-                "currentAvatarThumbnailImageUrl","currentAvatarImageUrl"):
+            CompanionImages.preferred(item,"iconUrl","userIcon",
+                "profilePicOverrideThumbnail","currentAvatarThumbnailImageUrl",
+                "currentAvatarImageUrl"):
             kind.equals("world")?
                 CompanionImages.preferred(item,"thumbnailImageUrl","imageUrl"):
                 CompanionImages.preferred(item,"iconUrl","bannerUrl");
@@ -237,8 +240,15 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         kicker("ABOUT");
         LinearLayout bio=box();
         String content=user.optString("bio","").trim();
-        bio.addView(text(content.isEmpty()?"No bio set.":content,14,
-            content.isEmpty()?CompanionStyle.MUTED:CompanionStyle.TEXT,false));
+        // "No bio set" must not be shown when a limited API response omitted
+        // the bio entirely. This page prioritizes /profile/{id}.
+        String visibleBio=content.isEmpty()?
+            (user.has("bio")?"No bio provided.":"Bio isn't available for this profile."):
+            content;
+        TextView bioText=text(visibleBio,14,
+            content.isEmpty()?CompanionStyle.MUTED:CompanionStyle.TEXT,false);
+        bioText.setTextIsSelectable(true);
+        bio.addView(bioText);
         JSONArray bioLinks=user.optJSONArray("bioLinks");
         if(bioLinks!=null&&bioLinks.length()>0){
             space(bio,14);
@@ -271,27 +281,59 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         detail(details,"Joined VRChat",user.optString("date_joined",""));
         detail(details,"Last platform",user.optString("last_platform",""));
         detail(details,"Last login",user.optString("last_login",""));
-        loadGroups();
+        showProfileExtras(user);
     }
-    private void loadGroups(){
-        io.execute(()->{
-            try{
-                JSONArray groups=VRChatApi.visibleUserGroups(this,id);
-                runOnUiThread(()->{
-                    if(!StaffGate.unlocked(this)||isFinishing()||isDestroyed()||groups.length()==0)return;
-                    kicker("VISIBLE GROUPS");
-                    LinearLayout container=box();
-                    int limit=Math.min(groups.length(),16);
-                    for(int i=0;i<limit;i++){
-                        JSONObject group=groups.optJSONObject(i);
-                        if(group==null)continue;
-                        String groupId=group.optString("groupId",group.optString("id",""));
-                        link(container,group.optString("name","Group"),
-                            group.optString("shortCode",""),"group",groupId);
-                    }
-                });
-            }catch(Exception ignored){/* Private groups are never guessed. */}
-        });
+    /** Show only items supplied by VRChat's publicly visible profile. */
+    private void showProfileExtras(JSONObject user){
+        JSONArray badges=user.optJSONArray("badges");
+        if(badges!=null){
+            LinearLayout badgeCard=null;
+            for(int i=0;i<badges.length() && i<40;i++){
+                JSONObject badge=badges.optJSONObject(i);
+                if(badge==null || badge.optBoolean("hidden",false))continue;
+                String badgeName=badge.optString("badgeName","");
+                if(badgeName.isEmpty())continue;
+                if(badgeCard==null){
+                    kicker("BADGES");
+                    badgeCard=box();
+                }
+                detail(badgeCard,badgeName,badge.optString("badgeDescription",""));
+            }
+        }
+        JSONObject represented=user.optJSONObject("representedGroup");
+        if(represented!=null){
+            String gId=represented.optString("groupId",represented.optString("id",""));
+            if(valid("group",gId)){
+                kicker("REPRESENTED GROUP");
+                LinearLayout representative=box();
+                link(representative,represented.optString("name","Group"),
+                    represented.optString("shortCode",""),"group",gId);
+            }
+        }
+        JSONObject groupResponse=user.optJSONObject("groups");
+        JSONArray groups=groupResponse==null?user.optJSONArray("groups"):groupResponse.optJSONArray("list");
+        if(groups!=null && groups.length()>0){
+            kicker("VISIBLE GROUPS");
+            LinearLayout container=box();
+            for(int i=0;i<Math.min(groups.length(),24);i++){
+                JSONObject group=groups.optJSONObject(i);
+                if(group==null)continue;
+                String groupId=group.optString("groupId",group.optString("id",""));
+                link(container,group.optString("name","Group"),
+                    group.optString("shortCode",""),"group",groupId);
+            }
+        }
+        JSONArray worlds=user.optJSONArray("publicWorlds");
+        if(worlds!=null && worlds.length()>0){
+            kicker("PUBLIC WORLDS");
+            LinearLayout worldCard=box();
+            for(int i=0;i<Math.min(worlds.length(),12);i++){
+                JSONObject world=worlds.optJSONObject(i);
+                if(world==null)continue;
+                link(worldCard,world.optString("name","World"),"",
+                    "world",world.optString("id",""));
+            }
+        }
     }
     private void showWorld(JSONObject world){
         kicker("ABOUT THIS WORLD");
