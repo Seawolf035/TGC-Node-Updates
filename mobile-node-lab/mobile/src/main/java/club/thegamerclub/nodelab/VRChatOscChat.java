@@ -24,6 +24,7 @@ public final class VRChatOscChat {
     private static final int VRCHAT_OSC_PORT=9000;
     private static final byte[] LOOPBACK={(byte)127,0,0,1};
     private static long lastSendAt=-MIN_SEND_INTERVAL_MS;
+    private static long lastManualAt=-60000L;
     private static long lastTypingAt=0L;
     private static Boolean lastTyping=null;
     private VRChatOscChat(){}
@@ -73,13 +74,24 @@ public final class VRChatOscChat {
      */
     public static synchronized void send(String raw,boolean notificationSound)
         throws Exception {
+        sendChat(raw,notificationSound,true);
+    }
+    /** Live status suppresses sound; manual messages take priority. */
+    public static synchronized void sendLive(String raw)throws Exception{
+        sendChat(raw,false,false);
+    }
+    public static synchronized long sinceManualChatMs(){
+        return SystemClock.elapsedRealtime()-lastManualAt;
+    }
+    private static void sendChat(String raw,boolean notificationSound,
+                                 boolean manual)throws Exception{
         String value=validate(raw);
         long now=SystemClock.elapsedRealtime();
         if(now-lastSendAt<MIN_SEND_INTERVAL_MS)
             throw new IllegalStateException("Wait a moment before sending again.");
-        byte[] data=packet(value,notificationSound);
-        transmit(data);
+        transmit(packet(value,notificationSound));
         lastSendAt=SystemClock.elapsedRealtime();
+        if(manual)lastManualAt=lastSendAt;
     }
 
     /** OSC /chatbox/typing, a true/false type tag without payload bytes. */
