@@ -397,7 +397,7 @@ public final class CompanionActivity extends Activity {
         LinearLayout quick=stack();
         page.addView(quick);
         compactQuickPair(quick,"♧","Friends","Who is online",()->openFriendHub("locations"),
-            "◎","Players","Recent encounters",()->openBrowse("encounters"));
+            "◎","Players","List & history",()->openPlayerLog("current"));
         compactQuickPair(quick,"✉","Inbox","Invites & requests",()->openInbox("all"),
             "◉","My profile","Your account",this::openMyProfile);
         compactQuickPair(quick,"◇","Worlds","Your favorites",()->openBrowse("worlds"),
@@ -524,6 +524,10 @@ public final class CompanionActivity extends Activity {
         action(people,"♧","Online friends","See who's around now",()->openBrowse("friends_online"));
         action(people,"◌","Offline friends","Find friends who aren't online",()->openBrowse("friends_offline"));
         action(people,"⌕","Find people","Search VRChat users",()->openBrowse("search_users"));
+        action(people,"◎","Observed player list","Players seen in your current session",
+            ()->openPlayerLog("current"));
+        action(people,"◷","Join & leave history","Locally saved VRChat Mobile log events",
+            ()->openPlayerLog("timeline"));
         action(people,"◎","Recent players","People you've encountered",()->openBrowse("encounters"));
         action(people,"♧","Friends Locations","Friends grouped by their visible instances",()->openFriendHub("locations"));
         action(people,"◷","Friend Log","Search recorded changes over time",()->openFriendHub("log"));
@@ -539,7 +543,7 @@ public final class CompanionActivity extends Activity {
         action(places,"★","Extended avatar favorites","Private categorized avatar collections • VRC+",this::openExtendedAvatars);
     }
     private void renderTracking(){
-        headline("ACTIVITY","Player tracking","Capture encounters while you're exploring VRChat.");
+        headline("ACTIVITY","Player tracking","See who joins and leaves while playing VRChat Mobile.");
         android.content.SharedPreferences s=getSharedPreferences("tgc_mobile_node_status",0);
         long heartbeat=s.getLong("service_heartbeat_at",0);
         boolean active=s.getBoolean("running",false) && heartbeat>0 &&
@@ -558,10 +562,27 @@ public final class CompanionActivity extends Activity {
             ()->openBrowse("encounters"),
             Integer.toString(s.getInt("uploaded_total",0)),"Records synced","↗",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
+        action(stats,"◷","Join & leave history","Times, players and instance changes",
+            ()->openPlayerLog("timeline"));
+        action(stats,"◎","Observed player list","People detected in this session",
+            ()->openPlayerLog("current"));
         action(stats,"⚙","Tracking controls","Start, stop or check your tracking",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
-        page.addView(txt("Tracking works in the background while the Companion is open or closed.",
-            12,CompanionStyle.MUTED,false));
+        page.addView(CompanionStyle.section(this,"HOW TRACKING WORKS"));
+        LinearLayout explanation=card();
+        explanation.addView(txt("Shizuku is optional.",16,CompanionStyle.TEXT,true));
+        space(explanation,7);
+        explanation.addView(txt(
+            "The Companion works without Shizuku for friends, profiles, notifications, worlds and avatars.",
+            13,CompanionStyle.MUTED,false));
+        space(explanation,8);
+        explanation.addView(txt(
+            "If you play VRChat on your phone, Shizuku only lets the Mobile Node read the game's log files. Those logs also give you a player list, join/leave history and world changes in this app. Join sightings can help the TGC network; your full logs stay on your phone.",
+            13,CompanionStyle.MUTED,false));
+        space(explanation,8);
+        explanation.addView(txt(
+            "Quest support is being explored, but isn't available yet.",
+            12,CompanionStyle.ACCENT,false));
     }
     private void renderSettings(){
         headline("PREFERENCES","Settings","Your account, device and Companion.");
@@ -605,6 +626,10 @@ public final class CompanionActivity extends Activity {
             action(extra,"⌘","Tracking diagnostics","Troubleshooting tools",
                 ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
         }
+    }
+    private void openPlayerLog(String tab){
+        needsStaff(()->startActivity(new Intent(this,PlayerActivityLogActivity.class)
+            .putExtra("tab",tab)));
     }
     private void openFriendHub(String tab){
         needsStaff(()->startActivity(new Intent(this,FriendHubActivity.class).putExtra("tab",tab)));
