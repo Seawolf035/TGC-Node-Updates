@@ -1,6 +1,7 @@
 package club.thegamerclub.nodelab;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -49,6 +50,14 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
         back.setOnClickListener(v->finish());
         TextView heading=text("Favorite avatars",22,CompanionStyle.TEXT,true);
         heading.setPadding(dp(13),0,0,0);head.addView(heading);
+        Button extended=CompanionStyle.button(this,"Extended favorites • VRC+",true);
+        LinearLayout.LayoutParams extendedP=CompanionStyle.buttonParams(this);
+        extendedP.setMargins(dp(15),dp(4),dp(15),dp(3));
+        root.addView(extended,extendedP);
+        extended.setOnClickListener(v->{
+            if(!StaffGate.unlocked(this)){finish();return;}
+            startActivity(new Intent(this,ExtendedAvatarActivity.class));
+        });
         status=text("Loading saved avatars...",13,CompanionStyle.MUTED,false);
         status.setPadding(dp(17),dp(11),dp(17),dp(12));root.addView(status);
         RecyclerView list=new RecyclerView(this);
@@ -116,6 +125,11 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
                     .setTitle(name)
                     .setMessage(msg.toString())
                     .setNegativeButton("Close",null)
+                    .setNeutralButton("Save to Extended",(d,w)->{
+                        if(!StaffGate.unlocked(this)){finish();return;}
+                        startActivity(new Intent(this,ExtendedAvatarActivity.class)
+                            .putExtra("avatar_id",id));
+                    })
                     .setPositiveButton("Use this avatar",(d,w)->confirmSelection(id,name))
                     .show();
                 status.setText(avatars.size()+" favorite avatars");
