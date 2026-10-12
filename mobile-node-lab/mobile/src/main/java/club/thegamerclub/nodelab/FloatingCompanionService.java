@@ -83,6 +83,9 @@ public final class FloatingCompanionService extends Service {
 
     private final Runnable validate=new Runnable(){
         @Override public void run(){
+            if(!QuestDevice.canRunOverlay(FloatingCompanionService.this)){
+                stopRequestedByUser();return;
+            }
             if(!StaffGate.unlocked(FloatingCompanionService.this)){
                 stopSelf();return;
             }
@@ -162,6 +165,9 @@ public final class FloatingCompanionService extends Service {
     };
     private final Runnable refreshTick=new Runnable(){
         @Override public void run(){
+            if(!QuestDevice.canRunOverlay(FloatingCompanionService.this)){
+                stopRequestedByUser();return;
+            }
             if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
             getSharedPreferences("tgc_overlay",0).edit()
                 .putLong("service_heartbeat_at",System.currentTimeMillis()).apply();
@@ -210,7 +216,8 @@ public final class FloatingCompanionService extends Service {
             .build();
     }
     private boolean startVisible(){
-        if(!StaffGate.unlocked(this)||!Settings.canDrawOverlays(this))return false;
+        if(!QuestDevice.canRunOverlay(this)||
+           !StaffGate.unlocked(this)||!Settings.canDrawOverlays(this))return false;
         try{
             if(bubble==null)showBubble();
         }catch(Exception e){return false;}
@@ -251,7 +258,8 @@ public final class FloatingCompanionService extends Service {
     /** A system-led recovery must verify access online before showing the bubble. */
     private void recoverAfterInterruption(){
         if(restoring)return;
-        if(!OverlayPreferences.desired(this)||!OverlayPreferences.recover(this)||
+        if(!QuestDevice.canRunOverlay(this)||
+           !OverlayPreferences.desired(this)||!OverlayPreferences.recover(this)||
            !Settings.canDrawOverlays(this)){
             stopSelf();return;
         }
@@ -259,7 +267,9 @@ public final class FloatingCompanionService extends Service {
         updateForegroundText("Checking staff access before restoring tools");
         restoreRunnable[0]=new Runnable(){
             @Override public void run(){
-                if(stoppingExplicitly||!OverlayPreferences.desired(FloatingCompanionService.this)||
+                if(stoppingExplicitly||
+                   !QuestDevice.canRunOverlay(FloatingCompanionService.this)||
+                   !OverlayPreferences.desired(FloatingCompanionService.this)||
                    !OverlayPreferences.recover(FloatingCompanionService.this)){
                     restoring=false;stopSelf();return;
                 }
@@ -303,6 +313,12 @@ public final class FloatingCompanionService extends Service {
     @Override public int onStartCommand(Intent intent,int flags,int startId){
         String action=intent==null?null:intent.getAction();
         if(ACTION_STOP.equals(action)){
+            stopRequestedByUser();
+            return START_NOT_STICKY;
+        }
+        // Enforce Quest consent in the service itself. This covers direct
+        // starts, sticky Android restarts and recovery calls alike.
+        if(!QuestDevice.canRunOverlay(this)){
             stopRequestedByUser();
             return START_NOT_STICKY;
         }
