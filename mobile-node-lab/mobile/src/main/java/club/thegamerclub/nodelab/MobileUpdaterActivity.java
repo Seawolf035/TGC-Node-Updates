@@ -53,6 +53,7 @@ public final class MobileUpdaterActivity extends Activity {
     root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(dp(18),dp(20),dp(18),dp(30));
     scroll.addView(root);setContentView(scroll);
+    CompanionStyle.safeArea(this,scroll);
     Button back=CompanionStyle.button(this,"← Back",false);
     root.addView(back,new LinearLayout.LayoutParams(dp(115),dp(44)));
     back.setOnClickListener(v->finish());
