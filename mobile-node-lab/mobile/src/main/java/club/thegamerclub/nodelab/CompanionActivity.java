@@ -31,6 +31,8 @@ public final class CompanionActivity extends Activity {
     private final ExecutorService gateWorker=Executors.newSingleThreadExecutor();
     private final Handler main=new Handler(Looper.getMainLooper());
     private boolean verifying=false;
+    private boolean showingUnlocked=false;
+    private TextView verificationNotice;
     private LinearLayout page;
     private TextView gateLabel;
     private String tab="HOME";
@@ -103,6 +105,8 @@ public final class CompanionActivity extends Activity {
         super.onDestroy();
     }
     private void locked(String reason){
+        showingUnlocked=false;
+        verificationNotice=null;
         shell();
         LinearLayout c=card("Staff access required","The Companion is a benefit for active TGC staff. Installing or copying the APK will not unlock it.");
         gateLabel=text(reason,14,GOLD,true);c.addView(gateLabel);gap(c,12);
@@ -114,21 +118,36 @@ public final class CompanionActivity extends Activity {
     private void revalidate(){
         if(verifying)return;
         verifying=true;
-        if(!StaffGate.unlocked(this))locked("Verifying staff access with the TGC relay...");
+        // Never invalidate a previously approved grant before asking the relay.
+        // Let people keep using their current screen during ordinary refreshes.
+        if(!StaffGate.unlocked(this) && showingUnlocked){
+            locked("Your previous verification expired. Checking the relay...");
+        }
         gateWorker.execute(()->{
             String failed=null;
             try{StaffGate.verifyOnline(this);}
             catch(Exception e){
                 String message=e.getMessage();
-                failed=message==null?e.getClass().getSimpleName():message.substring(0,Math.min(120,message.length()));
+                failed=message==null?e.getClass().getSimpleName():
+                    message.substring(0,Math.min(120,message.length()));
             }
             final String fail=failed;
             runOnUiThread(()->{
                 verifying=false;
-                if(isFinishing())return;
-                if(fail!=null){
-                    locked("LOCKED — "+fail+"\nCheck your connection, deployment or staff status.");
-                }else renderUnlocked();
+                if(isFinishing() || isDestroyed())return;
+                // A confirmed revocation clears the grant immediately. A temporary
+                // HTTP failure does NOT clear it until the bounded grace runs out.
+                if(!StaffGate.unlocked(this)){
+                    locked(fail==null?"Staff deployment needs verification":
+                        "Staff verification unavailable: "+fail+"\nRetrying automatically. You do not need a new deployment link.");
+                }else if(!showingUnlocked){
+                    renderUnlocked();
+                }else if(verificationNotice!=null){
+                    verificationNotice.setText(fail==null?
+                        "Verified with TGC relay • session remains active":
+                        "Relay connection temporarily unavailable • keeping previously verified session");
+                    verificationNotice.setTextColor(fail==null?ACCENT:GOLD);
+                }
             });
         });
     }
@@ -138,8 +157,12 @@ public final class CompanionActivity extends Activity {
     }
     private void renderUnlocked(){
         if(!StaffGate.unlocked(this)){locked("Deployment needs online verification");return;}
+        showingUnlocked=true;
         shell();
-        LinearLayout top=card("STAFF VERIFIED","This session is unlocked only while your deployed Node remains valid on the TGC relay.");
+        LinearLayout top=card("STAFF VERIFIED","Your staff deployment is verified. Background rechecks won't interrupt your screen.");
+        verificationNotice=text("Verified with TGC relay • session remains active",12,ACCENT,false);
+        top.addView(verificationNotice);
+        gap(top,8);
         action(top,"Your VRChat account","Sign in, verify your session, or log out",()->requiresStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
         action(top,"My VRChat profile","View my own account information here in the app",this::openMyProfile);
         LinearLayout features=card("VRChat companion","Native personal-account views and local history. Nothing here uses the GM1 account.");
