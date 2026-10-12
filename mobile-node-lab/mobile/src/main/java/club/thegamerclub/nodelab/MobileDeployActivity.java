@@ -31,6 +31,7 @@ public class MobileDeployActivity extends Activity {
   private Button startControl,stopControl;
   private LinearLayout enrollment,advancedPane;
   private boolean advanced=false;
+  private boolean helpExpanded=false;
   private final Handler handler=new Handler(Looper.getMainLooper());
   private final Runnable autoRefresh=new Runnable(){
     @Override public void run(){refresh();handler.postDelayed(this,5000);}
@@ -63,6 +64,7 @@ public class MobileDeployActivity extends Activity {
     getWindow().setNavigationBarColor(CompanionStyle.BG);
     Shizuku.addRequestPermissionResultListener(shizukuResult);
     advanced=getIntent().getBooleanExtra("advanced",false);
+    helpExpanded=state!=null && state.getBoolean("shizuku_help_expanded",false);
     ScrollView scroll=new ScrollView(this);
     scroll.setBackgroundColor(CompanionStyle.BG);
     LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
@@ -77,27 +79,6 @@ public class MobileDeployActivity extends Activity {
     TextView intro=title("Track who joins and leaves your VRChat Mobile instances and keep useful player history.",14);
     intro.setTextColor(CompanionStyle.MUTED);
     root.addView(intro);spacer(root,14);
-    LinearLayout info=CompanionStyle.card(this);
-    root.addView(info,CompanionStyle.cardParams(this));
-    info.addView(title("Do I need Shizuku?",18));
-    spacer(info,7);
-    TextView notNeeded=title(
-        "No. You can use your friends list, profiles, notifications, worlds, avatars and other Companion features without Shizuku or playing VRChat on this phone.",13);
-    notNeeded.setTextColor(CompanionStyle.MUTED);
-    info.addView(notNeeded);
-    spacer(info,10);
-    info.addView(title("What does Shizuku do?",16));
-    spacer(info,6);
-    TextView purpose=title(
-        "Shizuku is an Android utility that, with your permission, lets apps use certain restricted system features. Here it is only used to let the Mobile Node read VRChat Mobile's log files. The same logs power your player list, join/leave history and instance changes, like desktop VRCX.",13);
-    purpose.setTextColor(CompanionStyle.MUTED);info.addView(purpose);
-    spacer(info,9);
-    TextView sharing=title(
-        "Player join sightings may also be sent to the TGC network if tracking is enabled. Your complete raw log files are not uploaded. Quest support is planned for investigation, not available yet.",12);
-    sharing.setTextColor(CompanionStyle.MUTED);info.addView(sharing);
-    action(info,"View player list and log",()->startActivity(
-        new Intent(this,PlayerActivityLogActivity.class)),false);
-
     enrollment=CompanionStyle.card(this);
     root.addView(enrollment,CompanionStyle.cardParams(this));
     enrollment.addView(title("Link your device",20));
@@ -130,6 +111,52 @@ public class MobileDeployActivity extends Activity {
     startControl=action(dashboard,"Start tracking",this::startNode,true);
     stopControl=action(dashboard,"Stop tracking",this::stopNode,false);
     action(dashboard,"Refresh status",this::refresh,false);
+
+    action(dashboard,"View player list and log",()->startActivity(
+        new Intent(this,PlayerActivityLogActivity.class)),false);
+
+    // Keep setup and tracking controls accessible without scrolling through help text.
+    // Expand this explanation only when the user asks for it.
+    LinearLayout info=CompanionStyle.card(this);
+    root.addView(info,CompanionStyle.cardParams(this));
+    Button infoToggle=CompanionStyle.button(this,
+        helpExpanded?"▴ Hide Shizuku explanation":"ⓘ What is Shizuku? (optional)  ▾",false);
+    info.addView(infoToggle,CompanionStyle.buttonParams(this));
+
+    LinearLayout infoDetails=new LinearLayout(this);
+    infoDetails.setOrientation(LinearLayout.VERTICAL);
+    info.addView(infoDetails);
+    spacer(infoDetails,7);
+    infoDetails.addView(title("Do I need Shizuku?",18));
+    spacer(infoDetails,7);
+    TextView notNeeded=title(
+        "No. You can use your friends list, profiles, notifications, worlds, avatars and other Companion features without Shizuku or playing VRChat on this phone.",13);
+    notNeeded.setTextColor(CompanionStyle.MUTED);
+    infoDetails.addView(notNeeded);
+    spacer(infoDetails,10);
+    infoDetails.addView(title("What does Shizuku do?",16));
+    spacer(infoDetails,6);
+    TextView purpose=title(
+        "Shizuku is an Android utility that, with your permission, lets apps use certain restricted system features. Here it is only used to let the Mobile Node read VRChat Mobile's log files. The same logs power your player list, join/leave history and instance changes, like desktop VRCX.",13);
+    purpose.setTextColor(CompanionStyle.MUTED);
+    infoDetails.addView(purpose);
+    spacer(infoDetails,9);
+    TextView sharing=title(
+        "Player join sightings may also be sent to the TGC network if tracking is enabled. Your complete raw log files are not uploaded. Quest support is planned for investigation, not available yet.",12);
+    sharing.setTextColor(CompanionStyle.MUTED);
+    infoDetails.addView(sharing);
+    action(infoDetails,"Hide explanation",()->{
+      helpExpanded=false;
+      infoDetails.setVisibility(View.GONE);
+      infoToggle.setText("ⓘ What is Shizuku? (optional)  ▾");
+    },false);
+    infoDetails.setVisibility(helpExpanded?View.VISIBLE:View.GONE);
+    infoToggle.setOnClickListener(v->{
+      helpExpanded=!helpExpanded;
+      infoDetails.setVisibility(helpExpanded?View.VISIBLE:View.GONE);
+      infoToggle.setText(helpExpanded?
+          "▴ Hide Shizuku explanation":"ⓘ What is Shizuku? (optional)  ▾");
+    });
 
     advancedPane=CompanionStyle.card(this);
     root.addView(advancedPane,CompanionStyle.cardParams(this));
@@ -272,6 +299,10 @@ public class MobileDeployActivity extends Activity {
     super.onResume();
     handler.removeCallbacks(autoRefresh);
     handler.postDelayed(autoRefresh,2000);
+  }
+  @Override protected void onSaveInstanceState(Bundle state){
+    state.putBoolean("shizuku_help_expanded",helpExpanded);
+    super.onSaveInstanceState(state);
   }
   @Override protected void onPause(){handler.removeCallbacks(autoRefresh);super.onPause();}
   @Override protected void onDestroy(){
