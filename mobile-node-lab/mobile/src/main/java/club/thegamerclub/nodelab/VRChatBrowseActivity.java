@@ -156,7 +156,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
     }
     private static String imageFor(JSONObject item,String kind){
         if(kind.equals("user"))return CompanionImages.preferred(item,
-            "userIcon","profilePicOverride","currentAvatarThumbnailImageUrl","currentAvatarImageUrl");
+            "iconUrl","userIcon","currentAvatarThumbnailImageUrl","currentAvatarImageUrl");
         if(kind.equals("group"))return CompanionImages.preferred(item,"iconUrl","bannerUrl");
         if(kind.equals("world"))return CompanionImages.preferred(item,"thumbnailImageUrl","imageUrl");
         return "";
