@@ -27,9 +27,11 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
     private final ArrayList<JSONObject> avatars=new ArrayList<>();
     private final AvatarAdapter adapter=new AvatarAdapter();
     private TextView status;
-    private Button more,refreshButton;
+    private Button groupPicker,refreshButton;
+    private AvatarFavoritesRepository.Snapshot favoriteLists;
+    private String selectedGroup="all";
+    private String statusWarning="";
     private EditText filter;
-    private int offset=0;
     private boolean loading=false;
     private int dp(float n){return CompanionStyle.dp(this,n);}
     private TextView text(String val,int sp,int color,boolean strong){
@@ -38,7 +40,7 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         if(!StaffGate.unlocked(this)){finish();return;}
-        render();fetch(false);
+        render();fetch();
     }
     @Override protected void onResume(){super.onResume();if(!StaffGate.unlocked(this))finish();}
     private void render(){
@@ -54,7 +56,7 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
         back.setOnClickListener(v->finish());
         TextView heading=text("Favorite avatars",22,CompanionStyle.TEXT,true);
         heading.setPadding(dp(13),0,0,0);head.addView(heading);
-        Button extended=CompanionStyle.button(this,"Extended favorites • VRC+",true);
+        Button extended=CompanionStyle.button(this,"Local avatar collections • VRC+",true);
         LinearLayout.LayoutParams extendedP=CompanionStyle.buttonParams(this);
         extendedP.setMargins(dp(15),dp(4),dp(15),dp(3));
         root.addView(extended,extendedP);
@@ -62,9 +64,15 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
             if(!StaffGate.unlocked(this)){finish();return;}
             startActivity(new Intent(this,ExtendedAvatarActivity.class));
         });
-        status=text("Loading saved avatars...",13,CompanionStyle.MUTED,false);
+        status=text("Loading VRChat favorite lists…",13,CompanionStyle.MUTED,false);
         status.setPadding(dp(17),dp(11),dp(17),dp(8));root.addView(status);
-        filter=CompanionStyle.input(this,"Search saved avatar names or creators");
+        groupPicker=CompanionStyle.button(this,"All favorite lists ▾",false);
+        LinearLayout.LayoutParams gp=CompanionStyle.buttonParams(this);
+        gp.setMargins(dp(15),dp(3),dp(15),dp(9));
+        root.addView(groupPicker,gp);
+        groupPicker.setOnClickListener(v->chooseFavoriteList());
+        groupPicker.setEnabled(false);
+        filter=CompanionStyle.input(this,"Search avatars across loaded lists");
         filter.setSingleLine(true);
         LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(-1,dp(52));
         fp.setMargins(dp(14),0,dp(14),dp(10));
@@ -81,57 +89,124 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
         list.setLayoutManager(new LinearLayoutManager(this));list.setAdapter(adapter);
         list.setPadding(dp(13),0,dp(13),dp(10));
         root.addView(list,new LinearLayout.LayoutParams(-1,0,1f));
-        more=CompanionStyle.button(this,"Load more avatars",false);
-        LinearLayout.LayoutParams p=CompanionStyle.buttonParams(this);
-        p.setMargins(dp(15),0,dp(15),dp(13));root.addView(more,p);
-        more.setOnClickListener(v->fetch(true));
-        refreshButton=CompanionStyle.button(this,"Refresh",true);
+        refreshButton=CompanionStyle.button(this,"Refresh all favorite lists",true);
         LinearLayout.LayoutParams rp=CompanionStyle.buttonParams(this);
         rp.setMargins(dp(15),0,dp(15),dp(13));root.addView(refreshButton,rp);
-        refreshButton.setOnClickListener(v->fetch(false));
+        refreshButton.setOnClickListener(v->fetch());
     }
     private void updateSummary(){
         if(status==null)return;
         String term=filter==null?"":filter.getText().toString().trim();
-        int showing=adapter.getItemCount();
-        status.setText(term.isEmpty()?
-            avatars.size()+" favorites loaded":
-            showing+" matches from "+avatars.size()+" loaded favorites");
+        int matching=adapter.getItemCount();
+        int groupCount=favoriteLists==null?0:favoriteLists.groups.length();
+        String label=term.isEmpty()?
+            avatars.size()+" favorites · "+groupCount+" VRChat list"+
+                (groupCount==1?"":"s"):
+            matching+" matches in "+avatars.size()+" loaded avatars";
+        if(!"all".equals(selectedGroup))label+=" · "+selectedGroupLabel();
+        if(!statusWarning.isEmpty())label+="\n"+statusWarning;
+        status.setText(label);
+        status.setTextColor(statusWarning.isEmpty()?
+            CompanionStyle.MUTED:CompanionStyle.GOLD);
     }
-    private void fetch(boolean append){
-        if(loading||!StaffGate.unlocked(this))return;
-        loading=true;
-        if(more!=null)more.setEnabled(false);
-        if(refreshButton!=null)refreshButton.setEnabled(false);
-        int next=append?offset:0;
-        status.setText("Loading saved avatars...");
-        worker.execute(()->{
-            JSONArray data=null;
-            String error=null;
-            try{data=VRChatApi.favoriteAvatars(this,next);}
-            catch(Exception e){error=e.getMessage();}
-            JSONArray found=data;String issue=error;
-            runOnUiThread(()->{
-                loading=false;
-                more.setEnabled(true);
-                refreshButton.setEnabled(true);
-                if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
-                if(found==null){
-                    status.setText("Couldn't load avatars: "+issue);return;
+    private String selectedGroupLabel(){
+        if(favoriteLists==null)return "All lists";
+        for(int i=0;i<favoriteLists.groups.length();i++){
+            JSONObject g=favoriteLists.groups.optJSONObject(i);
+            if(g!=null&&selectedGroup.equals(g.optString("name","")))
+                return g.optString("displayName",selectedGroup);
+        }
+        return "All lists";
+    }
+    private void chooseFavoriteList(){
+        if(favoriteLists==null||loading)return;
+        JSONArray groups=favoriteLists.groups;
+        String[] names=new String[groups.length()+1];
+        names[0]="All lists • "+favoriteLists.uniqueAvatars+" unique avatars";
+        int selection=0;
+        for(int i=0;i<groups.length();i++){
+            JSONObject g=groups.optJSONObject(i);
+            if(g==null){names[i+1]="Favorite list";continue;}
+            String key=g.optString("name","");
+            if(key.equals(selectedGroup))selection=i+1;
+            JSONArray a=g.optJSONArray("avatars");
+            int size=a==null?0:a.length();
+            String suffix=g.optString("error","").isEmpty()?
+                size+" loaded":"Could not load";
+            names[i+1]=g.optString("displayName",key)+" • "+suffix;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("VRChat favorite avatar lists")
+            .setSingleChoiceItems(names,selection,(dialog,which)->{
+                if(which==0)selectedGroup="all";
+                else{
+                    JSONObject g=groups.optJSONObject(which-1);
+                    if(g!=null)selectedGroup=g.optString("name","all");
                 }
-                if(!append){avatars.clear();offset=0;}
-                java.util.HashSet<String> ids=new java.util.HashSet<>();
-                for(JSONObject old:avatars)ids.add(old.optString("id",""));
-                for(int i=0;i<found.length();i++){
-                    JSONObject avatar=found.optJSONObject(i);
+                dialog.dismiss();
+                updateVisibleAvatars();
+            })
+            .setNegativeButton("Cancel",null).show();
+    }
+    private void updateVisibleAvatars(){
+        avatars.clear();
+        if(favoriteLists!=null){
+            java.util.HashSet<String> seen=new java.util.HashSet<>();
+            for(int i=0;i<favoriteLists.groups.length();i++){
+                JSONObject g=favoriteLists.groups.optJSONObject(i);
+                if(g==null)continue;
+                if(!"all".equals(selectedGroup)&&
+                    !selectedGroup.equals(g.optString("name","")))continue;
+                JSONArray items=g.optJSONArray("avatars");
+                if(items==null)continue;
+                for(int j=0;j<items.length();j++){
+                    JSONObject avatar=items.optJSONObject(j);
                     if(avatar==null)continue;
                     String id=avatar.optString("id","");
-                    if(!id.isEmpty()&&ids.add(id))avatars.add(avatar);
+                    if(id.matches("avtr_[0-9a-fA-F-]{36}")&&seen.add(id))
+                        avatars.add(avatar);
                 }
-                offset+=found.length();
-                adapter.rebuild();
-                updateSummary();
-                more.setVisibility(found.length()==60?View.VISIBLE:View.GONE);
+            }
+        }
+        adapter.rebuild();
+        if(groupPicker!=null)
+            groupPicker.setText("all".equals(selectedGroup)?
+                "All favorite lists ▾":selectedGroupLabel()+" ▾");
+        updateSummary();
+    }
+    private void fetch(){
+        if(loading||!StaffGate.unlocked(this))return;
+        loading=true;
+        refreshButton.setEnabled(false);
+        groupPicker.setEnabled(false);
+        status.setText("Loading your VRChat avatar lists…");
+        worker.execute(()->{
+            AvatarFavoritesRepository.Snapshot data=null;
+            String issue="";
+            try{data=AvatarFavoritesRepository.fetch(this);}
+            catch(Exception e){issue=e.getMessage()==null?
+                "Please check your connection and VRChat login.":e.getMessage();}
+            final AvatarFavoritesRepository.Snapshot result=data;
+            final String error=issue;
+            runOnUiThread(()->{
+                loading=false;
+                if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
+                refreshButton.setEnabled(true);
+                if(result==null){
+                    statusWarning="Could not refresh lists: "+error;
+                    updateSummary();return; // Previous loaded groups remain available.
+                }
+                favoriteLists=result;
+                boolean groupPresent="all".equals(selectedGroup);
+                for(int i=0;i<result.groups.length();i++){
+                    JSONObject g=result.groups.optJSONObject(i);
+                    if(g!=null&&selectedGroup.equals(g.optString("name","")))
+                        groupPresent=true;
+                }
+                if(!groupPresent)selectedGroup="all";
+                statusWarning=result.warning;
+                groupPicker.setEnabled(result.groups.length()>0);
+                updateVisibleAvatars();
             });
         });
     }
