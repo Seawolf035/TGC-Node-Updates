@@ -274,6 +274,20 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
                 }
             }
         }
+        kicker("PRIVATE VRCHAT NOTE");
+        LinearLayout personalNote=box();
+        personalNote.addView(text("Visible only to your personal VRChat account. It is not sent to the TGC staff system.",
+            13,CompanionStyle.MUTED,false));
+        space(personalNote,11);
+        Button note=CompanionStyle.button(this,"View or edit note",false);
+        personalNote.addView(note,CompanionStyle.buttonParams(this));
+        final String noteTarget=id;
+        final String noteName=user.optString("displayName","this player");
+        note.setOnClickListener(v->{
+            if(!StaffGate.unlocked(this)){finish();return;}
+            startActivity(new Intent(this,VRChatNotesActivity.class)
+                .putExtra("target_id",noteTarget).putExtra("target_name",noteName));
+        });
         if(encountered!=null){
             kicker("YOUR HISTORY");
             LinearLayout history=box();
