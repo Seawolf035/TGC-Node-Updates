@@ -208,8 +208,8 @@ public class MobileDeployActivity extends Activity {
           "Device linked\n\n"+
           (online?"● Tracking is active":"○ Tracking is paused or reconnecting")+
           "\n\nPlayers recorded: "+state.getInt("captured_total",0)+
-          "\nRecords synced: "+state.getInt("uploaded_total",0)+
-          "\nWaiting to sync: "+pending;
+          "\nSent: "+state.getInt("uploaded_total",0)+
+          "\nNot sent yet: "+pending;
         String technical="Device: "+(r==null?"Not linked":r.nodeName)+
           "\nService heartbeat: "+(heartbeat==0?"Never":(now-heartbeat)/1000+" seconds ago")+
           "\nShizuku: "+(Shizuku.pingBinder()?"Connected":"Disconnected")+
