@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.16.2: Optional Shizuku explanation, local VRChat Mobile player joins/leaves and observed instance lists in Companion and floating tools, independent from existing join-only Node uploads; Quest support added to future roadmap."
+            "notes": "v0.16.3: Shizuku help is collapsed by default and can be expanded or hidden; tracking status, Start/Stop and player log shortcuts come first. Existing Node, friends and Quest roadmap unchanged."
           }
           JSON
           fi
