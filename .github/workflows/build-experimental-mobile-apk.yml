@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.16.0: Redesigned native Companion homepage with staff and tracking status, overlay controls, recent activity and stats; Mini VRCX adds group member directory/search, group instances and permission-aware read-only bans."
+            "notes": "v0.16.1: Compact homepage with Quick Access above statistics, swipe navigation between Home/Explore/Tracking/Settings, shorter status panel, cleaner icons, and plain-language floating tools labels."
           }
           JSON
           fi
