@@ -74,9 +74,29 @@ public class MobileDeployActivity extends Activity {
     root.addView(CompanionStyle.section(this,"DEVICE"));
     root.addView(title("Player tracking",28));
     spacer(root,7);
-    TextView intro=title("Capture player encounters in the background while you're enjoying VRChat.",14);
+    TextView intro=title("Track who joins and leaves your VRChat Mobile instances and keep useful player history.",14);
     intro.setTextColor(CompanionStyle.MUTED);
-    root.addView(intro);spacer(root,20);
+    root.addView(intro);spacer(root,14);
+    LinearLayout info=CompanionStyle.card(this);
+    root.addView(info,CompanionStyle.cardParams(this));
+    info.addView(title("Do I need Shizuku?",18));
+    spacer(info,7);
+    TextView notNeeded=title(
+        "No. You can use your friends list, profiles, notifications, worlds, avatars and other Companion features without Shizuku or playing VRChat on this phone.",13);
+    notNeeded.setTextColor(CompanionStyle.MUTED);
+    info.addView(notNeeded);
+    spacer(info,10);
+    info.addView(title("What does Shizuku do?",16));
+    spacer(info,6);
+    TextView purpose=title(
+        "Shizuku is only used to let the Mobile Node read VRChat Mobile's log files. The same logs power your in-app player list, join/leave history and instance changes, like desktop VRCX. No second log reader is needed.",13);
+    purpose.setTextColor(CompanionStyle.MUTED);info.addView(purpose);
+    spacer(info,9);
+    TextView sharing=title(
+        "Player join sightings may also be sent to the TGC network if tracking is enabled. Your complete raw log files are not uploaded. Quest support is planned for investigation, not available yet.",12);
+    sharing.setTextColor(CompanionStyle.MUTED);info.addView(sharing);
+    action(info,"View player list and log",()->startActivity(
+        new Intent(this,PlayerActivityLogActivity.class)),false);
 
     enrollment=CompanionStyle.card(this);
     root.addView(enrollment,CompanionStyle.cardParams(this));
