@@ -51,6 +51,8 @@ public final class OverlayMiniVrcx {
     private EditText search;
     private int limit=65;
     private String inboxFilter="all";
+    private String verificationProvider="gm3";
+    private VRChatInviteCode.Result verificationResult;
     private boolean canType=false;
     private String pending="";
     private Runnable pendingAction;
@@ -74,6 +76,10 @@ public final class OverlayMiniVrcx {
         }
     }
     public void findUser(){host.navigate("mini_search");}
+    public void verification(String provider){
+        verificationProvider="cult".equals(provider)?"cult":"gm3";
+        host.navigate("mini_verify");
+    }
     public void note(String userId){
         if(validUser(userId)){target=userId;kind="note";host.navigate("mini_note");}
     }
@@ -100,6 +106,7 @@ public final class OverlayMiniVrcx {
         close();
         root=parent;screen=page;lastError="";busy=false;loaded=new JSONArray();profile=new JSONObject();
         limit=65;pending="";revision++;
+        if("mini_verify".equals(page))verificationResult=null;
         drawFrame();
         load();
     }
@@ -174,6 +181,7 @@ public final class OverlayMiniVrcx {
             case "mini_log":return "Friend log";
             case "mini_activity":return "Activity feed";
             case "mini_inbox":return "Notifications";
+            case "mini_verify":return "Verification code";
             case "mini_profile":return "Player profile";
             case "mini_worlds":return "Saved worlds";
             case "mini_avatars":return "Favorite avatars";
@@ -199,6 +207,7 @@ public final class OverlayMiniVrcx {
             case "mini_log":return "Observed friend changes since logging began";
             case "mini_activity":return "Locally recorded encounters and friend activity";
             case "mini_inbox":return "Use your personal VRChat account without switching apps";
+            case "mini_verify":return "Read and copy your private invite code without leaving VRChat";
             case "mini_profile":return "Personal VRChat account profile details";
             case "mini_note":return "Notes are saved to your personal VRChat account";
             case "mini_presence":return "Change your personal status without leaving VRChat";
@@ -329,6 +338,24 @@ public final class OverlayMiniVrcx {
                     }
                     return result;
                 },result->{profile=(JSONObject)result;drawList();});break;
+            case "mini_verify":
+                final String selected=verificationProvider;
+                execute(()->{
+                    try{
+                        return "cult".equals(selected)?
+                            VRChatInviteCode.scanCult(ctx):VRChatInviteCode.scan(ctx);
+                    }catch(Exception error){
+                        String note=error instanceof SecurityException?
+                            "Your VRChat session may have expired. Sign in again in the Companion.":
+                            "VRChat invites are temporarily unavailable. Try again shortly.";
+                        return new VRChatInviteCode.Result("",note,0,false,0L);
+                    }
+                },result->{
+                    if(!selected.equals(verificationProvider))return;
+                    verificationResult=(VRChatInviteCode.Result)result;
+                    drawList();
+                });
+                break;
             case "mini_inbox":
                 execute(()->{
                     JSONObject result=new JSONObject();
@@ -408,6 +435,7 @@ public final class OverlayMiniVrcx {
             case "mini_log":showLog();break;
             case "mini_activity":showActivity();break;
             case "mini_inbox":showInbox();break;
+            case "mini_verify":showVerification();break;
             case "mini_profile":showProfile();break;
             case "mini_world":showWorld();break;
             case "mini_instance":showInstance();break;
@@ -646,6 +674,48 @@ public final class OverlayMiniVrcx {
             if(value.startsWith("wrld_")&&value.contains(":"))return value;
         }
         return "";
+    }
+    private void showVerification(){
+        boolean cult="cult".equals(verificationProvider);
+        chips(list,"Gamer Music 3","Cult","Check again",
+            ()->selectVerification("gm3"),()->selectVerification("cult"),this::load);
+        LinearLayout heading=card(list);
+        heading.addView(text(cult?"Gamer Music 2 · Cult":"Gamer Music 3 · TGC",
+            16,CompanionStyle.TEXT,true));
+        heading.addView(text(cult?
+            "Start Cult verification in Discord. This screen looks for a CULT-XXXX-XXXX code in your recent private VRChat invite.":
+            "Start verification in Discord. This screen looks for your TGC-XXXX-XXXX code in the private VRChat invite.",
+            12,CompanionStyle.MUTED,false));
+        VRChatInviteCode.Result found=verificationResult;
+        if(found==null){
+            heading.addView(text("Checking recent invites…",14,CompanionStyle.MUTED,false));
+            return;
+        }
+        if(!found.code.isEmpty()){
+            TextView label=text(found.code,22,CompanionStyle.ACCENT,true);
+            label.setGravity(Gravity.CENTER);
+            label.setPadding(0,dp(12),0,dp(12));
+            label.setBackground(CompanionStyle.shape(ctx,CompanionStyle.RAISED,12,0));
+            heading.addView(label);
+            final String code=found.code;
+            button(heading,"Copy "+(cult?"Cult":"TGC")+" code",true,
+                ()->copy(cult?"Cult verification code":"TGC verification code",code));
+            heading.addView(text(cult?
+                "Enter this code into the Gamer Music 2 verification prompt in Discord. Gamer Music 2 controls code expiration.":
+                "Enter this code into Gamer Music 3's verification prompt in Discord. TGC codes expire about 10 minutes after creation.",
+                12,CompanionStyle.MUTED,false));
+        }else{
+            heading.addView(text(found.message,13,CompanionStyle.GOLD,false));
+        }
+        heading.addView(text(
+            "This only reads your invitation; it does not verify your account or send anything to Discord.",
+            11,CompanionStyle.MUTED,false));
+    }
+    private void selectVerification(String provider){
+        if(verificationProvider.equals(provider))return;
+        verificationProvider=provider;
+        verificationResult=null;
+        load();
     }
     private void showInbox(){
         chips(list,"All","Invites","Friends",
