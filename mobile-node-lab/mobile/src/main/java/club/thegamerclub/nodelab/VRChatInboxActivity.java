@@ -3,6 +3,8 @@ package club.thegamerclub.nodelab;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,9 +31,20 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     private final ArrayList<Entry> entries=new ArrayList<>();
     private final InboxAdapter adapter=new InboxAdapter();
     private TextView status;
-    private Button allTab,inviteTab,friendTab,more,refreshButton;
+    private Button allTab,unreadTab,inviteTab,friendTab,more,refreshButton;
     private String filter="all";
-    private boolean busy=false;
+    private boolean busy=false,mutating=false,visible=false;
+    private final Handler handler=new Handler(Looper.getMainLooper());
+    private long lastCheckedAt=0L;
+    private String inboxWarning="";
+    private final Runnable foregroundRefresh=new Runnable(){
+        @Override public void run(){
+            if(visible&&!isFinishing()&&!isDestroyed()&&StaffGate.unlocked(VRChatInboxActivity.this)
+                &&!busy&&!mutating && System.currentTimeMillis()-lastCheckedAt>80_000L)
+                load(false);
+            if(visible)handler.postDelayed(this,90_000L);
+        }
+    };
     private int legacyOffset=0,modernOffset=0;
     private int dp(float n){return CompanionStyle.dp(this,n);}
     private TextView txt(String value,int size,int color,boolean bold){
@@ -47,11 +60,23 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         super.onCreate(b);
         if(!StaffGate.unlocked(this)){finish();return;}
         filter=getIntent().getStringExtra("filter");
-        if(!"invite".equals(filter)&&!"friend".equals(filter))filter="all";
+        if(!"invite".equals(filter)&&!"friend".equals(filter)&&
+           !"unread".equals(filter))filter="all";
         render();
         load(false);
     }
-    @Override protected void onResume(){super.onResume();if(!StaffGate.unlocked(this))finish();}
+    @Override protected void onResume(){
+        super.onResume();
+        if(!StaffGate.unlocked(this)){finish();return;}
+        visible=true;
+        handler.removeCallbacks(foregroundRefresh);
+        handler.postDelayed(foregroundRefresh,90_000L);
+        if(lastCheckedAt>0L&&System.currentTimeMillis()-lastCheckedAt>80_000L)
+            load(false);
+    }
+    @Override protected void onPause(){
+        visible=false;handler.removeCallbacks(foregroundRefresh);super.onPause();
+    }
     private void render(){
         getWindow().setStatusBarColor(CompanionStyle.BG);
         getWindow().setNavigationBarColor(CompanionStyle.BG);
@@ -71,6 +96,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         tools.setGravity(Gravity.CENTER_VERTICAL);
         root.addView(tools);
         allTab=filterButton(tools,"All","all");
+        unreadTab=filterButton(tools,"Unread","unread");
         inviteTab=filterButton(tools,"Invites","invite");
         friendTab=filterButton(tools,"Friends","friend");
         refreshButton=CompanionStyle.button(this,"↻",false);
@@ -98,13 +124,15 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,dp(46),1f);
         params.rightMargin=dp(4);
         tools.addView(button,params);
+        button.setTextSize(11);
         button.setOnClickListener(v->{filter=value;updateFilter();});
         return button;
     }
     private void updateFilter(){
-        for(Button button:new Button[]{allTab,inviteTab,friendTab}){
+        for(Button button:new Button[]{allTab,unreadTab,inviteTab,friendTab}){
             if(button==null)continue;
             boolean selected=(button==allTab&&filter.equals("all"))||
+                (button==unreadTab&&filter.equals("unread"))||
                 (button==inviteTab&&filter.equals("invite"))||
                 (button==friendTab&&filter.equals("friend"));
             button.setBackground(CompanionStyle.shape(this,
@@ -119,10 +147,17 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     private void updateStatus(){
         int count=0;
         for(Entry e:entries)if(include(e))count++;
-        status.setText(count+" notifications"+(busy?" · loading...":""));
+        int unread=0;
+        for(Entry e:entries)if(!e.seen)unread++;
+        String label=count+" shown · "+unread+" unread";
+        if(lastCheckedAt>0L)label+=" · Checked "+
+            android.text.format.DateFormat.format("HH:mm",lastCheckedAt);
+        if(!inboxWarning.isEmpty())label+=" · "+inboxWarning;
+        status.setText(label+(busy?" · loading…":""));
     }
     private boolean include(Entry e){
         if(filter.equals("all"))return true;
+        if(filter.equals("unread"))return !e.seen;
         String type=e.type.toLowerCase(Locale.US);
         return filter.equals("invite")?type.contains("invite"):type.contains("friend");
     }
@@ -179,59 +214,77 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         return e;
     }
     private void load(boolean append){
-        if(busy||!StaffGate.unlocked(this))return;
+        if(busy||mutating||!StaffGate.unlocked(this))return;
         busy=true;
-        if(refreshButton!=null)refreshButton.setEnabled(false);
-        if(more!=null)more.setEnabled(false);
-        if(!append){legacyOffset=0;modernOffset=0;}
-        status.setText("Checking your VRChat inbox...");
+        refreshButton.setEnabled(false);
+        more.setEnabled(false);
         final int old=legacyOffset,now=modernOffset;
+        if(!append)status.setText("Checking your VRChat inbox…");
         worker.execute(()->{
-            JSONArray legacy=null,modern=null;
-            String failures="";
-            try{legacy=VRChatApi.notifications(this,false,old);}
-            catch(Exception ex){failures+="Older notifications unavailable. ";}
-            try{modern=VRChatApi.notifications(this,true,now);}
-            catch(Exception ex){failures+="Some notifications unavailable. ";}
-            final JSONArray a=legacy,b=modern;
-            final String fail=failures;
+            InboxRepository.Snapshot snapshot=null;
+            JSONArray a=null,b=null;
+            String failure="";
+            if(!append){
+                try{snapshot=InboxRepository.refresh(this);}
+                catch(Exception ex){failure="Couldn't refresh your VRChat inbox. Check your connection or login.";}
+            }else{
+                try{a=VRChatApi.notifications(this,false,old);}
+                catch(Exception ex){failure="Older inbox unavailable. ";}
+                try{b=VRChatApi.notifications(this,true,now);}
+                catch(Exception ex){failure+="Some notifications unavailable. ";}
+                if(a!=null||b!=null){
+                    try{snapshot=InboxRepository.combine(a,b,failure);}
+                    catch(Exception ignored){}
+                }
+            }
+            final InboxRepository.Snapshot result=snapshot;
+            final JSONArray oldPage=a,newPage=b;
+            final String error=failure;
             runOnUiThread(()->{
                 busy=false;
-                if(refreshButton!=null)refreshButton.setEnabled(true);
-                if(more!=null)more.setEnabled(true);
                 if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
-                if(a==null&&b==null){
-                    status.setText(fail.isEmpty()?"Could not load notifications.":fail);
-                    return;
+                refreshButton.setEnabled(true);
+                more.setEnabled(true);
+                if(result==null){
+                    inboxWarning=error.isEmpty()?"Refresh failed":error;
+                    updateStatus();return; // Keep earlier entries visible.
                 }
                 LinkedHashMap<String,Entry> merged=new LinkedHashMap<>();
                 if(append){
                     for(Entry previous:entries)
-                        merged.put((previous.modern?"2:":"1:")+previous.id,previous);
+                        merged.put(previous.id.isEmpty()?previous.type+":"+previous.sort:
+                            previous.id,previous);
                 }
-                if(a!=null){
-                    for(int i=0;i<a.length();i++){
-                        JSONObject item=a.optJSONObject(i);if(item==null)continue;
-                        Entry e=decode(item,false);
-                        merged.put("1:"+e.id,e);
-                    }
-                    legacyOffset+=a.length();
-                }
-                if(b!=null){
-                    for(int i=0;i<b.length();i++){
-                        JSONObject item=b.optJSONObject(i);if(item==null)continue;
-                        Entry e=decode(item,true);
-                        merged.put("2:"+e.id,e);
-                    }
-                    modernOffset+=b.length();
+                for(int i=0;i<result.items.length();i++){
+                    JSONObject item=result.items.optJSONObject(i);if(item==null)continue;
+                    Entry e=decode(item,item.optBoolean("_modern",false));
+                    if(e.id.isEmpty())continue;
+                    String key=e.id;
+                    Entry previous=merged.get(key);
+                    if(previous!=null){
+                        // Keep the legacy friend-request endpoint when it supports
+                        // the accept action for the same underlying notification.
+                        boolean friend=e.type.toLowerCase(Locale.US).contains("friend")&&
+                            e.type.toLowerCase(Locale.US).contains("request");
+                        if(friend&&previous.modern&&!e.modern)merged.put(key,e);
+                        else if(!(friend&&!previous.modern&&e.modern))merged.put(key,e);
+                    }else merged.put(key,e);
                 }
                 entries.clear();entries.addAll(merged.values());
                 entries.sort((x,y)->Long.compare(y.sort,x.sort));
+                if(!append){
+                    legacyOffset=60;modernOffset=60;
+                    more.setVisibility(entries.size()>=60?View.VISIBLE:View.GONE);
+                }else{
+                    if(oldPage!=null)legacyOffset+=oldPage.length();
+                    if(newPage!=null)modernOffset+=newPage.length();
+                    more.setVisibility((oldPage!=null&&oldPage.length()>=60)||
+                        (newPage!=null&&newPage.length()>=60)?View.VISIBLE:View.GONE);
+                }
+                lastCheckedAt=result.checkedAt;
+                inboxWarning=result.partial?"Some inbox data unavailable":"";
                 adapter.rebuild();
                 updateStatus();
-                if(!fail.isEmpty())status.setText(status.getText()+" · Partial inbox");
-                more.setVisibility((a!=null&&a.length()==60)||(b!=null&&b.length()==60)
-                    ?View.VISIBLE:View.GONE);
             });
         });
     }
@@ -243,6 +296,8 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     }
     private void perform(Entry e,String kind){
         if(!StaffGate.unlocked(this)){finish();return;}
+        if(mutating)return;
+        mutating=true;
         status.setText("Updating your VRChat inbox...");
         worker.execute(()->{
             String error=null;
@@ -256,6 +311,8 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
             }
             final String fail=error;
             runOnUiThread(()->{
+                mutating=false;
+                if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
                 if(fail!=null){
                     status.setText("Could not update: "+fail);return;
                 }
@@ -357,5 +414,8 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         }
         @Override public int getItemCount(){return shown.size();}
     }
-    @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){
+        handler.removeCallbacks(foregroundRefresh);
+        worker.shutdownNow();super.onDestroy();
+    }
 }
