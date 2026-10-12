@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed published version before this pass: v0.17.6 (versionCode 39). v0.17.7 is in development until signed Android CI succeeds. Verify the actual build and publication status before later work. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.17.7 (versionCode 40). v0.17.8 is in development until signed CI passes. Verify actual GitHub build and manifest before later work.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -118,6 +118,13 @@ Last confirmed published version before this pass: v0.17.6 (versionCode 39). v0.
 - Android's normal Companion overlay IME provides entry; users must turn on OSC in the VRChat Mobile Action Menu. Only explicit user sends, with 144-character validation, limited send rate and optional chat SFX.
 - Preserve the unsent draft in memory and offer copy/clear controls. State clearly that UDP packet transmission is **not** delivery confirmation: in-game display still requires VRChat OSC to be enabled and needs real-device testing.
 - No Shizuku dependency, Remote Relay messages, special user access, background auto-send, additional credentials, or changes to the Node log watcher.
+
+### v0.17.8 — Dedicated OSC Tab and MagicChatbox-style Live Chatbox
+- Separate floating OSC tab (fourth main tab) for chat composer, local saved quick phrases, typing indicator, status composer and typed avatar OSC parameter controls.
+- Explicitly start a **continuous chatbox line** with custom text, clock and battery. Default OFF; 5/10/15/30-second intervals, immediate preview, one-shot send, nearby confirmation, Stop and clear status.
+- Continue local OSC updates while the floating panel is collapsed but the foreground floating service runs. Stop on deliberate bubble hide, loss of authorization, account change or service destruction; **no automatic broadcast restoration** on process relaunch.
+- Give manual typed chat priority for approximately 20 seconds, keep repetitive status messages silent and respect a shared rate limit. All OSC traffic stays on the phone's loopback address and does not involve Shizuku or TGC Relay.
+- Add VRChat avatar parameter Bool/Int/Float one-shot controls (saved by personal account). Music integrations, Pulsoid input and further MagicChatbox integrations remain future options.
 
 ### v0.18 — Universal Search and Reliability
 - Broaden unified search to groups/avatars/collections, caching, accessibility, logging and optional backup/export, followed by controlled group/instance management.
