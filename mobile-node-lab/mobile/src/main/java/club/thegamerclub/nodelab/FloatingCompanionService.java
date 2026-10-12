@@ -64,7 +64,36 @@ public final class FloatingCompanionService extends Service {
     private View bubble,panel;
     private WindowManager.LayoutParams bubbleParams;
     private boolean verifying=false;
-    private TextView tracking;
+    private TextView tracking,liveEvents;
+    private final ExecutorService feedWorker=Executors.newSingleThreadExecutor();
+    private boolean feedBusy=false;
+    private final Runnable feedTick=new Runnable(){
+        @Override public void run(){
+            if(panel!=null&&liveEvents!=null&&StaffGate.unlocked(FloatingCompanionService.this)&&!feedBusy){
+                feedBusy=true;
+                feedWorker.execute(()->{
+                    StringBuilder result=new StringBuilder();
+                    try(MobileOutbox outbox=new MobileOutbox(FloatingCompanionService.this)){
+                        org.json.JSONArray recent=outbox.recentTrackedEvents(3);
+                        for(int i=0;i<recent.length();i++){
+                            org.json.JSONObject e=recent.optJSONObject(i);
+                            if(e==null)continue;
+                            if(result.length()>0)result.append("\\n");
+                            result.append("• ").append(e.optString("display_name",e.optString("user_id","Player")));
+                        }
+                    }catch(Exception ignored){}
+                    final String display=result.length()==0?
+                        "No captured player events yet. Start Mobile Node tracking to populate this feed.":
+                        result.toString();
+                    handler.post(()->{
+                        feedBusy=false;
+                        if(liveEvents!=null)liveEvents.setText(display);
+                    });
+                });
+            }
+            handler.postDelayed(this,20_000L);
+        }
+    };
     private final Runnable validate=new Runnable(){
         @Override public void run(){
             if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
@@ -121,6 +150,7 @@ public final class FloatingCompanionService extends Service {
         getSharedPreferences("tgc_overlay",0).edit().putBoolean("running",true).apply();
         handler.removeCallbacks(validate);handler.postDelayed(validate,1500L);
         handler.removeCallbacks(friendTick);handler.postDelayed(friendTick,3000L);
+        handler.removeCallbacks(feedTick);handler.postDelayed(feedTick,4000L);
         return START_NOT_STICKY;
     }
     private WindowManager.LayoutParams params(int width,int height){
@@ -189,6 +219,10 @@ public final class FloatingCompanionService extends Service {
         frame.addView(title);
         tracking=CompanionStyle.text(this,"Checking Mobile Node…",13,CompanionStyle.MUTED,false);
         tracking.setPadding(0,dp(9),0,dp(9));frame.addView(tracking);
+        frame.addView(CompanionStyle.section(this,"LATEST MOBILE LOG EVENTS"));
+        liveEvents=CompanionStyle.text(this,"Loading recent captured players…",
+            12,CompanionStyle.MUTED,false);
+        frame.addView(liveEvents);
         addButton(frame,"Friends by location",FriendHubActivity.class,"locations");
         addButton(frame,"Friend log",FriendHubActivity.class,"log");
         addButton(frame,"Activity feed",FriendHubActivity.class,"activity");
@@ -204,8 +238,8 @@ public final class FloatingCompanionService extends Service {
             Math.min(dp(485),height-dp(135)));
         p.x=Math.max(dp(8),Math.min(width-Math.min(dp(315),width-dp(24))-dp(8),bubbleParams.x));
         p.y=Math.max(dp(28),Math.min(height-dp(530),bubbleParams.y+dp(66)));
-        try{wm.addView(panel,p);updateStatus();}
-        catch(Exception e){panel=null;tracking=null;}
+        try{wm.addView(panel,p);updateStatus();handler.post(feedTick);}
+        catch(Exception e){panel=null;tracking=null;liveEvents=null;}
     }
     private void addButton(LinearLayout parent,String label,Class<?> destination,String mode){
         Button b=CompanionStyle.button(this,label,false);
@@ -238,7 +272,8 @@ public final class FloatingCompanionService extends Service {
     @Override public void onDestroy(){
         handler.removeCallbacks(validate);
         handler.removeCallbacks(friendTick);
-        verifier.shutdownNow();friendWorker.shutdownNow();dismissPanel();
+        handler.removeCallbacks(feedTick);
+        verifier.shutdownNow();friendWorker.shutdownNow();feedWorker.shutdownNow();dismissPanel();
         if(bubble!=null){
             try{wm.removeView(bubble);}catch(Exception ignored){}
             bubble=null;
