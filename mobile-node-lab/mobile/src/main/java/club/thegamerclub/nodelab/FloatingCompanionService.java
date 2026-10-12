@@ -461,8 +461,8 @@ public final class FloatingCompanionService extends Service {
     /** Restrict panel bounds to the available device display on every open. */
     private int[] panelDimensions(){
         String mode=OverlayPreferences.size(this);
-        int availableWidth=Math.max(dp(230),screenWidth()-dp(16));
-        int availableHeight=Math.max(dp(275),screenHeight()-dp(80));
+        int availableWidth=Math.max(1,screenWidth()-dp(16));
+        int availableHeight=Math.max(1,screenHeight()-dp(80));
         int w="compact".equals(mode)?dp(294):
             "expanded".equals(mode)?dp(420):dp(352);
         int h="compact".equals(mode)?dp(410):
