@@ -2131,27 +2131,39 @@ public final class OverlayMiniVrcx {
         paint.run();
         TextView feedback=text("",12,CompanionStyle.GOLD,false);
         intervalCard.addView(feedback);
-        button(intervalCard,running?"Update Live Chatbox":"Start Live Chatbox",true,
-            ()->{
-                if(!StaffGate.unlocked(ctx))return;
-                host.keyboard(false);message.clearFocus();
-                try{
-                    OscControlStore.setPrefix(ctx,message.getText().toString());
-                    OscControlStore.setIncludeTime(ctx,flags[0]);
-                    OscControlStore.setIncludeBattery(ctx,flags[1]);
-                    OscControlStore.setLiveInterval(ctx,selected[0]);
-                    OscControlStore.statusLine(ctx); // validate now
-                }catch(Exception ex){
-                    feedback.setText("Cannot start: "+ex.getMessage());return;
-                }
-                confirm("Start continuous OSC Chatbox updates every "+
-                    selected[0]+" seconds? It will run while the floating "+
-                    "service stays active, even when its panel is collapsed.",
-                    ()->{
-                        host.oscStartLive(selected[0]);
-                        drawList();
-                    });
+        Button startLive=CompanionStyle.button(ctx,
+            running?"Update Live Chatbox":"Start Live Chatbox",true);
+        intervalCard.addView(startLive,CompanionStyle.buttonParams(ctx));
+        LinearLayout approval=new LinearLayout(ctx);
+        approval.setOrientation(LinearLayout.VERTICAL);
+        approval.setVisibility(View.GONE);
+        intervalCard.addView(approval);
+        startLive.setOnClickListener(v->{
+            if(!StaffGate.unlocked(ctx))return;
+            host.keyboard(false);message.clearFocus();
+            try{
+                OscControlStore.setPrefix(ctx,message.getText().toString());
+                OscControlStore.setIncludeTime(ctx,flags[0]);
+                OscControlStore.setIncludeBattery(ctx,flags[1]);
+                OscControlStore.setLiveInterval(ctx,selected[0]);
+                OscControlStore.statusLine(ctx);
+            }catch(Exception ex){
+                feedback.setText("Cannot start: "+ex.getMessage());return;
+            }
+            approval.removeAllViews();
+            approval.addView(text(
+                "Confirm continuous OSC Chatbox updates every "+
+                selected[0]+" seconds? The line will keep updating while "+
+                "the floating service runs, even if the panel is collapsed.",
+                12,CompanionStyle.GOLD,true));
+            button(approval,"Confirm Live Chatbox",true,()->{
+                approval.setVisibility(View.GONE);
+                host.oscStartLive(selected[0]);
+                drawList();
             });
+            button(approval,"Cancel",false,()->approval.setVisibility(View.GONE));
+            approval.setVisibility(View.VISIBLE);
+        });
         button(intervalCard,"Send this status once",false,()->{
             if(!StaffGate.unlocked(ctx)||oscStatusSending)return;
             host.keyboard(false);message.clearFocus();
