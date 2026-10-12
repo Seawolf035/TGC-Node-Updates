@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.16.3: Collapsible optional Shizuku help with tracking controls first; separate Gamer Music 2 Cult and Gamer Music 3 verification invite code readers, including in-overlay copy for the existing Discord verification prompt. Existing Node and Quest roadmap unchanged."
+            "notes": "v0.16.4: One automatic TGC/Cult verification code reader in app and overlay; newest available invite code appears without selecting a service. Floating icon dot now follows personal VRChat presence: green Online, blue Join Me, yellow Ask Me, red Busy, gray Offline/unknown; tracking remains separate."
           }
           JSON
           fi
