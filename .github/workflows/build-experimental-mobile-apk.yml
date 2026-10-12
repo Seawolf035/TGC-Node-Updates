@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.17.6: Upgrade floating Mini VRCX avatar favorites to a status-style picker: current avatar, list dropdown, thumbnail cards, selected preview, detail lookup and one confirmed Apply action. Add online/offline friend filters, quick instance invites, richer player profiles and show-more pagination for inbox and friends. Node, Quest gating and verification unchanged."
+            "notes": "v0.17.7: In-game floating text-chat composer for VRChat Mobile using local OSC /chatbox/input on 127.0.0.1:9000, bypassing its broken keyboard. Includes 144-character bound, send-only-on-tap, optional SFX, draft preservation, local-only privacy and pinned shortcut. Enable OSC in VRChat; UDP transmission cannot confirm display. No Shizuku or Node dependency."
           }
           JSON
           fi
