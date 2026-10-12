@@ -683,6 +683,7 @@ public final class FloatingCompanionService extends Service {
         container.addView(tabs);
         tab(tabs,"Home","home");
         tab(tabs,"Social","social");
+        tab(tabs,"OSC","osc");
         tab(tabs,"Tools","tools");
 
         ScrollView scroll=new ScrollView(this);
@@ -730,7 +731,8 @@ public final class FloatingCompanionService extends Service {
     }
     private void tab(LinearLayout container,String title,String key){
         Button b=CompanionStyle.button(this,title,key.equals(selectedTab));
-        b.setTextSize(12);
+        b.setTextSize(11);
+        b.setAllCaps(false);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(39),1);
         p.setMargins(dp(2),0,dp(2),0);
         container.addView(b,p);
@@ -749,6 +751,7 @@ public final class FloatingCompanionService extends Service {
         nodeStatus=null;nodeStats=null;trackingToggle=null;recentStatus=null;
         switch(selectedTab){
             case "social":showSocial();break;
+            case "osc":showOscDashboard();break;
             case "tools":showTools();break;
             case "home":showHome();break;
             case "customize":showOverlaySettings();break;
@@ -800,11 +803,6 @@ public final class FloatingCompanionService extends Service {
         }
     }
     private void showHome(){
-        section(panelContent,"TEXT CHAT");
-        LinearLayout chat=panelCard(panelContent);
-        action(chat,"Type & send to VRChat",true,()->go("mini_chat"));
-        chat.addView(text("Send through VRChat Mobile's local OSC chatbox — no Shizuku or broken in-game keyboard required.",
-            12,CompanionStyle.MUTED,false));
         section(panelContent,"TRACKING");
         LinearLayout node=panelCard(panelContent);
         nodeStatus=text("Checking tracking…",15,CompanionStyle.TEXT,true);
@@ -833,9 +831,6 @@ public final class FloatingCompanionService extends Service {
     }
     private LinearLayout recentRows;
     private void showSocial(){
-        section(panelContent,"IN-GAME COMMUNICATION");
-        LinearLayout chatting=panelCard(panelContent);
-        action(chatting,"Type & send VRChat chatbox text",true,()->go("mini_chat"));
         section(panelContent,"FRIENDS");
         LinearLayout friends=panelCard(panelContent);
         action(friends,"Friends & locations",true,()->go("mini_friends"));
@@ -855,12 +850,70 @@ public final class FloatingCompanionService extends Service {
             ()->go("mini_players"));
         action(players,"My VRChat groups",false,()->go("mini_groups"));
     }
-    private void showTools(){
-        section(panelContent,"TEXT CHAT");
-        LinearLayout chat=panelCard(panelContent);
-        action(chat,"In-game text chat",true,()->go("mini_chat"));
-        chat.addView(text("Type here and send to VRChat using local OSC. Enable OSC in the VRChat Action Menu first.",
+    /** Dedicated fourth tab: all local VRChat Mobile OSC controls live here. */
+    private void showOscDashboard(){
+        section(panelContent,"OSC · VRCHAT MOBILE");
+        LinearLayout top=panelCard(panelContent);
+        top.addView(text("Send directly to VRChat on this phone",
+            14,CompanionStyle.TEXT,true));
+        top.addView(text("Enable OSC in VRChat's Action Menu. OSC uses 127.0.0.1:9000 and does not need Shizuku, a PC or the TGC Relay.",
             12,CompanionStyle.MUTED,false));
+
+        section(panelContent,"CHATBOX");
+        LinearLayout chat=panelCard(panelContent);
+        action(chat,"Compose & send chat text",true,()->go("mini_chat"));
+        action(chat,"Saved quick phrases",false,()->go("mini_osc_presets"));
+
+        section(panelContent,"LIVE INFORMATION");
+        LinearLayout line=panelCard(panelContent);
+        action(line,"Time / battery status line",true,()->go("mini_osc_status"));
+        line.addView(text("Build an optional chatbox line using a custom message, current time and phone battery level. Sending is user-controlled.",
+            12,CompanionStyle.MUTED,false));
+
+        section(panelContent,"TYPING INDICATOR");
+        LinearLayout typing=panelCard(panelContent);
+        paired(typing,"Typing ON","Typing OFF",
+            ()->sendOscTyping(true),()->sendOscTyping(false));
+        boolean automatic=false;
+        try{automatic=OscControlStore.typingAuto(this);}
+        catch(Exception ignored){}
+        action(typing,"Follow chat keyboard: "+(automatic?"ON":"OFF"),false,()->{
+            try{
+                boolean next=!OscControlStore.typingAuto(this);
+                OscControlStore.setTypingAuto(this,next);
+                if(!next)sendOscTyping(false);
+                buildTab();
+            }catch(Exception ex){
+                Toast.makeText(this,"Sign in to VRChat first to configure OSC.",
+                    Toast.LENGTH_LONG).show();
+            }
+        });
+
+        section(panelContent,"AVATAR OSC PARAMETERS");
+        LinearLayout controls=panelCard(panelContent);
+        action(controls,"My avatar parameter controls",true,
+            ()->go("mini_osc_parameters"));
+        controls.addView(text("Add your avatar's exact parameter name; send Bool, Int or Float values. Only compatible avatars react.",
+            12,CompanionStyle.MUTED,false));
+
+        LinearLayout help=panelCard(panelContent);
+        help.addView(text("All broadcasts and parameter writes are OFF until you deliberately send them. Local OSC packets are not delivery confirmations.",
+            11,CompanionStyle.GOLD,false));
+    }
+    private void sendOscTyping(boolean typing){
+        if(!StaffGate.unlocked(this))return;
+        eventsWorker.execute(()->{
+            String issue=null;
+            try{VRChatOscChat.sendTyping(typing);}
+            catch(Exception ex){issue=ex.getMessage();}
+            final String error=issue;
+            handler.post(()->Toast.makeText(this,
+                error==null?
+                    "Typing "+(typing?"ON":"OFF")+" packet sent locally":
+                    "OSC: "+error,Toast.LENGTH_SHORT).show());
+        });
+    }
+    private void showTools(){
         section(panelContent,"YOUR VRCHAT STATUS");
         LinearLayout statusCard=panelCard(panelContent);
         presenceActionLabel=text(presenceDescription,16,CompanionStyle.ACCENT,true);
