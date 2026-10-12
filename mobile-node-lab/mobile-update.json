@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.9.1",
-  "version_code": 15,
+  "version": "0.9.2",
+  "version_code": 16,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "27d0f8625b75e9a3992ee3d42b4197d286c60c87b8ae62131579b90175a63d82",
+  "sha256": "30dad490978612888cd34b606f0580bc6b8af6c0f2a4156be3d0cabae8a1ad93",
   "notes": "A refreshed Mini VRCX interface with full bios, richer profiles, friend and world images, smoother scrolling and improved phone screen sizing."
 }
