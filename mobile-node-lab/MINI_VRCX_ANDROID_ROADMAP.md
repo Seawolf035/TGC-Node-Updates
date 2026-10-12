@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed Android release: v0.13.1 (versionCode 23). Verify repository/release state before development. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last signed and published release before this development pass: v0.15.0 (versionCode 26). v0.16.0 is under development until CI confirms signed publication. Verify repository/release state before future changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -20,19 +20,17 @@ Last confirmed Android release: v0.13.1 (versionCode 23). Verify repository/rele
 
 - **Friend Log (new v0.14 requirement):** a searchable, persistent chronological record of observed friend online/offline transitions, location changes, status changes and friend-list additions/removals where detectable; show timestamps, names and profile links, filtering by friend/event, deduplicate repeated polls, and label unknown/unobserved periods accurately. Keep it distinct from the general activity feed. Store account-scoped local history and never claim complete history before monitoring began.
 
-### v0.15 — History and Collections
-- Searchable player encounter history with first/last seen, worlds, repeated encounters and observed name changes.
-- World and instance visit history from locally observed logs; clarify when history cannot be reconstructed.
-- Local custom friend categories and favorites.
-- Device-local extended world favorites with categories, search and sorting.
-- Avatar selection/history only where observable; improved existing avatar manager and local collections.
+### v0.15 — Actual delivered scope: Mini VRCX inside the floating overlay
+- In-overlay player encounters, profiles, friends and visible locations, Friend Log, Activity Feed and notification actions; support in-overlay Android keyboard entry.
+- Personal VRChat notes, presence, avatars, world/group details and user search use the user's separate personal session.
+- Circle-cropped TGC icon, internal Back navigation, draggable bubble and existing Mobile Node controls.
+- Previously planned full world/instance history and unlimited custom favorite collections are **still future backlog**, not v0.15 deliverables.
 
-### v0.16 — Complete Account and Group Management
-- Supported instance creation and instance detail actions.
-- Profile editing and existing status preset improvements.
-- Invitation manager: send, request, accept/decline where supported, with confirmations.
-- Group browsing, membership information, announcements, events and permission-aware management where supported.
-- User search, mutual friends where API permits, and friend management.
+### v0.16 — Homepage Refresh + Advanced Group Tools
+- **Homepage redesign:** unified staff/access status, fast enable/hide overlay control, live Node status, recent captured activity, queue and friend summary metrics, and prioritized shortcuts.
+- **Group member tools inside overlay:** group member listing and server-side name search, member profile lookup, visible group instances and read-only group bans. Respect personal account permissions.
+- Retain existing in-overlay profiles, invites, notes, presence, avatars and group browsing. Extend instead of duplicating services.
+- Still pending for later releases: broad instance creation, group post/event editing, permission-changing moderation, exhaustive mutual friends, and further account profile customization. Explicitly validate APIs and authorization before shipping.
 
 ### v0.17 — Mobile Convenience and Reliability
 - Persistent Android notifications for supported invites/requests/activity, with battery-conscious refresh.
@@ -43,7 +41,7 @@ Last confirmed Android release: v0.13.1 (versionCode 23). Verify repository/rele
 ### Later / optional
 - Friend activity statistics and heatmaps based on actual observed history.
 - Advanced avatar/world collections and device migration.
-- Profile customization and customizable home dashboard.
+- Profile customization and customizable dashboard widgets (beyond the v0.16 homepage refresh).
 - Additional group and staff investigation views, subject to API permissions and TGC authorization.
 
 ## Engineering invariants
