@@ -483,6 +483,8 @@ public final class VRChatApi {
             throw new IllegalStateException("Favorite group list was not present");
         }catch(SecurityException e){throw e;}
         catch(Exception e){
+            if(e.getMessage()!=null&&e.getMessage().toLowerCase(Locale.US)
+                .contains("rate limit"))throw e;
             // Compatible older favorite-groups endpoint. Do not guess fixed
             // avatars1..avatars6 names: VRChat owns the available group list.
             return request("GET","/favorite/groups?type=avatar&n=100&offset=0",
