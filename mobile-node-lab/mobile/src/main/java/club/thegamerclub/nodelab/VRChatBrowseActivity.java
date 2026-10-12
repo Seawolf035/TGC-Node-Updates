@@ -3,6 +3,9 @@ package club.thegamerclub.nodelab;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.content.Context;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,6 +31,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
     private EditText searchField;
     private ResultsAdapter adapter;
     private long lastFetch=0L;
+    private String lastFetchKey="";
     private int offset=0;
     private boolean busy=false,hasMore=false;
     private String activeQuery="";
@@ -86,6 +90,18 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             inputP.setMargins(dp(15),dp(14),dp(15),dp(4));
             root.addView(searchField,inputP);
             searchField.setSingleLine(true);
+            searchField.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+            searchField.setOnEditorActionListener((view,actionId,event)->{
+                if(actionId==EditorInfo.IME_ACTION_SEARCH||
+                  (event!=null&&event.getKeyCode()==android.view.KeyEvent.KEYCODE_ENTER)){
+                    InputMethodManager imm=(InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if(imm!=null)imm.hideSoftInputFromWindow(searchField.getWindowToken(),0);
+                    searchField.clearFocus();
+                    load(true);
+                    return true;
+                }
+                return false;
+            });
         }
 
         LinearLayout controls=new LinearLayout(this);controls.setGravity(Gravity.CENTER_VERTICAL);
@@ -129,19 +145,19 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             count.setText("Enter at least two characters.");return;
         }
         if(!reset && (!hasMore || !paged()))return;
-        if(System.currentTimeMillis()-lastFetch<12_000L){
-            count.setText("Please wait a moment before requesting another page.");return;
+        int requestedOffset=reset||!term.equals(activeQuery)?0:offset;
+        String key=mode+"|"+term+"|"+requestedOffset;
+        if(key.equals(lastFetchKey)&&System.currentTimeMillis()-lastFetch<10_000L){
+            count.setText("Up to date. You can refresh again in a few seconds.");return;
         }
-        if(reset){
-            offset=0;hasMore=false;activeQuery=term;
-            adapter.replace(new ArrayList<>());
-        }else if(!term.equals(activeQuery)){
-            // A changed search always starts at offset zero.
+        if(reset||!term.equals(activeQuery)){
+            // Preserve the current list until replacement data arrives.
             offset=0;activeQuery=term;
-            adapter.replace(new ArrayList<>());
         }
         final int requested=offset;
         final boolean append=requested>0;
+        final String requestedTerm=term;
+        lastFetchKey=key;
         lastFetch=System.currentTimeMillis();
         busy=true;updatePaging();
         count.setText(append?"Loading more results…":"Loading…");
@@ -153,7 +169,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                     try(MobileOutbox outbox=new MobileOutbox(this)){
                         data=outbox.recentEncounters(100);
                     }
-                }else data=VRChatApi.browsePage(this,mode,activeQuery,requested);
+                }else data=VRChatApi.browsePage(this,mode,requestedTerm,requested);
                 ArrayList<JSONObject> rows=new ArrayList<>();
                 for(int i=0;i<data.length();i++){
                     JSONObject item=data.optJSONObject(i);if(item==null)continue;
