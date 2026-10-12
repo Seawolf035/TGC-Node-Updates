@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.16.5",
-  "version_code": 32,
+  "version": "0.17.0",
+  "version_code": 33,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "be27d4b7d83f8aad7db48ee88e24a77a7a5489bcce09a9c7fe94e1027ea731fe",
-  "notes": "v0.16.5: Verification code screens and floating tools now display The Gamer Club and Cult of Gamer Music as community names. Both TGC/CULT code formats, automatic scanning, and VRChat presence colors are unchanged."
+  "sha256": "d923727d39aa5dd83f45a25821f2459f681c58d1b5ae5b89e79c8ffda7cdce54",
+  "notes": "v0.17.0: New in-overlay VRChat presence picker with color-coded choices, single Apply action, message edit, shared saved presets and instant dot update; search people, worlds and locally seen players; recent worlds and detected instance view. Existing Node and verification flows preserved."
 }
