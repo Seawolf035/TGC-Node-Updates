@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.17.0: New in-overlay VRChat presence picker with color-coded choices, single Apply action, message edit, shared saved presets and instant dot update; search people, worlds and locally seen players; recent worlds and detected instance view. Existing Node and verification flows preserved."
+            "notes": "v0.17.1: Correct Home tracking and floating-tools status placement so each indicator sits directly above the matching button, with the existing live status updates and button behavior unchanged."
           }
           JSON
           fi
