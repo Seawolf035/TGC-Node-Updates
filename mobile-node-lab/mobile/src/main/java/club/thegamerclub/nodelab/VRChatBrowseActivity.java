@@ -1,93 +1,106 @@
 package club.thegamerclub.nodelab;
 
-import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Button;
-import android.widget.EditText;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** VRCX-style read-only personal account views; live VRChat API data, not fake samples. */
+/** Read-only native lists for the signed-in VRChat account. */
 public final class VRChatBrowseActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private String mode="friends_online";
-    private LinearLayout page;
+    private LinearLayout page,items;
     private TextView state;
     private EditText searchField;
-    private int fixedRows=4;
-    private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
-    private TextView label(String value,int size,int color){
-        TextView t=new TextView(this);t.setText(value);t.setTextColor(color);t.setTextSize(size);
-        t.setPadding(0,dp(7),0,dp(7));return t;
+    private long lastFetch=0L;
+    private int dp(int n){return CompanionStyle.dp(this,n);}
+    private TextView label(String text,int size,int color,boolean bold){
+        return CompanionStyle.text(this,text,size,color,bold);
     }
-    @Override public void onCreate(Bundle b){
-        super.onCreate(b);
+    private void gap(LinearLayout l,int n){
+        l.addView(new View(this),new LinearLayout.LayoutParams(1,dp(n)));
+    }
+    @Override public void onCreate(Bundle bundle){
+        super.onCreate(bundle);
         if(!StaffGate.unlocked(this)){finish();return;}
         mode=getIntent().getStringExtra("mode");
         if(mode==null)mode="friends_online";
         render();
     }
     @Override protected void onResume(){
-        super.onResume();
-        if(!StaffGate.unlocked(this)){finish();return;}
+        super.onResume();if(!StaffGate.unlocked(this))finish();
     }
-    private void render(){
-        ScrollView scroll=new ScrollView(this);scroll.setBackgroundColor(0xFF0B1423);
-        page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(18),dp(25),dp(18),dp(25));
-        scroll.addView(page);setContentView(scroll);
-        page.addView(label(labelForMode(),23,0xFFE6F4FA));
-        page.addView(label("Showing your own VRChat account data, not GM1 or any shared account. Refreshes are manual to respect VRChat's API limits.",12,0xFFB6CDE0));
-        boolean searchMode="search_users".equals(mode)||"search_worlds".equals(mode);
-        if(searchMode){
-            searchField=new EditText(this);
-            searchField.setTextColor(0xFFFFFFFF);
-            searchField.setHintTextColor(0xFFB4CBDD);
-            searchField.setSingleLine(true);
-            searchField.setHint("search_users".equals(mode)?"Search VRChat players":"Search VRChat worlds");
-            page.addView(searchField);
-        }
-        Button refresh=new Button(this);
-        refresh.setText(searchMode?"Search":"Refresh");
-        refresh.setAllCaps(false);
-        page.addView(refresh);refresh.setOnClickListener(v->load());
-        state=label(searchMode?"Enter a name and press Search":"Loading...",13,0xFF67D1EC);
-        page.addView(state);
-        fixedRows=page.getChildCount();
-        if(!searchMode)load();
-    }
-    private String labelForMode(){
+    private String pageTitle(){
         switch(mode){
-            case "friends_online": return "Online friends";
-            case "friends_offline": return "Offline friends";
-            case "worlds": return "Favorite worlds";
-            case "recent": return "Recent worlds";
-            case "groups": return "My groups";
-            case "encounters": return "Recently encountered players";
-            case "search_users":return "Search players";
-            case "search_worlds":return "Search worlds";
-            default:return "VRChat";
+            case "friends_online":return "Online friends";
+            case "friends_offline":return "Offline friends";
+            case "worlds":return "Favorite worlds";
+            case "recent":return "Recent worlds";
+            case "groups":return "My groups";
+            case "encounters":return "Recent players";
+            case "search_users":return "Find people";
+            case "search_worlds":return "Find worlds";
+            default:return "Explore";
         }
     }
-    private long lastFetch=0;
+    private boolean searching(){return "search_users".equals(mode)||"search_worlds".equals(mode);}
+    private void render(){
+        getWindow().setStatusBarColor(CompanionStyle.BG);
+        getWindow().setNavigationBarColor(CompanionStyle.BG);
+        ScrollView scroll=new ScrollView(this);scroll.setBackgroundColor(CompanionStyle.BG);
+        page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);
+        page.setPadding(dp(18),dp(20),dp(18),dp(27));
+        scroll.addView(page);setContentView(scroll);
+        Button back=CompanionStyle.button(this,"← Explore",false);
+        page.addView(back,new LinearLayout.LayoutParams(dp(122),dp(44)));
+        back.setOnClickListener(v->finish());
+        gap(page,18);
+        page.addView(CompanionStyle.section(this,"DISCOVER"));
+        page.addView(label(pageTitle(),27,CompanionStyle.TEXT,true));
+        gap(page,6);
+        page.addView(label(searching()?"Search your next connection or destination.":
+            "Tap an item to see more, all inside the Companion.",13,CompanionStyle.MUTED,false));
+        gap(page,19);
+        LinearLayout tools=CompanionStyle.card(this);
+        page.addView(tools,CompanionStyle.cardParams(this));
+        if(searching()){
+            tools.addView(CompanionStyle.section(this,"SEARCH"));
+            searchField=CompanionStyle.input(this,
+                "search_users".equals(mode)?"Search VRChat players":"Search VRChat worlds");
+            tools.addView(searchField,new LinearLayout.LayoutParams(-1,dp(56)));
+            gap(tools,13);
+        }
+        Button refresh=CompanionStyle.button(this,searching()?"Search":"Refresh list",true);
+        tools.addView(refresh,CompanionStyle.buttonParams(this));
+        refresh.setOnClickListener(v->load());
+        state=label(searching()?"Enter a name to search.":"Loading your list...",
+            13,CompanionStyle.MUTED,false);
+        page.addView(state);gap(page,11);
+        items=new LinearLayout(this);items.setOrientation(LinearLayout.VERTICAL);
+        page.addView(items);
+        if(!searching())load();
+    }
     private void load(){
         if(!StaffGate.unlocked(this)){finish();return;}
-        if(System.currentTimeMillis()-lastFetch<30000){
-            state.setText("Wait 30 seconds before the next VRChat API request.");return;
+        if(System.currentTimeMillis()-lastFetch<30_000L){
+            state.setText("Please wait a moment before refreshing.");return;
         }
-        final String search=("search_users".equals(mode)||"search_worlds".equals(mode))?
-            searchField.getText().toString().trim():"";
-        if(("search_users".equals(mode)||"search_worlds".equals(mode)) && search.length()<2){
-            state.setText("Enter at least two characters before searching.");return;
+        final String search=searching()?searchField.getText().toString().trim():"";
+        if(searching()&&search.length()<2){
+            state.setText("Enter at least two characters to search.");return;
         }
         lastFetch=System.currentTimeMillis();
-        state.setText("Loading "+labelForMode().toLowerCase()+"...");
+        state.setText("Loading...");
         io.execute(()->{
             try{
                 JSONArray data;
@@ -106,61 +119,76 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                 }
                 runOnUiThread(()->showItems(data));
             }catch(Exception e){
-                String m=e.getMessage();
-                if(m==null)m=e.getClass().getSimpleName();
-                final String safe=m.substring(0,Math.min(m.length(),190));
-                runOnUiThread(()->state.setText("Couldn't load: "+safe));
+                String m=e.getMessage();if(m==null)m="Please try again.";
+                final String safe=m.substring(0,Math.min(135,m.length()));
+                runOnUiThread(()->state.setText("Couldn't load. "+safe));
             }
         });
     }
-    private void showItems(JSONArray result){
+    private void showItems(JSONArray results){
         if(!StaffGate.unlocked(this)){finish();return;}
-        // remove previously drawn rows but retain the header/refresh/status.
-        while(page.getChildCount()>fixedRows)page.removeViewAt(fixedRows);
-        state.setText(result.length()+" results");
-        if(result.length()==0){
-            page.addView(label("Nothing to show yet.",13,0xFFB6CDE0));
-            return;
+        items.removeAllViews();
+        state.setText(results.length()==0?"Nothing here yet.":results.length()+" results");
+        if(results.length()==0){
+            LinearLayout empty=CompanionStyle.card(this);
+            items.addView(empty,CompanionStyle.cardParams(this));
+            empty.addView(label("No results yet",19,CompanionStyle.TEXT,true));
+            gap(empty,7);
+            empty.addView(label(searching()?"Try a different search.":"Your list is empty right now.",
+                13,CompanionStyle.MUTED,false));return;
         }
-        for(int i=0;i<Math.min(result.length(),100);i++){
-            JSONObject item=result.optJSONObject(i);
+        for(int i=0;i<Math.min(100,results.length());i++){
+            JSONObject item=results.optJSONObject(i);
             if(item==null)continue;
             String title=item.optString("displayName",item.optString("name","Unknown"));
-            String subtitle="",kind=null,profileId=null;
-            if("friends_online".equals(mode)||"friends_offline".equals(mode)||"search_users".equals(mode)){
-                subtitle=item.optString("statusDescription",item.optString("status",""))+
-                  " · "+item.optString("location","unknown location");
-                String id=item.optString("id");
-                if(id.matches("usr_[0-9a-fA-F-]{36}")){kind="user";profileId=id;}
-            }else if("worlds".equals(mode)||"recent".equals(mode)||"search_worlds".equals(mode)){
-                subtitle="Players: "+item.optInt("occupants",0)+" · Capacity: "+item.optInt("capacity",0);
-                String id=item.optString("id");
-                if(id.matches("wrld_[0-9a-fA-F-]{36}")){kind="world";profileId=id;}
-            }else if("groups".equals(mode)){
-                subtitle=item.optString("shortCode","")+
-                  " · "+item.optInt("memberCount",0)+" members";
-                String id=item.optString("groupId",item.optString("id",""));
-                if(id.matches("grp_[0-9a-fA-F-]{36}")){kind="group";profileId=id;}
-            }else if("encounters".equals(mode)){
+            String note="",kind=null,id=null,glyph="☺";
+            if(mode.equals("friends_online")||mode.equals("friends_offline")||mode.equals("search_users")){
+                note=item.optString("statusDescription",item.optString("status",""));
+                String where=item.optString("location","");
+                if(!where.isEmpty()&&!where.startsWith("wrld_"))note+=note.isEmpty()?where:" · "+where;
+                String candidate=item.optString("id","");
+                if(candidate.matches("usr_[0-9a-fA-F-]{36}")){kind="user";id=candidate;}
+            }else if(mode.equals("worlds")||mode.equals("recent")||mode.equals("search_worlds")){
+                glyph="◇";
+                note="Up to "+item.optInt("capacity",0)+" players";
+                String candidate=item.optString("id","");
+                if(candidate.matches("wrld_[0-9a-fA-F-]{36}")){kind="world";id=candidate;}
+            }else if(mode.equals("groups")){
+                glyph="◈";
+                note=item.optInt("memberCount",0)+" members";
+                String candidate=item.optString("groupId",item.optString("id",""));
+                if(candidate.matches("grp_[0-9a-fA-F-]{36}")){kind="group";id=candidate;}
+            }else if(mode.equals("encounters")){
                 title=item.optString("display_name","Unknown player");
-                subtitle="Seen "+item.optInt("count",0)+" time(s) · "+item.optString("last_seen","?");
-                String id=item.optString("user_id");
-                if(id.matches("usr_[0-9a-fA-F-]{36}")){kind="user";profileId=id;}
+                note="Seen "+item.optInt("count",0)+" times · "+item.optString("last_seen","Recently");
+                String candidate=item.optString("user_id","");
+                if(candidate.matches("usr_[0-9a-fA-F-]{36}")){kind="user";id=candidate;}
             }
-            LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);
-            row.setPadding(dp(14),dp(12),dp(14),dp(12));
-            row.setBackgroundColor((i%2==0)?0xFF17283A:0xFF21344A);
-            page.addView(row);
-            row.addView(label(title,16,0xFFE6F4FA));
-            if(subtitle!=null&&!subtitle.trim().isEmpty())row.addView(label(subtitle,12,0xFFAEC5DA));
-            if(kind!=null && profileId!=null){
-                final String destKind=kind;
-                final String destId=profileId;
-                row.addView(label("Tap for in-app details  →",12,0xFF67D1EC));
+            LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(14),dp(14),dp(12),dp(14));
+            row.setBackground(CompanionStyle.shape(this,CompanionStyle.SURFACE,16,CompanionStyle.BORDER));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+            lp.bottomMargin=dp(10);items.addView(row,lp);
+            TextView avatar=label(glyph,24,CompanionStyle.ACCENT,true);
+            avatar.setGravity(Gravity.CENTER);
+            avatar.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,13,0));
+            row.addView(avatar,new LinearLayout.LayoutParams(dp(48),dp(48)));
+            LinearLayout middle=new LinearLayout(this);middle.setOrientation(LinearLayout.VERTICAL);
+            middle.setPadding(dp(13),0,dp(7),0);row.addView(middle,new LinearLayout.LayoutParams(0,-2,1f));
+            TextView display=label(title,16,CompanionStyle.TEXT,true);
+            display.setMaxLines(2);middle.addView(display);
+            if(!note.trim().isEmpty()){
+                gap(middle,5);
+                TextView desc=label(note,12,CompanionStyle.MUTED,false);
+                desc.setMaxLines(2);middle.addView(desc);
+            }
+            row.addView(label("›",27,CompanionStyle.ACCENT,false));
+            if(kind!=null && id!=null){
+                final String targetKind=kind,targetId=id;
                 row.setOnClickListener(v->{
                     if(!StaffGate.unlocked(this)){finish();return;}
                     startActivity(new Intent(this,VRChatDetailActivity.class)
-                        .putExtra("kind",destKind).putExtra("id",destId));
+                        .putExtra("kind",targetKind).putExtra("id",targetId));
                 });
             }
         }
