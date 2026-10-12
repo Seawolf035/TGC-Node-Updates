@@ -29,7 +29,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     private final ArrayList<Entry> entries=new ArrayList<>();
     private final InboxAdapter adapter=new InboxAdapter();
     private TextView status;
-    private Button toggle,more;
+    private Button allTab,inviteTab,friendTab,more,refreshButton;
     private String filter="all";
     private boolean busy=false;
     private int legacyOffset=0,modernOffset=0;
@@ -70,16 +70,14 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         tools.setPadding(dp(14),dp(8),dp(14),dp(6));
         tools.setGravity(Gravity.CENTER_VERTICAL);
         root.addView(tools);
-        toggle=CompanionStyle.button(this,"All",false);
-        tools.addView(toggle,new LinearLayout.LayoutParams(0,dp(46),1f));
-        toggle.setOnClickListener(v->{
-            filter="all".equals(filter)?"invite":"invite".equals(filter)?"friend":"all";
-            updateFilter();
-        });
-        Button refresh=CompanionStyle.button(this,"Refresh",true);
-        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(dp(119),dp(46));
-        rp.leftMargin=dp(8);tools.addView(refresh,rp);
-        refresh.setOnClickListener(v->load(false));
+        allTab=filterButton(tools,"All","all");
+        inviteTab=filterButton(tools,"Invites","invite");
+        friendTab=filterButton(tools,"Friends","friend");
+        refreshButton=CompanionStyle.button(this,"↻",false);
+        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(dp(48),dp(46));
+        rp.leftMargin=dp(7);tools.addView(refreshButton,rp);
+        refreshButton.setContentDescription("Refresh notifications");
+        refreshButton.setOnClickListener(v->load(false));
         status=txt("Loading your notifications...",12,CompanionStyle.MUTED,false);
         status.setPadding(dp(17),dp(9),dp(17),dp(10));root.addView(status);
         RecyclerView list=new RecyclerView(this);
@@ -95,9 +93,27 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         more.setOnClickListener(v->load(true));
         updateFilter();
     }
+    private Button filterButton(LinearLayout tools,String label,String value){
+        Button button=CompanionStyle.button(this,label,false);
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,dp(46),1f);
+        params.rightMargin=dp(4);
+        tools.addView(button,params);
+        button.setOnClickListener(v->{filter=value;updateFilter();});
+        return button;
+    }
     private void updateFilter(){
-        toggle.setText("all".equals(filter)?"All  ▾":"invite".equals(filter)?"Invites  ▾":"Friend requests  ▾");
-        adapter.notifyDataSetChanged();
+        for(Button button:new Button[]{allTab,inviteTab,friendTab}){
+            if(button==null)continue;
+            boolean selected=(button==allTab&&filter.equals("all"))||
+                (button==inviteTab&&filter.equals("invite"))||
+                (button==friendTab&&filter.equals("friend"));
+            button.setBackground(CompanionStyle.shape(this,
+                selected?CompanionStyle.ACCENT:CompanionStyle.RAISED,11,
+                selected?CompanionStyle.ACCENT:0));
+            button.setTextColor(selected?CompanionStyle.BG:CompanionStyle.TEXT);
+            button.setContentDescription(button.getText()+(selected?" — selected":""));
+        }
+        adapter.rebuild();
         updateStatus();
     }
     private void updateStatus(){
@@ -165,6 +181,8 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     private void load(boolean append){
         if(busy||!StaffGate.unlocked(this))return;
         busy=true;
+        if(refreshButton!=null)refreshButton.setEnabled(false);
+        if(more!=null)more.setEnabled(false);
         if(!append){legacyOffset=0;modernOffset=0;}
         status.setText("Checking your VRChat inbox...");
         final int old=legacyOffset,now=modernOffset;
@@ -179,6 +197,8 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
             final String fail=failures;
             runOnUiThread(()->{
                 busy=false;
+                if(refreshButton!=null)refreshButton.setEnabled(true);
+                if(more!=null)more.setEnabled(true);
                 if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
                 if(a==null&&b==null){
                     status.setText(fail.isEmpty()?"Could not load notifications.":fail);
@@ -207,7 +227,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
                 }
                 entries.clear();entries.addAll(merged.values());
                 entries.sort((x,y)->Long.compare(y.sort,x.sort));
-                adapter.notifyDataSetChanged();
+                adapter.rebuild();
                 updateStatus();
                 if(!fail.isEmpty())status.setText(status.getText()+" · Partial inbox");
                 more.setVisibility((a!=null&&a.length()==60)||(b!=null&&b.length()==60)
@@ -242,7 +262,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
                 status.setText("Updated successfully");
                 if(kind.equals("seen"))e.seen=true;
                 else entries.remove(e);
-                adapter.notifyDataSetChanged();
+                adapter.rebuild();
                 updateStatus();
             });
         });
@@ -270,12 +290,28 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         }
         options.add("Dismiss notification");
         actions.add(()->action(e,"Dismiss notification",()->perform(e,"hide")));
+        // A custom action sheet displays the message AND all action controls.
+        // AlertDialog.setMessage() together with setItems() can hide the item list.
         String details=e.message.isEmpty()?e.type:e.message;
-        new AlertDialog.Builder(this)
+        LinearLayout sheet=new LinearLayout(this);
+        sheet.setOrientation(LinearLayout.VERTICAL);
+        sheet.setPadding(dp(18),dp(8),dp(18),dp(7));
+        TextView body=txt(details,14,CompanionStyle.TEXT,false);
+        body.setTextIsSelectable(true);
+        sheet.addView(body);
+        View divider=new View(this);
+        sheet.addView(divider,new LinearLayout.LayoutParams(1,dp(13)));
+        AlertDialog dialog=new AlertDialog.Builder(this)
             .setTitle(e.name)
-            .setMessage(details)
-            .setItems(options.toArray(new String[0]),(d,index)->actions.get(index).run())
-            .setNegativeButton("Close",null).show();
+            .setView(sheet)
+            .setNegativeButton("Close",null).create();
+        for(int i=0;i<options.size();i++){
+            final Runnable action=actions.get(i);
+            Button button=CompanionStyle.button(this,options.get(i),false);
+            sheet.addView(button,CompanionStyle.buttonParams(this));
+            button.setOnClickListener(v->{dialog.dismiss();action.run();});
+        }
+        dialog.show();
     }
     private final class Holder extends RecyclerView.ViewHolder{
         TextView icon,name,message,when;
@@ -285,6 +321,11 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     }
     private final class InboxAdapter extends RecyclerView.Adapter<Holder>{
         private final ArrayList<Entry> shown=new ArrayList<>();
+        void rebuild(){
+            shown.clear();
+            for(Entry e:entries)if(include(e))shown.add(e);
+            notifyDataSetChanged();
+        }
         @Override public Holder onCreateViewHolder(ViewGroup parent,int type){
             LinearLayout row=CompanionStyle.card(VRChatInboxActivity.this);
             RecyclerView.LayoutParams lp=new RecyclerView.LayoutParams(-1,-2);
@@ -314,11 +355,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
             h.when.setText((e.seen?"":"●  ")+e.date.replace('T',' ').replace('Z',' '));
             h.itemView.setOnClickListener(v->open(e));
         }
-        @Override public int getItemCount(){
-            shown.clear();
-            for(Entry e:entries)if(include(e))shown.add(e);
-            return shown.size();
-        }
+        @Override public int getItemCount(){return shown.size();}
     }
     @Override protected void onDestroy(){worker.shutdownNow();super.onDestroy();}
 }
