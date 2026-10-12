@@ -6,6 +6,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 /**
  * Personal VRChat chatbox text, sent only to the VRChat client on THIS device.
@@ -22,6 +24,8 @@ public final class VRChatOscChat {
     private static final int VRCHAT_OSC_PORT=9000;
     private static final byte[] LOOPBACK={(byte)127,0,0,1};
     private static long lastSendAt=-MIN_SEND_INTERVAL_MS;
+    private static long lastTypingAt=0L;
+    private static Boolean lastTyping=null;
     private VRChatOscChat(){}
 
     public static String validate(String raw){
@@ -74,12 +78,73 @@ public final class VRChatOscChat {
         if(now-lastSendAt<MIN_SEND_INTERVAL_MS)
             throw new IllegalStateException("Wait a moment before sending again.");
         byte[] data=packet(value,notificationSound);
+        transmit(data);
+        lastSendAt=SystemClock.elapsedRealtime();
+    }
+
+    /** OSC /chatbox/typing, a true/false type tag without payload bytes. */
+    public static synchronized void sendTyping(boolean typing)throws Exception{
+        long now=SystemClock.elapsedRealtime();
+        if(lastTyping!=null&&lastTyping.booleanValue()==typing&&
+           now-lastTypingAt<2500L)return;
+        if(now-lastTypingAt<200L)
+            throw new IllegalStateException("Please wait before updating typing again.");
+        ByteArrayOutputStream out=new ByteArrayOutputStream();
+        oscString(out,"/chatbox/typing");
+        oscString(out,typing?",T":",F");
+        transmit(out.toByteArray());
+        lastTyping=typing;lastTypingAt=SystemClock.elapsedRealtime();
+    }
+
+    /**
+     * Explicit, named avatar parameter writes. Only boolean, int, float.
+     * OSC has no receipt signal and unsupported avatar parameters do nothing.
+     */
+    public static void sendParameter(String name,String type,String raw)
+        throws Exception {
+        if(name==null||!name.matches("[A-Za-z_][A-Za-z0-9_]{0,63}"))
+            throw new IllegalArgumentException("Parameter name must contain letters, digits or underscores.");
+        if(type==null)throw new IllegalArgumentException("Choose a parameter type.");
+        ByteArrayOutputStream buffer=new ByteArrayOutputStream();
+        oscString(buffer,"/avatar/parameters/"+name);
+        switch(type){
+            case "bool":{
+                if(!"true".equals(raw)&&!"false".equals(raw))
+                    throw new IllegalArgumentException("Boolean values must be true or false.");
+                oscString(buffer,"true".equals(raw)?",T":",F");
+                break;
+            }
+            case "int":{
+                int number;
+                try{number=Integer.parseInt(raw.trim());}
+                catch(Exception e){throw new IllegalArgumentException("Enter a whole number (0–255).");}
+                if(number<0||number>255)
+                    throw new IllegalArgumentException("VRChat avatar int parameters range from 0 to 255.");
+                oscString(buffer,",i");
+                new DataOutputStream(buffer).writeInt(number);
+                break;
+            }
+            case "float":{
+                float number;
+                try{number=Float.parseFloat(raw.trim());}
+                catch(Exception e){throw new IllegalArgumentException("Enter a number from -1 to 1.");}
+                if(!Float.isFinite(number)||number< -1f||number>1f)
+                    throw new IllegalArgumentException("Float parameter must be between -1 and 1.");
+                oscString(buffer,",f");
+                new DataOutputStream(buffer).writeInt(Float.floatToIntBits(number));
+                break;
+            }
+            default:throw new IllegalArgumentException("Unsupported parameter type.");
+        }
+        transmit(buffer.toByteArray());
+    }
+
+    private static void transmit(byte[] data)throws Exception{
         InetAddress loopback=InetAddress.getByAddress(LOOPBACK);
         try(DatagramSocket socket=new DatagramSocket()){
             DatagramPacket outgoing=new DatagramPacket(data,data.length,
                 loopback,VRCHAT_OSC_PORT);
             socket.send(outgoing);
         }
-        lastSendAt=SystemClock.elapsedRealtime();
     }
 }
