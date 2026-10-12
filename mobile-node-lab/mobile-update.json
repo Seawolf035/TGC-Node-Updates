@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.17.7",
-  "version_code": 40,
+  "version": "0.17.8",
+  "version_code": 41,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "bdbe5cc96177fa4888c7c11702f762dec89dab780c06042426225b1db4a58fde",
-  "notes": "v0.17.7: In-game floating text-chat composer for VRChat Mobile using local OSC /chatbox/input on 127.0.0.1:9000, bypassing its broken keyboard. Includes 144-character bound, send-only-on-tap, optional SFX, draft preservation, local-only privacy and pinned shortcut. Enable OSC in VRChat; UDP transmission cannot confirm display. No Shizuku or Node dependency."
+  "sha256": "354e321d93e26aec6b66d03b68b4e7ce49a487518d783aff1f08f0a9b39428e4",
+  "notes": "v0.17.8: Dedicated OSC tab with Live Chatbox continuous local OSC status broadcasts (5/10/15/30 sec, off by default), custom text/time/battery preview, manual-chat priority, Start/Stop confirmation, account-scoped saved phrases, typing indicators and explicit avatar Bool/Int/Float parameter controls. Stops with floating service; no Node/Shizuku/Relay dependency."
 }
