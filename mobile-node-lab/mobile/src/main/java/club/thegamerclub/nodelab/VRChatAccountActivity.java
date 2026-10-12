@@ -62,6 +62,7 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);
         page.setPadding(dp(19),dp(23),dp(19),dp(30));
         scroll.addView(page);setContentView(scroll);
+        CompanionStyle.safeArea(this,scroll);
         Button back=CompanionStyle.button(this,"← Back",false);
         LinearLayout.LayoutParams backP=new LinearLayout.LayoutParams(dp(116),dp(44));
         page.addView(back,backP);back.setOnClickListener(v->finish());
