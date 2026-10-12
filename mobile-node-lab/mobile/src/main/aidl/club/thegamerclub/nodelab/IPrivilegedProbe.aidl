@@ -1,6 +1,6 @@
 package club.thegamerclub.nodelab;
 
-// Authorized read-only diagnostic service. No raw log text or user IDs leave the service.
+// Authorized read-only source. Player events are delivered only to the local Companion process.
 interface IPrivilegedProbe {
     String probe();
     String startWatching();
@@ -9,4 +9,6 @@ interface IPrivilegedProbe {
     String stopWatching();
     String pendingSightings(int limit);
     void ackSightings(String jsonIds);
+    String pendingActivity(int limit);
+    void ackActivity(String jsonIds);
 }
