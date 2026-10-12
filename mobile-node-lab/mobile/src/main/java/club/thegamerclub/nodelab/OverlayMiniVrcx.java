@@ -71,6 +71,7 @@ public final class OverlayMiniVrcx {
             target=id;kind="world";host.navigate("mini_world");
         }
     }
+    public void findUser(){host.navigate("mini_search");}
     public void note(String userId){
         if(validUser(userId)){target=userId;kind="note";host.navigate("mini_note");}
     }
@@ -115,7 +116,7 @@ public final class OverlayMiniVrcx {
         if(!"mini_profile".equals(screen)&&!"mini_note".equals(screen)){
             Button refresh=CompanionStyle.button(ctx,"↻",false);
             bar.addView(refresh,new LinearLayout.LayoutParams(dp(40),dp(40)));
-            refresh.setOnClickListener(v->load());
+            refresh.setOnClickListener(v->{if(search!=null)search.clearFocus();host.keyboard(false);load();});
         }
         TextView explanation=text(subtitle(),12,CompanionStyle.MUTED,false);
         explanation.setPadding(0,dp(6),0,dp(8));
@@ -126,6 +127,17 @@ public final class OverlayMiniVrcx {
             p.bottomMargin=dp(9);root.addView(search,p);
             search.setOnFocusChangeListener((v,focus)->host.keyboard(focus));
             search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+            if("mini_search".equals(screen)){
+                search.setHint("Enter at least 2 characters...");
+                search.setSingleLine(true);
+                search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+                search.setOnEditorActionListener((v,action,event)->{
+                    if(action==EditorInfo.IME_ACTION_SEARCH){
+                        search.clearFocus();host.keyboard(false);load();return true;
+                    }
+                    return false;
+                });
+            }
             search.addTextChangedListener(new android.text.TextWatcher(){
                 public void beforeTextChanged(CharSequence x,int a,int c,int d){}
                 public void onTextChanged(CharSequence x,int start,int before,int count){drawList();}
@@ -140,7 +152,9 @@ public final class OverlayMiniVrcx {
     private boolean isSearchable(){
         return screen.equals("mini_players")||screen.equals("mini_friends")||
             screen.equals("mini_log")||screen.equals("mini_activity")||
-            screen.equals("mini_worlds");
+            screen.equals("mini_worlds")||
+            screen.equals("mini_avatars")||screen.equals("mini_groups")||
+            screen.equals("mini_search");
     }
     private String title(){
         switch(screen){
@@ -151,6 +165,10 @@ public final class OverlayMiniVrcx {
             case "mini_inbox":return "Notifications";
             case "mini_profile":return "Player profile";
             case "mini_worlds":return "Saved worlds";
+            case "mini_avatars":return "Favorite avatars";
+            case "mini_groups":return "Your groups";
+            case "mini_group":return "Group details";
+            case "mini_search":return "Search users";
             case "mini_world":return "World details";
             case "mini_instance":return "Instance details";
             case "mini_presence":return "Your status";
@@ -302,6 +320,19 @@ public final class OverlayMiniVrcx {
             case "mini_instance":
                 execute(()->VRChatApi.getInstance(ctx,target),
                     result->{profile=(JSONObject)result;drawList();});break;
+            case "mini_avatars":
+                execute(()->VRChatApi.favoriteAvatars(ctx,0),
+                    result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_groups":
+                execute(()->VRChatApi.groups(ctx),
+                    result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_group":
+                execute(()->VRChatApi.getGroup(ctx,target),
+                    result->{profile=(JSONObject)result;drawList();});break;
+            case "mini_search":
+                if(term().length()<2){status("Enter at least two characters, then tap Search.");break;}
+                execute(()->VRChatApi.searchUsers(ctx,search.getText().toString().trim()),
+                    result->{loaded=(JSONArray)result;drawList();});break;
             case "mini_worlds":
                 execute(()->VRChatApi.browsePage(ctx,"worlds","",0),
                     result->{loaded=(JSONArray)result;drawList();});break;
@@ -338,6 +369,10 @@ public final class OverlayMiniVrcx {
             case "mini_world":showWorld();break;
             case "mini_instance":showInstance();break;
             case "mini_worlds":showWorlds();break;
+            case "mini_avatars":showAvatars();break;
+            case "mini_groups":showGroups();break;
+            case "mini_group":showGroup();break;
+            case "mini_search":showSearch();break;
             case "mini_presence":showPresence();break;
             case "mini_note":showNote();break;
             default:status("Select a Mini VRCX tool.");
@@ -617,6 +652,67 @@ public final class OverlayMiniVrcx {
         button(c,"View world details",false,()->world(worldId));
         String name=profile.optString("name",profile.optString("instanceName",""));
         if(!name.isEmpty())c.addView(text(name,13,CompanionStyle.ACCENT,false));
+    }
+    private void showAvatars(){
+        int count=0;
+        for(int i=0;i<loaded.length()&&count<limit;i++){
+            JSONObject a=loaded.optJSONObject(i);if(a==null)continue;
+            String name=a.optString("name","Avatar"),id=a.optString("id","");
+            if(!matches(name+" "+id))continue;
+            LinearLayout c=card(list);
+            c.addView(text(shortValue(name,55),15,CompanionStyle.TEXT,true));
+            c.addView(text(shortValue(a.optString("description",""),110),12,
+                CompanionStyle.MUTED,false));
+            if(id.matches("avtr_[0-9a-fA-F-]{36}")){
+                button(c,"Select avatar",false,()->confirm("Switch your VRChat avatar to "+name+"?",
+                    ()->write(()->VRChatApi.selectAvatar(ctx,id),"Avatar selected")));
+                button(c,"Copy avatar ID",false,()->copy("avatar ID",id));
+            }
+            count++;
+        }
+        if(count==0)line(list,"No favorite avatars","Save avatars in VRChat to see them here.",null);
+        if(count>=limit)button(list,"Show more",false,()->{limit+=65;drawList();});
+    }
+    private void showGroups(){
+        int count=0;
+        for(int i=0;i<loaded.length()&&count<limit;i++){
+            JSONObject group=loaded.optJSONObject(i);if(group==null)continue;
+            String name=group.optString("name",group.optString("groupName","Group"));
+            String id=group.optString("id",group.optString("groupId",""));
+            if(!id.matches("grp_[0-9a-fA-F-]{36}")||!matches(name+" "+id))continue;
+            line(list,name,group.optString("shortCode",id),()->{
+                target=id;host.navigate("mini_group");
+            });count++;
+        }
+        if(count==0)line(list,"No groups found","Your joined VRChat groups appear here.",null);
+    }
+    private void showGroup(){
+        String id=target;
+        LinearLayout c=card(list);
+        c.addView(text(profile.optString("name","VRChat group"),18,CompanionStyle.TEXT,true));
+        c.addView(text(shortValue(profile.optString("description",""),1300),
+            13,CompanionStyle.MUTED,false));
+        c.addView(text("Members: "+profile.optInt("memberCount",0),12,
+            CompanionStyle.ACCENT,false));
+        button(c,"Copy group ID",false,()->copy("group ID",id));
+        button(c,"Copy group link",false,
+            ()->copy("group link","https://vrchat.com/home/group/"+id));
+    }
+    private void showSearch(){
+        String query=term();
+        if(query.length()<2){
+            line(list,"Search VRChat users","Type two or more characters above, then tap Search.",null);
+            return;
+        }
+        int count=0;
+        for(int i=0;i<loaded.length()&&count<60;i++){
+            JSONObject user=loaded.optJSONObject(i);if(user==null)continue;
+            String id=user.optString("id",""),name=user.optString("displayName",id);
+            if(!validUser(id))continue;
+            line(list,name,user.optString("status","")+" · "+id,()->profile(id));
+            count++;
+        }
+        if(count==0)line(list,"No matching users","Try another search.",null);
     }
     private void showPresence(){
         LinearLayout c=card(list);
