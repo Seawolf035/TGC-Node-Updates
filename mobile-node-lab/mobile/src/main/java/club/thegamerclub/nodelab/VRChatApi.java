@@ -473,8 +473,31 @@ public final class VRChatApi {
         requireId("user",userId);
         request("POST","/requestInvite/"+userId,cookie(validSession(context)),null,new JSONObject());
     }
+    /** VRChat exposes multiple avatar-favorite groups; a flat first-page call misses them. */
+    public static JSONArray avatarFavoriteGroups(Context context)throws Exception{
+        String token=cookie(validSession(context));
+        try{
+            JSONObject response=request("GET","/favorites/groups/avatar",token,null,null).object();
+            JSONArray groups=response.optJSONArray("favoriteGroups");
+            if(groups!=null)return groups;
+            throw new IllegalStateException("Favorite group list was not present");
+        }catch(SecurityException e){throw e;}
+        catch(Exception e){
+            // Compatible older favorite-groups endpoint. Do not guess fixed
+            // avatars1..avatars6 names: VRChat owns the available group list.
+            return request("GET","/favorite/groups?type=avatar&n=100&offset=0",
+                token,null,null).array();
+        }
+    }
+    /** A group response wraps each actual avatar in favorites[].avatar. */
+    public static JSONObject avatarFavoriteGroupContents(Context context,String name)throws Exception{
+        if(name==null||!name.matches("[A-Za-z0-9_-]{1,64}"))
+            throw new IllegalArgumentException("Invalid VRChat avatar group");
+        return request("GET","/favorites/groups/avatar/"+name,
+            cookie(validSession(context)),null,null).object();
+    }
     public static JSONArray favoriteAvatars(Context context,int offset)throws Exception{
-        if(offset<0||offset>1000)throw new IllegalArgumentException("Invalid offset");
+        if(offset<0||offset>6000||offset%60!=0)throw new IllegalArgumentException("Invalid offset");
         return request("GET","/avatars/favorites?n=60&offset="+offset,
             cookie(validSession(context)),null,null).array();
     }
