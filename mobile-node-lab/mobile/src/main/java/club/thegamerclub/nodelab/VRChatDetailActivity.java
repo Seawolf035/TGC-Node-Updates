@@ -28,8 +28,8 @@ import java.util.concurrent.Executors;
  * Read-only endpoints are loaded with the staff member's separate VRChat session.
  */
 public final class VRChatDetailActivity extends StaffProtectedActivity {
-    private static final int BG=0xFF0B1423,SURFACE=0xFF182C40,TEXT=0xFFE7F4FF,
-        MUTED=0xFFB5CDE0,ACCENT=0xFF6BD5F2;
+    private static final int BG=CompanionStyle.BG,SURFACE=CompanionStyle.SURFACE,TEXT=CompanionStyle.TEXT,
+        MUTED=CompanionStyle.MUTED,ACCENT=CompanionStyle.ACCENT;
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private LinearLayout content;
     private TextView status;
@@ -38,15 +38,16 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
     private int dp(float value){return Math.round(getResources().getDisplayMetrics().density*value);}
     private TextView text(String value,int size,int color,boolean bold){
         TextView t=new TextView(this);t.setText(value);t.setTextColor(color);t.setTextSize(size);
-        t.setPadding(0,dp(4),0,dp(5));if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        t.setPadding(0,dp(4),0,dp(5));
+        if(bold)t.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
         return t;
     }
     private void spacer(int height){content.addView(new View(this),new LinearLayout.LayoutParams(1,dp(height)));}
     private void row(String label,String value){
         if(value==null||value.trim().isEmpty()||"null".equals(value))return;
         LinearLayout line=new LinearLayout(this);line.setOrientation(LinearLayout.VERTICAL);
-        line.setPadding(dp(13),dp(9),dp(13),dp(9));
-        line.setBackgroundColor(SURFACE);
+        line.setPadding(dp(16),dp(13),dp(16),dp(13));
+        line.setBackground(CompanionStyle.shape(this,SURFACE,14,CompanionStyle.BORDER));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(6);
         content.addView(line,p);
         line.addView(text(label,12,ACCENT,true));
@@ -56,7 +57,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         if(!valid(targetKind,targetId))return;
         LinearLayout item=new LinearLayout(this);
         item.setPadding(dp(15),dp(12),dp(15),dp(12));item.setOrientation(LinearLayout.VERTICAL);
-        item.setBackgroundColor(SURFACE);
+        item.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,14,CompanionStyle.BORDER));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(8);
         content.addView(item,p);
         item.addView(text(title+"  →",15,TEXT,true));
@@ -90,11 +91,16 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(17),dp(17),dp(17),dp(28));
         scroll.addView(content);setContentView(scroll);
-        Button back=new Button(this);back.setAllCaps(false);back.setText("← Back to Companion");
-        content.addView(back);back.setOnClickListener(v->finish());
-        content.addView(text(kind.equals("user")?"PLAYER PROFILE":kind.equals("world")?"WORLD PROFILE":"GROUP PROFILE",
-            23,TEXT,true));
-        status=text("Loading from your VRChat account...",13,MUTED,false);
+        Button back=CompanionStyle.button(this,"← Back",false);
+        content.addView(back,new LinearLayout.LayoutParams(dp(110),dp(44)));
+        back.setOnClickListener(v->finish());
+        spacer(20);
+        TextView kicker=text(kind.equals("user")?"PLAYER":kind.equals("world")?"WORLD":"GROUP",12,ACCENT,true);
+        kicker.setLetterSpacing(.15f);
+        content.addView(kicker);
+        content.addView(text("Details",27,TEXT,true));
+        spacer(7);
+        status=text("Loading...",13,MUTED,false);
         content.addView(status);
     }
     private void load(boolean force){
@@ -121,7 +127,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
             }
         });
     }
-    private void sectionTitle(String title){spacer(13);content.addView(text(title,19,TEXT,true));spacer(5);}
+    private void sectionTitle(String title){spacer(18);content.addView(text(title,24,TEXT,true));spacer(15);}
     private static String arr(JSONArray data){
         if(data==null||data.length()==0)return "";
         StringBuilder s=new StringBuilder();
@@ -132,7 +138,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         return s.toString();
     }
     private void showDetails(JSONObject item){
-        status.setText("Native VRChat details · "+kind+" · personal account");
+        status.setText("Details are shown based on your account's access.");
         String title=item.optString("displayName",item.optString("name","Unknown"));
         sectionTitle(title);
         String url="";
@@ -146,8 +152,9 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         if(kind.equals("world"))showWorld(item);
         if(kind.equals("group"))showGroup(item);
         spacer(16);
-        Button refresh=new Button(this);refresh.setText("Refresh "+kind+" details");refresh.setAllCaps(false);
-        content.addView(refresh);refresh.setOnClickListener(v->load(true));
+        Button refresh=CompanionStyle.button(this,"Refresh details",true);
+        content.addView(refresh,CompanionStyle.buttonParams(this));
+        refresh.setOnClickListener(v->load(true));
     }
     private void showUser(JSONObject u){
         row("Display name",u.optString("displayName"));
@@ -155,11 +162,11 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         row("Status",u.optString("status"));
         row("Status message",u.optString("statusDescription"));
         row("Bio",u.optString("bio"));
-        row("Trust/Tags",arr(u.optJSONArray("tags")));
+        // Internal account tags are not meaningful to ordinary staff.
         row("Joined VRChat",u.optString("date_joined"));
         row("Last login",u.optString("last_login"));
         row("Last platform",u.optString("last_platform"));
-        row("Profile ID",id);
+        // Technical identifiers are intentionally hidden from ordinary staff.
         String location=u.optString("location","");
         if(location.startsWith("wrld_")){
             String world=location.split(":",2)[0];
@@ -177,12 +184,10 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         row("Visits",Integer.toString(w.optInt("visits",0)));
         row("Publication",w.optString("publicationDate"));
         row("Release status",w.optString("releaseStatus"));
-        row("Tags",arr(w.optJSONArray("tags")));
-        row("Platform compatibility",arr(w.optJSONArray("unityPackages")));
-        row("World ID",id);
+        // Raw API tags and internal IDs are hidden from normal profile views.
         String author=w.optString("authorId","");
         navigate("View creator profile",w.optString("authorName",""),"user",author);
-        row("Instances",w.optJSONArray("instances")==null?"Not available":w.optJSONArray("instances").length()+" active entries");
+        // Instance tools will be presented in a dedicated native screen later.
     }
     private void showGroup(JSONObject g){
         row("Description",g.optString("description"));
@@ -192,7 +197,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         row("Members",Integer.toString(g.optInt("memberCount",0)));
         row("Online members",Integer.toString(g.optInt("onlineMemberCount",0)));
         row("Privacy",g.optString("privacy"));
-        row("Group ID",id);
+        // Raw group IDs are not needed here.
         String owner=g.optString("ownerId","");
         navigate("View group owner",null,"user",owner);
         // No moderation action unless separately authorized and explicitly requested.
@@ -208,7 +213,9 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
                  host.equals("vrchat.com")||host.endsWith(".vrchat.com")))return;
         }catch(Exception e){return;}
         ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,dp(190));
+        image.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,18,0));
+        image.setClipToOutline(true);
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,dp(202));
         params.bottomMargin=dp(10);content.addView(image,params);
         io.execute(()->{
             HttpURLConnection c=null;
