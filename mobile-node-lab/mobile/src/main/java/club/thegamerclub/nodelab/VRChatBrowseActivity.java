@@ -84,20 +84,37 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         View rule=new View(this);rule.setBackgroundColor(CompanionStyle.BORDER);
         root.addView(rule,new LinearLayout.LayoutParams(-1,dp(1)));
 
-        if(search()){
-            searchField=CompanionStyle.input(this,"Search by name");
+        {
+            searchField=CompanionStyle.input(this,search()?"Search VRChat by name":
+                "Filter loaded "+name().toLowerCase(java.util.Locale.US));
             LinearLayout.LayoutParams inputP=new LinearLayout.LayoutParams(-1,dp(52));
             inputP.setMargins(dp(15),dp(14),dp(15),dp(4));
             root.addView(searchField,inputP);
             searchField.setSingleLine(true);
-            searchField.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+            if(!search()){
+                searchField.addTextChangedListener(new android.text.TextWatcher(){
+                    public void beforeTextChanged(CharSequence t,int start,int count,int after){}
+                    public void afterTextChanged(android.text.Editable e){}
+                    public void onTextChanged(CharSequence t,int start,int before,int count){
+                        if(adapter!=null){
+                            adapter.applyFilter();
+                            showCount();
+                        }
+                    }
+                });
+            }
+            searchField.setImeOptions(search()?EditorInfo.IME_ACTION_SEARCH:EditorInfo.IME_ACTION_DONE);
             searchField.setOnEditorActionListener((view,actionId,event)->{
-                if(actionId==EditorInfo.IME_ACTION_SEARCH||
+                if(actionId==EditorInfo.IME_ACTION_SEARCH||actionId==EditorInfo.IME_ACTION_DONE||
                   (event!=null&&event.getKeyCode()==android.view.KeyEvent.KEYCODE_ENTER)){
                     InputMethodManager imm=(InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
                     if(imm!=null)imm.hideSoftInputFromWindow(searchField.getWindowToken(),0);
                     searchField.clearFocus();
-                    load(true);
+                    if(search())load(true);
+                    else{
+                        adapter.applyFilter();
+                        showCount();
+                    }
                     return true;
                 }
                 return false;
@@ -126,6 +143,13 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         moreButton.setOnClickListener(v->load(false));
         updatePaging();
         if(!search())load(true);
+    }
+    private void showCount(){
+        if(count==null||adapter==null||busy)return;
+        int shown=adapter.getItemCount(),loaded=adapter.loadedCount();
+        count.setText(loaded==0?"No results yet":
+            (shown==loaded?loaded+" results":shown+" shown of "+loaded+" loaded")+
+            (hasMore?" · More available":""));
     }
     private boolean paged(){
         return !"groups".equals(mode)&&!"encounters".equals(mode);
@@ -192,8 +216,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                     else adapter.replace(rows);
                     offset=paged()?requested+VRChatApi.LIST_PAGE_SIZE:0;
                     hasMore=next;
-                    count.setText(adapter.getItemCount()==0?"No results yet":
-                        adapter.getItemCount()+" results"+(hasMore?" · More available":""));
+                    showCount();
                     updatePaging();
                 });
             }catch(Exception e){
@@ -254,8 +277,22 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
     }
     private final class ResultsAdapter extends RecyclerView.Adapter<Holder>{
         private final ArrayList<JSONObject> data=new ArrayList<>();
+        private final ArrayList<JSONObject> shown=new ArrayList<>();
+        int loadedCount(){return data.size();}
+        void applyFilter(){
+            shown.clear();
+            String phrase=(searchField==null||search())?"":searchField.getText().toString()
+                .trim().toLowerCase(java.util.Locale.US);
+            for(JSONObject item:data){
+                Entry result=entry(item);
+                if(phrase.isEmpty()||result.title.toLowerCase(java.util.Locale.US).contains(phrase)||
+                    result.description.toLowerCase(java.util.Locale.US).contains(phrase))
+                    shown.add(item);
+            }
+            notifyDataSetChanged();
+        }
         void replace(ArrayList<JSONObject> newItems){
-            data.clear();data.addAll(newItems);notifyDataSetChanged();
+            data.clear();data.addAll(newItems);applyFilter();
         }
         void append(ArrayList<JSONObject> newItems){
             java.util.HashSet<String> known=new java.util.HashSet<>();
@@ -265,7 +302,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                 String id=key(obj);
                 if(known.add(id)){data.add(obj);added++;}
             }
-            if(added>0)notifyItemRangeInserted(data.size()-added,added);
+            if(added>0)applyFilter();
         }
         private String key(JSONObject item){
             if(mode.equals("groups"))return item.optString("groupId",item.optString("id",""));
@@ -308,7 +345,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             return new Holder(card,image,placeholder,name,desc);
         }
         @Override public void onBindViewHolder(Holder h,int position){
-            Entry e=entry(data.get(position));
+            Entry e=entry(shown.get(position));
             h.name.setText(e.title);
             h.description.setText(e.description);
             h.description.setVisibility(e.description.isEmpty()?View.GONE:View.VISIBLE);
@@ -322,7 +359,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                     .putExtra("kind",e.kind).putExtra("id",e.id));
             }:null);
         }
-        @Override public int getItemCount(){return data.size();}
+        @Override public int getItemCount(){return shown.size();}
     }
     @Override protected void onDestroy(){io.shutdownNow();super.onDestroy();}
 }
