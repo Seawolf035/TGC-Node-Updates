@@ -3,7 +3,7 @@ package club.thegamerclub.nodelab;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.BatteryManager;
+import android.os.BatteryManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.text.SimpleDateFormat;
