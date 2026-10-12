@@ -212,6 +212,20 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
             space(names,5);
             names.addView(text(descriptor,13,CompanionStyle.MUTED,false));
         }
+        Button shareLink=CompanionStyle.button(this,"Copy VRChat link",false);
+        shareLink.setTextSize(12);
+        LinearLayout.LayoutParams quickLink=new LinearLayout.LayoutParams(-1,dp(42));
+        quickLink.topMargin=dp(8);
+        names.addView(shareLink,quickLink);
+        shareLink.setOnClickListener(v->{
+            String part=kind.equals("user")?"user":kind.equals("world")?"world":"group";
+            String url="https://vrchat.com/home/"+part+"/"+id;
+            ClipboardManager clipboard=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+            if(clipboard!=null){
+                clipboard.setPrimaryClip(ClipData.newPlainText("VRChat "+kind+" link",url));
+                Toast.makeText(this,"Profile link copied",Toast.LENGTH_SHORT).show();
+            }
+        });
         space(content,14);
         if(kind.equals("user"))showUser(item,local);
         else if(kind.equals("world"))showWorld(item);
