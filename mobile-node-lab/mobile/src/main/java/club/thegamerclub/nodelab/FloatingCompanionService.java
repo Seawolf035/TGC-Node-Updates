@@ -45,6 +45,7 @@ import java.util.concurrent.Executors;
 public final class FloatingCompanionService extends Service {
     public static final String ACTION_START="club.thegamerclub.nodelab.OVERLAY_START";
     public static final String ACTION_STOP="club.thegamerclub.nodelab.OVERLAY_STOP";
+    public static final String ACTION_RESTORE="club.thegamerclub.nodelab.OVERLAY_RESTORE";
     private static final String CHANNEL="tgc_companion_overlay";
     private static final int NOTICE=223;
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -70,11 +71,17 @@ public final class FloatingCompanionService extends Service {
     private String selectedTab="home", statusNote="";
     private boolean verifying=false, friendBusy=false, eventBusy=false, pendingStop=false;
     private boolean panelVisible=false;
+    private boolean restoring=false,stoppingExplicitly=false;
+    private int restoreAttempts=0;
+    private static final int MAX_RESTORE_ATTEMPTS=3;
+    private final Runnable[] restoreRunnable=new Runnable[1];
     private long lastPanelRefresh=0L;
 
     private final Runnable validate=new Runnable(){
         @Override public void run(){
-            if(!StaffGate.unlocked(FloatingCompanionService.this)){stopSelf();return;}
+            if(!StaffGate.unlocked(FloatingCompanionService.this)){
+                stopSelf();return;
+            }
             if(!verifying){
                 verifying=true;
                 verifier.execute(()->{
@@ -180,7 +187,8 @@ public final class FloatingCompanionService extends Service {
         manager.createNotificationChannel(new NotificationChannel(CHANNEL,
             "TGC floating tools",NotificationManager.IMPORTANCE_LOW));
     }
-    private Notification notice(){
+    private Notification notice(){return notice("Floating quick tools are enabled");}
+    private Notification notice(String detail){
         PendingIntent open=PendingIntent.getActivity(this,11,
             new Intent(this,CompanionActivity.class),
             PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -190,39 +198,133 @@ public final class FloatingCompanionService extends Service {
         return new Notification.Builder(this,CHANNEL)
             .setSmallIcon(R.drawable.tgc_logo)
             .setContentTitle("TGC floating tools")
-            .setContentText("Floating quick tools are enabled")
+            .setContentText(detail)
             .setContentIntent(open).setOngoing(true)
             .addAction(new Notification.Action.Builder(null,"Hide bubble",close).build())
             .build();
     }
-    @Override public int onStartCommand(Intent intent,int flags,int startId){
-        if(intent!=null && ACTION_STOP.equals(intent.getAction())){
-            stopSelf();return START_NOT_STICKY;
-        }
-        if(!StaffGate.unlocked(this)||!Settings.canDrawOverlays(this)){
-            stopSelf();return START_NOT_STICKY;
-        }
+    private boolean startVisible(){
+        if(!StaffGate.unlocked(this)||!Settings.canDrawOverlays(this))return false;
         try{
-            if(Build.VERSION.SDK_INT>=34)
-                startForeground(NOTICE,notice(),
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
-            else startForeground(NOTICE,notice());
             if(bubble==null)showBubble();
-        }catch(Exception e){
-            stopSelf();return START_NOT_STICKY;
-        }
+        }catch(Exception e){return false;}
         getSharedPreferences("tgc_overlay",0).edit()
             .putBoolean("running",true)
             .putLong("service_heartbeat_at",System.currentTimeMillis()).apply();
+        restoring=false;restoreAttempts=0;
+        scheduleTasks();
+        updateForegroundText("Floating tools ready");
+        return true;
+    }
+    private void scheduleTasks(){
         handler.removeCallbacks(validate);
         handler.postDelayed(validate,1500L);
         handler.removeCallbacks(friendTick);
-        handler.postDelayed(friendTick,3000L);
+        handler.postDelayed(friendTick,2500L);
         handler.removeCallbacks(refreshTick);
         handler.postDelayed(refreshTick,600L);
         handler.removeCallbacks(presenceTick);
         handler.post(presenceTick);
-        return START_NOT_STICKY;
+    }
+    private void updateForegroundText(String description){
+        try{
+            NotificationManager m=getSystemService(NotificationManager.class);
+            if(m!=null)m.notify(NOTICE,notice(description));
+        }catch(Exception ignored){}
+    }
+    private void stopRequestedByUser(){
+        stoppingExplicitly=true;
+        OverlayPreferences.setDesired(this,false);
+        handler.removeCallbacks(validate);
+        handler.removeCallbacks(friendTick);
+        handler.removeCallbacks(refreshTick);
+        handler.removeCallbacks(presenceTick);
+        if(restoreRunnable[0]!=null)handler.removeCallbacks(restoreRunnable[0]);
+        stopSelf();
+    }
+    /** A system-led recovery must verify access online before showing the bubble. */
+    private void recoverAfterInterruption(){
+        if(restoring)return;
+        if(!OverlayPreferences.desired(this)||!OverlayPreferences.recover(this)||
+           !Settings.canDrawOverlays(this)){
+            stopSelf();return;
+        }
+        restoring=true;
+        updateForegroundText("Checking staff access before restoring tools");
+        restoreRunnable[0]=new Runnable(){
+            @Override public void run(){
+                if(stoppingExplicitly||!OverlayPreferences.desired(FloatingCompanionService.this)||
+                   !OverlayPreferences.recover(FloatingCompanionService.this)){
+                    restoring=false;stopSelf();return;
+                }
+                if(StaffGate.unlocked(FloatingCompanionService.this)){
+                    restoring=false;
+                    if(!startVisible())stopSelf();
+                    return;
+                }
+                if(++restoreAttempts>MAX_RESTORE_ATTEMPTS){
+                    restoring=false;
+                    // Leave the user's preference alone: they can re-open the
+                    // Companion when service startup is allowed and online.
+                    stopSelf();return;
+                }
+                verifier.execute(()->{
+                    boolean denied=false;
+                    try{StaffGate.verifyOnline(FloatingCompanionService.this);}
+                    catch(SecurityException e){denied=true;}
+                    catch(Exception ignored){}
+                    final boolean rejected=denied;
+                    handler.post(()->{
+                        if(stoppingExplicitly)return;
+                        if(rejected){
+                            // Never resurrect an overlay after definite revocation.
+                            OverlayPreferences.setDesired(FloatingCompanionService.this,false);
+                            restoring=false;stopSelf();return;
+                        }
+                        if(StaffGate.unlocked(FloatingCompanionService.this)){
+                            restoring=false;
+                            if(!startVisible())stopSelf();
+                        }else{
+                            updateForegroundText("Waiting for connection to restore floating tools");
+                            handler.postDelayed(this,30_000L);
+                        }
+                    });
+                });
+            }
+        };
+        handler.post(restoreRunnable[0]);
+    }
+    @Override public int onStartCommand(Intent intent,int flags,int startId){
+        String action=intent==null?null:intent.getAction();
+        if(ACTION_STOP.equals(action)){
+            stopRequestedByUser();
+            return START_NOT_STICKY;
+        }
+        final boolean manual=ACTION_START.equals(action);
+        if(manual){
+            // Only an explicit user action can initially opt into the overlay.
+            if(!StaffGate.unlocked(this)||!Settings.canDrawOverlays(this)){
+                stopSelf();return START_NOT_STICKY;
+            }
+            OverlayPreferences.setDesired(this,true);
+        }else if(!OverlayPreferences.desired(this)||!OverlayPreferences.recover(this)){
+            // Never resurrect a deliberately hidden bubble.
+            stopSelf();return START_NOT_STICKY;
+        }
+        try{
+            if(Build.VERSION.SDK_INT>=34)
+                startForeground(NOTICE,notice(manual?"Floating tools ready":"Restoring floating tools"),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            else startForeground(NOTICE,notice("Floating tools ready"));
+        }catch(Exception e){
+            stopSelf();return START_NOT_STICKY;
+        }
+        if(manual){
+            if(!startVisible())stopSelf();
+        }else recoverAfterInterruption();
+        // Recovery is available ONLY with the opt-in setting enabled. Android
+        // still decides when and whether a killed foreground service restarts.
+        return OverlayPreferences.recover(this)?START_STICKY:START_NOT_STICKY;
     }
     private WindowManager.LayoutParams params(int width,int height){
         WindowManager.LayoutParams p=new WindowManager.LayoutParams(width,height,
@@ -746,6 +848,7 @@ public final class FloatingCompanionService extends Service {
         nodeStatus=null;nodeStats=null;trackingToggle=null;
     }
     @Override public void onDestroy(){
+        if(restoreRunnable[0]!=null)handler.removeCallbacks(restoreRunnable[0]);
         handler.removeCallbacks(validate);
         handler.removeCallbacks(friendTick);
         handler.removeCallbacks(refreshTick);
