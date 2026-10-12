@@ -276,6 +276,8 @@ public final class CompanionActivity extends Activity {
             "Worlds","Find somewhere to go","◇",()->openBrowse("worlds"));
         twinActions(quick,"Groups","Your communities","◈",()->openBrowse("groups"),
             "Recent players","People you've met","◎",()->openBrowse("encounters"));
+        twinActions(quick,"Avatars","Saved and extended","★",this::openAvatars,
+            "My status","One-tap status presets","☼",this::openStatus);
         twinActions(quick,"My status","Presets & presence","☼",this::openStatus,
             "Avatar library","Favorites & more","★",this::openExtendedAvatars);
         page.addView(CompanionStyle.section(this,"DISCOVER"));
