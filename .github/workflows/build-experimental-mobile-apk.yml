@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.17.5: Detect Meta Quest hardware; floating tools are disabled by default there but can be explicitly enabled experimentally in Settings. Block overlay launch and sticky recovery unless Quest opt-in is enabled, without changing phone behavior or other Companion features."
+            "notes": "v0.17.6: Upgrade floating Mini VRCX avatar favorites to a status-style picker: current avatar, list dropdown, thumbnail cards, selected preview, detail lookup and one confirmed Apply action. Add online/offline friend filters, quick instance invites, richer player profiles and show-more pagination for inbox and friends. Node, Quest gating and verification unchanged."
           }
           JSON
           fi
