@@ -32,6 +32,7 @@
   <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/tgc_update_paths"/>
  </provider>
  <activity android:name=".ExtendedAvatarActivity" android:exported="false"/>
+ <activity android:name=".PlayerActivityLogActivity" android:exported="false"/>
  <activity android:name=".FriendHubActivity" android:exported="false"/>
  <activity android:name=".PresenceActivity" android:exported="false"/>
  <activity android:name=".VRChatNotesActivity" android:exported="false"/>
