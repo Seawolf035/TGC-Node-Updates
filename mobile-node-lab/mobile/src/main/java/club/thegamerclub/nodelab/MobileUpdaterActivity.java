@@ -45,30 +45,41 @@ public final class MobileUpdaterActivity extends Activity {
 
   @Override public void onCreate(Bundle state){
     super.onCreate(state);
-    getWindow().setStatusBarColor(0xFF0B1423);
-    ScrollView scroll=new ScrollView(this);scroll.setBackgroundColor(0xFF0B1423);
-    LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(dp(20),dp(28),dp(20),dp(20));scroll.addView(root);
-    setContentView(scroll);
-    TextView heading=text("STAFF COMPANION UPDATES",24,Color.WHITE);
-    root.addView(heading);
-    root.addView(text("Updates are checked over HTTPS, verified by SHA-256 and the APK signing certificate. Android will ask you to approve the installation. Your staff credentials and queued sightings remain on this device during a normal in-place update.",14,0xFFB7CBE0));
-    status=text("Ready to check.",14,0xFF67D1EC);
-    status.setPadding(0,dp(15),0,dp(15));root.addView(status);
+    getWindow().setStatusBarColor(CompanionStyle.BG);
+    getWindow().setNavigationBarColor(CompanionStyle.BG);
+    ScrollView scroll=new ScrollView(this);
+    scroll.setBackgroundColor(CompanionStyle.BG);
+    LinearLayout root=new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(18),dp(20),dp(18),dp(30));
+    scroll.addView(root);setContentView(scroll);
+    Button back=CompanionStyle.button(this,"← Back",false);
+    root.addView(back,new LinearLayout.LayoutParams(dp(115),dp(44)));
+    back.setOnClickListener(v->finish());
+    TextView kicker=CompanionStyle.section(this,"COMPANION");
+    root.addView(kicker);
+    root.addView(text("Updates",28,CompanionStyle.TEXT));
+    root.addView(text("Keep your Companion up to date. Your account, tracking, and settings stay in place when you update.",14,CompanionStyle.MUTED));
+    LinearLayout body=CompanionStyle.card(this);
+    root.addView(body,CompanionStyle.cardParams(this));
+    status=text("Checking for updates...",14,CompanionStyle.ACCENT);
+    body.addView(status);
     progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
-    progress.setMax(100);progress.setVisibility(View.GONE);root.addView(progress);
-    button(root,"Check for updates",this::check);
-    button(root,"Install verified download",this::install);
-    root.addView(text("An APK built with a different signing key cannot update the installed app. The updater will refuse such an APK instead of asking you to uninstall and lose your local Node data.",12,0xFFB7CBE0));
+    progress.setMax(100);progress.setVisibility(View.GONE);
+    body.addView(progress);
+    button(body,"Check for updates",this::check);
+    button(body,"Install downloaded update",this::install);
     check();
   }
-  private int dp(int x){return Math.round(x*getResources().getDisplayMetrics().density);}
+  private int dp(int x){return CompanionStyle.dp(this,x);}
   private TextView text(String value,int sp,int color){
-    TextView t=new TextView(this);t.setText(value);t.setTextColor(color);t.setTextSize(sp);t.setPadding(0,dp(9),0,dp(9));return t;
+    TextView t=CompanionStyle.text(this,value,sp,color,sp>=25);
+    t.setPadding(0,dp(9),0,dp(10));return t;
   }
   private void button(LinearLayout root,String title,Runnable action){
-    Button b=new Button(this);b.setText(title);b.setAllCaps(false);
-    root.addView(b,new LinearLayout.LayoutParams(-1,dp(55)));b.setOnClickListener(v->action.run());
+    Button b=CompanionStyle.button(this,title,true);
+    root.addView(b,CompanionStyle.buttonParams(this));
+    b.setOnClickListener(v->action.run());
   }
   private void show(String value){runOnUiThread(()->status.setText(value));}
   private void check(){
@@ -83,24 +94,23 @@ public final class MobileUpdaterActivity extends Activity {
         int latest=release.getInt("version_code");
         int current=localVersion();
         if(latest<=current){
-          show("Up to date. Installed version code "+current+".\nLatest published: "+release.optString("version"));
+          show("You're up to date!\nVersion "+release.optString("version"));
           return;
         }
-        show("Update available: "+release.optString("version")+
-          " (installed version code "+current+", release code "+latest+").\n"+
-          release.optString("notes","")+"\n\nDownloading and verifying APK...");
+        show("A new version is available: "+release.optString("version")+
+          "\nDownloading the update...");
         runOnUiThread(()->{progress.setProgress(0);progress.setVisibility(View.VISIBLE);});
         File candidate=download(release);
         verifySameSigner(candidate);
         readyApk=candidate;readyVersion=latest;
-        show("Verified update "+release.optString("version")+
-          " is ready. Tap 'Install verified download'. Android will ask for approval.");
+        show("Version "+release.optString("version")+
+          " is ready. Tap Install downloaded update. Android will ask for approval.");
       }catch(Exception e){
         readyApk=null;
         String m=e.getMessage();
         if(m==null)m=e.getClass().getSimpleName();
         if(m.length()>320)m=m.substring(0,320);
-        show("Update check/download blocked:\n"+m);
+        show("Couldn't check for updates:\n"+m);
       }finally{downloading=false;}
     });
   }
@@ -201,7 +211,7 @@ public final class MobileUpdaterActivity extends Activity {
   }
   private void install(){
     File f=readyApk;
-    if(f==null||!f.isFile()){show("No verified update is ready. Tap Check for updates first.");return;}
+    if(f==null||!f.isFile()){show("No update is ready yet. Tap Check for updates first.");return;}
     if(Build.VERSION.SDK_INT>=26&&!getPackageManager().canRequestPackageInstalls()){
       Intent allow=new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
         Uri.parse("package:"+getPackageName()));
