@@ -69,7 +69,6 @@ public final class OverlayPreferences {
             if(keys.size()>6)throw new IllegalArgumentException("Maximum six shortcuts");
         }
         if(keys.isEmpty())throw new IllegalArgumentException("Choose at least one shortcut");
-        android.text.TextUtils.join(",",keys);
         prefs(ctx).edit().putString("pinned",android.text.TextUtils.join(",",keys)).apply();
     }
     public static String name(String key){
