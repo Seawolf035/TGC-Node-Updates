@@ -673,14 +673,14 @@ public final class OverlayMiniVrcx {
         LinearLayout heading=card(list);
         heading.addView(text("Automatic invite code",16,CompanionStyle.TEXT,true));
         heading.addView(text(
-            "Start verification in Gamer Music 3 or Gamer Music 2's Discord. "
+            "Start verification in The Gamer Club's Discord or Cult of Gamer Music's Discord. "
             +"The latest available TGC-XXXX-XXXX or CULT-XXXX-XXXX code will appear here automatically.",
             12,CompanionStyle.MUTED,false));
         VRChatInviteCode.Result found=verificationResult;
         if(found==null){
             heading.addView(text("Checking recent invites…",13,CompanionStyle.MUTED,false));
         }else if(!found.code.isEmpty()){
-            String service="cult".equals(found.provider)?"Gamer Music 2 · Cult":"Gamer Music 3 · TGC";
+            String service="cult".equals(found.provider)?"Cult of Gamer Music":"The Gamer Club";
             heading.addView(text(service,12,CompanionStyle.ACCENT,true));
             TextView label=text(found.code,21,CompanionStyle.GOOD,true);
             label.setGravity(Gravity.CENTER);
