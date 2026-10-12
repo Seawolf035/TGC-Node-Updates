@@ -99,7 +99,9 @@ public final class VRChatOscChat {
         long now=SystemClock.elapsedRealtime();
         if(lastTyping!=null&&lastTyping.booleanValue()==typing&&
            now-lastTypingAt<2500L)return;
-        if(now-lastTypingAt<200L)
+        // Turning typing OFF is always allowed: a fast dismiss must not
+        // leave an OSC typing bubble stuck until VRChat times it out.
+        if(typing&&now-lastTypingAt<200L)
             throw new IllegalStateException("Please wait before updating typing again.");
         ByteArrayOutputStream out=new ByteArrayOutputStream();
         oscString(out,"/chatbox/typing");
