@@ -42,6 +42,8 @@ public final class OverlayMiniVrcx {
     private LinearLayout root;
     private String screen="",target="",kind="";
     private String selectedGroupId="";
+    private String avatarGroup="all";
+    private AvatarFavoritesRepository.Snapshot favoriteAvatarLists;
     private String searchKind="people";
     private String submittedSearch="";
     private String searchLoadingKind="";
@@ -397,8 +399,21 @@ public final class OverlayMiniVrcx {
                 execute(()->VRChatApi.getInstance(ctx,target),
                     result->{profile=(JSONObject)result;drawList();});break;
             case "mini_avatars":
-                execute(()->VRChatApi.favoriteAvatars(ctx,0),
-                    result->{loaded=(JSONArray)result;drawList();});break;
+                execute(()->AvatarFavoritesRepository.fetch(ctx),
+                    result->{
+                        favoriteAvatarLists=(AvatarFavoritesRepository.Snapshot)result;
+                        if(!"all".equals(avatarGroup)){
+                            boolean found=false;
+                            for(int i=0;i<favoriteAvatarLists.groups.length();i++){
+                                JSONObject group=favoriteAvatarLists.groups.optJSONObject(i);
+                                if(group!=null&&avatarGroup.equals(group.optString("name",""))){
+                                    found=true;break;
+                                }
+                            }
+                            if(!found)avatarGroup="all";
+                        }
+                        drawList();
+                    });break;
             case "mini_groups":
                 execute(()->VRChatApi.groups(ctx),
                     result->{loaded=(JSONArray)result;drawList();});break;
@@ -915,24 +930,92 @@ public final class OverlayMiniVrcx {
         if(!name.isEmpty())c.addView(text(name,13,CompanionStyle.ACCENT,false));
     }
     private void showAvatars(){
-        int count=0;
-        for(int i=0;i<loaded.length()&&count<limit;i++){
-            JSONObject a=loaded.optJSONObject(i);if(a==null)continue;
-            String name=a.optString("name","Avatar"),id=a.optString("id","");
-            if(!matches(name+" "+id))continue;
-            LinearLayout c=card(list);
-            c.addView(text(shortValue(name,55),15,CompanionStyle.TEXT,true));
-            c.addView(text(shortValue(a.optString("description",""),110),12,
-                CompanionStyle.MUTED,false));
-            if(id.matches("avtr_[0-9a-fA-F-]{36}")){
-                button(c,"Select avatar",false,()->confirm("Switch your VRChat avatar to "+name+"?",
-                    ()->write(()->VRChatApi.selectAvatar(ctx,id),"Avatar selected")));
-                button(c,"Copy avatar ID",false,()->copy("avatar ID",id));
-            }
-            count++;
+        AvatarFavoritesRepository.Snapshot snapshot=favoriteAvatarLists;
+        if(snapshot==null){
+            line(list,"Loading favorite lists",
+                "Retrieving your VRChat avatar groups…",null);
+            return;
         }
-        if(count==0)line(list,"No favorite avatars","Save avatars in VRChat to see them here.",null);
-        if(count>=limit)button(list,"Show more",false,()->{limit+=65;drawList();});
+        JSONArray groups=snapshot.groups;
+        LinearLayout picker=card(list);
+        picker.addView(text(groups.length()+" VRChat favorite list"+
+            (groups.length()==1?"":"s")+" · "+snapshot.uniqueAvatars+
+            " unique avatars",13,CompanionStyle.ACCENT,true));
+        if(!snapshot.warning.isEmpty())
+            picker.addView(text(snapshot.warning,12,CompanionStyle.GOLD,false));
+        button(picker,("all".equals(avatarGroup)?"✓ ":"")+"All avatar lists",false,()->{
+            avatarGroup="all";limit=65;drawList();
+        });
+        // Display every group returned by VRChat, including VRC+ slots and
+        // renamed groups. The labels are obtained from VRChat, not guessed.
+        for(int i=0;i<groups.length();i++){
+            JSONObject group=groups.optJSONObject(i);
+            if(group==null)continue;
+            String key=group.optString("name","");
+            String display=group.optString("displayName",key);
+            JSONArray entries=group.optJSONArray("avatars");
+            String count=group.optString("error","").isEmpty()?
+                (entries==null?0:entries.length())+" loaded":"Unavailable";
+            button(picker,(avatarGroup.equals(key)?"✓ ":"")+
+                shortValue(display,36)+" · "+count,false,()->{
+                avatarGroup=key;limit=65;drawList();
+            });
+        }
+        if(groups.length()==0)
+            line(list,"No avatar favorite lists",
+                "VRChat did not return any favorite avatar groups for your account.",null);
+        java.util.HashSet<String> seen=new java.util.HashSet<>();
+        int total=0,shown=0;
+        for(int i=0;i<groups.length();i++){
+            JSONObject group=groups.optJSONObject(i);
+            if(group==null)continue;
+            if(!"all".equals(avatarGroup)&&
+                !avatarGroup.equals(group.optString("name","")))continue;
+            JSONArray avatars=group.optJSONArray("avatars");
+            if(avatars==null)continue;
+            for(int j=0;j<avatars.length();j++){
+                JSONObject a=avatars.optJSONObject(j);if(a==null)continue;
+                String name=a.optString("name","Avatar"),id=a.optString("id","");
+                if(!id.matches("avtr_[0-9a-fA-F-]{36}"))continue;
+                if(!seen.add(id)||!matches(name+" "+id+" "+a.optString("authorName","")))
+                    continue;
+                total++;
+                if(shown>=limit)continue;
+                LinearLayout card=card(list);
+                card.addView(text(shortValue(name,55),15,CompanionStyle.TEXT,true));
+                card.addView(text("By "+shortValue(a.optString("authorName","Unknown creator"),55),
+                    12,CompanionStyle.MUTED,false));
+                if("all".equals(avatarGroup)){
+                    card.addView(text(shortValue(group.optString("displayName",""),50),
+                        11,CompanionStyle.ACCENT,false));
+                }
+                String info=a.optString("description","");
+                if(!info.isEmpty())card.addView(text(shortValue(info,105),
+                    12,CompanionStyle.MUTED,false));
+                button(card,"Select avatar",false,()->confirm(
+                    "Switch your VRChat avatar to "+name+"?",
+                    ()->write(()->VRChatApi.selectAvatar(ctx,id),"Avatar selected")));
+                button(card,"Copy avatar ID",false,()->copy("avatar ID",id));
+                shown++;
+            }
+        }
+        if(total==0){
+            JSONObject group=null;
+            for(int i=0;i<groups.length();i++){
+                JSONObject candidate=groups.optJSONObject(i);
+                if(candidate!=null&&avatarGroup.equals(candidate.optString("name",""))){
+                    group=candidate;break;
+                }
+            }
+            line(list,"No avatars in this view",
+                group!=null&&!group.optString("error","").isEmpty()?
+                    "VRChat couldn't load this list. Try Refresh.":
+                    "Choose another list or change your search.",null);
+        }else if(total>shown){
+            button(list,"Show more avatars ("+(total-shown)+" remaining)",false,
+                ()->{limit+=65;drawList();});
+        }
+        button(list,"Refresh all favorite lists",false,this::load);
     }
     private void showGroups(){
         int count=0;
