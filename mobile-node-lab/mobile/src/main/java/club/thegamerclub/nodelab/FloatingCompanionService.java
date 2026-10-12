@@ -24,6 +24,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.graphics.drawable.GradientDrawable;
+import android.view.inputmethod.InputMethodManager;
+import java.util.ArrayDeque;
 import android.widget.Toast;
 import androidx.core.content.ContextCompat;
 import org.json.JSONArray;
@@ -49,6 +52,9 @@ public final class FloatingCompanionService extends Service {
     private final ExecutorService friendWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService eventsWorker=Executors.newSingleThreadExecutor();
     private WindowManager wm;
+    private WindowManager.LayoutParams panelParams;
+    private OverlayMiniVrcx mini;
+    private final ArrayDeque<String> backStack=new ArrayDeque<>();
     private FrameLayout bubble;
     private View statusDot;
     private LinearLayout panel, panelContent;
@@ -116,6 +122,11 @@ public final class FloatingCompanionService extends Service {
     @Override public void onCreate(){
         super.onCreate();
         wm=(WindowManager)getSystemService(WINDOW_SERVICE);
+        mini=new OverlayMiniVrcx(this,new OverlayMiniVrcx.Host(){
+            @Override public void navigate(String page){go(page);}
+            @Override public void back(){goBack();}
+            @Override public void keyboard(boolean enabled){setOverlayKeyboard(enabled);}
+        });
         NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
         manager.createNotificationChannel(new NotificationChannel(CHANNEL,
             "TGC floating Companion",NotificationManager.IMPORTANCE_LOW));
@@ -176,14 +187,26 @@ public final class FloatingCompanionService extends Service {
     private void showBubble(){
         FrameLayout circle=new FrameLayout(this);
         circle.setContentDescription("TGC Companion. Tap to expand, hold and drag to move.");
-        circle.setBackground(CompanionStyle.shape(this,CompanionStyle.SURFACE,45,CompanionStyle.ACCENT));
+        GradientDrawable ring=new GradientDrawable();
+        ring.setShape(GradientDrawable.OVAL);
+        ring.setColor(CompanionStyle.SURFACE);
+        ring.setStroke(dp(2),CompanionStyle.ACCENT);
+        circle.setBackground(ring);
         circle.setElevation(dp(9));
         ImageView logo=new ImageView(this);
         // The actual app icon, not substitute text or an unrelated image.
         logo.setImageResource(R.drawable.tgc_logo);
-        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        logo.setPadding(dp(7),dp(7),dp(7),dp(7));
-        circle.addView(logo,new FrameLayout.LayoutParams(-1,-1));
+        logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        // Clip the app's square icon to a true circle; avoids the square corners
+        // visible in the original overlay screenshot while retaining the logo.
+        GradientDrawable disk=new GradientDrawable();
+        disk.setShape(GradientDrawable.OVAL);
+        disk.setColor(CompanionStyle.SURFACE);
+        logo.setBackground(disk);
+        logo.setClipToOutline(true);
+        FrameLayout.LayoutParams imageParams=new FrameLayout.LayoutParams(dp(48),dp(48),
+            Gravity.CENTER);
+        circle.addView(logo,imageParams);
         View led=new View(this);
         led.setBackground(CompanionStyle.shape(this,CompanionStyle.GOLD,10,CompanionStyle.SURFACE));
         FrameLayout.LayoutParams indicator=new FrameLayout.LayoutParams(dp(13),dp(13),
@@ -332,6 +355,7 @@ public final class FloatingCompanionService extends Service {
         if(possibleTop+height>screenHeight()-dp(20))possibleTop=bubbleParams.y-height-dp(7);
         p.y=Math.max(dp(25),Math.min(screenHeight()-height-dp(25),possibleTop));
         try{
+            panelParams=p;
             wm.addView(container,p);
             refreshStatus();loadRecentEvents();
         }catch(Exception e){
@@ -347,7 +371,7 @@ public final class FloatingCompanionService extends Service {
         container.addView(b,p);
         b.setOnClickListener(v->{
             if(key.equals(selectedTab))return;
-            selectedTab=key;pendingStop=false;
+            selectedTab=key;pendingStop=false;backStack.clear();
             dismissPanel();togglePanel();
         });
     }
@@ -358,7 +382,44 @@ public final class FloatingCompanionService extends Service {
         switch(selectedTab){
             case "social":showSocial();break;
             case "tools":showTools();break;
-            default:showHome();break;
+            case "home":showHome();break;
+            default:mini.show(panelContent,selectedTab);break;
+        }
+    }
+    private void go(String destination){
+        if(!StaffGate.unlocked(this)){stopSelf();return;}
+        if(selectedTab.equals(destination))return;
+        backStack.push(selectedTab);
+        selectedTab=destination;
+        pendingStop=false;
+        buildTab();
+    }
+    private void goBack(){
+        selectedTab=backStack.isEmpty()?"home":backStack.pop();
+        pendingStop=false;
+        buildTab();
+    }
+    private void setOverlayKeyboard(boolean focusable){
+        if(panel==null||panelParams==null)return;
+        if(focusable){
+            panelParams.flags&=~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            panelParams.softInputMode=WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
+        }else{
+            panelParams.flags|=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            panelParams.softInputMode=WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN;
+            InputMethodManager imm=(InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+            if(imm!=null)imm.hideSoftInputFromWindow(panel.getWindowToken(),0);
+        }
+        try{wm.updateViewLayout(panel,panelParams);}catch(Exception ignored){}
+        if(focusable){
+            handler.postDelayed(()->{
+                if(panel==null)return;
+                View focus=panel.findFocus();
+                if(focus!=null){
+                    InputMethodManager imm=(InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+                    if(imm!=null)imm.showSoftInput(focus,InputMethodManager.SHOW_IMPLICIT);
+                }
+            },110L);
         }
     }
     private void showHome(){
@@ -379,65 +440,55 @@ public final class FloatingCompanionService extends Service {
         recent.addView(recentStatus);
         // A small, bounded dynamic region. No second log parser or tracker is created.
         recentRows=vertical();recent.addView(recentRows);
-        action(recent,"All recent players",false,()->
-            open(VRChatBrowseActivity.class,"mode","encounters"));
+        action(recent,"Open full player log",false,()->go("mini_players"));
 
         section(panelContent,"QUICK ACCESS");
         LinearLayout quick=panelCard(panelContent);
         paired(quick,"Friends locations","Friend log",
-            ()->open(FriendHubActivity.class,"tab","locations"),
-            ()->open(FriendHubActivity.class,"tab","log"));
+            ()->go("mini_friends"),()->go("mini_log"));
         paired(quick,"Inbox","Activity feed",
-            ()->open(VRChatInboxActivity.class,"filter","all"),
-            ()->open(FriendHubActivity.class,"tab","activity"));
+            ()->mini.inbox("all"),()->go("mini_activity"));
     }
     private LinearLayout recentRows;
     private void showSocial(){
-        section(panelContent,"FRIENDS");
+        section(panelContent,"FRIENDS — STAY IN VRCHAT");
         LinearLayout friends=panelCard(panelContent);
-        action(friends,"Friends by location",false,()->
-            open(FriendHubActivity.class,"tab","locations"));
-        paired(friends,"Online friends","Offline friends",
-            ()->open(VRChatBrowseActivity.class,"mode","friends_online"),
-            ()->open(VRChatBrowseActivity.class,"mode","friends_offline"));
+        action(friends,"Friends & locations",true,()->go("mini_friends"));
         paired(friends,"Friend log","Activity feed",
-            ()->open(FriendHubActivity.class,"tab","log"),
-            ()->open(FriendHubActivity.class,"tab","activity"));
-        section(panelContent,"MESSAGES");
+            ()->go("mini_log"),()->go("mini_activity"));
+        section(panelContent,"INBOX");
         LinearLayout communication=panelCard(panelContent);
         paired(communication,"All notifications","Invitations",
-            ()->open(VRChatInboxActivity.class,"filter","all"),
-            ()->open(VRChatInboxActivity.class,"filter","invite"));
-        action(communication,"Friend requests",false,()->
-            open(VRChatInboxActivity.class,"filter","friend"));
-        section(panelContent,"DISCOVERY");
-        LinearLayout discovery=panelCard(panelContent);
-        paired(discovery,"Player search","Groups",
-            ()->open(VRChatBrowseActivity.class,"mode","search_users"),
-            ()->open(VRChatBrowseActivity.class,"mode","groups"));
+            ()->mini.inbox("all"),()->mini.inbox("invite"));
+        paired(communication,"Friend requests","Search players",
+            ()->mini.inbox("friend"),()->mini.findUser());
+        section(panelContent,"PLAYER TOOLS");
+        LinearLayout players=panelCard(panelContent);
+        action(players,"Captured player log & profiles",false,
+            ()->go("mini_players"));
+        action(players,"My VRChat groups",false,()->go("mini_groups"));
     }
     private void showTools(){
-        section(panelContent,"PERSONAL VRCX");
-        LinearLayout accounts=panelCard(panelContent);
-        paired(accounts,"My account","Status & presets",
-            ()->open(VRChatAccountActivity.class,null,null),
-            ()->open(PresenceActivity.class,null,null));
-        paired(accounts,"Favorite avatars","Saved worlds",
-            ()->open(VRChatAvatarActivity.class,null,null),
-            ()->open(VRChatBrowseActivity.class,"mode","worlds"));
-        paired(accounts,"Extended avatars","World search",
-            ()->open(ExtendedAvatarActivity.class,null,null),
-            ()->open(VRChatBrowseActivity.class,"mode","search_worlds"));
-        paired(accounts,"Private notes","Verification invite",
-            ()->open(VRChatNotesActivity.class,null,null),
-            ()->open(InviteCodeActivity.class,null,null));
-        section(panelContent,"INSTANCE & NODE");
-        LinearLayout instance=panelCard(panelContent);
-        paired(instance,"Recent players","Recent worlds",
-            ()->open(VRChatBrowseActivity.class,"mode","encounters"),
-            ()->open(VRChatBrowseActivity.class,"mode","recent"));
-        action(instance,"Tracking controls & Shizuku setup",false,
-            ()->open(MobileDeployActivity.class,null,null));
+        section(panelContent,"ACCOUNT — NO APP SWITCH");
+        LinearLayout personal=panelCard(panelContent);
+        paired(personal,"Status & presets","Favorite avatars",
+            ()->go("mini_presence"),()->go("mini_avatars"));
+        paired(personal,"Saved worlds","My groups",
+            ()->go("mini_worlds"),()->go("mini_groups"));
+        paired(personal,"Search players","Friends & locations",
+            ()->mini.findUser(),()->go("mini_friends"));
+        section(panelContent,"PLAYER INFORMATION");
+        LinearLayout player=panelCard(panelContent);
+        paired(player,"Player log","Friend log",
+            ()->go("mini_players"),()->go("mini_log"));
+        section(panelContent,"NODE TRACKING");
+        LinearLayout node=panelCard(panelContent);
+        TextView info=text("Use Home to start or stop tracking. Captures and relay uploads continue independently when this panel closes.",
+            12,CompanionStyle.MUTED,false);
+        node.addView(info);
+        action(node,"Tracking dashboard",false,()->{
+            backStack.clear();selectedTab="home";buildTab();refreshStatus();
+        });
     }
     private void open(Class<?> destination,String parameter,String value){
         if(!StaffGate.unlocked(this)){stopSelf();return;}
@@ -561,8 +612,8 @@ public final class FloatingCompanionService extends Service {
                     lp.setMargins(0,dp(3),0,dp(3));recentRows.addView(item,lp);
                     item.setOnClickListener(v->{
                         if(uid.matches("usr_[0-9a-fA-F-]{36}"))
-                            open(VRChatDetailActivity.class,"kind","user",uid);
-                        else open(VRChatBrowseActivity.class,"mode","encounters");
+                            mini.profile(uid);
+                        else go("mini_players");
                     });
                 }
                 lastPanelRefresh=System.currentTimeMillis();
@@ -582,7 +633,9 @@ public final class FloatingCompanionService extends Service {
         if(panel!=null){
             try{wm.removeView(panel);}catch(Exception ignored){}
         }
+        if(mini!=null)mini.close();
         panel=null;panelContent=null;recentRows=null;recentStatus=null;
+        panelParams=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;
     }
     @Override public void onDestroy(){
@@ -590,7 +643,7 @@ public final class FloatingCompanionService extends Service {
         handler.removeCallbacks(friendTick);
         handler.removeCallbacks(refreshTick);
         verifier.shutdownNow();friendWorker.shutdownNow();eventsWorker.shutdownNow();
-        dismissPanel();
+        dismissPanel();if(mini!=null)mini.shutdown();
         if(bubble!=null){
             try{wm.removeView(bubble);}catch(Exception ignored){}
             bubble=null;statusDot=null;
