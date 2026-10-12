@@ -110,7 +110,7 @@ public final class VRChatInviteCode {
         if(s==null)return "";
         Matcher matcher=LOCATION.matcher(s);
         if(matcher.find() && matcher.group(1).equalsIgnoreCase(WORLD))
-            return matcher.group(2).replaceAll("[,.;)]*$","");
+            return matcher.group(2).replaceAll("[,.;]*$","");
         // Some notification payloads include instanceId without a world prefix.
         if(s.length()>4 && s.length()<512 &&
            s.matches("[0-9]{1,9}(?:~[A-Za-z0-9_-]+\\([^)]*\\))*"))
