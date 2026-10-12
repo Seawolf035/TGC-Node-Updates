@@ -56,6 +56,16 @@ public final class OverlayMiniVrcx {
     private EditText search;
     private int limit=65;
     private String inboxFilter="all";
+    private long inboxLastChecked=0L;
+    private boolean inboxPartial=false;
+    private String inboxError="";
+    private final Runnable inboxTick=new Runnable(){
+        @Override public void run(){
+            if(root==null||!"mini_inbox".equals(screen))return;
+            if(!busy&&!writing)refreshInbox(false);
+            handler.postDelayed(this,90_000L);
+        }
+    };
     private VRChatInviteCode.Result verificationResult;
     private final Runnable verificationTick=new Runnable(){
         @Override public void run(){
@@ -75,6 +85,7 @@ public final class OverlayMiniVrcx {
     }
     public void close(){
         handler.removeCallbacks(verificationTick);
+        handler.removeCallbacks(inboxTick);
         revision++;root=null;list=null;search=null;pendingAction=null;
         host.keyboard(false);
     }
@@ -93,7 +104,11 @@ public final class OverlayMiniVrcx {
     public void note(String userId){
         if(validUser(userId)){target=userId;kind="note";host.navigate("mini_note");}
     }
-    public void inbox(String type){inboxFilter=type;host.navigate("mini_inbox");}
+    public void inbox(String type){
+        inboxFilter=type;
+        if("mini_inbox".equals(screen)&&root!=null)drawList();
+        else host.navigate("mini_inbox");
+    }
     public void location(String value){
         if(value!=null&&value.startsWith("wrld_")&&value.contains(":")){
             target=value;kind="location";host.navigate("mini_instance");
@@ -121,6 +136,8 @@ public final class OverlayMiniVrcx {
         load();
         if("mini_verify".equals(page))
             handler.postDelayed(verificationTick,45_000L);
+        if("mini_inbox".equals(page))
+            handler.postDelayed(inboxTick,90_000L);
     }
     private void drawFrame(){
         if(root==null)return;
@@ -369,16 +386,7 @@ public final class OverlayMiniVrcx {
                 });
                 break;
             case "mini_inbox":
-                execute(()->{
-                    JSONObject result=new JSONObject();
-                    try{result.put("legacy",VRChatApi.notifications(ctx,false,0));}
-                    catch(Exception e){result.put("legacyError",shortValue(e.getMessage(),100));}
-                    try{result.put("modern",VRChatApi.notifications(ctx,true,0));}
-                    catch(Exception e){result.put("modernError",shortValue(e.getMessage(),100));}
-                    if(!result.has("legacy")&&!result.has("modern"))
-                        throw new IllegalStateException("VRChat notifications unavailable");
-                    return result;
-                },result->{profile=(JSONObject)result;drawList();});break;
+                refreshInbox(profile.optJSONArray("items")==null);break;
             case "mini_profile":
                 execute(()->VRChatApi.getUserProfile(ctx,target),
                     result->{profile=(JSONObject)result;drawList();});break;
@@ -660,24 +668,46 @@ public final class OverlayMiniVrcx {
         if(results.size()>limit)button(list,"Show more",false,()->{limit+=65;drawList();});
     }
     private JSONArray inboxEntries(){
-        JSONArray entries=new JSONArray();
-        HashMap<String,Boolean> seen=new HashMap<>();
-        for(boolean modern:new boolean[]{false,true}){
-            JSONArray source=profile.optJSONArray(modern?"modern":"legacy");
-            if(source==null)continue;
-            for(int i=0;i<source.length();i++){
-                JSONObject n=source.optJSONObject(i);if(n==null)continue;
-                String type=n.optString("type","").toLowerCase(Locale.US);
-                boolean invite=type.contains("invite"),friend=type.contains("friend");
-                if(inboxFilter.equals("invite")&&!invite)continue;
-                if(inboxFilter.equals("friend")&&!friend)continue;
-                String id=n.optString("id","");
-                if(id.isEmpty()||seen.put((modern?"2:":"1:")+id,true)!=null)continue;
-                try{entries.put(new JSONObject(n.toString()).put("_modern",modern));}
-                catch(Exception ignored){}
-            }
+        JSONArray filtered=new JSONArray();
+        JSONArray items=profile.optJSONArray("items");
+        if(items==null)return filtered;
+        for(int i=0;i<items.length();i++){
+            JSONObject item=items.optJSONObject(i);
+            if(InboxRepository.include(item,inboxFilter))filtered.put(item);
         }
-        return entries;
+        return filtered;
+    }
+    /** Keep the previous inbox visible if one refresh fails or VRChat is offline. */
+    private void refreshInbox(boolean first){
+        if(root==null||!"mini_inbox".equals(screen)||busy||writing||
+           !StaffGate.unlocked(ctx))return;
+        busy=true;
+        final int token=revision;
+        if(first)status("Checking your VRChat inbox…");
+        io.execute(()->{
+            InboxRepository.Snapshot snapshot=null;String issue="";
+            try{snapshot=InboxRepository.refresh(ctx);}
+            catch(Exception e){issue=e instanceof SecurityException?
+                "Sign in to your personal VRChat account in the Companion first.":
+                "Couldn't refresh. Check your VRChat connection, then try again.";}
+            final InboxRepository.Snapshot found=snapshot;
+            final String problem=issue;
+            handler.post(()->{
+                if(token!=revision||root==null||!"mini_inbox".equals(screen)||
+                    !StaffGate.unlocked(ctx))return;
+                busy=false;
+                if(found!=null){
+                    try{profile.put("items",found.items);}catch(Exception ignored){}
+                    inboxLastChecked=found.checkedAt;
+                    inboxPartial=found.partial;
+                    inboxError=found.warning;
+                    drawList();
+                }else if(profile.optJSONArray("items")!=null){
+                    inboxError=problem+" Showing the last loaded notifications.";
+                    drawList();
+                }else status(problem);
+            });
+        });
     }
     private JSONObject details(JSONObject n){
         JSONObject d=n.optJSONObject("details");
@@ -772,9 +802,17 @@ public final class OverlayMiniVrcx {
     private void showInbox(){
         chips(list,"All","Invites","Friends",
             ()->inbox("all"),()->inbox("invite"),()->inbox("friend"));
+        button(list,"unread".equals(inboxFilter)?"✓ Showing unread only":"Show unread only",
+            false,()->inbox("unread".equals(inboxFilter)?"all":"unread"));
         JSONArray entries=inboxEntries();
-        list.addView(text(entries.length()+" notifications on this page",
+        JSONArray all=profile.optJSONArray("items");
+        int unread=all==null?0:InboxRepository.unread(all);
+        list.addView(text(entries.length()+" shown · "+unread+" unread"+
+            (inboxLastChecked>0?" · Checked "+date(inboxLastChecked):""),
             12,CompanionStyle.ACCENT,false));
+        if(!inboxError.isEmpty())line(list,
+            inboxPartial?"Partial inbox":"Refresh unavailable",
+            inboxError,null);
         for(int i=0;i<Math.min(entries.length(),65);i++){
             JSONObject n=entries.optJSONObject(i);if(n==null)continue;
             final boolean modern=n.optBoolean("_modern",false);
