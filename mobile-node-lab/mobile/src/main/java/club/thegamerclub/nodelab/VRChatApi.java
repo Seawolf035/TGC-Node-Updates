@@ -176,6 +176,49 @@ public final class VRChatApi {
         return request("GET","/worlds/recent?n=40&offset=0",cookie(session),null,null).array();
     }
 
+    /** A single bounded VRChat page; caller controls when to request the next page. */
+    public static final int LIST_PAGE_SIZE=60;
+    public static JSONArray browsePage(Context context,String mode,String query,int offset)throws Exception{
+        if(offset<0||offset>10000||offset%LIST_PAGE_SIZE!=0)
+            throw new IllegalArgumentException("Invalid page offset");
+        String location;
+        switch(mode){
+            case "friends_online":
+                location="/auth/user/friends?n=60&offline=false&offset="+offset;break;
+            case "friends_offline":
+                location="/auth/user/friends?n=60&offline=true&offset="+offset;break;
+            case "worlds":
+                location="/worlds/favorites?n=60&offset="+offset;break;
+            case "recent":
+                location="/worlds/recent?n=60&offset="+offset;break;
+            case "search_users":
+            case "search_worlds":
+                String term=query==null?"":query.trim();
+                if(term.length()<2||term.length()>80)
+                    throw new IllegalArgumentException("Search must contain 2–80 characters");
+                location=(mode.equals("search_users")?"/users?search=":"/worlds?search=")+
+                    java.net.URLEncoder.encode(term,"UTF-8")+"&n=60&offset="+offset;break;
+            default:throw new IllegalArgumentException("This list is not paginated");
+        }
+        return request("GET",location,cookie(validSession(context)),null,null).array();
+    }
+    /** VRChat's private notes, saved to the authenticated VRChat account (not the TGC relay). */
+    public static JSONArray userNotes(Context context,int offset)throws Exception{
+        if(offset<0||offset>10000||offset%100!=0)
+            throw new IllegalArgumentException("Invalid notes offset");
+        return request("GET","/userNotes?n=100&offset="+offset,
+            cookie(validSession(context)),null,null).array();
+    }
+    public static JSONObject saveUserNote(Context context,String targetId,String note)throws Exception{
+        requireId("user",targetId);
+        if(note==null||note.trim().isEmpty()||note.length()>2000)
+            throw new IllegalArgumentException("Please enter a note of 1–2000 characters");
+        JSONObject body=new JSONObject();
+        body.put("targetUserId",targetId);
+        body.put("note",note.trim());
+        return request("POST","/userNotes",cookie(validSession(context)),null,body).object();
+    }
+
     private static void requireId(String type,String id){
         String prefix=type.equals("user")?"usr_":type.equals("world")?"wrld_":"grp_";
         if(id==null||!id.matches(prefix+"[0-9a-fA-F-]{36}"))
