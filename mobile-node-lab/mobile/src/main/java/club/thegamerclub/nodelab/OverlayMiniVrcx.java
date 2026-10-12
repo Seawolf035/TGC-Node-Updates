@@ -101,6 +101,21 @@ public final class OverlayMiniVrcx {
     private String chatNotice="";
     private boolean chatSound=true;
     private boolean chatSending=false;
+    private String oscPresetType="bool";
+    private String oscStatusNote="";
+    private boolean oscStatusSending=false;
+    private boolean liveStatusEnabled=false;
+    private static final long LIVE_STATUS_INTERVAL_MS=120_000L;
+    private TextView oscStatusFeedback;
+    private boolean typingActive=false;
+    private final Runnable oscStatusTick=new Runnable(){
+        @Override public void run(){
+            if(!liveStatusEnabled||root==null||
+               !"mini_osc_status".equals(screen)||!StaffGate.unlocked(ctx))return;
+            sendOscStatus(true);
+            handler.postDelayed(this,LIVE_STATUS_INTERVAL_MS);
+        }
+    };
     private String pending="";
     private Runnable pendingAction;
     private final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
@@ -112,6 +127,16 @@ public final class OverlayMiniVrcx {
     public void close(){
         handler.removeCallbacks(verificationTick);
         handler.removeCallbacks(inboxTick);
+        handler.removeCallbacks(oscStatusTick);
+        liveStatusEnabled=false;
+        oscStatusFeedback=null;
+        if(typingActive){
+            typingActive=false;
+            io.execute(()->{
+                try{VRChatOscChat.sendTyping(false);}
+                catch(Exception ignored){}
+            });
+        }
         revision++;root=null;list=null;search=null;pendingAction=null;
         host.keyboard(false);
     }
@@ -178,7 +203,9 @@ public final class OverlayMiniVrcx {
         heading.setPadding(dp(9),0,0,0);
         bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
         if(!"mini_profile".equals(screen)&&!"mini_note".equals(screen)&&
-           !"mini_chat".equals(screen)){
+           !"mini_chat".equals(screen)&&!"mini_osc_status".equals(screen)&&
+           !"mini_osc_presets".equals(screen)&&
+           !"mini_osc_parameters".equals(screen)){
             Button refresh=CompanionStyle.button(ctx,"↻",false);
             bar.addView(refresh,new LinearLayout.LayoutParams(dp(40),dp(40)));
             refresh.setOnClickListener(v->{if(search!=null)search.clearFocus();host.keyboard(false);load();});
@@ -248,6 +275,9 @@ public final class OverlayMiniVrcx {
             case "mini_worlds":return "Saved worlds";
             case "mini_avatars":return "Favorite avatars";
             case "mini_chat":return "In-game text chat";
+            case "mini_osc_presets":return "OSC quick phrases";
+            case "mini_osc_status":return "OSC status line";
+            case "mini_osc_parameters":return "Avatar OSC controls";
             case "mini_groups":return "Your groups";
             case "mini_group":return "Group details";
             case "mini_members":return "Group members";
@@ -277,6 +307,9 @@ public final class OverlayMiniVrcx {
             case "mini_profile":return "Personal VRChat account profile details";
             case "mini_note":return "Notes are saved to your personal VRChat account";
             case "mini_chat":return "Send directly to VRChat Mobile through local OSC";
+            case "mini_osc_presets":return "Reusable messages · nothing sends until you tap Send";
+            case "mini_osc_status":return "Custom text, clock and battery via chatbox OSC";
+            case "mini_osc_parameters":return "Typed OSC writes to your current avatar";
             case "mini_presence":return "Choose a status, edit your message, then apply once";
             case "mini_find":return "Search people, worlds or players seen on this phone";
             case "mini_recent":return "Worlds your VRChat account has visited";
@@ -506,6 +539,9 @@ public final class OverlayMiniVrcx {
                 execute(()->VRChatApi.currentUser(ctx),
                     result->{profile=(JSONObject)result;drawList();});break;
             case "mini_chat":
+            case "mini_osc_presets":
+            case "mini_osc_status":
+            case "mini_osc_parameters":
                 drawList();break;
             case "mini_note":
                 execute(()->{
@@ -552,6 +588,9 @@ public final class OverlayMiniVrcx {
             case "mini_now":showCurrentInstance();break;
             case "mini_presence":showPresence();break;
             case "mini_chat":showChat();break;
+            case "mini_osc_presets":showOscPresets();break;
+            case "mini_osc_status":showOscStatus();break;
+            case "mini_osc_parameters":showOscParameters();break;
             case "mini_note":showNote();break;
             default:status("Choose a tool.");
         }
