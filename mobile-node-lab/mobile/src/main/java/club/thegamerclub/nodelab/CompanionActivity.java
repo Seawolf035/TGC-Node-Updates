@@ -330,9 +330,11 @@ public final class CompanionActivity extends Activity {
         metric(top,"Waiting to sync","—","↗",CompanionStyle.GOLD,t->homeQueueLabel=t);
         space(statsRow,7);
         LinearLayout bottom=new LinearLayout(this);statsRow.addView(bottom);
-        metric(bottom,"Online friends","—","♧",CompanionStyle.ACCENT,t->homeFriendsLabel=t);
+        metric(bottom,"Friends online*","—","♧",CompanionStyle.ACCENT,t->homeFriendsLabel=t);
         metric(bottom,"Floating overlay","—","◉",CompanionStyle.GOOD,t->homeOverlayLabel=t);
 
+        page.addView(txt("* Online friends reflects observations from the last five minutes.",
+            11,CompanionStyle.MUTED,false));
         page.addView(CompanionStyle.section(this,"QUICK ACCESS"));
         LinearLayout quick=card();
         twinActions(quick,"Friends","See who's online","♧",()->openFriendHub("locations"),
@@ -411,11 +413,13 @@ public final class CompanionActivity extends Activity {
             try{
                 JSONObject session=VRChatSession.load(this);
                 JSONObject snap=FriendLogStore.snapshot(this,session);
-                online=0;
-                java.util.Iterator<String> ids=snap.keys();
-                while(ids.hasNext()){
-                    JSONObject f=snap.optJSONObject(ids.next());
-                    if(f!=null&&f.optBoolean("online",false))online++;
+                if(System.currentTimeMillis()-FriendLogStore.lastPoll(this,session)<5*60_000L){
+                    online=0;
+                    java.util.Iterator<String> ids=snap.keys();
+                    while(ids.hasNext()){
+                        JSONObject f=snap.optJSONObject(ids.next());
+                        if(f!=null&&f.optBoolean("online",false))online++;
+                    }
                 }
             }catch(Exception ignored){}
             final int pending=queue,friends=online;
