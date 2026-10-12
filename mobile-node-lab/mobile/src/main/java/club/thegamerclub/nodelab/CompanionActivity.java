@@ -26,7 +26,8 @@ public final class CompanionActivity extends Activity {
     private final ExecutorService gateWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService homeWorker=Executors.newSingleThreadExecutor();
     private boolean homeLoading=false;
-    private TextView homeNodeLabel,homeOverlayLabel,homeCaptureLabel,homeQueueLabel,homeFriendsLabel,homeRecentLabel;
+    private TextView homeNodeLabel,homeOverlayLabel,homeOverlayStatus,homeCaptureLabel,homeQueueLabel,homeFriendsLabel,homeRecentLabel;
+    private android.widget.Button homeOverlayButton;
     private final Runnable refreshHome=new Runnable(){
         @Override public void run(){
             if(!isFinishing()&&!isDestroyed()&&showingUnlocked&&"home".equals(tab)){
@@ -287,7 +288,8 @@ public final class CompanionActivity extends Activity {
         LinearLayout actions=new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         parent.addView(actions);
-        android.widget.Button overlay=CompanionStyle.button(this,"Open floating Mini VRCX",true);
+        android.widget.Button overlay=CompanionStyle.button(this,"Enable floating Mini VRCX",true);
+        homeOverlayButton=overlay;
         overlay.setTextSize(12);
         LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(53),1.45f);
         left.setMargins(0,0,dp(6),0);actions.addView(overlay,left);
@@ -313,8 +315,8 @@ public final class CompanionActivity extends Activity {
         homeNodeLabel=txt("Checking player tracking…",14,CompanionStyle.GOLD,true);
         hero.addView(homeNodeLabel);
         space(hero,5);
-        homeOverlayLabel=txt("Checking floating overlay…",12,CompanionStyle.MUTED,false);
-        hero.addView(homeOverlayLabel);
+        homeOverlayStatus=txt("Checking floating overlay…",12,CompanionStyle.MUTED,false);
+        hero.addView(homeOverlayStatus);
         space(hero,7);
         verificationNotice=txt("Staff access verified",12,CompanionStyle.GOOD,false);
         hero.addView(verificationNotice);
@@ -380,6 +382,11 @@ public final class CompanionActivity extends Activity {
             homeCaptureLabel.setText(Integer.toString(node.getInt("captured_total",0)));
         if(homeOverlayLabel!=null)
             homeOverlayLabel.setText(overlayRunning?"ON":"OFF");
+        if(homeOverlayStatus!=null)
+            homeOverlayStatus.setText(overlayRunning?
+                "● Floating Mini VRCX is enabled":"○ Floating Mini VRCX is off");
+        if(homeOverlayButton!=null)
+            homeOverlayButton.setText(overlayRunning?"Hide floating Mini VRCX":"Enable floating Mini VRCX");
     }
     private void loadHomeHistory(){
         if(!homeVisible()||homeLoading)return;
