@@ -49,12 +49,29 @@ public final class CompanionImages {
         pool.execute(()->{
             HttpURLConnection c=null;
             try{
-                c=(HttpURLConnection)new URL(url).openConnection();
-                c.setConnectTimeout(7500);
-                c.setReadTimeout(10000);
-                c.setInstanceFollowRedirects(false);
-                c.setRequestProperty("Accept","image/*");
-                if(c.getResponseCode()!=200)return;
+                URL targetUrl=new URL(url);
+                for(int redirects=0;redirects<4;redirects++){
+                    if(!approved(targetUrl.toString()))return;
+                    c=(HttpURLConnection)targetUrl.openConnection();
+                    c.setConnectTimeout(7500);
+                    c.setReadTimeout(10000);
+                    c.setInstanceFollowRedirects(false);
+                    c.setRequestProperty("Accept","image/*");
+                    int code=c.getResponseCode();
+                    if(code==200)break;
+                    if(code==301||code==302||code==303||code==307||code==308){
+                        String location=c.getHeaderField("Location");
+                        if(location==null)return;
+                        URL destination=new URL(targetUrl,location);
+                        if(!approved(destination.toString()))return;
+                        c.disconnect();
+                        c=null;
+                        targetUrl=destination;
+                        continue;
+                    }
+                    return;
+                }
+                if(c==null || c.getResponseCode()!=200)return;
                 String contentType=c.getContentType();
                 if(contentType!=null && !contentType.toLowerCase(Locale.US).startsWith("image/"))return;
                 ByteArrayOutputStream bytes=new ByteArrayOutputStream();
