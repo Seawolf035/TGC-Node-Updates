@@ -137,8 +137,10 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                 JSONObject session=VRChatSession.load(this);
                 FriendLogStore.account(session);
                 // No partial pagination may be committed to the history.
-                JSONArray friends=VRChatApi.friendSnapshot(this);
-                changes=FriendLogStore.observe(this,session,friends);
+                if(force || System.currentTimeMillis()-FriendLogStore.lastPoll(this,session)>=110_000L){
+                    JSONArray friends=VRChatApi.friendSnapshot(this);
+                    changes=FriendLogStore.observe(this,session,friends);
+                }
                 stored=FriendLogStore.snapshot(this,session);
                 log=FriendLogStore.events(this,session);
             }catch(Exception e){
