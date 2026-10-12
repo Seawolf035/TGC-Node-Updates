@@ -285,6 +285,7 @@ public final class CompanionActivity extends Activity {
         action(people,"◌","Offline friends","Find friends who aren't online",()->openBrowse("friends_offline"));
         action(people,"⌕","Find people","Search VRChat users",()->openBrowse("search_users"));
         action(people,"◎","Recent players","People you've encountered",()->openBrowse("encounters"));
+        action(people,"✎","Private VRChat notes","Notes saved to your VRChat account",this::openNotes);
         page.addView(CompanionStyle.section(this,"PLACES & COMMUNITY"));
         LinearLayout places=card();
         action(places,"◇","Favorite worlds","Your saved places",()->openBrowse("worlds"));
@@ -329,6 +330,7 @@ public final class CompanionActivity extends Activity {
         action(account,"♢","Verification invite code","Read your invite and copy its code",this::openInviteCode);
         action(account,"✉","Your inbox","Notifications and friend requests",()->openInbox("all"));
         action(account,"◉","Favorite avatars","Browse avatars saved to your VRChat account",this::openAvatars);
+        action(account,"✎","Your VRChat notes","View and edit private notes",this::openNotes);
         page.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=card();
         action(app,"↓","Check for updates","Keep your Companion up to date",
@@ -361,6 +363,9 @@ public final class CompanionActivity extends Activity {
     }
     private void openAvatars(){
         needsStaff(()->startActivity(new Intent(this,VRChatAvatarActivity.class)));
+    }
+    private void openNotes(){
+        needsStaff(()->startActivity(new Intent(this,VRChatNotesActivity.class)));
     }
     private void openInviteCode(){
         needsStaff(()->startActivity(new Intent(this,InviteCodeActivity.class)));
