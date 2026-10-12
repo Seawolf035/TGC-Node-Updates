@@ -27,7 +27,12 @@ public final class OscControlStore {
         return ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE);
     }
     private static String account(Context ctx){
-        String user=VRChatSession.load(ctx).optString("userId","");
+        String user;
+        try{user=VRChatSession.load(ctx).optString("userId","");}
+        catch(Exception e){
+            throw new SecurityException(
+                "Sign in to your personal VRChat account first.",e);
+        }
         if(!user.matches("usr_[0-9a-fA-F-]{36}"))
             throw new SecurityException("Sign in to your personal VRChat account first.");
         return user;
