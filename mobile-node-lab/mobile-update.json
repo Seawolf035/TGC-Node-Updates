@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.10.0",
-  "version_code": 19,
+  "version": "0.11.0",
+  "version_code": 20,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "94a90650b556836a2e02cc48a3d5d1d89c742a0caeb204e7292690c41fe3da40",
-  "notes": "Fix verification invite code detection by reading VRChat invitation instance locations exactly like VRCX."
+  "sha256": "3cbe567209588ad5121f581d980e293c408c6fe027364b5daf19c8c0ebd41394",
+  "notes": "Mini VRCX update: personal VRChat notes with account sync, player-profile note editing, and paginated friends, world and search lists."
 }
