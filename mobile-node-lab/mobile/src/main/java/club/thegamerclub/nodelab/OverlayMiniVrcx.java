@@ -324,7 +324,8 @@ public final class OverlayMiniVrcx {
                     JSONObject result=new JSONObject();
                     result.put("friends",FriendLogStore.events(ctx,VRChatSession.load(ctx)));
                     try(MobileOutbox db=new MobileOutbox(ctx)){
-                        result.put("players",db.recentTrackedEvents(150));
+                        JSONArray local=db.recentLocalActivity(150);
+                        result.put("players",local.length()>0?local:db.recentTrackedEvents(150));
                     }
                     return result;
                 },result->{profile=(JSONObject)result;drawList();});break;
@@ -563,9 +564,18 @@ public final class OverlayMiniVrcx {
             JSONObject item=events.optJSONObject(i);
             if(item==null)continue;
             try{
-                results.add(new JSONObject().put("time",item.optLong("local_seen_at"))
-                    .put("name",item.optString("display_name","Player"))
-                    .put("type","Player encounter")
+                String kind=item.optString("kind","");
+                String label="join".equals(kind)?"Joined":
+                    "leave".equals(kind)?"Left":
+                    "instance".equals(kind)?"Changed instance":"Player encountered";
+                String person="instance".equals(kind)?"World / instance":
+                    item.optString("display_name","Player");
+                if(person.isEmpty())person=item.optString("user_id","Player");
+                results.add(new JSONObject().put("time",item.optLong("time",
+                        item.optLong("local_seen_at")))
+                    .put("name",person)
+                    .put("type",label+
+                        (item.optString("location","").isEmpty()?"":" · "+shortValue(item.optString("location",""),75)))
                     .put("user",item.optString("user_id","")));
             }catch(Exception ignored){}
         }
