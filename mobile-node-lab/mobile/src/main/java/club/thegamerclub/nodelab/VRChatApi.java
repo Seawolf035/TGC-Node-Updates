@@ -186,6 +186,12 @@ public final class VRChatApi {
         requireId("user",id);
         return request("GET","/users/"+id,cookie(validSession(context)),null,null).object();
     }
+    /** Groups publicly visible on another user's profile, subject to VRChat privacy. */
+    public static JSONArray visibleUserGroups(Context context,String userId)throws Exception{
+        requireId("user",userId);
+        return request("GET","/users/"+userId+"/groups",
+            cookie(validSession(context)),null,null).array();
+    }
     public static JSONObject getWorld(Context context,String id)throws Exception{
         requireId("world",id);
         return request("GET","/worlds/"+id,cookie(validSession(context)),null,null).object();
