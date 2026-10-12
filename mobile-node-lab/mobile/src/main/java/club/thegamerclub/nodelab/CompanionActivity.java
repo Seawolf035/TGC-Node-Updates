@@ -61,20 +61,20 @@ public final class CompanionActivity extends Activity {
     }
     private void header(){
         LinearLayout h=new LinearLayout(this);h.setGravity(Gravity.CENTER_VERTICAL);
-        h.setPadding(dp(20),dp(16),dp(20),dp(16));
+        h.setPadding(dp(14),dp(9),dp(14),dp(9));
         h.setBackgroundColor(CompanionStyle.BG);
         root.addView(h);
         ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.tgc_logo);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        h.addView(logo,new LinearLayout.LayoutParams(dp(49),dp(49)));
+        h.addView(logo,new LinearLayout.LayoutParams(dp(40),dp(40)));
         LinearLayout brand=stack();
-        brand.setPadding(dp(12),0,0,0);
-        TextView over=txt("THE GAMER CLUB",11,CompanionStyle.ACCENT,true);
+        brand.setPadding(dp(9),0,0,0);
+        TextView over=txt("THE GAMER CLUB",10,CompanionStyle.ACCENT,true);
         over.setLetterSpacing(.13f);brand.addView(over);
-        brand.addView(txt("Staff Companion",22,CompanionStyle.TEXT,true));
+        brand.addView(txt("Staff Companion",19,CompanionStyle.TEXT,true));
         h.addView(brand,new LinearLayout.LayoutParams(0,-2,1f));
         if(showingUnlocked){
-            TextView status=CompanionStyle.chip(this,"● Active",CompanionStyle.GOOD,0xFF173B37);
+            TextView status=CompanionStyle.chip(this,"● Staff",CompanionStyle.GOOD,0xFF173B37);
             h.addView(status);
         }
     }
@@ -85,12 +85,34 @@ public final class CompanionActivity extends Activity {
         header();
         View rule=new View(this);rule.setBackgroundColor(CompanionStyle.BORDER);
         root.addView(rule,new LinearLayout.LayoutParams(-1,dp(1)));
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
+        ScrollView scroll;
+        if(navigation){
+            scroll=new SwipePageScrollView(this,this::swipePage);
+        }else{
+            scroll=new ScrollView(this);
+            scroll.setFillViewport(true);
+        }
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
-        page=stack();page.setPadding(dp(18),dp(22),dp(18),dp(25));
+        page=stack();page.setPadding(dp(16),dp(17),dp(16),dp(24));
         scroll.addView(page);
         if(navigation)bottomBar();
         CompanionStyle.safeArea(this,root);
+    }
+    /**
+     * Home ↔ Explore ↔ Tracking ↔ Settings, with bottom tabs always available.
+     * Only an intentional horizontal gesture advances; vertical scrolling remains native.
+     */
+    private void swipePage(int direction){
+        if(!StaffGate.unlocked(this))return;
+        String[] pages={"home","explore","tracking","settings"};
+        int position=0;
+        for(int i=0;i<pages.length;i++){
+            if(pages[i].equals(tab)){position=i;break;}
+        }
+        int next=position+direction;
+        if(next<0||next>=pages.length)return;
+        tab=pages[next];
+        renderUnlocked();
     }
     private void bottomBar(){
         LinearLayout nav=new LinearLayout(this);nav.setGravity(Gravity.CENTER_VERTICAL);
@@ -284,83 +306,131 @@ public final class CompanionActivity extends Activity {
         cell.addView(label);
         sink.accept(value);
     }
+    /** Compact shortcuts make the core tools visible without scrolling past statistics. */
+    private void compactQuickTile(LinearLayout line,String icon,String name,String subtitle,Runnable click){
+        LinearLayout tile=stack();
+        tile.setPadding(dp(12),dp(10),dp(9),dp(8));
+        tile.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,14,0));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(90),1f);
+        lp.setMargins(dp(3),0,dp(3),0);
+        line.addView(tile,lp);
+        tile.addView(txt(icon,19,CompanionStyle.ACCENT,false));
+        space(tile,5);
+        TextView label=txt(name,14,CompanionStyle.TEXT,true);
+        label.setSingleLine(true);
+        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        tile.addView(label);
+        TextView sub=txt(subtitle,11,CompanionStyle.MUTED,false);
+        sub.setSingleLine(true);
+        sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        tile.addView(sub);
+        tile.setContentDescription(name+". "+subtitle);
+        tile.setOnClickListener(v->click.run());
+    }
+    private void compactQuickPair(LinearLayout parent,
+            String glyphA,String nameA,String descA,Runnable clickA,
+            String glyphB,String nameB,String descB,Runnable clickB){
+        LinearLayout row=new LinearLayout(this);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
+        p.bottomMargin=dp(7);
+        parent.addView(row,p);
+        compactQuickTile(row,glyphA,nameA,descA,clickA);
+        compactQuickTile(row,glyphB,nameB,descB,clickB);
+    }
     private void homeButtons(LinearLayout parent){
         LinearLayout actions=new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         parent.addView(actions);
-        android.widget.Button overlay=CompanionStyle.button(this,"Enable floating Mini VRCX",true);
+        android.widget.Button overlay=CompanionStyle.button(this,"Show floating tools",true);
         homeOverlayButton=overlay;
         overlay.setTextSize(12);
-        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(53),1.45f);
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(43),1.4f);
         left.setMargins(0,0,dp(6),0);actions.addView(overlay,left);
         overlay.setOnClickListener(v->{toggleOverlay();main.postDelayed(this::updateHomeIndicators,650L);});
-        android.widget.Button controls=CompanionStyle.button(this,"Tracking controls",false);
+        android.widget.Button controls=CompanionStyle.button(this,"Tracking",false);
         controls.setTextSize(12);
-        actions.addView(controls,new LinearLayout.LayoutParams(0,dp(53),1f));
+        actions.addView(controls,new LinearLayout.LayoutParams(0,dp(43),1f));
         controls.setOnClickListener(v->needsStaff(
             ()->startActivity(new Intent(this,MobileDeployActivity.class))));
     }
     private void renderHome(){
-        headline("YOUR COMMAND CENTER",displayName()+".",
-            "Everything you need for VRChat and TGC in one place.");
+        // Home has its own compact geometry; no large repeated hero/headline block.
+        page.setPadding(dp(14),dp(10),dp(14),dp(20));
+        TextView welcome=txt(displayName(),23,CompanionStyle.TEXT,true);
+        welcome.setMaxLines(1);
+        welcome.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        page.addView(welcome);
+        space(page,8);
+
         LinearLayout hero=card();
-        hero.setBackground(CompanionStyle.gradient(this,0xFF1A4159,0xFF15283E,20));
-        hero.addView(CompanionStyle.chip(this,"● VERIFIED TGC STAFF",CompanionStyle.GOOD,0xFF173C3A));
-        space(hero,14);
-        hero.addView(txt("Mobile Companion",22,CompanionStyle.TEXT,true));
-        space(hero,4);
-        hero.addView(txt("Keep playing. Stay connected. Manage everything from your phone.",
-            13,CompanionStyle.MUTED,false));
-        space(hero,13);
-        homeNodeLabel=txt("Checking player tracking…",14,CompanionStyle.GOLD,true);
-        hero.addView(homeNodeLabel);
-        space(hero,5);
-        homeOverlayStatus=txt("Checking floating overlay…",12,CompanionStyle.MUTED,false);
-        hero.addView(homeOverlayStatus);
-        space(hero,7);
-        verificationNotice=txt("Staff access verified",12,CompanionStyle.GOOD,false);
+        hero.setPadding(dp(14),dp(12),dp(14),dp(12));
+        hero.setBackground(CompanionStyle.gradient(this,0xFF1A4159,0xFF15283E,17));
+        LinearLayout status=new LinearLayout(this);
+        status.setGravity(Gravity.CENTER_VERTICAL);
+        hero.addView(status);
+        homeNodeLabel=txt("○ Checking tracking…",13,CompanionStyle.GOLD,true);
+        status.addView(homeNodeLabel,new LinearLayout.LayoutParams(0,-2,1f));
+        homeOverlayStatus=txt("○ Tools off",12,CompanionStyle.MUTED,false);
+        homeOverlayStatus.setGravity(Gravity.END);
+        status.addView(homeOverlayStatus,new LinearLayout.LayoutParams(-2,-2));
+        verificationNotice=txt("Staff access verified",11,CompanionStyle.GOOD,false);
+        verificationNotice.setVisibility(View.GONE); // status is already visible in the app header
         hero.addView(verificationNotice);
-        space(hero,17);
+        space(hero,10);
         homeButtons(hero);
 
-        page.addView(CompanionStyle.section(this,"AT A GLANCE"));
-        LinearLayout statsRow=stack();page.addView(statsRow);
-        LinearLayout top=new LinearLayout(this);statsRow.addView(top);
-        metric(top,"Players recorded","—","◎",CompanionStyle.ACCENT,t->homeCaptureLabel=t);
-        metric(top,"Waiting to sync","—","↗",CompanionStyle.GOLD,t->homeQueueLabel=t);
-        space(statsRow,7);
-        LinearLayout bottom=new LinearLayout(this);statsRow.addView(bottom);
-        metric(bottom,"Friends online*","—","♧",CompanionStyle.ACCENT,t->homeFriendsLabel=t);
-        metric(bottom,"Floating overlay","—","◉",CompanionStyle.GOOD,t->homeOverlayLabel=t);
+        LinearLayout shortcutsHeading=new LinearLayout(this);
+        shortcutsHeading.setGravity(Gravity.CENTER_VERTICAL);
+        page.addView(shortcutsHeading);
+        shortcutsHeading.addView(CompanionStyle.section(this,"QUICK ACCESS"),
+            new LinearLayout.LayoutParams(0,-2,1f));
+        shortcutsHeading.addView(txt("Swipe to Explore  →",11,CompanionStyle.MUTED,false));
 
-        page.addView(txt("* Online friends reflects observations from the last five minutes.",
-            11,CompanionStyle.MUTED,false));
-        page.addView(CompanionStyle.section(this,"QUICK ACCESS"));
-        LinearLayout quick=card();
-        twinActions(quick,"Friends","See who's online","♧",()->openFriendHub("locations"),
-            "Player Log","Recent encounters","◎",()->openBrowse("encounters"));
-        twinActions(quick,"Your inbox","Invites & requests","✉",()->openInbox("all"),
-            "Your profile","Status & account","☺",this::openMyProfile);
-        twinActions(quick,"Favorite worlds","Explore places","◇",()->openBrowse("worlds"),
-            "Favorite avatars","Your collection","★",this::openAvatars);
+        // No large surrounding card: six core shortcuts sit immediately below the compact status bar.
+        LinearLayout quick=stack();
+        page.addView(quick);
+        compactQuickPair(quick,"♧","Friends","Who is online",()->openFriendHub("locations"),
+            "◎","Players","Recent encounters",()->openBrowse("encounters"));
+        compactQuickPair(quick,"✉","Inbox","Invites & requests",()->openInbox("all"),
+            "☺","My profile","Your account",this::openMyProfile);
+        compactQuickPair(quick,"◇","Worlds","Your favorites",()->openBrowse("worlds"),
+            "★","Avatars","Your collection",this::openAvatars);
 
-        page.addView(CompanionStyle.section(this,"LATEST ACTIVITY"));
+        page.addView(CompanionStyle.section(this,"YOUR ACTIVITY"));
+        LinearLayout summary=card();
+        summary.setPadding(dp(12),dp(12),dp(12),dp(8));
+        LinearLayout counts=new LinearLayout(this);
+        summary.addView(counts);
+        metric(counts,"Players seen","—","◎",CompanionStyle.ACCENT,t->homeCaptureLabel=t);
+        metric(counts,"Not sent yet","—","↗",CompanionStyle.GOLD,t->homeQueueLabel=t);
+        space(summary,7);
+        LinearLayout second=new LinearLayout(this);
+        summary.addView(second);
+        metric(second,"Friends online*","—","♧",CompanionStyle.ACCENT,t->homeFriendsLabel=t);
+        metric(second,"Floating tools","—","◉",CompanionStyle.GOOD,t->homeOverlayLabel=t);
+        TextView freshness=txt("* Based on friends checked in the last five minutes.",
+            11,CompanionStyle.MUTED,false);
+        summary.addView(freshness);
+
         LinearLayout recent=card();
-        homeRecentLabel=txt("Loading recent locally captured players…",12,CompanionStyle.MUTED,false);
+        recent.setPadding(dp(12),dp(12),dp(12),dp(8));
+        recent.addView(txt("RECENT PLAYERS",11,CompanionStyle.ACCENT,true));
+        space(recent,7);
+        homeRecentLabel=txt("Looking for recent encounters…",12,CompanionStyle.MUTED,false);
         recent.addView(homeRecentLabel);
-        space(recent,8);
-        action(recent,"↗","Open activity feed","Friend changes and recent encounters",
+        space(recent,7);
+        action(recent,"↗","View activity","Friend updates and recent players",
             ()->openFriendHub("activity"));
 
-        page.addView(CompanionStyle.section(this,"STAFF ESSENTIALS"));
+        page.addView(CompanionStyle.section(this,"MORE"));
         LinearLayout essentials=card();
-        action(essentials,"◷","Friend Log","Online, offline and world history",
+        action(essentials,"◷","Friend history","Online, offline and world changes",
             ()->openFriendHub("log"));
-        action(essentials,"◈","Group tools","Groups, members and instance information",
+        action(essentials,"◈","Groups","Members and group instances",
             ()->openBrowse("groups"));
-        action(essentials,"♢","Verification invite","Find your Gamer Music 3 verification code",
+        action(essentials,"♢","Verification code","Get your Gamer Music 3 code",
             this::openInviteCode);
-        action(essentials,"⌕","Search VRChat","Find players without needing a computer",
+        action(essentials,"⌕","Search people","Find someone on VRChat",
             ()->openBrowse("search_users"));
         updateHomeIndicators();
         loadHomeHistory();
@@ -377,7 +447,7 @@ public final class CompanionActivity extends Activity {
         boolean overlayRunning=overlay.getBoolean("running",false)&&
             System.currentTimeMillis()-overlay.getLong("service_heartbeat_at",0L)<35_000L;
         if(homeNodeLabel!=null){
-            homeNodeLabel.setText(running?"● Player tracking is running":"○ Player tracking is paused");
+            homeNodeLabel.setText(running?"● Tracking on":"○ Tracking off");
             homeNodeLabel.setTextColor(running?CompanionStyle.GOOD:CompanionStyle.GOLD);
         }
         if(homeCaptureLabel!=null)
@@ -386,9 +456,9 @@ public final class CompanionActivity extends Activity {
             homeOverlayLabel.setText(overlayRunning?"ON":"OFF");
         if(homeOverlayStatus!=null)
             homeOverlayStatus.setText(overlayRunning?
-                "● Floating Mini VRCX is enabled":"○ Floating Mini VRCX is off");
+                "● Tools on":"○ Tools off");
         if(homeOverlayButton!=null)
-            homeOverlayButton.setText(overlayRunning?"Hide floating Mini VRCX":"Enable floating Mini VRCX");
+            homeOverlayButton.setText(overlayRunning?"Hide floating tools":"Show floating tools");
     }
     private void loadHomeHistory(){
         if(!homeVisible()||homeLoading)return;
@@ -500,11 +570,11 @@ public final class CompanionActivity extends Activity {
         action(account,"✎","Your VRChat notes","View and edit private notes",this::openNotes);
         action(account,"☼","Status & presets","Edit your status and saved presets",this::openStatus);
         action(account,"★","Extended avatar favorites","VRC+-only local avatar collections",this::openExtendedAvatars);
-        page.addView(CompanionStyle.section(this,"MOBILE OVERLAY"));
+        page.addView(CompanionStyle.section(this,"FLOATING TOOLS"));
         LinearLayout floating=card();
-        action(floating,"◉","Floating Mini VRCX bubble",
-            "Open quick tools over VRChat Mobile; requires Android overlay permission",this::toggleOverlay);
-        floating.addView(txt("The bubble is optional. Stopping it never stops the Mobile Node.",
+        action(floating,"◉","Floating tools",
+            "Keep your tools available while playing VRChat",this::toggleOverlay);
+        floating.addView(txt("Turning this off won't stop player tracking.",
             12,CompanionStyle.MUTED,false));
         page.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=card();
@@ -539,13 +609,13 @@ public final class CompanionActivity extends Activity {
                 System.currentTimeMillis()-overlayState.getLong("service_heartbeat_at",0L)<35_000L;
             if(overlayActive){
                 stopService(new Intent(this,FloatingCompanionService.class));
-                Toast.makeText(this,"Floating Companion disabled",Toast.LENGTH_SHORT).show();
+                Toast.makeText(this,"Floating tools hidden",Toast.LENGTH_SHORT).show();
                 return;
             }
             if(!android.provider.Settings.canDrawOverlays(this)){
                 new android.app.AlertDialog.Builder(this)
-                    .setTitle("Allow the Mini VRCX bubble")
-                    .setMessage("Android needs permission to display this optional overlay on top of VRChat Mobile. After granting permission, return here and tap Floating Mini VRCX again.")
+                    .setTitle("Allow floating tools")
+                    .setMessage("Allow floating tools to appear over VRChat. Return here afterward to turn them on.")
                     .setNegativeButton("Cancel",null)
                     .setPositiveButton("Open settings",(dialog,which)->{
                         Intent allow=new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -558,7 +628,7 @@ public final class CompanionActivity extends Activity {
                 androidx.core.content.ContextCompat.startForegroundService(this,
                     new Intent(this,FloatingCompanionService.class)
                         .setAction(FloatingCompanionService.ACTION_START));
-                Toast.makeText(this,"Floating Companion enabled",Toast.LENGTH_SHORT).show();
+                Toast.makeText(this,"Floating tools enabled",Toast.LENGTH_SHORT).show();
             }catch(Exception e){
                 Toast.makeText(this,"Could not start overlay: "+e.getMessage(),Toast.LENGTH_LONG).show();
             }
