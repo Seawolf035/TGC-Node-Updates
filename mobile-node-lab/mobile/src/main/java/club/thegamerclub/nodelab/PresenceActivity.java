@@ -26,6 +26,7 @@ public final class PresenceActivity extends StaffProtectedActivity {
     private TextView feedback,current,chosenLabel;
     private LinearLayout saved;
     private Button apply,savePreset;
+    private final java.util.ArrayList<Button> stateButtons=new java.util.ArrayList<>();
     private int dp(float size){return CompanionStyle.dp(this,size);}
     private TextView text(String val,int sp,int color,boolean strong){
         return CompanionStyle.text(this,val,sp,color,strong);
@@ -65,7 +66,29 @@ public final class PresenceActivity extends StaffProtectedActivity {
         LinearLayout edit=card(root);
         chosenLabel=text("Selected: Online",16,CompanionStyle.TEXT,true);
         edit.addView(chosenLabel);
-        Button pick=button(edit,"Choose status",false,this::choose);
+        edit.addView(CompanionStyle.section(this,"CHOOSE PRESENCE"));
+        LinearLayout first=new LinearLayout(this);
+        first.setGravity(Gravity.CENTER_VERTICAL);
+        edit.addView(first);
+        LinearLayout second=new LinearLayout(this);
+        second.setGravity(Gravity.CENTER_VERTICAL);
+        edit.addView(second);
+        for(int i=0;i<states.length;i++){
+            final String value=states[i];
+            LinearLayout container=i<3?first:second;
+            Button option=CompanionStyle.button(this,labels[i],false);
+            option.setTextSize(12);
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,dp(47),1f);
+            params.setMargins(dp(3),dp(3),dp(3),dp(3));
+            container.addView(option,params);
+            stateButtons.add(option);
+            option.setOnClickListener(v->{
+                chosen=value;
+                chosenLabel.setText("Selected: "+labels[indexOf(chosen)]);
+                paintStatuses();
+            });
+        }
+        paintStatuses();
         edit.addView(CompanionStyle.section(this,"STATUS MESSAGE"));
         description=CompanionStyle.input(this,"Your status message (up to 32 characters)");
         description.setSingleLine(false);description.setMaxLines(3);
@@ -83,6 +106,16 @@ public final class PresenceActivity extends StaffProtectedActivity {
         root.addView(text("Presets are private to this phone and VRChat account. Only Apply changes your live VRChat status.",
             12,CompanionStyle.MUTED,false));
         controls();
+    }
+    private void paintStatuses(){
+        for(int i=0;i<stateButtons.size();i++){
+            boolean chosenNow=states[i].equals(chosen);
+            Button option=stateButtons.get(i);
+            option.setBackground(CompanionStyle.shape(this,
+                chosenNow?CompanionStyle.ACCENT:CompanionStyle.RAISED,10,0));
+            option.setTextColor(chosenNow?CompanionStyle.BG:CompanionStyle.TEXT);
+            option.setContentDescription(labels[i]+(chosenNow?" — selected":""));
+        }
     }
     private void controls(){
         boolean available=!accountId.isEmpty()&&!busy;
@@ -119,6 +152,7 @@ public final class PresenceActivity extends StaffProtectedActivity {
                 String status=info.optString("status","active");
                 chosen=indexOf(status)<states.length?states[indexOf(status)]:"active";
                 chosenLabel.setText("Selected: "+labels[indexOf(chosen)]);
+                paintStatuses();
                 description.setText(info.optString("statusDescription",""));
                 current.setText("Current status: "+status);
                 feedback.setText("");
@@ -157,6 +191,7 @@ public final class PresenceActivity extends StaffProtectedActivity {
             buttons.addView(use,new LinearLayout.LayoutParams(0,dp(43),1f));
             use.setOnClickListener(v->{
                 chosen=status;chosenLabel.setText("Selected: "+labels[indexOf(chosen)]);
+                paintStatuses();
                 description.setText(desc);
                 feedback.setText("Preset loaded. Tap Apply to update your VRChat status.");
             });
