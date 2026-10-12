@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed published version before this pass: v0.17.1 (versionCode 34). v0.17.2 remains under development until the signed Android CI pipeline succeeds. Verify actual GitHub state before future work. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.17.2 (versionCode 35). v0.17.3 remains under development until the signed Android CI pipeline succeeds. Verify actual GitHub state before future work. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -85,11 +85,19 @@ Last confirmed published version before this pass: v0.17.1 (versionCode 34). v0.
 - Generic notifications hide personal message bodies and locations. Store only bounded, per-account hashed notification IDs for baseline/dedup; establish first sync and per-endpoint baseline without old-request alert floods.
 - Real-device test Android 13–16 notification permission, battery deferrals, dual-inbox API errors, and staff revocation.
 
-### v0.17.3 — Floating Panel Customization
-- Resizable/compact overlay, customizable pinned shortcuts, persistent arrangement and improved navigation. Avoid new overlays/log collectors.
+### v0.17.3 — Floating Customization + Background QoL
+- Floating panel **Compact / Standard / Expanded** layouts clamped to device bounds, persistent user-configurable shortcut pins (one to six, reorderable), drag/edge-snap and reset-position controls.
+- User-driven opt-in **overlay recovery**: Android may recreate a killed sticky floating service, but it must verify staff authorization online before opening private views; after offline interruption retry a bounded number of times. Explicitly hidden bubble stays hidden.
+- Automatic foreground restoration checks only when the full Companion is visible and a verified staff grant and prior recovery consent are present. No force-stop/Doze or battery restriction bypass.
+- Lower-rate VRChat API polls while the overlay is collapsed. Node tracking, Shizuku watcher and Relay remain wholly independent of the floating panel and new preferences.
+- A Background health dashboard gives honest Node/overlay/alerts state and Android battery settings access; no new dangerous permissions or second log reader.
+- Device-test process recreation, offline and revoked-staff cases, Android 13–16 foreground-service restrictions and orientation changes.
+
+### v0.18 — Universal Search and Reliability
+- Broaden unified search to groups/avatars/collections, caching, accessibility, logging and optional backup/export, followed by controlled group/instance management.
 
 ### v0.18 — Remaining Convenience and Reliability
-- Improve inbox retry explanations, pagination, accessibility, rate-limit backoff and safe optional caching; expand the interactive settings and overlay controls. User-controlled overlay sizing and positioning, stronger offline data handling, and backup/export remain ahead.
+- Improve inbox retry explanations, pagination, accessibility, rate-limit backoff and safe optional caching. Strengthen offline data handling and export/backups; overlay sizing and shortcut pinning began in v0.17.3.
 - Full-scale group management and advanced instance tools only after verifying VRChat authorization scopes and safe write workflows.
 - Extend unified search to groups, avatars, friend collections and other supported data beyond people/world/local modes; validate battery impact and privacy.
 - Safe import/export and migration of local collections and history, excluding credentials.
