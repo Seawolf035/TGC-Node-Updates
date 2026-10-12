@@ -40,6 +40,8 @@ public final class OverlayMiniVrcx {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private LinearLayout root;
     private String screen="",target="",kind="";
+    private String selectedGroupId="";
+    private int memberOffset=0,banOffset=0;
     private int revision=0;
     private String lastError="";
     private boolean busy=false;
@@ -132,8 +134,9 @@ public final class OverlayMiniVrcx {
                 return false;
             });
             search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-            if("mini_search".equals(screen)){
-                search.setHint("Enter at least 2 characters...");
+            if("mini_search".equals(screen)||"mini_members".equals(screen)){
+                search.setHint("mini_members".equals(screen)?
+                    "Search member name (3+ letters)":"Search user (2+ letters)");
                 search.setSingleLine(true);
                 search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
                 search.setOnEditorActionListener((v,action,event)->{
@@ -159,7 +162,7 @@ public final class OverlayMiniVrcx {
             screen.equals("mini_log")||screen.equals("mini_activity")||
             screen.equals("mini_worlds")||
             screen.equals("mini_avatars")||screen.equals("mini_groups")||
-            screen.equals("mini_search");
+            screen.equals("mini_search")||screen.equals("mini_members");
     }
     private String title(){
         switch(screen){
@@ -173,6 +176,9 @@ public final class OverlayMiniVrcx {
             case "mini_avatars":return "Favorite avatars";
             case "mini_groups":return "Your groups";
             case "mini_group":return "Group details";
+            case "mini_members":return "Group members";
+            case "mini_instances":return "Group instances";
+            case "mini_bans":return "Group bans";
             case "mini_search":return "Search users";
             case "mini_world":return "World details";
             case "mini_instance":return "Instance details";
@@ -332,8 +338,20 @@ public final class OverlayMiniVrcx {
                 execute(()->VRChatApi.groups(ctx),
                     result->{loaded=(JSONArray)result;drawList();});break;
             case "mini_group":
-                execute(()->VRChatApi.getGroup(ctx,target),
+                execute(()->VRChatApi.getGroup(ctx,selectedGroupId),
                     result->{profile=(JSONObject)result;drawList();});break;
+            case "mini_members":
+                execute(()->{
+                    String term=term();
+                    if(term.length()>=3)return VRChatApi.searchGroupMembers(ctx,selectedGroupId,term);
+                    return VRChatApi.groupMembers(ctx,selectedGroupId,memberOffset);
+                },result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_instances":
+                execute(()->VRChatApi.groupInstances(ctx,selectedGroupId),
+                    result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_bans":
+                execute(()->VRChatApi.groupBans(ctx,selectedGroupId,banOffset),
+                    result->{loaded=(JSONArray)result;drawList();});break;
             case "mini_search":
                 if(term().length()<2){status("Enter at least two characters, then tap Search.");break;}
                 execute(()->VRChatApi.searchUsers(ctx,search.getText().toString().trim()),
@@ -377,6 +395,9 @@ public final class OverlayMiniVrcx {
             case "mini_avatars":showAvatars();break;
             case "mini_groups":showGroups();break;
             case "mini_group":showGroup();break;
+            case "mini_members":showMembers();break;
+            case "mini_instances":showGroupInstances();break;
+            case "mini_bans":showBans();break;
             case "mini_search":showSearch();break;
             case "mini_presence":showPresence();break;
             case "mini_note":showNote();break;
@@ -686,13 +707,14 @@ public final class OverlayMiniVrcx {
             String id=group.optString("id",group.optString("groupId",""));
             if(!id.matches("grp_[0-9a-fA-F-]{36}")||!matches(name+" "+id))continue;
             line(list,name,group.optString("shortCode",id),()->{
-                target=id;host.navigate("mini_group");
+                selectedGroupId=id;target=id;memberOffset=0;banOffset=0;
+                host.navigate("mini_group");
             });count++;
         }
         if(count==0)line(list,"No groups found","Your joined VRChat groups appear here.",null);
     }
     private void showGroup(){
-        String id=target;
+        String id=selectedGroupId;
         LinearLayout c=card(list);
         c.addView(text(profile.optString("name","VRChat group"),18,CompanionStyle.TEXT,true));
         c.addView(text(shortValue(profile.optString("description",""),1300),
@@ -702,6 +724,102 @@ public final class OverlayMiniVrcx {
         button(c,"Copy group ID",false,()->copy("group ID",id));
         button(c,"Copy group link",false,
             ()->copy("group link","https://vrchat.com/home/group/"+id));
+        button(c,"Browse group members",true,()->{memberOffset=0;host.navigate("mini_members");});
+        button(c,"View active group instances",false,()->host.navigate("mini_instances"));
+        button(c,"Review group bans (read-only)",false,()->{banOffset=0;host.navigate("mini_bans");});
+    }
+    private String memberName(JSONObject member){
+        JSONObject user=member.optJSONObject("user");
+        if(user!=null){
+            String name=user.optString("displayName","");
+            if(!name.isEmpty())return name;
+        }
+        return member.optString("displayName",member.optString("userId","Member"));
+    }
+    private String memberId(JSONObject member){
+        String uid=member.optString("userId","");
+        if(!validUser(uid)){
+            JSONObject user=member.optJSONObject("user");
+            if(user!=null)uid=user.optString("id","");
+        }
+        return uid;
+    }
+    private void showMembers(){
+        section(list,"GROUP MEMBER DIRECTORY");
+        list.addView(text("Page "+(memberOffset/60+1)+" · "+loaded.length()+
+            " results · search 3+ characters for server-wide matches",
+            12,CompanionStyle.MUTED,false));
+        int count=0;
+        for(int i=0;i<loaded.length();i++){
+            JSONObject e=loaded.optJSONObject(i);
+            if(e==null)continue;
+            String name=memberName(e),id=memberId(e);
+            if(!matches(name+" "+id))continue;
+            String role="";
+            JSONArray roles=e.optJSONArray("roleIds");
+            if(roles!=null&&roles.length()>0)role=" · "+roles.length()+" group role(s)";
+            final String uid=id;
+            line(list,name,"Member"+role+
+                (e.optString("joinedAt","").isEmpty()?"":" · Joined "+e.optString("joinedAt")),
+                validUser(uid)?()->profile(uid):null);
+            count++;
+        }
+        if(count==0)line(list,"No matching members",
+            "Try another search, or refresh without a search filter.",null);
+        if(term().length()<3){
+            LinearLayout navigation=card(list);
+            button(navigation,"Previous 60",false,()->{
+                if(memberOffset>=60){memberOffset-=60;load();}
+            });
+            if(loaded.length()>=60){
+                button(navigation,"Next 60",false,()->{memberOffset+=60;load();});
+            }
+        }
+    }
+    private void showGroupInstances(){
+        section(list,"ACTIVE GROUP INSTANCES");
+        list.addView(text("Only instances this personal account is allowed to see",
+            12,CompanionStyle.MUTED,false));
+        for(int i=0;i<loaded.length();i++){
+            JSONObject item=loaded.optJSONObject(i);if(item==null)continue;
+            String loc=item.optString("location","");
+            String name=item.optString("name",item.optString("instanceId","Group instance"));
+            String number=item.optString("n_users",
+                item.optString("userCount",item.optString("capacity","")));
+            LinearLayout c=card(list);
+            c.addView(text(shortValue(name,60),14,CompanionStyle.TEXT,true));
+            c.addView(text(shortValue(loc,150)+
+                (number.isEmpty()?"":" · "+number+" players/capacity"),12,
+                CompanionStyle.MUTED,false));
+            if(!loc.isEmpty()){
+                button(c,"Copy location",false,()->copy("group instance location",loc));
+                if(loc.startsWith("wrld_")&&loc.contains(":")){
+                    button(c,"Instance details",false,()->location(loc));
+                    button(c,"Request self-invite",false,()->confirm(
+                        "Send yourself an invite to this group instance?",
+                        ()->write(()->VRChatApi.selfInvite(ctx,loc),"Invite requested")));
+                }
+            }
+        }
+        if(loaded.length()==0)line(list,"No visible group instances",
+            "There may be no active instances, or your account cannot see them.",null);
+    }
+    private void showBans(){
+        section(list,"READ-ONLY GROUP BAN LIST");
+        list.addView(text("Visible only where your VRChat group permissions allow it.",
+            12,CompanionStyle.MUTED,false));
+        for(int i=0;i<loaded.length();i++){
+            JSONObject item=loaded.optJSONObject(i);if(item==null)continue;
+            String id=memberId(item);
+            String name=memberName(item);
+            if(name.trim().isEmpty())name=id.isEmpty()?"Group ban":id;
+            line(list,name,"Banned member · "+shortValue(id,60),
+                validUser(id)?()->profile(id):null);
+        }
+        if(loaded.length()==0)line(list,"No visible bans",
+            "This group may have no bans, or your account may have limited access.",null);
+        if(banOffset>=60)button(list,"Previous 60",false,()->{banOffset-=60;load();});
+        if(loaded.length()>=60)button(list,"Next 60",false,()->{banOffset+=60;load();});
     }
     private void showSearch(){
         String query=term();
