@@ -184,12 +184,12 @@ public final class OverlayMiniVrcx {
             case "mini_instance":return "Instance details";
             case "mini_presence":return "Your status";
             case "mini_note":return "Private VRChat note";
-            default:return "Mini VRCX";
+            default:return "Floating tools";
         }
     }
     private String subtitle(){
         switch(screen){
-            case "mini_players":return "Captured by Mobile Node · stored on this phone";
+            case "mini_players":return "People you have met · saved on this phone";
             case "mini_friends":return "Your personal VRChat friends · only visible locations";
             case "mini_log":return "Observed friend changes since logging began";
             case "mini_activity":return "Locally recorded encounters and friend activity";
@@ -197,7 +197,7 @@ public final class OverlayMiniVrcx {
             case "mini_profile":return "Personal VRChat account profile details";
             case "mini_note":return "Notes are saved to your personal VRChat account";
             case "mini_presence":return "Change your personal status without leaving VRChat";
-            default:return "Inside the overlay — VRChat Mobile stays open";
+            default:return "Use these tools without leaving VRChat";
         }
     }
     private void status(String message){
@@ -401,7 +401,7 @@ public final class OverlayMiniVrcx {
             case "mini_search":showSearch();break;
             case "mini_presence":showPresence();break;
             case "mini_note":showNote();break;
-            default:status("Select a Mini VRCX tool.");
+            default:status("Choose a tool.");
         }
     }
     private void showPlayers(){
@@ -410,7 +410,7 @@ public final class OverlayMiniVrcx {
         if(recent==null)recent=new JSONArray();
         TextView counts=text(seen.length()+" known players · "+
             recent.length()+" captured log entries · "+profile.optInt("pending",0)+
-            " waiting for Relay",12,CompanionStyle.ACCENT,false);
+            " waiting to send",12,CompanionStyle.ACCENT,false);
         list.addView(counts);
         int items=0;
         for(int i=0;i<seen.length()&&items<limit;i++){
@@ -500,7 +500,7 @@ public final class OverlayMiniVrcx {
             try{
                 results.add(new JSONObject().put("time",item.optLong("local_seen_at"))
                     .put("name",item.optString("display_name","Player"))
-                    .put("type","Mobile Node encounter")
+                    .put("type","Player encounter")
                     .put("user",item.optString("user_id","")));
             }catch(Exception ignored){}
         }
