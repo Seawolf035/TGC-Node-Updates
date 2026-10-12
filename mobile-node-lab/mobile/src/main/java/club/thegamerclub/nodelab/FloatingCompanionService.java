@@ -85,7 +85,8 @@ public final class FloatingCompanionService extends Service {
     // bubble exists, even when the panel is collapsed.
     private volatile boolean oscLiveActive=false;
     private boolean oscLiveBusy=false;
-    private int oscLiveIntervalSeconds=10,oscLiveGeneration=0;
+    private int oscLiveIntervalSeconds=5;
+    private volatile int oscLiveGeneration=0;
     private String oscLiveAccountId="",oscLiveLastError="",oscLiveLastText="";
     private long oscLiveLastAt=0L;
     private final Runnable oscLiveTick=new Runnable(){
@@ -183,7 +184,7 @@ public final class FloatingCompanionService extends Service {
         oscLiveGeneration++;
         handler.removeCallbacks(oscLiveTick);
         oscLiveBusy=false;
-        if(!stoppingExplicitly)
+        if(!stoppingExplicitly&&bubble!=null)
             updateForegroundText("Floating tools ready");
     }
     private String oscLiveSummary(){
@@ -1250,6 +1251,7 @@ public final class FloatingCompanionService extends Service {
         });
     }
     @Override public void onDestroy(){
+        stoppingExplicitly=true;
         stopOscLive();
         if(restoreRunnable[0]!=null)handler.removeCallbacks(restoreRunnable[0]);
         handler.removeCallbacks(validate);
