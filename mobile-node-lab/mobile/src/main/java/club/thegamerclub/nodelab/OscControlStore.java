@@ -21,6 +21,7 @@ public final class OscControlStore {
     private static final String PREF="tgc_osc_controls";
     private static final int MAX_PHRASES=24;
     private static final int MAX_PARAMETERS=16;
+    private static final int MAX_CHATBOXES=8;
     private OscControlStore(){}
 
     private static android.content.SharedPreferences prefs(Context ctx){
@@ -49,6 +50,7 @@ public final class OscControlStore {
     }
     public static JSONArray phrases(Context ctx){return array(ctx,"phrases");}
     public static JSONArray parameters(Context ctx){return array(ctx,"params");}
+    public static JSONArray chatboxes(Context ctx){return array(ctx,"rotating_chatboxes");}
     private static String validLabel(String value){
         if(value==null||value.trim().isEmpty()||value.trim().length()>40)
             throw new IllegalArgumentException("Use a name between 1 and 40 characters.");
@@ -139,16 +141,95 @@ public final class OscControlStore {
             throw new IllegalArgumentException("Choose a 5, 10, 15 or 30 second interval.");
         prefs(ctx).edit().putInt(key(ctx,"live_interval_seconds"),seconds).apply();
     }
+    /** Additional named rotating chatboxes; the legacy status remains slot zero. */
+    public static void saveChatbox(Context ctx,String previousName,String newName,
+                                   String message,boolean clock,boolean battery)throws Exception{
+        String label=validLabel(newName);
+        String content=message==null?"":message.trim();
+        if(content.length()>90)
+            throw new IllegalArgumentException("Chatbox text is limited to 90 characters.");
+        // Validate the full outgoing OSC message before changing saved settings.
+        buildStatusLine(ctx,content,clock,battery);
+        JSONArray old=chatboxes(ctx),next=new JSONArray();
+        String original=previousName==null?"":previousName.trim();
+        boolean replaced=false;
+        for(int n=0;n<old.length();n++){
+            JSONObject item=old.optJSONObject(n);
+            if(item==null)continue;
+            String name=item.optString("name","");
+            if(label.equalsIgnoreCase(name)&&!original.equalsIgnoreCase(name))
+                throw new IllegalArgumentException("A chatbox with that name already exists.");
+            if(!original.isEmpty()&&original.equalsIgnoreCase(name)){
+                next.put(new JSONObject().put("name",label).put("text",content)
+                    .put("time",clock).put("battery",battery));
+                replaced=true;
+            }else next.put(item);
+        }
+        if(!replaced){
+            if(next.length()>=MAX_CHATBOXES)
+                throw new IllegalArgumentException("Maximum 8 additional chatboxes.");
+            next.put(new JSONObject().put("name",label).put("text",content)
+                .put("time",clock).put("battery",battery));
+        }
+        saveArray(ctx,"rotating_chatboxes",next);
+    }
+    public static void deleteChatbox(Context ctx,String name){
+        JSONArray old=chatboxes(ctx),next=new JSONArray();
+        for(int n=0;n<old.length();n++){
+            JSONObject item=old.optJSONObject(n);
+            if(item!=null&&!name.equals(item.optString("name","")))next.put(item);
+        }
+        saveArray(ctx,"rotating_chatboxes",next);
+        if(next.length()==0)setRotationEnabled(ctx,false);
+    }
+    public static boolean rotationEnabled(Context ctx){
+        return prefs(ctx).getBoolean(key(ctx,"chatbox_rotation_enabled"),false)
+            &&chatboxes(ctx).length()>0;
+    }
+    public static void setRotationEnabled(Context ctx,boolean enabled){
+        if(enabled&&chatboxes(ctx).length()==0)
+            throw new IllegalArgumentException("Save at least one additional chatbox first.");
+        prefs(ctx).edit().putBoolean(key(ctx,"chatbox_rotation_enabled"),enabled).apply();
+    }
+    public static int rotationInterval(Context ctx){
+        int seconds=prefs(ctx).getInt(key(ctx,"chatbox_rotation_interval"),30);
+        return seconds==15||seconds==30||seconds==60||seconds==120?seconds:30;
+    }
+    public static void setRotationInterval(Context ctx,int seconds){
+        if(seconds!=15&&seconds!=30&&seconds!=60&&seconds!=120)
+            throw new IllegalArgumentException("Choose a 15, 30, 60 or 120 second switch.");
+        prefs(ctx).edit().putInt(key(ctx,"chatbox_rotation_interval"),seconds).apply();
+    }
+    public static int liveSlotCount(Context ctx){
+        return rotationEnabled(ctx)?1+chatboxes(ctx).length():1;
+    }
+    public static String liveChatboxAt(Context ctx,int slot){
+        if(slot<=0||!rotationEnabled(ctx))return statusLine(ctx);
+        JSONObject row=chatboxes(ctx).optJSONObject(slot-1);
+        if(row==null)return statusLine(ctx);
+        return buildStatusLine(ctx,row.optString("text",""),
+            row.optBoolean("time",false),row.optBoolean("battery",false));
+    }
+    public static String previewChatbox(Context ctx,String message,
+                                        boolean clock,boolean battery){
+        return buildStatusLine(ctx,message,clock,battery);
+    }
     public static String statusLine(Context ctx){
+        return buildStatusLine(ctx,prefix(ctx),includeTime(ctx),includeBattery(ctx));
+    }
+    private static String buildStatusLine(Context ctx,String prefix,
+                                          boolean showTime,boolean showBattery){
         StringBuilder result=new StringBuilder();
-        String prefix=prefix(ctx).trim();
-        if(!prefix.isEmpty())result.append(prefix);
-        if(includeTime(ctx)){
+        String message=prefix==null?"":prefix.trim();
+        if(message.length()>90)
+            throw new IllegalArgumentException("Status text is limited to 90 characters.");
+        if(!message.isEmpty())result.append(message);
+        if(showTime){
             if(result.length()>0)result.append("  ·  ");
             result.append(new SimpleDateFormat("h:mm a",Locale.getDefault())
                 .format(new Date()));
         }
-        if(includeBattery(ctx)){
+        if(showBattery){
             if(result.length()>0)result.append("  ·  ");
             Intent battery=ctx.registerReceiver(null,
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
