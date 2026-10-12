@@ -87,8 +87,8 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
         more.setOnClickListener(v->fetch(true));
         refreshButton=CompanionStyle.button(this,"Refresh",true);
         LinearLayout.LayoutParams rp=CompanionStyle.buttonParams(this);
-        rp.setMargins(dp(15),0,dp(15),dp(13));root.addView(refresh,rp);
-        refresh.setOnClickListener(v->fetch(false));
+        rp.setMargins(dp(15),0,dp(15),dp(13));root.addView(refreshButton,rp);
+        refreshButton.setOnClickListener(v->fetch(false));
     }
     private void updateSummary(){
         if(status==null)return;
