@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** VRCX-style read-only personal account views; live VRChat API data, not fake samples. */
-public final class VRChatBrowseActivity extends Activity {
+public final class VRChatBrowseActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private String mode="friends_online";
     private LinearLayout page;
