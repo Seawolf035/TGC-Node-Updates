@@ -77,12 +77,9 @@ Last confirmed published version before this pass: v0.16.5 (versionCode 32). v0.
 ### v0.17.x / v0.18 — Remaining Convenience and Reliability
 - Improved notification refresh, filters and deduplication, user-controlled overlay sizing and positioning, stronger caching and error recovery, status/search accessibility, and backup/export for device-local histories and presets.
 - Full-scale group management and advanced instance tools only after verifying VRChat authorization scopes and safe write workflows.
-
-
-- Persistent Android notifications for supported invites/requests/activity, with battery-conscious refresh.
-- Unified search across friends, players, groups, worlds, avatars and local history.
-- Import/export for local collections and history (exclude session credentials and secrets).
-- Responsive native UI, accessible controls, pagination, caching, robust back navigation, offline states and error handling.
+- Battery-conscious Android invite/notification updates; unified search expanded to groups, avatars, friend collections and other supported data beyond v0.17's people/world/local modes.
+- Safe import/export and migration of local collections and history, excluding credentials.
+- Accessible controls, pagination, caching, improved back navigation and offline states.
 
 ### Later / optional
 - Friend activity statistics and heatmaps based on actual observed history.
