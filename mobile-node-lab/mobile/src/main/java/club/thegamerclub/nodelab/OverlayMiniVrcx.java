@@ -2309,6 +2309,19 @@ public final class OverlayMiniVrcx {
      * receives only the explicit local OSC chatbox packet when Send is tapped,
      * avoiding the currently unreliable VRChat Mobile keyboard.
      */
+    private void autoOscTyping(boolean on){
+        if(!StaffGate.unlocked(ctx))return;
+        boolean enabled=false;
+        try{enabled=OscControlStore.typingAuto(ctx);}
+        catch(Exception ignored){}
+        if(on&&!enabled)return;
+        if(typingActive==on)return;
+        typingActive=on;
+        io.execute(()->{
+            try{VRChatOscChat.sendTyping(on);}
+            catch(Exception ignored){}
+        });
+    }
     private void showChat(){
         LinearLayout info=card(list);
         info.addView(text("Text chat without VRChat's keyboard",17,
@@ -2338,7 +2351,10 @@ public final class OverlayMiniVrcx {
             new InputFilter.LengthFilter(VRChatOscChat.MAX_CHARACTERS)});
         entry.setText(chatDraft);
         entry.setSelection(entry.length());
-        entry.setOnFocusChangeListener((v,focused)->host.keyboard(focused));
+        entry.setOnFocusChangeListener((v,focused)->{
+            host.keyboard(focused);
+            if(!focused)autoOscTyping(false);
+        });
         entry.setOnTouchListener((v,event)->{
             if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN)
                 host.keyboard(true);
@@ -2364,6 +2380,7 @@ public final class OverlayMiniVrcx {
                 chatDraft=text.toString();
                 chatNotice="";
                 feedback.setText("");
+                autoOscTyping(!chatDraft.trim().isEmpty());
                 refreshControls.run();
             }
             public void afterTextChanged(android.text.Editable text){}
@@ -2381,6 +2398,7 @@ public final class OverlayMiniVrcx {
             }
             final boolean sfx=chatSound;
             chatSending=true;
+            autoOscTyping(false);
             refreshControls.run();
             host.keyboard(false);
             entry.clearFocus();
