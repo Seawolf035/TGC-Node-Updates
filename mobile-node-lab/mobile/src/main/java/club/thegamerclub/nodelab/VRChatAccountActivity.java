@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Personal VRChat account; login details never sent to TGC and password never saved. */
-public final class VRChatAccountActivity extends Activity {
+public final class VRChatAccountActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private LinearLayout page;
     private TextView message;
