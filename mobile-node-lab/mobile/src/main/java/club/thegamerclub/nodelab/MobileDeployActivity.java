@@ -66,6 +66,7 @@ public class MobileDeployActivity extends Activity {
     LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(dp(18),dp(20),dp(18),dp(27));
     scroll.addView(root);setContentView(scroll);
+    CompanionStyle.safeArea(this,scroll);
     action(root,"← Back",this::finish,false);
     spacer(root,12);
     root.addView(CompanionStyle.section(this,"DEVICE"));
