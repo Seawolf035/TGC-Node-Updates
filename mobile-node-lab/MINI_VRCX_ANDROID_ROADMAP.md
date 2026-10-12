@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed published version before this pass: v0.17.3 (versionCode 36). v0.17.4 is in development until signed Android CI succeeds. Verify current GitHub state before further changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.17.4 (versionCode 37). v0.17.5 is under development until the signed CI pipeline succeeds. Verify the actual GitHub release state before further changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -98,6 +98,13 @@ Last confirmed published version before this pass: v0.17.3 (versionCode 36). v0.
 - Show every accessible group's actual avatars and name/count in both the full gallery and floating tools, plus a deduplicated combined All view with search, avatar details and safe Select avatar actions.
 - Explicitly report partial or inaccessible groups; if discovery is unavailable, use a clearly labeled bounded legacy combined fallback rather than claiming it retrieved every list.
 - In optional Node Tracking help, add a **Download Shizuku** link to the official site and a setup-guide link. The personal-account Companion requires neither Shizuku nor VRChat Mobile installation.
+
+### v0.17.5 — Quest-Aware Floating Tools
+- Detect Oculus/Meta Quest Android hardware through local Build device identifiers.
+- On Quest, disable the 2D floating panel **by default**, without disabling the main Companion or assuming Quest-compatible log tracking is shipped.
+- Offer an explicit **experimental opt-in** under Companion Settings with a clear Quest incompatibility warning. Opt-in permits manual attempts to launch but does not grant overlay permission or guarantee visibility inside VR.
+- Enforce the same setting in Home, the service's direct start, sticky background recovery and active runtime checks; disabling the preference stops any existing floater and prevents revival.
+- Keep normal Android phone/tablet floating features unchanged. Actual Quest device verification remains pending.
 
 ### v0.18 — Universal Search and Reliability
 - Broaden unified search to groups/avatars/collections, caching, accessibility, logging and optional backup/export, followed by controlled group/instance management.
