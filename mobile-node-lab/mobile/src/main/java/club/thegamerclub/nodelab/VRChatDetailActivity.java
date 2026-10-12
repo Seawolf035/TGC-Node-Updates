@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
  * Native VRChat user/world/group profile. No ACTION_VIEW or external web browser.
  * Read-only endpoints are loaded with the staff member's separate VRChat session.
  */
-public final class VRChatDetailActivity extends Activity {
+public final class VRChatDetailActivity extends StaffProtectedActivity {
     private static final int BG=0xFF0B1423,SURFACE=0xFF182C40,TEXT=0xFFE7F4FF,
         MUTED=0xFFB5CDE0,ACCENT=0xFF6BD5F2;
     private final ExecutorService io=Executors.newSingleThreadExecutor();
