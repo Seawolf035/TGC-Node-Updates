@@ -6,6 +6,7 @@
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
 <application android:allowBackup="false" android:label="TGC Staff Companion" android:icon="@drawable/tgc_logo" android:roundIcon="@drawable/tgc_logo"
  android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.Light.NoActionBar">
  <provider android:name="rikka.shizuku.ShizukuProvider"
@@ -19,6 +20,11 @@
    <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
      android:value="User-initiated continuous VRChat player event monitoring with a persistent notification" />
  </service>
+ <service android:name=".FloatingCompanionService" android:enabled="true" android:exported="false"
+   android:foregroundServiceType="specialUse">
+   <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+     android:value="Optional user-controlled floating quick-tools overlay for VRChat Mobile" />
+ </service>
  <provider android:name="androidx.core.content.FileProvider"
    android:authorities="${applicationId}.updates"
    android:exported="false"
@@ -26,6 +32,7 @@
   <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/tgc_update_paths"/>
  </provider>
  <activity android:name=".ExtendedAvatarActivity" android:exported="false"/>
+ <activity android:name=".FriendHubActivity" android:exported="false"/>
  <activity android:name=".PresenceActivity" android:exported="false"/>
  <activity android:name=".VRChatNotesActivity" android:exported="false"/>
  <activity android:name=".VRChatInboxActivity" android:exported="false"/>
