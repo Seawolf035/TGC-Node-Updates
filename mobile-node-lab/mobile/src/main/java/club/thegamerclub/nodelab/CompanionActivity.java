@@ -196,8 +196,19 @@ public final class CompanionActivity extends Activity {
         tile.addView(txt(description,12,CompanionStyle.MUTED,false));
         tile.setOnClickListener(v->click.run());
     }
+    /** Quest starts with the floating window disabled, even after an upgrade. */
+    private void enforceQuestOverlaySetting(){
+        if(QuestDevice.canRunOverlay(this))return;
+        OverlayPreferences.setDesired(this,false);
+        // Stop any overlay surviving an in-place upgrade from an older release.
+        stopService(new Intent(this,FloatingCompanionService.class));
+        getSharedPreferences("tgc_overlay",0).edit()
+            .putBoolean("running",false)
+            .putLong("service_heartbeat_at",0L).apply();
+    }
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
+        enforceQuestOverlaySetting();
         if(saved!=null){tab=saved.getString("tab","home");advanced=saved.getBoolean("advanced",false);}
         locked("Checking your staff access...");
         InboxAlertSettings.restore(this);
@@ -208,6 +219,7 @@ public final class CompanionActivity extends Activity {
     }
     @Override protected void onResume(){
         super.onResume();
+        enforceQuestOverlaySetting();
         foreground=true;
         main.removeCallbacks(refreshGate);
         revalidate();
@@ -286,7 +298,8 @@ public final class CompanionActivity extends Activity {
      * User opt-in and a newly approved staff grant are mandatory.
      */
     private void maybeRestoreFloatingTools(){
-        if(!foreground||!OverlayPreferences.recover(this)||
+        if(!QuestDevice.canRunOverlay(this)||
+           !foreground||!OverlayPreferences.recover(this)||
             !OverlayPreferences.desired(this)||!StaffGate.unlocked(this)||
             !android.provider.Settings.canDrawOverlays(this))return;
         android.content.SharedPreferences prefs=getSharedPreferences("tgc_overlay",0);
@@ -396,6 +409,11 @@ public final class CompanionActivity extends Activity {
         overlay.setTextSize(12);
         toolsColumn.addView(overlay,new LinearLayout.LayoutParams(-1,dp(43)));
         overlay.setOnClickListener(v->{
+            if(!QuestDevice.canRunOverlay(this)){
+                tab="settings";
+                renderUnlocked();
+                return;
+            }
             toggleOverlay();
             main.postDelayed(this::updateHomeIndicators,650L);
         });
@@ -499,13 +517,15 @@ public final class CompanionActivity extends Activity {
         }
         if(homeCaptureLabel!=null)
             homeCaptureLabel.setText(Integer.toString(node.getInt("captured_total",0)));
+        boolean questBlocked=!QuestDevice.canRunOverlay(this);
         if(homeOverlayLabel!=null)
-            homeOverlayLabel.setText(overlayRunning?"ON":"OFF");
+            homeOverlayLabel.setText(questBlocked?"DISABLED":overlayRunning?"ON":"OFF");
         if(homeOverlayStatus!=null)
-            homeOverlayStatus.setText(overlayRunning?
-                "● Tools on":"○ Tools off");
+            homeOverlayStatus.setText(questBlocked?
+                "○ Quest: disabled":overlayRunning?"● Tools on":"○ Tools off");
         if(homeOverlayButton!=null)
-            homeOverlayButton.setText(overlayRunning?"Hide floating tools":"Show floating tools");
+            homeOverlayButton.setText(questBlocked?"Enable in Settings":
+                overlayRunning?"Hide floating tools":"Show floating tools");
     }
     private void loadHomeHistory(){
         if(!homeVisible()||homeLoading)return;
@@ -664,6 +684,25 @@ public final class CompanionActivity extends Activity {
                 this::requestInboxNotificationPermission);
         page.addView(CompanionStyle.section(this,"FLOATING TOOLS"));
         LinearLayout floating=card();
+        if(QuestDevice.isQuestDevice()){
+            floating.addView(txt("Meta Quest headset detected",16,
+                CompanionStyle.ACCENT,true));
+            space(floating,7);
+            floating.addView(txt(
+                "Floating tools are disabled by default on Quest because "+
+                "Android's 2D overlays may not work in VR. Other Companion "+
+                "features are still available. You can enable the floater "+
+                "experimentally, but it may not appear or function correctly.",
+                12,CompanionStyle.MUTED,false));
+            space(floating,9);
+            action(floating,"◉",QuestDevice.experimentalOverlayAllowed(this)?
+                "Disable experimental Quest floater":"Enable experimental Quest floater",
+                QuestDevice.experimentalOverlayAllowed(this)?
+                    "Enabled on this headset · Tap to turn off":
+                    "Off by default · Tap to opt in",
+                this::toggleQuestOverlayExperimental);
+        }
+        if(QuestDevice.canRunOverlay(this)){
         action(floating,"◉","Floating tools",
             "Keep your tools available while playing VRChat",this::toggleOverlay);
         floating.addView(txt("Turning this off won't stop player tracking.",
@@ -689,6 +728,7 @@ public final class CompanionActivity extends Activity {
             "Android permits it and staff access can be reverified. It doesn't "+
             "force-start after an Android force-stop or bypass battery restrictions.",
             12,CompanionStyle.MUTED,false));
+        }
         page.addView(CompanionStyle.section(this,"BACKGROUND & BATTERY"));
         LinearLayout background=card();
         action(background,"◉","Background health",
@@ -794,7 +834,9 @@ public final class CompanionActivity extends Activity {
         }catch(Exception ignored){}
         String details=
             "Player tracking: "+(nodeLive?"Running":"Not currently running")+
-            "\nFloating tools: "+(overlayLive?"Running":"Not currently running")+
+            "\nFloating tools: "+(!QuestDevice.canRunOverlay(this)?
+                "Disabled by default on Quest":overlayLive?
+                "Running":"Not currently running")+
             "\nAutomatic floating recovery: "+
                 (OverlayPreferences.recover(this)?"Enabled":"Off")+
             "\nInbox alerts: "+(alerts?"Enabled":
@@ -819,6 +861,32 @@ public final class CompanionActivity extends Activity {
                 }
             }).show();
     }
+    private void toggleQuestOverlayExperimental(){
+        if(!QuestDevice.isQuestDevice()||!StaffGate.unlocked(this))return;
+        if(QuestDevice.experimentalOverlayAllowed(this)){
+            QuestDevice.setExperimentalOverlayAllowed(this,false);
+            enforceQuestOverlaySetting();
+            Toast.makeText(this,"Quest floating tools disabled",
+                Toast.LENGTH_SHORT).show();
+            renderUnlocked();return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Try experimental floating tools on Quest?")
+            .setMessage("Quest does not reliably support the Android overlay "+
+                "window used by the Companion. Turning this on only allows "+
+                "you to attempt launching the floater; it may not appear in VR. "+
+                "No floating service will start until you choose Show floating "+
+                "tools and approve any Android permissions. Tracking, "+
+                "notifications and other Companion features are unaffected.")
+            .setNegativeButton("Keep disabled",null)
+            .setPositiveButton("Enable experimentally",(dialog,which)->{
+                QuestDevice.setExperimentalOverlayAllowed(this,true);
+                Toast.makeText(this,
+                    "Quest floater enabled. Launch it from Home if supported.",
+                    Toast.LENGTH_LONG).show();
+                renderUnlocked();
+            }).show();
+    }
     private void chooseOverlaySize(){
         if(!StaffGate.unlocked(this))return;
         String[] labels={"Compact","Standard","Expanded"};
@@ -839,7 +907,7 @@ public final class CompanionActivity extends Activity {
             .setNegativeButton("Cancel",null).show();
     }
     private void toggleOverlayRecovery(){
-        if(!StaffGate.unlocked(this))return;
+        if(!StaffGate.unlocked(this)||!QuestDevice.canRunOverlay(this))return;
         boolean enable=!OverlayPreferences.recover(this);
         if(!enable){
             OverlayPreferences.setRecover(this,false);
@@ -860,6 +928,7 @@ public final class CompanionActivity extends Activity {
             }).show();
     }
     private void updateOverlayRecoveryMode(){
+        if(!QuestDevice.canRunOverlay(this))return;
         android.content.SharedPreferences prefs=getSharedPreferences("tgc_overlay",0);
         boolean live=prefs.getBoolean("running",false)&&
             System.currentTimeMillis()-prefs.getLong("service_heartbeat_at",0L)<35_000L;
@@ -878,6 +947,13 @@ public final class CompanionActivity extends Activity {
     }
     private void toggleOverlay(){
         needsStaff(()->{
+            if(!QuestDevice.canRunOverlay(this)){
+                tab="settings";renderUnlocked();
+                Toast.makeText(this,
+                    "Enable experimental floating tools in Settings first",
+                    Toast.LENGTH_LONG).show();
+                return;
+            }
             android.content.SharedPreferences overlayState=getSharedPreferences("tgc_overlay",0);
             boolean overlayActive=overlayState.getBoolean("running",false) &&
                 System.currentTimeMillis()-overlayState.getLong("service_heartbeat_at",0L)<35_000L;
