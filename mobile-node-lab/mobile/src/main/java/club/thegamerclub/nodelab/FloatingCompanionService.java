@@ -129,7 +129,7 @@ public final class FloatingCompanionService extends Service {
         });
         NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
         manager.createNotificationChannel(new NotificationChannel(CHANNEL,
-            "TGC floating Companion",NotificationManager.IMPORTANCE_LOW));
+            "TGC floating tools",NotificationManager.IMPORTANCE_LOW));
     }
     private Notification notice(){
         PendingIntent open=PendingIntent.getActivity(this,11,
@@ -140,7 +140,7 @@ public final class FloatingCompanionService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         return new Notification.Builder(this,CHANNEL)
             .setSmallIcon(R.drawable.tgc_logo)
-            .setContentTitle("TGC Mini VRCX")
+            .setContentTitle("TGC floating tools")
             .setContentText("Floating quick tools are enabled")
             .setContentIntent(open).setOngoing(true)
             .addAction(new Notification.Action.Builder(null,"Hide bubble",close).build())
@@ -319,7 +319,7 @@ public final class FloatingCompanionService extends Service {
         labels.setPadding(dp(10),0,0,0);
         bar.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
         labels.addView(text("TGC STAFF COMPANION",10,CompanionStyle.ACCENT,true));
-        labels.addView(text("Mini VRCX",19,CompanionStyle.TEXT,true));
+        labels.addView(text("Floating tools",19,CompanionStyle.TEXT,true));
         Button collapse=CompanionStyle.button(this,"−",false);
         collapse.setContentDescription("Collapse overlay");
         bar.addView(collapse,new LinearLayout.LayoutParams(dp(43),dp(39)));
@@ -423,7 +423,7 @@ public final class FloatingCompanionService extends Service {
         }
     }
     private void showHome(){
-        section(panelContent,"MOBILE NODE");
+        section(panelContent,"TRACKING");
         LinearLayout node=panelCard(panelContent);
         nodeStatus=text("Checking tracking…",15,CompanionStyle.TEXT,true);
         node.addView(nodeStatus);
@@ -431,7 +431,7 @@ public final class FloatingCompanionService extends Service {
         nodeStats.setPadding(0,dp(8),0,dp(5));
         node.addView(nodeStats);
         trackingToggle=action(node,"Start tracking",true,this::toggleTracking);
-        paired(node,"Node settings","Refresh",()->
+        paired(node,"Tracking setup","Refresh",()->
             open(MobileDeployActivity.class,null,null),()->{refreshStatus();loadRecentEvents();});
 
         section(panelContent,"RECENTLY ENCOUNTERED");
@@ -451,7 +451,7 @@ public final class FloatingCompanionService extends Service {
     }
     private LinearLayout recentRows;
     private void showSocial(){
-        section(panelContent,"FRIENDS — STAY IN VRCHAT");
+        section(panelContent,"FRIENDS");
         LinearLayout friends=panelCard(panelContent);
         action(friends,"Friends & locations",true,()->go("mini_friends"));
         paired(friends,"Friend log","Activity feed",
@@ -522,17 +522,17 @@ public final class FloatingCompanionService extends Service {
             try{
                 startService(new Intent(this,MobileNodeService.class).setAction(MobileNodeService.STOP));
                 statusNote="Stopping tracking…";
-            }catch(Exception error){statusNote="Unable to stop tracking. Open Node settings.";}
+            }catch(Exception error){statusNote="Could not stop tracking. Check tracking settings.";}
         }else{
             pendingStop=false;
             try{
                 if(MobileCredentials.load(this)==null){
-                    statusNote="Link this device in Node settings first.";
+                    statusNote="Link this phone in Tracking first.";
                     open(MobileDeployActivity.class,null,null);return;
                 }
                 if(!Shizuku.pingBinder()||
                     Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
-                    statusNote="Shizuku needs to be running and authorized. Open Node settings.";
+                    statusNote="Tracking needs permission. Open Tracking settings.";
                     if(nodeStatus!=null)nodeStatus.setText(statusNote);
                     // Permission requests must come from the existing Activity, never this service.
                     open(MobileDeployActivity.class,null,null);return;
@@ -571,8 +571,8 @@ public final class FloatingCompanionService extends Service {
         }
         if(nodeStats!=null){
             nodeStats.setText("Players: "+pref.getInt("captured_total",0)+
-                "  ·  Uploaded: "+pref.getInt("uploaded_total",0)+
-                "\n"+(watcher.isEmpty()?"Status available in Node settings":
+                "  ·  Sent: "+pref.getInt("uploaded_total",0)+
+                "\n"+(watcher.isEmpty()?"Check tracking settings for details":
                     watcher.length()>95?watcher.substring(0,95)+"…":watcher)+
                 (statusNote.isEmpty()?"":"\n"+statusNote));
         }
@@ -595,7 +595,7 @@ public final class FloatingCompanionService extends Service {
                     !StaffGate.unlocked(this))return;
                 recentRows.removeAllViews();
                 recentStatus.setText(queue<0?"Local history unavailable":
-                    "Pending uploads: "+queue+
+                    "Waiting to send: "+queue+
                     (entries.length()==0?" · No recorded encounters yet":""));
                 for(int i=0;i<entries.length();i++){
                     JSONObject event=entries.optJSONObject(i);
