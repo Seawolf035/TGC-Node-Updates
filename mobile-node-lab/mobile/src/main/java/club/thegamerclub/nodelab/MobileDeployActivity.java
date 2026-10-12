@@ -257,7 +257,7 @@ public class MobileDeployActivity extends Activity {
   }
   private void unlinkConfirm(){
     new AlertDialog.Builder(this).setTitle("Unlink this phone?")
-      .setMessage("This stops tracking and clears saved setup and unsent encounters from this device. Your VRChat sign-in is separate.")
+      .setMessage("This stops tracking and clears this device's Node setup, unsent encounters and saved local player/log history. Your personal VRChat sign-in is separate.")
       .setNegativeButton("Cancel",null)
       .setPositiveButton("Unlink",(d,w)->{
         stopNode();
