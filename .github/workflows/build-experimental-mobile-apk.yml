@@ -28,6 +28,17 @@ jobs:
       SIGN_ALIAS: ${{ secrets.TGC_ANDROID_RELEASE_KEY_ALIAS }}
       SIGN_KEY_PASS: ${{ secrets.TGC_ANDROID_RELEASE_KEY_PASSWORD }}
     steps:
+      - name: Require complete permanent Android signing credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for var in SIGN_KEY_B64 SIGN_STORE_PASS SIGN_ALIAS SIGN_KEY_PASS; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::Permanent Android signing credentials are incomplete ($var)."
+              exit 1
+            fi
+          done
+          echo "All required signing credentials present (values not displayed)."
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
