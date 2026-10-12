@@ -27,6 +27,8 @@ import android.widget.TextView;
 import android.graphics.drawable.GradientDrawable;
 import android.view.inputmethod.InputMethodManager;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 import android.widget.Toast;
 import androidx.core.content.ContextCompat;
 import org.json.JSONArray;
@@ -113,7 +115,7 @@ public final class FloatingCompanionService extends Service {
                     }finally{handler.post(()->friendBusy=false);}
                 });
             }
-            handler.postDelayed(this,150_000L);
+            handler.postDelayed(this,panelVisible?150_000L:300_000L);
         }
     };
 
@@ -151,7 +153,7 @@ public final class FloatingCompanionService extends Service {
                 });
             }
             // Avoid excessive VRChat account API calls while a game is running.
-            handler.postDelayed(this,75_000L);
+            handler.postDelayed(this,panelVisible?75_000L:180_000L);
         }
     };
     private final Runnable refreshTick=new Runnable(){
@@ -396,8 +398,7 @@ public final class FloatingCompanionService extends Service {
                         return true;
                     case MotionEvent.ACTION_UP:
                         if(moved){
-                            getSharedPreferences("tgc_overlay",0).edit()
-                                .putInt("x",bubbleParams.x).putInt("y",bubbleParams.y).apply();
+                            snapBubbleToEdge();
                             dismissPanel();
                         }else togglePanel();
                         return true;
@@ -449,6 +450,165 @@ public final class FloatingCompanionService extends Service {
         p.setMargins(dp(2),dp(2),dp(2),dp(8));
         parent.addView(b,p);
         b.setOnClickListener(v->click.run());
+    }
+    /** Restrict panel bounds to the available device display on every open. */
+    private int[] panelDimensions(){
+        String mode=OverlayPreferences.size(this);
+        int availableWidth=Math.max(dp(230),screenWidth()-dp(16));
+        int availableHeight=Math.max(dp(275),screenHeight()-dp(80));
+        int w="compact".equals(mode)?dp(294):
+            "expanded".equals(mode)?dp(420):dp(352);
+        int h="compact".equals(mode)?dp(410):
+            "expanded".equals(mode)?dp(690):dp(555);
+        return new int[]{Math.min(w,availableWidth),Math.min(h,availableHeight)};
+    }
+    private void resizePanel(){
+        if(panel==null||panelParams==null)return;
+        int[] dimensions=panelDimensions();
+        panelParams.width=dimensions[0];panelParams.height=dimensions[1];
+        panelParams.x=Math.max(0,Math.min(screenWidth()-panelParams.width,
+            panelParams.x));
+        panelParams.y=Math.max(dp(10),Math.min(
+            Math.max(dp(10),screenHeight()-panelParams.height-dp(12)),
+            panelParams.y));
+        try{wm.updateViewLayout(panel,panelParams);}
+        catch(Exception ignored){}
+    }
+    private void snapBubbleToEdge(){
+        if(bubbleParams==null)return;
+        if(OverlayPreferences.snap(this)){
+            int max=Math.max(0,screenWidth()-dp(60));
+            bubbleParams.x=bubbleParams.x<max/2?0:max;
+        }
+        bubbleParams.x=Math.max(0,Math.min(screenWidth()-dp(60),bubbleParams.x));
+        bubbleParams.y=Math.max(dp(10),Math.min(screenHeight()-dp(70),
+            bubbleParams.y));
+        try{wm.updateViewLayout(bubble,bubbleParams);}
+        catch(Exception ignored){}
+        saveBubblePosition();
+    }
+    private void saveBubblePosition(){
+        if(bubbleParams==null)return;
+        getSharedPreferences("tgc_overlay",0).edit()
+            .putInt("x",bubbleParams.x).putInt("y",bubbleParams.y).apply();
+    }
+    private void openShortcut(String key){
+        switch(key){
+            case "inbox":mini.inbox("all");break;
+            case "search":mini.findAnything();break;
+            case "verify":mini.verification();break;
+            default:go(OverlayPreferences.destination(key));break;
+        }
+    }
+    private void pinnedShortcuts(LinearLayout parent){
+        List<String> pinned=OverlayPreferences.shortcuts(this);
+        for(int i=0;i<pinned.size();i+=2){
+            final String a=pinned.get(i);
+            if(i+1<pinned.size()){
+                final String b=pinned.get(i+1);
+                paired(parent,OverlayPreferences.name(a),OverlayPreferences.name(b),
+                    ()->openShortcut(a),()->openShortcut(b));
+            }else{
+                action(parent,OverlayPreferences.name(a),false,()->openShortcut(a));
+            }
+        }
+    }
+    private void showOverlaySettings(){
+        section(panelContent,"FLOATING PANEL SIZE");
+        LinearLayout sizes=panelCard(panelContent);
+        String selected=OverlayPreferences.size(this);
+        sizes.addView(text("Current: "+(
+            "compact".equals(selected)?"Compact":
+            "expanded".equals(selected)?"Expanded":"Standard"),
+            12,CompanionStyle.ACCENT,true));
+        action(sizes,"Compact • less screen space",false,
+            ()->changeSize("compact"));
+        action(sizes,"Standard • balanced",false,
+            ()->changeSize("standard"));
+        action(sizes,"Expanded • more information",false,
+            ()->changeSize("expanded"));
+        section(panelContent,"BUBBLE POSITION");
+        LinearLayout position=panelCard(panelContent);
+        action(position,
+            OverlayPreferences.snap(this)?
+                "Snap to nearest edge: ON":"Snap to nearest edge: OFF",false,()->{
+                OverlayPreferences.setSnap(this,!OverlayPreferences.snap(this));
+                if(OverlayPreferences.snap(this))snapBubbleToEdge();
+                buildTab();
+            });
+        action(position,"Reset bubble position",false,()->{
+            if(bubbleParams==null)return;
+            bubbleParams.x=Math.max(0,screenWidth()-dp(80));
+            bubbleParams.y=dp(165);
+            snapBubbleToEdge();
+            buildTab();
+        });
+        section(panelContent,"PINNED HOME SHORTCUTS");
+        LinearLayout pins=panelCard(panelContent);
+        pins.addView(text(
+            "Choose up to six shortcuts; tap ↑ or ↓ to change their order. "
+            +"Your choices stay saved on this phone.",
+            12,CompanionStyle.MUTED,false));
+        List<String> selectedPins=OverlayPreferences.shortcuts(this);
+        for(String key:OverlayPreferences.SHORTCUTS){
+            final String value=key;
+            boolean pinned=selectedPins.contains(value);
+            action(pins,(pinned?"✓ ":"＋ ")+OverlayPreferences.name(value),
+                pinned,()->{
+                List<String> list=new ArrayList<>(OverlayPreferences.shortcuts(this));
+                if(list.contains(value)){
+                    if(list.size()<=1){
+                        Toast.makeText(this,"Keep at least one shortcut",
+                            Toast.LENGTH_SHORT).show();return;
+                    }
+                    list.remove(value);
+                }else{
+                    if(list.size()>=6){
+                        Toast.makeText(this,"Maximum six shortcuts",
+                            Toast.LENGTH_SHORT).show();return;
+                    }
+                    list.add(value);
+                }
+                OverlayPreferences.setShortcuts(this,list);
+                buildTab();
+            });
+            if(pinned){
+                paired(pins,"↑ Move earlier","↓ Move later",
+                    ()->moveShortcut(value,-1),()->moveShortcut(value,1));
+            }
+        }
+        section(panelContent,"BACKGROUND RECOVERY");
+        LinearLayout background=panelCard(panelContent);
+        background.addView(text(
+            "Tracking runs independently. Android can interrupt the floating "
+            +"panel; optional recovery asks Android to restart it and checks "
+            +"staff access online before showing it again. This is best-effort, "
+            +"not a way around battery restrictions or force-stop.",
+            12,CompanionStyle.MUTED,false));
+        action(background,OverlayPreferences.recover(this)?
+            "Recover floating tools: ON":"Recover floating tools: OFF",false,()->{
+            boolean enable=!OverlayPreferences.recover(this);
+            OverlayPreferences.setRecover(this,enable);
+            // Refresh the foreground service's START_STICKY return mode.
+            try{
+                startService(new Intent(this,FloatingCompanionService.class)
+                    .setAction(ACTION_START));
+            }catch(Exception ignored){}
+            buildTab();
+        });
+    }
+    private void changeSize(String size){
+        OverlayPreferences.setSize(this,size);
+        resizePanel();
+        buildTab();
+    }
+    private void moveShortcut(String key,int direction){
+        List<String> list=new ArrayList<>(OverlayPreferences.shortcuts(this));
+        int index=list.indexOf(key),next=index+direction;
+        if(index<0||next<0||next>=list.size())return;
+        java.util.Collections.swap(list,index,next);
+        OverlayPreferences.setShortcuts(this,list);
+        buildTab();
     }
     private void togglePanel(){
         if(panel!=null){dismissPanel();return;}
@@ -505,10 +665,10 @@ public final class FloatingCompanionService extends Service {
         bottom.setPadding(dp(11),dp(5),dp(11),dp(9));
         container.addView(bottom);
         smallAction(bottom,"Full Companion",()->open(CompanionActivity.class,null,null));
-        smallAction(bottom,"Hide bubble",this::stopSelf);
+        smallAction(bottom,"Hide bubble",this::stopRequestedByUser);
 
-        int width=Math.min(dp(352),screenWidth()-dp(20));
-        int height=Math.min(dp(555),screenHeight()-dp(118));
+        int[] dimensions=panelDimensions();
+        int width=dimensions[0],height=dimensions[1];
         WindowManager.LayoutParams p=params(width,height);
         p.x=Math.max(dp(8),Math.min(screenWidth()-width-dp(8),bubbleParams.x));
         int possibleTop=bubbleParams.y+dp(65);
@@ -546,6 +706,7 @@ public final class FloatingCompanionService extends Service {
             case "social":showSocial();break;
             case "tools":showTools();break;
             case "home":showHome();break;
+            case "customize":showOverlaySettings();break;
             default:mini.show(panelContent,selectedTab);break;
         }
         // Each in-overlay page should start at its header, not inherit the
@@ -615,14 +776,12 @@ public final class FloatingCompanionService extends Service {
             ()->go("mini_current"),()->go("mini_joins"));
         action(recent,"Past encounters",false,()->go("mini_players"));
 
-        section(panelContent,"QUICK ACCESS");
+        section(panelContent,"YOUR PINNED TOOLS");
         LinearLayout quick=panelCard(panelContent);
-        paired(quick,"Friends locations","Friend log",
-            ()->go("mini_friends"),()->go("mini_log"));
-        paired(quick,"Inbox","Find anything",
-            ()->mini.inbox("all"),()->mini.findAnything());
-        paired(quick,"Your instance","Activity feed",
-            ()->go("mini_now"),()->go("mini_activity"));
+        pinnedShortcuts(quick);
+        action(quick,"Customize shortcuts",false,()->{
+            selectedTab="tools";backStack.clear();buildTab();
+        });
     }
     private LinearLayout recentRows;
     private void showSocial(){
@@ -677,6 +836,8 @@ public final class FloatingCompanionService extends Service {
             ()->go("mini_current"),()->go("mini_joins"));
         paired(player,"Past encounters","Friend log",
             ()->go("mini_players"),()->go("mini_log"));
+        action(panelContent,"Customize floating panel",false,
+            ()->{selectedTab="customize";buildTab();});
         section(panelContent,"NODE TRACKING");
         LinearLayout node=panelCard(panelContent);
         TextView info=text("Use Home to start or stop tracking. Captures and relay uploads continue independently when this panel closes.",
