@@ -141,6 +141,14 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
             }
         });
     }
+    /** Profile colors are user-chosen 6-digit hex values, never raw drawables. */
+    private static int profileColor(String value,int fallback){
+        if(value==null)return fallback;
+        String hex=value.trim().replace("#","");
+        if(!hex.matches("(?i)[0-9a-f]{6}"))return fallback;
+        try{return 0xFF000000 | (int)Long.parseLong(hex,16);}
+        catch(Exception ignored){return fallback;}
+    }
     private void show(JSONObject item,JSONObject local){
         status.setVisibility(View.GONE);
         String title=item.optString("displayName",item.optString("name","Unknown"));
@@ -160,7 +168,11 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
                 CompanionImages.preferred(item,"thumbnailImageUrl","imageUrl"):
                 CompanionImages.preferred(item,"iconUrl","bannerUrl");
         FrameLayout banner=new FrameLayout(this);
-        banner.setBackground(CompanionStyle.gradient(this,0xFF244E67,0xFF15283F,18));
+        int bannerTop=profileColor(item.optString("backgroundGradientTop",
+            item.optString("bannerColor","")),0xFF244E67);
+        int bannerBottom=profileColor(item.optString("backgroundGradientBottom",
+            item.optString("bannerColor","")),0xFF15283F);
+        banner.setBackground(CompanionStyle.gradient(this,bannerTop,bannerBottom,18));
         banner.setClipToOutline(true);
         content.addView(banner,new LinearLayout.LayoutParams(-1,dp(158)));
         ImageView background=new ImageView(this);
@@ -297,7 +309,13 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
                     kicker("BADGES");
                     badgeCard=box();
                 }
-                detail(badgeCard,badgeName,badge.optString("badgeDescription",""));
+                badgeCard.addView(text("✦ "+badgeName,14,CompanionStyle.TEXT,true));
+                String description=badge.optString("badgeDescription","").trim();
+                if(!description.isEmpty()){
+                    space(badgeCard,3);
+                    badgeCard.addView(text(description,12,CompanionStyle.MUTED,false));
+                }
+                space(badgeCard,12);
             }
         }
         JSONObject represented=user.optJSONObject("representedGroup");
