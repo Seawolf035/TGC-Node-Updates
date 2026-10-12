@@ -49,7 +49,7 @@ public final class OverlayMiniVrcx {
     private int memberOffset=0,banOffset=0;
     private int revision=0;
     private String lastError="";
-    private boolean busy=false;
+    private boolean busy=false,writing=false;
     private JSONArray loaded=new JSONArray();
     private JSONObject profile=new JSONObject();
     private LinearLayout list;
@@ -1181,33 +1181,182 @@ public final class OverlayMiniVrcx {
         button(c,"Join & leave history",false,()->host.navigate("mini_joins"));
     }
     private void showPresence(){
-        LinearLayout c=card(list);
-        c.addView(text("Current status: "+profile.optString("status","Unknown"),
-            15,CompanionStyle.TEXT,true));
+        final String accountId=profile.optString("id","");
+        final String currentStatus=profile.optString("status","");
+        final String description=profile.optString("statusDescription","");
         final String[] states={"active","join me","ask me","busy","offline"};
-        final String[] labels={"Online","Join Me","Ask Me","Busy","Offline"};
-        final EditText message=CompanionStyle.input(ctx,"Status message (32 characters max)");
-        message.setText(profile.optString("statusDescription",""));
-        message.setFilters(new android.text.InputFilter[]{
+        final String[] chosen={currentStatus};
+        if(!java.util.Arrays.asList(states).contains(chosen[0]))chosen[0]="active";
+        LinearLayout main=card(list);
+        LinearLayout activeLine=new LinearLayout(ctx);
+        activeLine.setGravity(Gravity.CENTER_VERTICAL);
+        main.addView(activeLine);
+        TextView current=text("●",22,VRChatPresenceIndicator.color(currentStatus),true);
+        activeLine.addView(current,new LinearLayout.LayoutParams(dp(28),-2));
+        LinearLayout details=new LinearLayout(ctx);
+        details.setOrientation(LinearLayout.VERTICAL);
+        activeLine.addView(details,new LinearLayout.LayoutParams(0,-2,1f));
+        details.addView(text("Currently "+VRChatPresenceIndicator.label(currentStatus),
+            17,CompanionStyle.TEXT,true));
+        details.addView(text(description.isEmpty()?"No status message":
+            shortValue(description,55),12,CompanionStyle.MUTED,false));
+        section(main,"CHOOSE HOW YOU APPEAR");
+        final java.util.ArrayList<Button> choices=new java.util.ArrayList<>();
+        for(int i=0;i<states.length;i++){
+            final String state=states[i];
+            if(i%2==0){
+                LinearLayout row=new LinearLayout(ctx);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                main.addView(row);
+            }
+            LinearLayout row=(LinearLayout)main.getChildAt(main.getChildCount()-1);
+            Button option=CompanionStyle.button(ctx,
+                "● "+VRChatPresenceIndicator.label(state),false);
+            option.setTextSize(12);
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,dp(44),1f);
+            params.setMargins(dp(2),dp(3),dp(2),dp(3));
+            row.addView(option,params);
+            choices.add(option);
+        }
+        TextView preview=text("",13,CompanionStyle.ACCENT,true);
+        preview.setPadding(0,dp(7),0,dp(4));
+        main.addView(preview);
+        Runnable paint=()->{
+            for(int i=0;i<states.length;i++){
+                Button b=choices.get(i);
+                boolean active=states[i].equals(chosen[0]);
+                int color=VRChatPresenceIndicator.color(states[i]);
+                b.setBackground(CompanionStyle.shape(ctx,
+                    active?color:CompanionStyle.RAISED,11,
+                    active?CompanionStyle.ACCENT:CompanionStyle.BORDER));
+                b.setTextColor(active?0xFF091423:color);
+                b.setContentDescription(VRChatPresenceIndicator.label(states[i])+
+                    (active?" selected":""));
+            }
+            preview.setText("Selected: "+VRChatPresenceIndicator.label(chosen[0]));
+        };
+        for(int i=0;i<states.length;i++){
+            final String state=states[i];
+            choices.get(i).setOnClickListener(v->{chosen[0]=state;paint.run();});
+        }
+        paint.run();
+        section(main,"STATUS MESSAGE");
+        EditText input=CompanionStyle.input(ctx,"Your message · max 32 characters");
+        input.setSingleLine(false);
+        input.setMaxLines(2);
+        input.setMinLines(1);
+        input.setFilters(new android.text.InputFilter[]{
             new android.text.InputFilter.LengthFilter(32)});
-        c.addView(message,new LinearLayout.LayoutParams(-1,dp(47)));
-        message.setOnFocusChangeListener((v,focused)->host.keyboard(focused));
-        message.setOnTouchListener((v,event)->{
+        input.setText(description);
+        main.addView(input,new LinearLayout.LayoutParams(-1,dp(72)));
+        input.setOnFocusChangeListener((v,focused)->host.keyboard(focused));
+        input.setOnTouchListener((v,event)->{
             if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN)
                 host.keyboard(true);
             return false;
         });
-        section(c,"Choose a status");
-        for(int i=0;i<states.length;i++){
-            final String state=states[i];
-            button(c,labels[i],false,()->{
-                host.keyboard(false);
-                message.clearFocus();
-                confirm("Set status to "+state+"?",
-                    ()->write(()->VRChatApi.updatePresence(ctx,state,
-                        message.getText().toString()),"Presence updated"));
+        TextView count=text(input.length()+"/32",11,CompanionStyle.MUTED,false);
+        count.setGravity(Gravity.END);
+        main.addView(count);
+        input.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence a,int s,int c,int d){}
+            public void onTextChanged(CharSequence a,int start,int before,int n){
+                count.setText(a.length()+"/32");
+            }
+            public void afterTextChanged(android.text.Editable value){}
+        });
+        LinearLayout confirmBox=new LinearLayout(ctx);
+        confirmBox.setOrientation(LinearLayout.VERTICAL);
+        main.addView(confirmBox);
+        confirmBox.setVisibility(View.GONE);
+        Button apply=CompanionStyle.button(ctx,"Apply status",true);
+        main.addView(apply,CompanionStyle.buttonParams(ctx));
+        apply.setOnClickListener(v->{
+            if(!StaffGate.unlocked(ctx))return;
+            host.keyboard(false);input.clearFocus();
+            if(confirmBox.getVisibility()==View.VISIBLE){
+                confirmBox.setVisibility(View.GONE);return;
+            }
+            confirmBox.removeAllViews();
+            String state=chosen[0],newMessage=input.getText().toString().trim();
+            confirmBox.addView(text(
+                "Update VRChat to "+VRChatPresenceIndicator.label(state)+
+                (newMessage.isEmpty()?"":" · "+newMessage)+"?",
+                12,CompanionStyle.GOLD,true));
+            button(confirmBox,"Confirm change",true,()->{
+                confirmBox.setVisibility(View.GONE);
+                // Verify the authenticated account before changing its status.
+                write(()->{
+                    JSONObject me=VRChatApi.currentUser(ctx);
+                    if(!accountId.equals(me.optString("id","")))
+                        throw new SecurityException("VRChat account changed. Refresh this page.");
+                    VRChatApi.updatePresence(ctx,state,newMessage);
+                },"Status updated",
+                  ()->host.onPresenceChanged(state));
             });
+            button(confirmBox,"Cancel",false,()->confirmBox.setVisibility(View.GONE));
+            confirmBox.setVisibility(View.VISIBLE);
+        });
+        section(list,"SAVED PRESETS");
+        LinearLayout presetBox=card(list);
+        presetBox.addView(text("Presets saved in the full Companion also work here.",
+            12,CompanionStyle.MUTED,false));
+        JSONArray presets=readStatusPresets(accountId);
+        if(presets.length()==0){
+            presetBox.addView(text("No presets saved yet.",12,CompanionStyle.MUTED,false));
         }
+        for(int i=0;i<Math.min(30,presets.length());i++){
+            JSONObject row=presets.optJSONObject(i);if(row==null)continue;
+            String name=row.optString("title","Preset");
+            String status=row.optString("status","active");
+            String message=row.optString("description","");
+            if(!java.util.Arrays.asList(states).contains(status))continue;
+            button(presetBox,shortValue(name,26)+" · "+
+                VRChatPresenceIndicator.label(status),false,()->{
+                    chosen[0]=status;paint.run();input.setText(message);
+                    confirmBox.setVisibility(View.GONE);
+                });
+        }
+        section(presetBox,"SAVE THIS COMBINATION");
+        EditText presetName=CompanionStyle.input(ctx,"Preset name");
+        presetName.setFilters(new android.text.InputFilter[]{
+            new android.text.InputFilter.LengthFilter(45)});
+        presetName.setSingleLine(true);
+        presetBox.addView(presetName,new LinearLayout.LayoutParams(-1,dp(43)));
+        presetName.setOnFocusChangeListener((v,focused)->host.keyboard(focused));
+        presetName.setOnTouchListener((v,event)->{
+            if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN)
+                host.keyboard(true);
+            return false;
+        });
+        button(presetBox,"Save preset on this phone",false,()->{
+            if(!StaffGate.unlocked(ctx))return;
+            String label=presetName.getText().toString().trim();
+            if(label.isEmpty()){presetName.setError("Enter a name");return;}
+            if(!validUser(accountId)){message("Sign in to VRChat to save presets");return;}
+            JSONArray existing=readStatusPresets(accountId),updated=new JSONArray();
+            for(int i=0;i<existing.length();i++){
+                JSONObject item=existing.optJSONObject(i);
+                if(item!=null&&!label.equalsIgnoreCase(item.optString("title","")))
+                    updated.put(item);
+            }
+            if(updated.length()>=30){message("You can save up to 30 presets");return;}
+            try{
+                updated.put(new JSONObject().put("title",label)
+                    .put("status",chosen[0])
+                    .put("description",input.getText().toString().trim()));
+                ctx.getSharedPreferences("tgc_vrcx_presets",0).edit()
+                    .putString("status_presets_"+accountId,updated.toString()).apply();
+                presetName.setText("");presetName.clearFocus();host.keyboard(false);
+                message("Preset saved. Reopen Status to see it in your list.");
+            }catch(Exception e){message("Unable to save preset");}
+        });
+    }
+    private JSONArray readStatusPresets(String accountId){
+        if(!validUser(accountId))return new JSONArray();
+        String raw=ctx.getSharedPreferences("tgc_vrcx_presets",0)
+            .getString("status_presets_"+accountId,"[]");
+        try{return new JSONArray(raw);}catch(Exception ignored){return new JSONArray();}
     }
     private void section(LinearLayout parent,String title){
         parent.addView(CompanionStyle.section(ctx,title));
@@ -1248,7 +1397,11 @@ public final class OverlayMiniVrcx {
         pendingAction=action;pending=prompt;
     }
     private void write(Action action,String success){
-        if(!StaffGate.unlocked(ctx))return;
+        write(action,success,null);
+    }
+    private void write(Action action,String success,Runnable onSuccess){
+        if(!StaffGate.unlocked(ctx)||writing)return;
+        writing=true;
         final int token=revision;
         message("Working…");
         io.execute(()->{
@@ -1257,9 +1410,12 @@ public final class OverlayMiniVrcx {
             catch(Exception e){error=e.getMessage()==null?"Action unavailable":e.getMessage();}
             final String problem=error;
             handler.post(()->{
+                writing=false;
                 if(token!=revision||root==null||!StaffGate.unlocked(ctx))return;
-                if(problem==null){message(success);load();}
-                else message("Action failed: "+shortValue(problem,110));
+                if(problem==null){
+                    if(onSuccess!=null)onSuccess.run();
+                    message(success);load();
+                }else message("Action failed: "+shortValue(problem,110));
             });
         });
     }
