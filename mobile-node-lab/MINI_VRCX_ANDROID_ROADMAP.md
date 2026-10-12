@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed published version before this pass: v0.17.2 (versionCode 35). v0.17.3 remains under development until the signed Android CI pipeline succeeds. Verify actual GitHub state before future work. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.17.3 (versionCode 36). v0.17.4 is in development until signed Android CI succeeds. Verify current GitHub state before further changes. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -92,6 +92,12 @@ Last confirmed published version before this pass: v0.17.2 (versionCode 35). v0.
 - Lower-rate VRChat API polls while the overlay is collapsed. Node tracking, Shizuku watcher and Relay remain wholly independent of the floating panel and new preferences.
 - A Background health dashboard gives honest Node/overlay/alerts state and Android battery settings access; no new dangerous permissions or second log reader.
 - Device-test process recreation, offline and revoked-staff cases, Android 13–16 foreground-service restrictions and orientation changes.
+
+### v0.17.4 — Complete VRChat Favorite Avatar Groups + Shizuku Links
+- Replace the old flattened first-page avatar gallery with server-discovered **avatar favorite lists** (including VRChat's regular and VRC+ favorites groups), using the VRChat favorites-group endpoints and actual group names instead of guessing available slots.
+- Show every accessible group's actual avatars and name/count in both the full gallery and floating tools, plus a deduplicated combined All view with search, avatar details and safe Select avatar actions.
+- Explicitly report partial or inaccessible groups; if discovery is unavailable, use a clearly labeled bounded legacy combined fallback rather than claiming it retrieved every list.
+- In optional Node Tracking help, add a **Download Shizuku** link to the official site and a setup-guide link. The personal-account Companion requires neither Shizuku nor VRChat Mobile installation.
 
 ### v0.18 — Universal Search and Reliability
 - Broaden unified search to groups/avatars/collections, caching, accessibility, logging and optional backup/export, followed by controlled group/instance management.
