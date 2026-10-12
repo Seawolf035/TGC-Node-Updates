@@ -78,7 +78,7 @@ public final class FloatingCompanionService extends Service {
                         for(int i=0;i<recent.length();i++){
                             org.json.JSONObject e=recent.optJSONObject(i);
                             if(e==null)continue;
-                            if(result.length()>0)result.append("\\n");
+                            if(result.length()>0)result.append("\n");
                             result.append("• ").append(e.optString("display_name",e.optString("user_id","Player")));
                         }
                     }catch(Exception ignored){}
