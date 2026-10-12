@@ -16,7 +16,7 @@ import java.util.Locale;
 /** Personal-account VRChat API client: sessions NEVER go through the TGC relay. */
 public final class VRChatApi {
     private static final String API="https://api.vrchat.cloud/api/1";
-    private static final String AGENT="TGC-Staff-Companion/0.9.2 (Android VRChat companion)";
+    private static final String AGENT="TGC-Staff-Companion/1.0.0 (Android VRChat companion)";
     private VRChatApi(){}
 
     private static final class Response {
@@ -295,6 +295,84 @@ public final class VRChatApi {
         // change the private/group instance-location syntax.
         return request("GET","/instances/"+worldId+":"+instanceId,
             cookie(validSession(context)),null,null).object();
+    }
+
+    /** VRCX-compatible account notifications with explicitly chosen pagination. */
+    public static JSONArray notifications(Context context,boolean modern,int offset)throws Exception{
+        if(offset<0 || offset>1000)throw new IllegalArgumentException("Invalid offset");
+        return request("GET",(modern?"/notifications":"/auth/user/notifications")+
+            "?n=60&offset="+offset,cookie(validSession(context)),null,null).array();
+    }
+    private static void notificationId(String id){
+        if(id==null || !id.matches("not_[0-9a-zA-Z_-]{4,90}"))
+            throw new IllegalArgumentException("Invalid notification ID");
+    }
+    public static void markNotificationSeen(Context context,String id,boolean modern)throws Exception{
+        notificationId(id);
+        request(modern?"POST":"PUT",
+            modern?"/notifications/"+id+"/see":"/auth/user/notifications/"+id+"/see",
+            cookie(validSession(context)),null,null);
+    }
+    public static void dismissNotification(Context context,String id,boolean modern)throws Exception{
+        notificationId(id);
+        request(modern?"DELETE":"PUT",
+            modern?"/notifications/"+id:"/auth/user/notifications/"+id+"/hide",
+            cookie(validSession(context)),null,null);
+    }
+    public static void acceptFriendRequest(Context context,String notificationId)throws Exception{
+        notificationId(notificationId);
+        request("PUT","/auth/user/notifications/"+notificationId+"/accept",
+            cookie(validSession(context)),null,null);
+    }
+    public static JSONObject getFriendStatus(Context context,String userId)throws Exception{
+        requireId("user",userId);
+        return request("GET","/user/"+userId+"/friendStatus",
+            cookie(validSession(context)),null,null).object();
+    }
+    public static void sendFriendRequest(Context context,String userId)throws Exception{
+        requireId("user",userId);
+        request("POST","/user/"+userId+"/friendRequest",cookie(validSession(context)),null,null);
+    }
+    public static void requestInvite(Context context,String userId)throws Exception{
+        requireId("user",userId);
+        request("POST","/requestInvite/"+userId,cookie(validSession(context)),null,new JSONObject());
+    }
+    public static JSONArray favoriteAvatars(Context context,int offset)throws Exception{
+        if(offset<0||offset>1000)throw new IllegalArgumentException("Invalid offset");
+        return request("GET","/avatars/favorites?n=60&offset="+offset,
+            cookie(validSession(context)),null,null).array();
+    }
+    public static JSONObject avatar(Context context,String avatarId)throws Exception{
+        if(avatarId==null||!avatarId.matches("avtr_[0-9a-fA-F-]{36}"))
+            throw new IllegalArgumentException("Invalid avatar");
+        return request("GET","/avatars/"+avatarId,cookie(validSession(context)),null,null).object();
+    }
+    public static void selectAvatar(Context context,String avatarId)throws Exception{
+        if(avatarId==null||!avatarId.matches("avtr_[0-9a-fA-F-]{36}"))
+            throw new IllegalArgumentException("Invalid avatar");
+        request("PUT","/avatars/"+avatarId+"/select",cookie(validSession(context)),null,null);
+    }
+    public static void sendInvite(Context context,String userId,String location)throws Exception{
+        requireId("user",userId);
+        String safe=normalizeLocation(location);
+        request("POST","/invite/"+userId,cookie(validSession(context)),null,
+            new JSONObject().put("instanceId",safe));
+    }
+    public static String normalizeLocation(String location){
+        if(location==null || !location.matches(
+            "wrld_[0-9a-fA-F-]{36}:[0-9]{1,12}(?:~[A-Za-z0-9_-]+(?:\\([A-Za-z0-9_-]+\\))?)*"))
+            throw new IllegalArgumentException("Invalid VRChat instance");
+        if(location.length()>480)throw new IllegalArgumentException("Location is too long");
+        return location;
+    }
+    public static JSONObject getInstance(Context context,String location)throws Exception{
+        String safe=normalizeLocation(location);
+        return request("GET","/instances/"+safe,cookie(validSession(context)),null,null).object();
+    }
+    public static void selfInvite(Context context,String location)throws Exception{
+        String safe=normalizeLocation(location);
+        request("POST","/invite/myself/to/"+safe,cookie(validSession(context)),
+            null,new JSONObject());
     }
     public static void logout(Context context){VRChatSession.clear(context);}
 }
