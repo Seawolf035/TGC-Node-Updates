@@ -289,9 +289,12 @@ public final class VRChatApi {
             !instanceId.matches("[A-Za-z0-9_~().,-]{1,512}")){
             throw new IllegalArgumentException("Invalid instance location");
         }
-        return request("GET","/instances/"+worldId+":"+
-            java.net.URLEncoder.encode(instanceId,"UTF-8"),cookie(validSession(context)),
-            null,null).object();
+        // Match VRCX: GET /instances/{worldId}:{instanceId}
+        // instanceId was strictly validated above to prevent URL injection.
+        // URLEncoder is for query parameters, not URI path segments; it can
+        // change the private/group instance-location syntax.
+        return request("GET","/instances/"+worldId+":"+instanceId,
+            cookie(validSession(context)),null,null).object();
     }
     public static void logout(Context context){VRChatSession.clear(context);}
 }
