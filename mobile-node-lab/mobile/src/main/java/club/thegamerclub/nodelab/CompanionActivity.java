@@ -78,6 +78,7 @@ public final class CompanionActivity extends Activity {
         page=stack();page.setPadding(dp(18),dp(22),dp(18),dp(25));
         scroll.addView(page);
         if(navigation)bottomBar();
+        CompanionStyle.safeArea(this,root);
     }
     private void bottomBar(){
         LinearLayout nav=new LinearLayout(this);nav.setGravity(Gravity.CENTER_VERTICAL);
