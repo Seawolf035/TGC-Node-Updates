@@ -391,7 +391,10 @@ public final class CompanionActivity extends Activity {
     }
     private void toggleOverlay(){
         needsStaff(()->{
-            if(getSharedPreferences("tgc_overlay",0).getBoolean("running",false)){
+            android.content.SharedPreferences overlayState=getSharedPreferences("tgc_overlay",0);
+            boolean overlayActive=overlayState.getBoolean("running",false) &&
+                System.currentTimeMillis()-overlayState.getLong("service_heartbeat_at",0L)<35_000L;
+            if(overlayActive){
                 stopService(new Intent(this,FloatingCompanionService.class));
                 Toast.makeText(this,"Floating Companion disabled",Toast.LENGTH_SHORT).show();
                 return;
