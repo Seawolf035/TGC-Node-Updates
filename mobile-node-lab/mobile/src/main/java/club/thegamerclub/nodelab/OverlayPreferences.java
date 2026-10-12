@@ -15,7 +15,7 @@ public final class OverlayPreferences {
     private static final String PREF="tgc_overlay";
     public static final String[] SHORTCUTS={
         "inbox","friends","status","players","recent","search",
-        "instance","activity","verify","joins","groups","worlds"
+        "instance","activity","verify","joins","groups","worlds","chat"
     };
     private static final String DEFAULT="inbox,friends,status,instance";
     private OverlayPreferences(){}
@@ -82,6 +82,7 @@ public final class OverlayPreferences {
             case "instance":return "Your instance";
             case "activity":return "Activity feed";
             case "verify":return "Verification code";
+            case "chat":return "In-game text chat";
             case "joins":return "Join / leave";
             case "groups":return "Your groups";
             case "worlds":return "Saved worlds";
@@ -99,6 +100,7 @@ public final class OverlayPreferences {
             case "instance":return "mini_now";
             case "activity":return "mini_activity";
             case "verify":return "mini_verify";
+            case "chat":return "mini_chat";
             case "joins":return "mini_joins";
             case "groups":return "mini_groups";
             case "worlds":return "mini_worlds";
