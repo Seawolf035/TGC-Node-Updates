@@ -34,10 +34,9 @@ public final class InboxAlertWorker extends Worker {
             if(!StaffGate.unlocked(ctx))StaffGate.verifyOnline(ctx);
             if(!StaffGate.unlocked(ctx))return Result.retry();
             InboxRepository.Snapshot snapshot=InboxRepository.refresh(ctx);
-            // On a partially available inbox, don't baseline or notify from a
-            // truncated set; the next successful check will handle it.
-            if(snapshot.partial)return Result.retry();
-            InboxAlertSettings.Changes changes=InboxAlertSettings.remember(ctx,snapshot.items);
+            // Each available endpoint has its own first-use baseline, so a
+            // persistent VRChat API endpoint error doesn't disable alerts.
+            InboxAlertSettings.Changes changes=InboxAlertSettings.remember(ctx,snapshot);
             if(changes.newUnread>0 && InboxAlertSettings.active(ctx))notify(ctx,changes);
             return Result.success();
         }catch(SecurityException e){
