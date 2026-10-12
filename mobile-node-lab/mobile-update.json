@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.14.1",
-  "version_code": 25,
+  "version": "0.15.0",
+  "version_code": 26,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "c3185e1ab735da0cf3317571ed63689b2556db22fc36106d4897d4ec7365cd32",
-  "notes": "v0.14.1: Redesigned Mini VRCX bubble using the TGC app icon, Home/Social/Tools tabs, Node Start/Stop tracking, live encounter shortcuts, and expanded quick tools."
+  "sha256": "5dbd252e0dc01285cfc83efc58a9cd4854168bb6312046be19bd1e333b3c0b4f",
+  "notes": "v0.15.0: Circular TGC icon and fully in-overlay Mini VRCX screens: player history, friends, friend log, activity, notifications with actions, profiles, notes, search, worlds, groups, avatars, and presence controls. No routine app switching."
 }
