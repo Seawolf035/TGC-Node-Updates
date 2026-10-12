@@ -36,6 +36,7 @@ public final class OverlayMiniVrcx {
         void back();
         void keyboard(boolean focus);
         void onPresenceChanged(String status);
+        void scrollToTop();
     }
     private final Service ctx;
     private final Host host;
@@ -148,7 +149,7 @@ public final class OverlayMiniVrcx {
     public void show(LinearLayout parent,String page){
         close();
         root=parent;screen=page;lastError="";busy=false;loaded=new JSONArray();profile=new JSONObject();
-        limit=65;pending="";revision++;
+        limit="mini_avatars".equals(page)?18:65;pending="";revision++;
         if("mini_verify".equals(page))verificationResult=null;
         drawFrame();
         load();
