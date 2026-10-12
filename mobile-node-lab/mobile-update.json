@@ -4,6 +4,6 @@
   "version": "0.13.1",
   "version_code": 23,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "7a3b4c2a714f1a62fee4e42be50247e6a27aa733e58515e72d2d591109b47927",
+  "sha256": "8738311216fcd9b9c1a23fe2074e2b0db7fae4dcc2673b9ccb0c8799f7df0616",
   "notes": "UX refinements: searchable and deduplicated avatar favorites, profile actions moved to the top, simpler non-duplicated home shortcuts, plus the v0.13.0 inbox, search, status and tracking improvements."
 }
