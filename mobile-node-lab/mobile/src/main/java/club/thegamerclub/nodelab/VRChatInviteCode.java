@@ -273,6 +273,8 @@ public final class VRChatInviteCode {
             throw new IllegalStateException("VRChat invite inbox unavailable");
         }
         Collections.sort(matches,(a,b)->Long.compare(b.created,a.created));
+        java.util.HashSet<String> checkedLocations=new java.util.HashSet<>();
+        int instanceRequests=0;
         for(Invite invite:matches){
             if(!invite.code.isEmpty()){
                 return new Result(invite.code,
@@ -281,7 +283,9 @@ public final class VRChatInviteCode {
             }
             String location=invite.location;
             int colon=location.indexOf(':');
-            if(colon<=0)continue;
+            if(colon<=0 || !checkedLocations.add(location))continue;
+            // Avoid scanning every personal invite / hitting the VRChat rate limit.
+            if(++instanceRequests>12)break;
             try{
                 JSONObject instance=VRChatApi.invitedInstance(context,
                     location.substring(0,colon),location.substring(colon+1));
