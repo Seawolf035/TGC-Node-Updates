@@ -176,6 +176,23 @@ public final class VRChatApi {
         return request("GET","/worlds/recent?n=40&offset=0",cookie(session),null,null).array();
     }
 
+    /** Online entitlement check. VRCX and VRChat identify active VRC+ by system_supporter. */
+    public static String requireActiveVRCPlus(Context context)throws Exception{
+        JSONObject profile=currentUser(context);
+        JSONArray tags=profile.optJSONArray("tags");
+        boolean supporter=false;
+        if(tags!=null){
+            for(int i=0;i<tags.length();i++){
+                if("system_supporter".equals(tags.optString(i,""))){supporter=true;break;}
+            }
+        }
+        if(!supporter)throw new SecurityException(
+            "An active VRC+ subscription is required for Extended Avatar Favorites.");
+        String id=profile.optString("id","");
+        if(!id.matches("usr_[0-9a-fA-F-]{36}"))
+            throw new SecurityException("VRChat did not return the signed-in account.");
+        return id;
+    }
     /** Apply only the signed-in user's status and status message; other profile fields are untouched. */
     public static JSONObject updatePresence(Context context,String status,String description)throws Exception{
         if(!status.matches("active|ask me|busy|join me|offline"))
