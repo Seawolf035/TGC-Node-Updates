@@ -689,6 +689,16 @@ public final class CompanionActivity extends Activity {
             "Android permits it and staff access can be reverified. It doesn't "+
             "force-start after an Android force-stop or bypass battery restrictions.",
             12,CompanionStyle.MUTED,false));
+        page.addView(CompanionStyle.section(this,"BACKGROUND & BATTERY"));
+        LinearLayout background=card();
+        action(background,"◉","Background health",
+            "Tracking, floating tools and inbox alerts at a glance",
+            this::showBackgroundHealth);
+        background.addView(txt(
+            "Android power settings can delay alerts or interrupt background "+
+            "services. Tracking and floating tools run independently; you can "+
+            "review the app's battery settings without disabling Android protections.",
+            12,CompanionStyle.MUTED,false));
         page.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=card();
         action(app,"↓","Check for updates","Keep your Companion up to date",
@@ -758,6 +768,56 @@ public final class CompanionActivity extends Activity {
             Toast.makeText(this,"Notification permission was not granted",Toast.LENGTH_LONG).show();
         }
         if(StaffGate.unlocked(this))renderUnlocked();
+    }
+    private void showBackgroundHealth(){
+        if(!StaffGate.unlocked(this)){revalidate();return;}
+        long now=System.currentTimeMillis();
+        android.content.SharedPreferences node=
+            getSharedPreferences("tgc_mobile_node_status",0);
+        android.content.SharedPreferences overlay=
+            getSharedPreferences("tgc_overlay",0);
+        long nodeHeartbeat=node.getLong("service_heartbeat_at",0L);
+        long overlayHeartbeat=overlay.getLong("service_heartbeat_at",0L);
+        boolean nodeLive=node.getBoolean("running",false)&&nodeHeartbeat>0&&
+            now-nodeHeartbeat<90_000L;
+        boolean overlayLive=overlay.getBoolean("running",false)&&
+            overlayHeartbeat>0&&now-overlayHeartbeat<35_000L;
+        boolean alerts=InboxAlertSettings.active(this);
+        String battery="Managed by Android";
+        try{
+            android.os.PowerManager pm=
+                (android.os.PowerManager)getSystemService(POWER_SERVICE);
+            if(pm!=null&&android.os.Build.VERSION.SDK_INT>=23){
+                battery=pm.isIgnoringBatteryOptimizations(getPackageName())?
+                    "Battery optimization unrestricted":"Battery optimization may limit background work";
+            }
+        }catch(Exception ignored){}
+        String details=
+            "Player tracking: "+(nodeLive?"Running":"Not currently running")+
+            "\nFloating tools: "+(overlayLive?"Running":"Not currently running")+
+            "\nAutomatic floating recovery: "+
+                (OverlayPreferences.recover(this)?"Enabled":"Off")+
+            "\nInbox alerts: "+(alerts?"Enabled":
+                InboxAlertSettings.enabled(this)?"Android permission needed":"Off")+
+            "\nBattery status: "+battery+
+            "\n\nAndroid may postpone scheduled inbox checks or stop services under "+
+            "memory and battery pressure. The Node's ongoing tracking and the "+
+            "floating window are independent. Auto-recovery is best effort and "+
+            "cannot bypass a force-stop or Android's background-start restrictions.";
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Background health")
+            .setMessage(details)
+            .setNegativeButton("Close",null)
+            .setPositiveButton("Android app settings",(dialog,which)->{
+                try{
+                    Intent open=new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.parse("package:"+getPackageName()));
+                    startActivity(open);
+                }catch(Exception e){
+                    Toast.makeText(this,"Open Android Settings → Apps → TGC Staff Companion",
+                        Toast.LENGTH_LONG).show();
+                }
+            }).show();
     }
     private void chooseOverlaySize(){
         if(!StaffGate.unlocked(this))return;
