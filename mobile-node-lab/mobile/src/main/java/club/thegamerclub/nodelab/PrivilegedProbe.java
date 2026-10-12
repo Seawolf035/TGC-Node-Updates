@@ -114,8 +114,12 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
   // It never writes to VRChat files, holds no credentials, and never sends network traffic.
   private static final Pattern WATCH_JOIN=Pattern.compile("OnPlayerJoined\\s+.*?\\s+\\((usr_[a-fA-F0-9-]{36})\\)");
   private static final Pattern WATCH_LEAVE=Pattern.compile("OnPlayerLeft\\s+.*?\\s+\\((usr_[a-fA-F0-9-]{36})\\)");
+  private static final Pattern WATCH_INSTANCE=Pattern.compile("\\bJoining\\s+(wrld_[a-fA-F0-9-]{36}:[^\\s]+)");
   private final Object watchLock=new Object();
   private final LinkedHashMap<String, JSONObject> pendingSightings=new LinkedHashMap<>();
+  // Independent on-device Mini VRCX stream. Never part of Relay submissions.
+  private final LinkedHashMap<String,JSONObject> pendingActivity=new LinkedHashMap<>();
+  private String lastInstance="";
   private int droppedDueToLimit=0;
   private final Set<String> seenUsers=new HashSet<>();
   private volatile boolean watching=false;
@@ -134,6 +138,8 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
       lastCheck=0;lastLogChange=0;readBytes=0;lastSeenAppend=0;
       joinCount=0;leaveCount=0;unrecognized=0;pollCount=0;errorCount=0;fileSwitches=0;
       seenUsers.clear();
+      // Unknown session on monitoring start; only *observed* joins can count as present.
+      lastInstance="";
       // Pending events are retained across watcher restarts until the Android app ACKs them.
       lastError="none";
       File existing=latestVrchatFile();
@@ -197,6 +203,55 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
         for(int i=0;i<Math.min(ids.length(),250);i++)pendingSightings.remove(ids.optString(i,""));
       }catch(JSONException ignored){}
     }
+  }
+
+  @Override public String pendingActivity(int limit){
+    synchronized(watchLock){
+      JSONArray out=new JSONArray();
+      int n=Math.max(1,Math.min(limit,200));
+      for(JSONObject item:pendingActivity.values()){
+        if(out.length()>=n)break;
+        out.put(item);
+      }
+      return out.toString();
+    }
+  }
+  @Override public void ackActivity(String jsonIds){
+    synchronized(watchLock){
+      try{
+        JSONArray ids=new JSONArray(jsonIds);
+        for(int i=0;i<Math.min(250,ids.length());i++)
+          pendingActivity.remove(ids.optString(i,""));
+      }catch(JSONException ignored){}
+    }
+  }
+  private static String nameFromLine(String raw,String event){
+    String name="";
+    try{
+      String line=new String(raw.getBytes(StandardCharsets.ISO_8859_1),StandardCharsets.UTF_8);
+      int marker=line.indexOf(event);
+      if(marker>=0){
+        String rest=line.substring(marker+event.length()).trim();
+        int end=rest.lastIndexOf(" (usr_");
+        if(end>=0)name=rest.substring(0,end).trim();
+      }
+    }catch(RuntimeException ignored){}
+    return name.length()>180?name.substring(0,180):name;
+  }
+  private void activity(String kind,String uid,String name,String location){
+    // The local activity queue is independent from pending join-only Relay sightings.
+    if(pendingActivity.size()>=4000){droppedDueToLimit++;return;}
+    JSONObject event=new JSONObject();
+    try{
+      String id="local_"+UUID.randomUUID().toString();
+      event.put("event_id",id);
+      event.put("kind",kind);
+      event.put("user_id",uid==null?"":uid);
+      event.put("display_name",name==null?"":name);
+      event.put("location",location==null?"":location);
+      event.put("time",System.currentTimeMillis());
+      pendingActivity.put(id,event);
+    }catch(JSONException ignored){}
   }
 
   private void captureSighting(String rawLine,String userId){
@@ -299,10 +354,26 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
         }
         consumed+=next-position;
         offset=next;
+        Matcher entering=WATCH_INSTANCE.matcher(line);
+        if(entering.find()){
+          String location=entering.group(1);
+          if(location.length()>220)location=location.substring(0,220);
+          if(!location.equals(lastInstance)){
+            lastInstance=location;
+            activity("instance","","",location);
+          }
+        }
         Matcher join=WATCH_JOIN.matcher(line);
-        if(join.find()){joinCount++;seenUsers.add(join.group(1));captureSighting(line,join.group(1));}
-        else if(line.contains("OnPlayerJoined"))unrecognized++;
-        if(WATCH_LEAVE.matcher(line).find())leaveCount++;
+        if(join.find()){
+          joinCount++;seenUsers.add(join.group(1));
+          captureSighting(line,join.group(1)); // unchanged join-only Node/Relay path
+          activity("join",join.group(1),nameFromLine(line,"OnPlayerJoined"),lastInstance);
+        }else if(line.contains("OnPlayerJoined"))unrecognized++;
+        Matcher leave=WATCH_LEAVE.matcher(line);
+        if(leave.find()){
+          leaveCount++;
+          activity("leave",leave.group(1),nameFromLine(line,"OnPlayerLeft"),lastInstance);
+        }
       }
     }
     if(consumed>0){readBytes+=consumed;lastSeenAppend=System.currentTimeMillis();}
