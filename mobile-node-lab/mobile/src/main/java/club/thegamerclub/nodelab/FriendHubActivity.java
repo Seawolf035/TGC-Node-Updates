@@ -153,7 +153,8 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                 }catch(Exception ignored){}
             }
             try(MobileOutbox outbox=new MobileOutbox(this)){
-                recent=outbox.recentTrackedEvents(150);
+                JSONArray local=outbox.recentLocalActivity(150);
+                recent=local.length()>0?local:outbox.recentTrackedEvents(150);
             }catch(Exception ignored){}
             final JSONObject result=stored;final JSONArray logResult=log,encounterResult=recent;
             final String problem=error;final int recorded=changes;
@@ -285,12 +286,16 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                 if(e==null)continue;
                 JSONObject item=new JSONObject();
                 try{
-                    item.put("name",e.optString("display_name","Player"))
+                    String kind=e.optString("kind","encounter");
+                    String name="instance".equals(kind)?"World / instance":
+                        e.optString("display_name","Player");
+                    if(name.isEmpty())name=e.optString("user_id","Player");
+                    item.put("name",name)
                         .put("userId",e.optString("user_id",""))
-                        .put("time",e.optLong("local_seen_at"))
-                        .put("type","encounter")
-                        .put("location",e.optString("world_id",""));
-                    if(match(item.optString("name")+" encounter"))result.add(item);
+                        .put("time",e.optLong("time",e.optLong("local_seen_at")))
+                        .put("type",kind)
+                        .put("location",e.optString("location",e.optString("world_id","")));
+                    if(match(item.optString("name")+" "+kind+" "+item.optString("location")))result.add(item);
                 }catch(Exception ignored){}
             }
         }
@@ -308,7 +313,10 @@ public final class FriendHubActivity extends StaffProtectedActivity {
             case "name":return "Display name changed";
             case "friend_added":return "Added to friends";
             case "friend_removed":return "No longer on friends list";
-            case "encounter":return "Detected by Mobile Node"+(item.optString("location","").isEmpty()?"":" · "+item.optString("location"));
+            case "join":return "Joined the instance"+(item.optString("location","").isEmpty()?"":" · "+item.optString("location"));
+            case "leave":return "Left the instance";
+            case "instance":return "Entered another world"+(item.optString("location","").isEmpty()?"":" · "+item.optString("location"));
+            case "encounter":return "Player encountered";
             default:return type;
         }
     }
