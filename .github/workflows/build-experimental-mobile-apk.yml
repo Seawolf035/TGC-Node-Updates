@@ -109,7 +109,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "Mini VRCX update: VRC+-only extended local avatar collections with categories, plus personal VRChat status editor and reusable presets."
+            "notes": "Major usability update: reliable inbox and avatar action menus, visible notification filters, keyboard search, live local list filtering, one-tap status presets, intuitive tracking controls and profile sharing."
           }
           JSON
           fi
