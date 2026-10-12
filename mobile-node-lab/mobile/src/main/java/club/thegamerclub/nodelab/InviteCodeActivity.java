@@ -23,10 +23,17 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
     private TextView status,codeText,meta;
     private Button copy;
     private String code="";
-    private long lastScan=0L;
+    private long lastScan=0L,expiresAt=0L;
     private final Runnable refresh=new Runnable(){
         @Override public void run(){
             if(!active || isFinishing()||isDestroyed())return;
+            if(found && expiresAt>0L && System.currentTimeMillis()>expiresAt){
+                found=false;
+                code="";
+                copy.setEnabled(false);
+                codeText.setText("— — — —");
+                status.setText("That invite code has expired. Waiting for a new one...");
+            }
             if(!found)scan();
             handler.postDelayed(this,45_000L);
         }
@@ -113,7 +120,7 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
         help.addView(text("How it works",17,CompanionStyle.TEXT,true));
         gap(help,9);
         help.addView(text("1. Start your normal staff verification in Discord.\n"+
-            "2. Accept the invite sent by Gamer Music 3.\n"+
+            "2. Receive the invite sent by Gamer Music 3.\n"+
             "3. Copy the code from here and paste it into Discord.",
             14,CompanionStyle.MUTED,false));
         gap(help,11);
@@ -147,6 +154,7 @@ public final class InviteCodeActivity extends StaffProtectedActivity {
                 if(!outcome.code.isEmpty()){
                     code=outcome.code;
                     found=true;
+                    expiresAt=outcome.createdAt>0L?outcome.createdAt+10L*60_000L:0L;
                     codeText.setText(code);
                     codeText.setTextColor(CompanionStyle.GOOD);
                     status.setText("Verification invite found!");
