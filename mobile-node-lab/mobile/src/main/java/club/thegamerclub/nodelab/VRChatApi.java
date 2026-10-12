@@ -16,7 +16,7 @@ import java.util.Locale;
 /** Personal-account VRChat API client: sessions NEVER go through the TGC relay. */
 public final class VRChatApi {
     private static final String API="https://api.vrchat.cloud/api/1";
-    private static final String AGENT="TGC-Staff-Companion/0.9.1 (Android VRChat companion)";
+    private static final String AGENT="TGC-Staff-Companion/0.9.2 (Android VRChat companion)";
     private VRChatApi(){}
 
     private static final class Response {
@@ -269,6 +269,29 @@ public final class VRChatApi {
         if(value.length()<2||value.length()>80)throw new IllegalArgumentException("Search for 2–80 characters");
         return request("GET","/worlds?search="+java.net.URLEncoder.encode(value,"UTF-8")+"&n=40&offset=0",
             cookie(validSession(context)),null,null).array();
+    }
+    /** Read-only VRChat invite inbox. Never acknowledges, accepts or hides notifications. */
+    public static JSONArray inviteNotifications(Context context)throws Exception{
+        JSONObject session=validSession(context);
+        return request("GET","/auth/user/notifications?n=100&offset=0",
+            cookie(session),null,null).array();
+    }
+    /** Some newer VRChat invite metadata exists on the version-two inbox. */
+    public static JSONArray inviteNotificationsV2(Context context)throws Exception{
+        JSONObject session=validSession(context);
+        return request("GET","/notifications?n=100&offset=0",
+            cookie(session),null,null).array();
+    }
+    /** Read the custom displayName from a specific invited instance, if accessible. */
+    public static JSONObject invitedInstance(Context context,String worldId,String instanceId)throws Exception{
+        requireId("world",worldId);
+        if(instanceId==null||instanceId.length()<1||instanceId.length()>512 ||
+            !instanceId.matches("[A-Za-z0-9_~().,-]{1,512}")){
+            throw new IllegalArgumentException("Invalid instance location");
+        }
+        return request("GET","/instances/"+worldId+":"+
+            java.net.URLEncoder.encode(instanceId,"UTF-8"),cookie(validSession(context)),
+            null,null).object();
     }
     public static void logout(Context context){VRChatSession.clear(context);}
 }
