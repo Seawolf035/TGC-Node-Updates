@@ -93,6 +93,7 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
                     if(!id.matches("usr_[0-9a-fA-F-]{36}")){say("Please check your session.");return;}
                     startActivity(new Intent(this,VRChatDetailActivity.class).putExtra("kind","user").putExtra("id",id));
                 },true);
+                action(form,"My private VRChat notes",()->startActivity(new Intent(this,VRChatNotesActivity.class)),false);
                 action(form,"Check connection",this::checkSession,false);
                 action(form,"Sign out",this::confirmLogout,false);
                 return;
