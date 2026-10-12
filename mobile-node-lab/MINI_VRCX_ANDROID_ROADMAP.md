@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed published version before this pass: v0.16.1 (versionCode 28). v0.16.2 is a development update until the signed CI build succeeds. Verify repository status before continuing. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.16.2 (versionCode 29). v0.16.3 is under development until the signed CI build succeeds. Verify repository status before continuing. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -50,6 +50,13 @@ Last confirmed published version before this pass: v0.16.1 (versionCode 28). v0.
 - Reuse the same on-device normalized event types (join, leave, instance) from a future Quest-compatible read-only provider; keep the player list, local history and Node/Relay policy independent of the source implementation.
 - Require real-device feasibility, permission, privacy, performance and update testing before advertising Quest player tracking.
 - Quest users may have different device requirements; personal VRChat account features remain conceptually separate from log tracking.
+
+### v0.16.3 — Compact Help + Gamer Music 2 Cult Invite Codes
+- Tracking setup's Shizuku explanation starts **collapsed**, behind an accessible expand/hide control, below primary tracking controls and device status. Preserve help state on Activity recreation.
+- Gamer Music 3 verification remains the existing Discord-started TGC invite flow. Add a **separate** Gamer Music 2 / Cult verification reader for `CULT-XXXX-XXXX` codes found in private VRChat invites / invited-instance custom names.
+- Verification for both systems starts and finishes in Discord. The Companion (including floating tools) only locates and copies the code from the VRChat invite, helping staff paste it into the original Discord prompt; it never initiates or submits verification.
+- Cult TTL and a dedicated world identifier are currently unknown; do not invent either. Limit API lookups, keep personal VRChat credentials isolated, and require real-device verification.
+- Preserve existing Node, logs, and Quest feasibility plans.
 
 ### v0.17 — Mobile Convenience and Reliability
 - Persistent Android notifications for supported invites/requests/activity, with battery-conscious refresh.
