@@ -362,6 +362,38 @@ public final class VRChatApi {
         requireId("group",id);
         return request("GET","/groups/"+id,cookie(validSession(context)),null,null).object();
     }
+    /** Read-only pages of visible group members; user's own membership is under myMember. */
+    public static JSONArray groupMembers(Context context,String groupId,int offset)throws Exception{
+        requireId("group",groupId);
+        if(offset<0||offset>100000||offset%60!=0)
+            throw new IllegalArgumentException("Invalid group member page");
+        return request("GET","/groups/"+groupId+"/members?n=60&offset="+offset,
+            cookie(validSession(context)),null,null).array();
+    }
+    /** Read-only server-side group member search for large groups. */
+    public static JSONArray searchGroupMembers(Context context,String groupId,String name)throws Exception{
+        requireId("group",groupId);
+        String term=name==null?"":name.trim();
+        if(term.length()<3||term.length()>80)
+            throw new IllegalArgumentException("Group member search needs 3–80 characters");
+        return request("GET","/groups/"+groupId+"/members/search?query="+
+            java.net.URLEncoder.encode(term,"UTF-8")+"&n=60&offset=0",
+            cookie(validSession(context)),null,null).array();
+    }
+    /** Returns instances visible to this personal VRChat account. */
+    public static JSONArray groupInstances(Context context,String groupId)throws Exception{
+        requireId("group",groupId);
+        return request("GET","/groups/"+groupId+"/instances",
+            cookie(validSession(context)),null,null).array();
+    }
+    /** Group ban list is read-only and subject to the signed-in account's permissions. */
+    public static JSONArray groupBans(Context context,String groupId,int offset)throws Exception{
+        requireId("group",groupId);
+        if(offset<0||offset>100000||offset%60!=0)
+            throw new IllegalArgumentException("Invalid group bans page");
+        return request("GET","/groups/"+groupId+"/bans?n=60&offset="+offset,
+            cookie(validSession(context)),null,null).array();
+    }
     public static JSONArray searchUsers(Context context,String query)throws Exception{
         String value=query.trim();
         if(value.length()<2||value.length()>80)throw new IllegalArgumentException("Search for 2–80 characters");
