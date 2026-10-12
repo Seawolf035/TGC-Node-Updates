@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.9.3",
-  "version_code": 17,
+  "version": "0.10.0",
+  "version_code": 19,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "29b6a0cd42e01c7d65a8a73c70b700ecd62bb064c343324620598de36121227d",
+  "sha256": "94a90650b556836a2e02cc48a3d5d1d89c742a0caeb204e7292690c41fe3da40",
   "notes": "Fix verification invite code detection by reading VRChat invitation instance locations exactly like VRCX."
 }
