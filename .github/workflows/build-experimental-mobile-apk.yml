@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.16.4: One automatic TGC/Cult verification code reader in app and overlay; newest available invite code appears without selecting a service. Floating icon dot now follows personal VRChat presence: green Online, blue Join Me, yellow Ask Me, red Busy, gray Offline/unknown; tracking remains separate."
+            "notes": "v0.16.5: Verification code screens and floating tools now display The Gamer Club and Cult of Gamer Music as community names. Both TGC/CULT code formats, automatic scanning, and VRChat presence colors are unchanged."
           }
           JSON
           fi
