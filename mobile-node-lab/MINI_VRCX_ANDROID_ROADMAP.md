@@ -5,7 +5,7 @@ Updated: 2026-10-12. Planning document, not a feature-completion claim.
 Build a full-featured Android VRCX alternative for TGC staff who have no PC or limited PC access. The existing staff-only Mobile Node remains integrated, but personal Mini VRCX functions use each staff member's own VRChat account. Do not confuse staff authorization, personal VRChat authentication, or central inviter credentials.
 
 ## Confirmed baseline
-Last confirmed published version before this pass: v0.17.5 (versionCode 38). v0.17.6 is a development update until signed CI succeeds. Verify the actual GitHub build and manifest before later work. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
+Last confirmed published version before this pass: v0.17.6 (versionCode 39). v0.17.7 is in development until signed Android CI succeeds. Verify the actual build and publication status before later work. Existing capabilities include personal VRChat sign-in/2FA, encrypted sessions, friends, profiles, browsing, notifications/invites, avatar favorites, VRC+ gated device-local Extended Favorites, status presets, VRChat user notes, verification-code reading, and Shizuku-backed Mobile Node tracking.
 
 **Already tested in early development:** live VRChat Mobile log feeds via Shizuku, background monitoring, player encounters, SQLite offline queue, and Relay uploads. Do not reopen basic log-access feasibility as an untested assumption. Check specific log event coverage when implementing each new feature.
 
@@ -111,6 +111,13 @@ Last confirmed published version before this pass: v0.17.5 (versionCode 38). v0.
 - Reuse all remote favorites groups from v0.17.4, deduplicate in the All view, support avatar name/author search and show-more pagination. Update current-avatar UI immediately on successful selection without reloading every list; refuse an Apply if the personal VRChat account changed.
 - Add **All / Online / Offline** friend filters, expandable friend results, visible-instance actions, richer image-backed player profiles and additional Inbox pagination. Keep the actions within the floater.
 - Preserve user-selected Quest floater opt-in, Node tracking, background/recovery behavior, The Gamer Club/Cult verification and personal-account cookie isolation.
+
+### v0.17.7 — VRChat Mobile Chatbox Without Its Native Keyboard
+- Add a dedicated **In-game text chat** composer to the floating Home, Social and Tools tabs; it can also be pinned as a Home shortcut.
+- Use VRChat's documented **local OSC chatbox input**, `/chatbox/input`, to send typed text over UDP loopback to the VRChat Mobile client **without opening the broken in-game keyboard**.
+- Android's normal Companion overlay IME provides entry; users must turn on OSC in the VRChat Mobile Action Menu. Only explicit user sends, with 144-character validation, limited send rate and optional chat SFX.
+- Preserve the unsent draft in memory and offer copy/clear controls. State clearly that UDP packet transmission is **not** delivery confirmation: in-game display still requires VRChat OSC to be enabled and needs real-device testing.
+- No Shizuku dependency, Remote Relay messages, special user access, background auto-send, additional credentials, or changes to the Node log watcher.
 
 ### v0.18 — Universal Search and Reliability
 - Broaden unified search to groups/avatars/collections, caching, accessibility, logging and optional backup/export, followed by controlled group/instance management.
