@@ -1,6 +1,11 @@
 package club.thegamerclub.nodelab;
 
+import android.app.Activity;
 import android.content.Context;
+import android.view.View;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -25,6 +30,25 @@ public final class CompanionStyle {
     public static final int BORDER=0xFF324D68;
     public static final int GOOD=0xFF68E4B0;
     private CompanionStyle(){}
+    /**
+     * Target API 35 draws underneath system bars on recent Android versions.
+     * Apply real system-bar and display-cutout insets to the top-level view,
+     * preserving its authored padding. This fixes Samsung status/nav overlap
+     * without relying on guessed 24dp or 48dp fixed sizes.
+     */
+    public static void safeArea(Activity activity,View root){
+        WindowCompat.setDecorFitsSystemWindows(activity.getWindow(),false);
+        final int left=root.getPaddingLeft(),top=root.getPaddingTop();
+        final int right=root.getPaddingRight(),bottom=root.getPaddingBottom();
+        ViewCompat.setOnApplyWindowInsetsListener(root,(v,insets)->{
+            androidx.core.graphics.Insets safe=insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() |
+                WindowInsetsCompat.Type.displayCutout());
+            v.setPadding(left+safe.left,top+safe.top,right+safe.right,bottom+safe.bottom);
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(root);
+    }
     public static int dp(Context c,float size){
         return Math.round(size*c.getResources().getDisplayMetrics().density);
     }
