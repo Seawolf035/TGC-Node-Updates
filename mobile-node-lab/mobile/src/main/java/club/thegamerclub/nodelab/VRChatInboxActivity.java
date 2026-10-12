@@ -273,8 +273,9 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
                 entries.clear();entries.addAll(merged.values());
                 entries.sort((x,y)->Long.compare(y.sort,x.sort));
                 if(!append){
-                    legacyOffset=60;modernOffset=60;
-                    more.setVisibility(entries.size()>=60?View.VISIBLE:View.GONE);
+                    legacyOffset=result.legacyCount;modernOffset=result.modernCount;
+                    more.setVisibility(result.legacyCount>=60||result.modernCount>=60?
+                        View.VISIBLE:View.GONE);
                 }else{
                     if(oldPage!=null)legacyOffset+=oldPage.length();
                     if(newPage!=null)modernOffset+=newPage.length();
