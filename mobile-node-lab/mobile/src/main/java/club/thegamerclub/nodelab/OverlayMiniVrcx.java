@@ -126,6 +126,11 @@ public final class OverlayMiniVrcx {
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(43));
             p.bottomMargin=dp(9);root.addView(search,p);
             search.setOnFocusChangeListener((v,focus)->host.keyboard(focus));
+            search.setOnTouchListener((v,event)->{
+                if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN)
+                    host.keyboard(true);
+                return false;
+            });
             search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
             if("mini_search".equals(screen)){
                 search.setHint("Enter at least 2 characters...");
@@ -726,6 +731,11 @@ public final class OverlayMiniVrcx {
             new android.text.InputFilter.LengthFilter(32)});
         c.addView(message,new LinearLayout.LayoutParams(-1,dp(47)));
         message.setOnFocusChangeListener((v,focused)->host.keyboard(focused));
+        message.setOnTouchListener((v,event)->{
+            if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN)
+                host.keyboard(true);
+            return false;
+        });
         section(c,"Choose a status");
         for(int i=0;i<states.length;i++){
             final String state=states[i];
@@ -750,6 +760,11 @@ public final class OverlayMiniVrcx {
         input.setFilters(new android.text.InputFilter[]{
             new android.text.InputFilter.LengthFilter(2000)});
         input.setOnFocusChangeListener((v,focus)->host.keyboard(focus));
+        input.setOnTouchListener((v,event)->{
+            if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN)
+                host.keyboard(true);
+            return false;
+        });
         c.addView(input);
         button(c,"Save private VRChat note",true,()->{
             String value=input.getText().toString().trim();
