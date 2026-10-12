@@ -122,7 +122,7 @@ public final class VRChatInviteCode {
         // VRCX reads the *complete location* from ref.details.worldId.
         // It is typically wrld_<uuid>:<instance>~private(...)~nonce(...),
         // not a bare world UUID plus a separate instanceId.
-        for(String field:new String[]{"worldId","location","instanceId","instanceLocation",
+        for(String field:new String[]{"worldId","worldId","location","instanceId","instanceLocation",
                 "targetLocation","worldInstance","joinLocation","link"}){
             String result=instanceLocation(o.optString(field,""));
             if(!result.isEmpty())return result;
@@ -192,6 +192,7 @@ public final class VRChatInviteCode {
             if(lastError!=null)throw lastError;
             throw new IllegalStateException("VRChat invite inbox unavailable");
         }
+        // Notifications v1/v2 can contain the same invite. The newest is best.
         Collections.sort(matches,(a,b)->Long.compare(b.created,a.created));
         String newest="";
         for(Invite invite:matches){
