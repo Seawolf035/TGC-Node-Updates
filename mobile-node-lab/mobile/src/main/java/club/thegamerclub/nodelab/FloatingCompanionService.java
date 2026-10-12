@@ -440,7 +440,9 @@ public final class FloatingCompanionService extends Service {
         recent.addView(recentStatus);
         // A small, bounded dynamic region. No second log parser or tracker is created.
         recentRows=vertical();recent.addView(recentRows);
-        action(recent,"Open full player log",false,()->go("mini_players"));
+        paired(recent,"Player list","Join / leave log",
+            ()->go("mini_current"),()->go("mini_joins"));
+        action(recent,"Past encounters",false,()->go("mini_players"));
 
         section(panelContent,"QUICK ACCESS");
         LinearLayout quick=panelCard(panelContent);
@@ -464,7 +466,9 @@ public final class FloatingCompanionService extends Service {
             ()->mini.inbox("friend"),()->mini.findUser());
         section(panelContent,"PLAYER TOOLS");
         LinearLayout players=panelCard(panelContent);
-        action(players,"Captured player log & profiles",false,
+        paired(players,"Player list","Join / leave log",
+            ()->go("mini_current"),()->go("mini_joins"));
+        action(players,"Past encounters & profiles",false,
             ()->go("mini_players"));
         action(players,"My VRChat groups",false,()->go("mini_groups"));
     }
@@ -479,7 +483,9 @@ public final class FloatingCompanionService extends Service {
             ()->mini.findUser(),()->go("mini_friends"));
         section(panelContent,"PLAYER INFORMATION");
         LinearLayout player=panelCard(panelContent);
-        paired(player,"Player log","Friend log",
+        paired(player,"Player list","Join / leave log",
+            ()->go("mini_current"),()->go("mini_joins"));
+        paired(player,"Past encounters","Friend log",
             ()->go("mini_players"),()->go("mini_log"));
         section(panelContent,"NODE TRACKING");
         LinearLayout node=panelCard(panelContent);
