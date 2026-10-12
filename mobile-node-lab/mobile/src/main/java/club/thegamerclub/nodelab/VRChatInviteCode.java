@@ -35,9 +35,16 @@ public final class VRChatInviteCode {
         public final int matchingInvites;
         public final boolean inboxRead;
         public final long createdAt;
+        /** "gm3", "cult", or "none"; set by the recognized code, never by a UI tab. */
+        public final String provider;
         Result(String code,String message,int matchingInvites,boolean inboxRead,long createdAt){
+            this(code,message,matchingInvites,inboxRead,createdAt,
+                code!=null&&code.toUpperCase(Locale.US).startsWith("CULT-")?"cult":
+                code!=null&&code.toUpperCase(Locale.US).startsWith("TGC-")?"gm3":"none");
+        }
+        Result(String code,String message,int matchingInvites,boolean inboxRead,long createdAt,String provider){
             this.code=code;this.message=message;this.matchingInvites=matchingInvites;
-            this.inboxRead=inboxRead;this.createdAt=createdAt;
+            this.inboxRead=inboxRead;this.createdAt=createdAt;this.provider=provider;
         }
     }
     private static final class Invite{
@@ -307,6 +314,125 @@ public final class VRChatInviteCode {
             "Invites found, but a Cult verification code was not available in their accessible details. You can also read the instance name in VRChat.",
             matches.size(),true,0L);
     }
+    private static final class UnifiedInvite {
+        final String key;
+        final long created;
+        final String code,location,tgcInstance;
+        UnifiedInvite(String key,long created,String code,String location,String tgcInstance){
+            this.key=key;this.created=created;this.code=code;
+            this.location=location;this.tgcInstance=tgcInstance;
+        }
+    }
+    private static void collectUnified(JSONArray notifications,
+                                       ArrayList<UnifiedInvite> candidates){
+        if(notifications==null)return;
+        long now=System.currentTimeMillis();
+        for(int i=0;i<notifications.length();i++){
+            JSONObject notification=notifications.optJSONObject(i);
+            if(notification==null)continue;
+            String type=notification.optString("type","").toLowerCase(Locale.US);
+            if(!type.equals("invite")&&!type.endsWith(".invite")&&
+                !type.equals("invitev2"))continue;
+            long created=date(notification);
+            if(created>now+60_000L)continue;
+            JSONObject detail=details(notification);
+            boolean gm3World=containsWorld(notification,detail);
+            String gm3Direct=gm3World?matchCode(detail,0):"";
+            if(gm3World&&gm3Direct.isEmpty())gm3Direct=matchCode(notification,0);
+            String cultDirect=findCultCode(detail,0);
+            if(cultDirect.isEmpty())cultDirect=findCultCode(notification,0);
+            boolean gm3Fresh=gm3World&&(created==0||now-created<=TTL+20_000L);
+            boolean cultFresh=created==0||now-created<=CULT_RECENT_WINDOW;
+            String tgcInstance=gm3Fresh?findLocation(notification,0):"";
+            String cultLocation=cultFresh?findCultLocation(detail,0):"";
+            if(cultLocation.isEmpty()&&cultFresh)
+                cultLocation=findCultLocation(notification,0);
+            String code="";
+            if(gm3Fresh&&!gm3Direct.isEmpty())code=gm3Direct;
+            else if(cultFresh&&!cultDirect.isEmpty())code=cultDirect;
+            // A TGC world is authoritative for TGC codes; otherwise an invite
+            // with a known location can expose a Cult custom instance name.
+            if(code.isEmpty()&&!gm3Fresh&&!cultFresh)continue;
+            if(code.isEmpty()&&tgcInstance.isEmpty()&&cultLocation.isEmpty())continue;
+            String id=notification.optString("id","");
+            String key=!id.isEmpty()?id:
+                (created+":"+tgcInstance+":"+cultLocation+":"+code);
+            candidates.add(new UnifiedInvite(key,created,code,cultLocation,tgcInstance));
+        }
+    }
+    /**
+     * Auto-recognizes whichever of Gamer Music 3 (TGC) or Gamer Music 2 (CULT)
+     * verification codes arrived most recently.
+     *
+     * Both verification flows begin and end in Discord. This only reads the
+     * personal VRChat inbox / the invited instance's displayName; never
+     * creates codes, sends Discord messages, or uploads VRChat credentials.
+     */
+    public static Result scanLatest(Context context)throws Exception{
+        ArrayList<UnifiedInvite> candidates=new ArrayList<>();
+        boolean read=false;
+        Exception error=null;
+        try{
+            collectUnified(VRChatApi.inviteNotifications(context),candidates);
+            read=true;
+        }catch(Exception e){error=e;}
+        try{
+            collectUnified(VRChatApi.inviteNotificationsV2(context),candidates);
+            read=true;
+        }catch(Exception e){if(error==null)error=e;}
+        if(!read){
+            if(error!=null)throw error;
+            throw new IllegalStateException("Unable to read VRChat invitations");
+        }
+        // Resolve newest first, deduplicating v1/v2 versions of the same invite.
+        Collections.sort(candidates,(a,b)->Long.compare(b.created,a.created));
+        java.util.HashSet<String> seen=new java.util.HashSet<>();
+        java.util.HashSet<String> lookedUp=new java.util.HashSet<>();
+        int requests=0;
+        for(UnifiedInvite invite:candidates){
+            if(!seen.add(invite.key))continue;
+            if(!invite.code.isEmpty()){
+                return new Result(invite.code,
+                    "New "+(invite.code.startsWith("CULT-")?"Cult":"Gamer Music 3")+
+                        " verification code found",
+                    candidates.size(),true,invite.created);
+            }
+            // Use the known TGC verification world only for TGC requests.
+            // Cult uses the complete instance location from the actual invite.
+            String world="",instance="";
+            if(!invite.tgcInstance.isEmpty()){
+                world=WORLD;instance=invite.tgcInstance;
+            }else if(!invite.location.isEmpty()){
+                int colon=invite.location.indexOf(':');
+                if(colon>0){
+                    world=invite.location.substring(0,colon);
+                    instance=invite.location.substring(colon+1);
+                }
+            }
+            if(world.isEmpty()||instance.isEmpty())continue;
+            if(!lookedUp.add(world+":"+instance))continue;
+            if(++requests>12)break; // Bound metadata lookups across both services.
+            try{
+                JSONObject metadata=VRChatApi.invitedInstance(context,world,instance);
+                String display=metadata.optString("displayName","");
+                String detected=world.equalsIgnoreCase(WORLD)?code(display):"";
+                if(detected.isEmpty())detected=cultCode(display);
+                if(!detected.isEmpty()){
+                    return new Result(detected,
+                        "Verification code found in the private VRChat instance name",
+                        candidates.size(),true,invite.created);
+                }
+            }catch(Exception ignored){
+                // A private world may not expose its instance name to this account.
+            }
+        }
+        return new Result("",
+            candidates.isEmpty()?
+            "No recent TGC or Cult verification invite found. Start verification in Discord, then check again.":
+            "A recent invite was found, but VRChat did not expose a TGC or Cult code. You can also check its instance name in VRChat.",
+            candidates.size(),true,0L);
+    }
+
     private static void accept(JSONArray notifications,ArrayList<Invite> matches){
         if(notifications==null)return;
         long now=System.currentTimeMillis();
