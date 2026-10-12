@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.14.0: Friends Locations, persistent searchable Friend Log, combined activity feed, optional Mini VRCX floating bubble, and local Mobile Node log history."
+            "notes": "v0.14.1: Redesigned Mini VRCX bubble using the TGC app icon, Home/Social/Tools tabs, Node Start/Stop tracking, live encounter shortcuts, and expanded quick tools."
           }
           JSON
           fi
