@@ -153,7 +153,7 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                 }catch(Exception ignored){}
             }
             try(MobileOutbox outbox=new MobileOutbox(this)){
-                recent=outbox.recentEncounters(100);
+                recent=outbox.recentTrackedEvents(150);
             }catch(Exception ignored){}
             final JSONObject result=stored;final JSONArray logResult=log,encounterResult=recent;
             final String problem=error;final int recorded=changes;
@@ -287,9 +287,9 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                 try{
                     item.put("name",e.optString("display_name","Player"))
                         .put("userId",e.optString("user_id",""))
-                        .put("time",e.optLong("seen_at"))
+                        .put("time",e.optLong("local_seen_at"))
                         .put("type","encounter")
-                        .put("visits",e.optInt("visits",1));
+                        .put("location",e.optString("world_id",""));
                     if(match(item.optString("name")+" encounter"))result.add(item);
                 }catch(Exception ignored){}
             }
@@ -308,7 +308,7 @@ public final class FriendHubActivity extends StaffProtectedActivity {
             case "name":return "Display name changed";
             case "friend_added":return "Added to friends";
             case "friend_removed":return "No longer on friends list";
-            case "encounter":return "Recently encountered · "+item.optInt("visits",1)+" recorded visit(s)";
+            case "encounter":return "Detected by Mobile Node"+(item.optString("location","").isEmpty()?"":" · "+item.optString("location"));
             default:return type;
         }
     }
