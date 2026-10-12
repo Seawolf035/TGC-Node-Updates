@@ -94,6 +94,8 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
                     startActivity(new Intent(this,VRChatDetailActivity.class).putExtra("kind","user").putExtra("id",id));
                 },true);
                 action(form,"My private VRChat notes",()->startActivity(new Intent(this,VRChatNotesActivity.class)),false);
+                action(form,"Status & presets",()->startActivity(new Intent(this,PresenceActivity.class)),false);
+                action(form,"Extended avatar favorites (VRC+)",()->startActivity(new Intent(this,ExtendedAvatarActivity.class)),false);
                 action(form,"Check connection",this::checkSession,false);
                 action(form,"Sign out",this::confirmLogout,false);
                 return;
