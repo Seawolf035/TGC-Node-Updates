@@ -20,6 +20,11 @@
    <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
      android:value="User-initiated continuous VRChat player event monitoring with a persistent notification" />
  </service>
+ <service android:name=".QuestOscService" android:enabled="true" android:exported="false"
+   android:foregroundServiceType="specialUse">
+   <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+     android:value="User-initiated Quest-native VRChat OSC Live Chatbox and microphone PTT with visible notification" />
+ </service>
  <service android:name=".FloatingCompanionService" android:enabled="true" android:exported="false"
    android:foregroundServiceType="specialUse">
    <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
@@ -31,6 +36,7 @@
    android:grantUriPermissions="true">
   <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/tgc_update_paths"/>
  </provider>
+ <activity android:name=".QuestToolsActivity" android:exported="false"/>
  <activity android:name=".ExtendedAvatarActivity" android:exported="false"/>
  <activity android:name=".PlayerActivityLogActivity" android:exported="false"/>
  <activity android:name=".FriendHubActivity" android:exported="false"/>
