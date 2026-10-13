@@ -220,8 +220,8 @@ public final class FloatingCompanionService extends Service {
                 Toast.LENGTH_LONG).show();
             return;
         }
-        if(seconds!=5&&seconds!=10&&seconds!=15&&seconds!=30)
-            seconds=10;
+        if(!OscControlStore.supportsLiveInterval(seconds))
+            seconds=OscControlStore.liveInterval(this);
         try{
             String account=VRChatSession.load(this).optString("userId","");
             if(!account.matches("usr_[0-9a-fA-F-]{36}"))
