@@ -1336,21 +1336,9 @@ public final class OverlayMiniVrcx {
                 if(!avatarId.equals(active)){
                     Button apply=CompanionStyle.button(ctx,"Apply selected avatar",true);
                     controls.addView(apply,CompanionStyle.buttonParams(ctx));
-                    LinearLayout approval=new LinearLayout(ctx);
-                    approval.setOrientation(LinearLayout.VERTICAL);
-                    controls.addView(approval);
-                    approval.setVisibility(View.GONE);
                     apply.setOnClickListener(v->{
                         host.keyboard(false);
-                        if(approval.getVisibility()==View.VISIBLE){
-                            approval.setVisibility(View.GONE);return;
-                        }
-                        approval.removeAllViews();
-                        approval.addView(text(
-                            "Switch your personal VRChat account to "+name+"?",
-                            12,CompanionStyle.GOLD,true));
-                        button(approval,"Confirm avatar change",true,()->{
-                            approval.setVisibility(View.GONE);
+                        confirm("Switch your personal VRChat avatar to "+name+"?",()->
                             write(()->{
                                 String now=VRChatSession.load(ctx)
                                     .optString("userId","");
@@ -1362,11 +1350,7 @@ public final class OverlayMiniVrcx {
                             },"Avatar changed",()->{
                                 try{avatarOwnUser.put("currentAvatar",avatarId);}
                                 catch(Exception ignored){}
-                            },false);
-                        });
-                        button(approval,"Cancel",false,
-                            ()->approval.setVisibility(View.GONE));
-                        approval.setVisibility(View.VISIBLE);
+                            },false));
                     });
                 }else{
                     selection.addView(text(
@@ -1982,37 +1966,20 @@ public final class OverlayMiniVrcx {
             }
             public void afterTextChanged(android.text.Editable value){}
         });
-        LinearLayout confirmBox=new LinearLayout(ctx);
-        confirmBox.setOrientation(LinearLayout.VERTICAL);
-        main.addView(confirmBox);
-        confirmBox.setVisibility(View.GONE);
         Button apply=CompanionStyle.button(ctx,"Apply status",true);
         main.addView(apply,CompanionStyle.buttonParams(ctx));
         apply.setOnClickListener(v->{
             if(!StaffGate.unlocked(ctx))return;
             host.keyboard(false);input.clearFocus();
-            if(confirmBox.getVisibility()==View.VISIBLE){
-                confirmBox.setVisibility(View.GONE);return;
-            }
-            confirmBox.removeAllViews();
             String state=chosen[0],newMessage=input.getText().toString().trim();
-            confirmBox.addView(text(
-                "Update VRChat to "+VRChatPresenceIndicator.label(state)+
-                (newMessage.isEmpty()?"":" · "+newMessage)+"?",
-                12,CompanionStyle.GOLD,true));
-            button(confirmBox,"Confirm change",true,()->{
-                confirmBox.setVisibility(View.GONE);
-                // Verify the authenticated account before changing its status.
+            confirm("Update VRChat to "+VRChatPresenceIndicator.label(state)+
+                (newMessage.isEmpty()?"":" · "+newMessage)+"?",()->
                 write(()->{
                     JSONObject me=VRChatApi.currentUser(ctx);
                     if(!accountId.equals(me.optString("id","")))
                         throw new SecurityException("VRChat account changed. Refresh this page.");
                     VRChatApi.updatePresence(ctx,state,newMessage);
-                },"Status updated",
-                  ()->host.onPresenceChanged(state));
-            });
-            button(confirmBox,"Cancel",false,()->confirmBox.setVisibility(View.GONE));
-            confirmBox.setVisibility(View.VISIBLE);
+                },"Status updated",()->host.onPresenceChanged(state)));
         });
         section(list,"SAVED PRESETS");
         LinearLayout presetBox=card(list);
@@ -2342,35 +2309,30 @@ public final class OverlayMiniVrcx {
         Button startLive=CompanionStyle.button(ctx,
             running?"Update Live Chatbox":"Start Live Chatbox",true);
         intervalCard.addView(startLive,CompanionStyle.buttonParams(ctx));
-        LinearLayout approval=new LinearLayout(ctx);
-        approval.setOrientation(LinearLayout.VERTICAL);
-        approval.setVisibility(View.GONE);
-        intervalCard.addView(approval);
         startLive.setOnClickListener(v->{
             if(!StaffGate.unlocked(ctx))return;
             host.keyboard(false);message.clearFocus();
+            final String nextLine=message.getText().toString();
+            final boolean clock=flags[0],battery=flags[1];
+            final int speed=selected[0];
             try{
-                OscControlStore.setPrefix(ctx,message.getText().toString());
-                OscControlStore.setIncludeTime(ctx,flags[0]);
-                OscControlStore.setIncludeBattery(ctx,flags[1]);
-                OscControlStore.setLiveInterval(ctx,selected[0]);
-                OscControlStore.statusLine(ctx);
+                OscControlStore.previewChatbox(ctx,nextLine,clock,battery);
             }catch(Exception ex){
                 feedback.setText("Cannot start: "+ex.getMessage());return;
             }
-            approval.removeAllViews();
-            approval.addView(text(
-                "Confirm continuous OSC Chatbox updates every "+
-                selected[0]+" seconds? The line will keep updating while "+
-                "the floating service runs, even if the panel is collapsed.",
-                12,CompanionStyle.GOLD,true));
-            button(approval,"Confirm Live Chatbox",true,()->{
-                approval.setVisibility(View.GONE);
-                host.oscStartLive(selected[0]);
-                drawList();
+            confirm("Start continuous OSC Chatbox updates every "+
+                speed+" seconds? It will keep updating while the floating "+
+                "service runs, even when collapsed.",()->{
+                try{
+                    OscControlStore.setPrefix(ctx,nextLine);
+                    OscControlStore.setIncludeTime(ctx,clock);
+                    OscControlStore.setIncludeBattery(ctx,battery);
+                    OscControlStore.setLiveInterval(ctx,speed);
+                    OscControlStore.statusLine(ctx);
+                    host.oscStartLive(speed);
+                    drawList();
+                }catch(Exception ex){message("Cannot start: "+ex.getMessage());}
             });
-            button(approval,"Cancel",false,()->approval.setVisibility(View.GONE));
-            approval.setVisibility(View.VISIBLE);
         });
         button(intervalCard,"Send this status once",false,()->{
             if(!StaffGate.unlocked(ctx)||oscStatusSending)return;
