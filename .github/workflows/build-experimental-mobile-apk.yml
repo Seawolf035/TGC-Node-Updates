@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.18.5: Official-only Live Chatbox rotation: optionally exclude the default personal status and saved personal chatboxes without deleting them, select only rank-authorized official TGC tags, and clear saved personal text/time/battery through a confirmation. Live start accepts a valid official-only slot even when the default personal status is empty, and live sends stop rather than fall back after all eligible tags disappear. Existing v0.18.4 confirmed-working experimental OSC Android PTT toggle, quick release, v0.18.3 floating controls, world bookmarks, Mini-VRCX, staff auth, and Shizuku/Relay Node remain intact."
+            "notes": "v0.18.6: Four floating usability upgrades: tap a separate draggable-bubble-adjacent OSC PTT button to hold/release without expanding the panel; quick Live Chatbox start/pause/resume/stop, authorized official-only selector and direct one-tap sends for up to four saved phrases; pinned friend profiles with fast Social and invitation links; and a configurable 0-3-action bar fixed above long scrolled pages in addition to the existing six Home shortcuts. The PTT latch has a dedicated low-latency worker and retains five-minute and exit-release safeguards. All previous v0.18.5 official-only chatbox, world bookmarks, Mini-VRCX, moderation/Node/OSC utilities and staff authorization are preserved. No Main Launcher or Relay update required."
           }
           JSON
           fi
