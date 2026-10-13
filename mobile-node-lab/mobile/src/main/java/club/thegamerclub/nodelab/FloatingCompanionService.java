@@ -62,7 +62,8 @@ public final class FloatingCompanionService extends Service {
     private final ArrayDeque<String> backStack=new ArrayDeque<>();
     private FrameLayout bubble;
     private View statusDot;
-    private LinearLayout panel, panelContent;
+    private LinearLayout panel, panelContent, panelActionArea;
+    private int actionNoticeRevision=0;
     private ScrollView panelScroller;
     private WindowManager.LayoutParams bubbleParams;
     private TextView nodeStatus, nodeStats, recentStatus, presenceLabel,presenceActionLabel;
@@ -344,6 +345,12 @@ public final class FloatingCompanionService extends Service {
             @Override public String oscLiveDescription(){return oscLiveSummary();}
             @Override public void oscStartLive(int seconds){startOscLive(seconds);}
             @Override public void oscStopLive(){stopOscLive();}
+            @Override public void confirm(String prompt,Runnable action){
+                showPinnedConfirmation(prompt,action);
+            }
+            @Override public void feedback(String message){
+                showPinnedFeedback(message);
+            }
             @Override public void scrollToTop(){
                 if(panelScroller!=null){
                     final ScrollView target=panelScroller;
@@ -837,6 +844,13 @@ public final class FloatingCompanionService extends Service {
         tab(tabs,"OSC","osc");
         tab(tabs,"Tools","tools");
 
+        // Persistent action area stays ABOVE the scrolling content. Confirmations
+        // and feedback never require scrolling to the end of a long tool page.
+        panelActionArea=vertical();
+        panelActionArea.setPadding(dp(12),dp(2),dp(12),dp(2));
+        panelActionArea.setVisibility(View.GONE);
+        container.addView(panelActionArea);
+
         ScrollView scroll=new ScrollView(this);
         panelScroller=scroll;
         scroll.setFillViewport(false);
@@ -893,8 +907,68 @@ public final class FloatingCompanionService extends Service {
             dismissPanel();togglePanel();
         });
     }
+    private void clearPinnedAction(){
+        actionNoticeRevision++;
+        if(panelActionArea==null)return;
+        panelActionArea.removeAllViews();
+        panelActionArea.setVisibility(View.GONE);
+    }
+    private void showPinnedConfirmation(String prompt,Runnable action){
+        if(panelActionArea==null || !StaffGate.unlocked(this) || action==null)return;
+        clearPinnedAction();
+        // Dismiss the IME so the fixed confirmation controls are immediately usable.
+        setOverlayKeyboard(false);
+        final LinearLayout owner=panelActionArea;
+        LinearLayout card=CompanionStyle.card(this);
+        owner.addView(card,CompanionStyle.cardParams(this));
+        card.addView(text(prompt==null?"Confirm this action?":prompt,
+            13,CompanionStyle.GOLD,true));
+        LinearLayout buttons=new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        card.addView(buttons);
+        Button cancel=CompanionStyle.button(this,"Cancel",false);
+        Button approve=CompanionStyle.button(this,"Confirm",true);
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(43),1f);
+        left.setMargins(0,dp(7),dp(4),0);
+        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(43),1f);
+        right.setMargins(dp(4),dp(7),0,0);
+        buttons.addView(cancel,left);
+        buttons.addView(approve,right);
+        owner.setVisibility(View.VISIBLE);
+        cancel.setOnClickListener(v->clearPinnedAction());
+        approve.setOnClickListener(v->{
+            if(owner!=panelActionArea)return;
+            clearPinnedAction();
+            if(!StaffGate.unlocked(this)){stopSelf();return;}
+            action.run();
+        });
+    }
+    private void showPinnedFeedback(String info){
+        if(panelActionArea==null || info==null || info.trim().isEmpty())return;
+        clearPinnedAction();
+        final LinearLayout owner=panelActionArea;
+        final int notice=actionNoticeRevision;
+        LinearLayout row=new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(11),dp(7),dp(7),dp(7));
+        row.setBackground(CompanionStyle.shape(this,CompanionStyle.SURFACE,11,
+            CompanionStyle.BORDER));
+        owner.addView(row);
+        TextView label=text(info,12,CompanionStyle.ACCENT,false);
+        row.addView(label,new LinearLayout.LayoutParams(0,-2,1f));
+        Button close=CompanionStyle.button(this,"×",false);
+        close.setContentDescription("Dismiss message");
+        row.addView(close,new LinearLayout.LayoutParams(dp(42),dp(38)));
+        close.setOnClickListener(v->clearPinnedAction());
+        owner.setVisibility(View.VISIBLE);
+        handler.postDelayed(()->{
+            if(notice==actionNoticeRevision && owner==panelActionArea)
+                clearPinnedAction();
+        },6000L);
+    }
     private void buildTab(){
         if(panelContent==null)return;
+        clearPinnedAction();
         // Stop in-overlay periodic lookups when navigating away from a detail page.
         if(mini!=null)mini.close();
         panelContent.removeAllViews();
@@ -1265,7 +1339,9 @@ public final class FloatingCompanionService extends Service {
             try{wm.removeView(panel);}catch(Exception ignored){}
         }
         if(mini!=null)mini.close();
-        panel=null;panelContent=null;panelScroller=null;recentRows=null;recentStatus=null;
+        clearPinnedAction();
+        panel=null;panelContent=null;panelActionArea=null;panelScroller=null;
+        recentRows=null;recentStatus=null;
         presenceLabel=null;presenceActionLabel=null;
         panelParams=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;
