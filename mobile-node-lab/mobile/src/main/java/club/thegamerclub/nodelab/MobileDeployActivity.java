@@ -31,7 +31,7 @@ public class MobileDeployActivity extends Activity {
   private TextView status,technicalStatus,feedback,questFolderStatus;
   private Button startControl,stopControl,questFolderControl,questFolderModeControl;
   private LinearLayout enrollment,advancedPane,questFallbackContainer,questFallbackDetails;
-  private View unlinkControl;
+  private View unlinkControl,setupGuideControl;
   private boolean advanced=false;
   private boolean helpExpanded=false,questFallbackExpanded=false;
   private static final String FIRST_SETUP_PREF="tgc_tracking_first_setup_v1";
@@ -187,7 +187,7 @@ public class MobileDeployActivity extends Activity {
       folder.addView(title("QUEST LOG ACCESS",18));
       spacer(folder,7);
       TextView detail=title(
-          "Recommended for Quest: grant read-only access to VRChat's Documents/Logs folder. No Shizuku installation is needed. Use the first-time setup guide for VRChat logging instructions.",13);
+          "Recommended for Quest: grant read-only access to VRChat's Documents/Logs folder. No Shizuku installation is needed for the default method.",13);
       detail.setTextColor(CompanionStyle.MUTED);
       folder.addView(detail);
       spacer(folder,9);
@@ -257,7 +257,7 @@ public class MobileDeployActivity extends Activity {
     technicalStatus=title("",12);
     technicalStatus.setTextColor(CompanionStyle.MUTED);
     advancedPane.addView(technicalStatus);
-    action(advancedPane,"Reopen first-time tracking setup guide",
+    setupGuideControl=action(advancedPane,"Reopen first-time tracking setup guide",
         this::showFirstSetupGuide,false);
     if(QuestDevice.isQuestDevice()){
       questFallbackContainer=new LinearLayout(this);
@@ -297,6 +297,8 @@ public class MobileDeployActivity extends Activity {
     if(technicalStatus==null || advancedPane==null)return;
     technicalStatus.setVisibility(advanced?View.VISIBLE:View.GONE);
     if(unlinkControl!=null)unlinkControl.setVisibility(advanced?View.VISIBLE:View.GONE);
+    if(setupGuideControl!=null)
+      setupGuideControl.setVisibility(advanced?View.VISIBLE:View.GONE);
     if(questFallbackContainer!=null)
       questFallbackContainer.setVisibility(advanced?View.VISIBLE:View.GONE);
     if(questFallbackDetails!=null)
