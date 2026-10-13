@@ -2283,6 +2283,7 @@ public final class OverlayMiniVrcx {
                 try{
                     // Validate eligibility BEFORE clearing anything.
                     OscControlStore.setOfficialOnly(ctx,true);
+                    OscControlStore.setIncludeDefaultChatbox(ctx,false);
                     OscControlStore.clearPersonalStatus(ctx);
                     message.setText("");
                     flags[0]=false;flags[1]=false;
