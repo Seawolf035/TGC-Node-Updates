@@ -44,6 +44,37 @@ public final class CompanionActivity extends Activity {
     private TextView verificationNotice;
     private LinearLayout page,root;
     private String tab="home";
+    // Quest Back remembers changes between bottom tabs and swipe navigation.
+    // Phones keep their preexisting Android Back behavior.
+    private final java.util.ArrayDeque<String> questTabs=new java.util.ArrayDeque<>();
+    private void openTab(String next){
+        if(tab.equals(next))return;
+        if(QuestDevice.isQuestDevice()){
+            if(questTabs.size()>=24)questTabs.removeLast();
+            questTabs.push(tab);
+        }
+        tab=next;
+        renderUnlocked();
+    }
+    @Override public void onBackPressed(){
+        if(!QuestDevice.isQuestDevice()){
+            super.onBackPressed();return;
+        }
+        if(!showingUnlocked||!StaffGate.unlocked(this)){
+            super.onBackPressed();return;
+        }
+        if(!questTabs.isEmpty()){
+            tab=questTabs.pop();
+            renderUnlocked();
+            return;
+        }
+        if(!"home".equals(tab)){
+            tab="home";
+            renderUnlocked();
+            return;
+        }
+        super.onBackPressed();
+    }
     private final Runnable refreshGate=new Runnable(){
         @Override public void run(){
             if(!isFinishing()&&!isDestroyed()){
@@ -120,8 +151,7 @@ public final class CompanionActivity extends Activity {
         main.post(()->{
             if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
             if(!tab.equals(expectedTab))return;
-            tab=nextTab;
-            renderUnlocked();
+            openTab(nextTab);
         });
     }
     private void bottomBar(){
@@ -144,7 +174,7 @@ public final class CompanionActivity extends Activity {
         symbol.setGravity(Gravity.CENTER);item.addView(symbol);
         TextView title=txt(name,11,selected?CompanionStyle.TEXT:CompanionStyle.MUTED,selected);
         title.setGravity(Gravity.CENTER);item.addView(title);
-        item.setOnClickListener(v->{if(!tab.equals(id)){tab=id;renderUnlocked();}});
+        item.setOnClickListener(v->openTab(id));
     }
     private LinearLayout card(){
         LinearLayout c=CompanionStyle.card(this);
@@ -211,13 +241,23 @@ public final class CompanionActivity extends Activity {
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
         enforceQuestOverlaySetting();
-        if(saved!=null){tab=saved.getString("tab","home");advanced=saved.getBoolean("advanced",false);}
+        if(saved!=null){
+            tab=saved.getString("tab","home");
+            advanced=saved.getBoolean("advanced",false);
+            java.util.ArrayList<String> history=saved.getStringArrayList("quest_tab_history");
+            if(history!=null && QuestDevice.isQuestDevice())
+                for(int i=history.size()-1;i>=0;i--)
+                    questTabs.push(history.get(i));
+        }
         locked("Checking your staff access...");
         InboxAlertSettings.restore(this);
         PinnedFriendAlerts.restore(this);
     }
     @Override protected void onSaveInstanceState(Bundle out){
         out.putString("tab",tab);out.putBoolean("advanced",advanced);
+        if(QuestDevice.isQuestDevice())
+            out.putStringArrayList("quest_tab_history",
+                new java.util.ArrayList<>(questTabs));
         super.onSaveInstanceState(out);
     }
     @Override protected void onResume(){
