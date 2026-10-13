@@ -1496,6 +1496,28 @@ public final class OverlayMiniVrcx {
             c.addView(text("Your membership: "+
                 (status.isEmpty()?"Member":status),
                 12,CompanionStyle.GOOD,true));
+            JSONArray assigned=myMember.optJSONArray("roleIds");
+            JSONArray available=profile.optJSONArray("roles");
+            if(assigned!=null&&assigned.length()>0){
+                StringBuilder labels=new StringBuilder();
+                for(int i=0;i<assigned.length();i++){
+                    String roleId=assigned.optString(i,"");
+                    String label=roleId;
+                    if(available!=null)for(int j=0;j<available.length();j++){
+                        JSONObject role=available.optJSONObject(j);
+                        if(role!=null&&roleId.equals(role.optString("id",""))){
+                            label=role.optString("name",roleId);break;
+                        }
+                    }
+                    if(!label.isEmpty()){
+                        if(labels.length()>0)labels.append(", ");
+                        labels.append(label);
+                    }
+                }
+                if(labels.length()>0)c.addView(text(
+                    "Your VRChat group roles: "+shortValue(labels.toString(),240),
+                    12,CompanionStyle.ACCENT,false));
+            }
         }
         boolean pinned=false;
         try{pinned=GroupToolkitStore.contains(ctx,id);}catch(Exception ignored){}
