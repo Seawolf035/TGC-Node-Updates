@@ -432,6 +432,12 @@ public final class CompanionActivity extends Activity {
         controls.setOnClickListener(v->needsStaff(
             ()->startActivity(new Intent(this,MobileDeployActivity.class))));
     }
+    private void openQuestTools(){
+        needsStaff(()->{
+            if(!QuestDevice.isQuestDevice())return;
+            startActivity(new Intent(this,QuestToolsActivity.class));
+        });
+    }
     private void renderHome(){
         // Home has its own compact geometry; no large repeated hero/headline block.
         page.setPadding(dp(14),dp(10),dp(14),dp(20));
@@ -445,6 +451,10 @@ public final class CompanionActivity extends Activity {
         hero.setPadding(dp(14),dp(12),dp(14),dp(12));
         hero.setBackground(CompanionStyle.gradient(this,0xFF1A4159,0xFF15283E,17));
         homeButtons(hero);
+        if(QuestDevice.isQuestDevice())
+            action(hero,"⌘","Quest native tools",
+                "All your VRChat utilities without a floating overlay",
+                this::openQuestTools);
 
         LinearLayout shortcutsHeading=new LinearLayout(this);
         shortcutsHeading.setGravity(Gravity.CENTER_VERTICAL);
@@ -576,6 +586,13 @@ public final class CompanionActivity extends Activity {
     }
     private void renderExplore(){
         headline("EXPLORE","Your VRChat","Everything you want to discover, without leaving the app.");
+        if(QuestDevice.isQuestDevice()){
+            page.addView(CompanionStyle.section(this,"QUEST-NATIVE VRCHAT TOOLKIT"));
+            LinearLayout questTools=card();
+            action(questTools,"⌘","Open Quest native tools",
+                "All floating-tool features through normal app screens",
+                this::openQuestTools);
+        }
         page.addView(CompanionStyle.section(this,"MESSAGES & INVITES"));
         LinearLayout messages=card();
         action(messages,"✉","Notifications","All incoming VRChat notifications",()->openInbox("all"));
@@ -718,11 +735,14 @@ public final class CompanionActivity extends Activity {
             floating.addView(txt("Meta Quest headset detected",16,
                 CompanionStyle.ACCENT,true));
             space(floating,7);
+            action(floating,"⌘","Open Quest native tools",
+                "Use all VRChat utility screens without floating windows",
+                this::openQuestTools);
             floating.addView(txt(
                 "Floating tools are disabled by default on Quest because "+
-                "Android's 2D overlays may not work in VR. Other Companion "+
-                "features are still available. You can enable the floater "+
-                "experimentally, but it may not appear or function correctly.",
+                "Android's 2D overlays may not work in VR. Use Quest native "+
+                "tools above instead; the original experimental floating "+
+                "mode remains optional and off by default.",
                 12,CompanionStyle.MUTED,false));
             space(floating,9);
             action(floating,"◉",QuestDevice.experimentalOverlayAllowed(this)?
