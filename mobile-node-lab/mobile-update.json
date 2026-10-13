@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.0",
-  "version_code": 52,
+  "version": "0.19.1",
+  "version_code": 53,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "2298e3a8d12216e95e87d8482168c6dad41ac89aa46dab8799e27ea12f7890b4",
-  "notes": "v0.19.0: Quest-native VRChat toolkit accessible ONLY on Meta Quest from the existing Main Companion Home, Explore and Settings. Home/Social/OSC/Tools screens reuse all existing Mini-VRCX pages including profiles, friends, online-pinned reordering, inbox/invites, private notes, bookmarks, world/group browsing, search, activity, verification, official rank-locked chatboxes, quick phrases and avatar parameters. New overlay-free Quest foreground OSC service offers explicit start/stop/pause of Live Chatbox and experimental PTT hold/release with five-minute timeout, permanent notification and emergency release. Ordinary Android phone navigation and floating overlay remain unchanged; Quest floater is still off by default. Quest log capture and in-game OSC reception still depend on device/VRChat behavior. No Relay/Main Launcher changes."
+  "sha256": "58a1ad419ecbb6bf40f00364b1e736989be9646690e78a9119f639757fdc29a4",
+  "notes": "v0.19.1: Quest-only native toolkit polish: keep Home/Social/OSC/Tools tabs and configurable three-action quick shortcuts fixed above scrolling content. Shizuku live watcher now reads Quest VRChat Full output_log_*.txt from Documents/Logs (confirmed accessible and containing join/leave/instance entries on Quest 2), refreshes its Shizuku user service, and preserves the same join-only queue, authorization, Relay submission and GM4/GM1 authority. Actual concurrent/background monitoring on Quest still requires field verification. Ordinary Android phone floater, PTT, existing Android VRChat log sources, staff gate, and signing identity remain unchanged; no Main Launcher or Relay changes."
 }
