@@ -132,7 +132,7 @@ public final class FloatingCompanionService extends Service {
             final String owner=oscLiveAccountId;
             eventsWorker.execute(()->{
                 String error=null,value=null;
-                boolean accountChanged=false;
+                boolean accountChanged=false, noChatboxes=false;
                 try{
                     String account=VRChatSession.load(FloatingCompanionService.this)
                         .optString("userId","");
@@ -144,6 +144,11 @@ public final class FloatingCompanionService extends Service {
                     }else{
                         // Refresh interval and rotation interval are independent.
                         int count=OscControlStore.liveSlotCount(FloatingCompanionService.this);
+                        if(count<1){
+                            noChatboxes=true;
+                            throw new IllegalStateException(
+                                "No authorized chatbox remains. Live Chatbox stopped.");
+                        }
                         long now=android.os.SystemClock.elapsedRealtime();
                         if(count>1){
                             int interval=OscControlStore.rotationInterval(FloatingCompanionService.this);
@@ -169,11 +174,17 @@ public final class FloatingCompanionService extends Service {
                 }
                 final String problem=error,output=value;
                 final boolean invalidAccount=accountChanged;
+                final boolean emptyRotation=noChatboxes;
                 handler.post(()->{
                     if(epoch!=oscLiveGeneration)return;
                     oscLiveBusy=false;
                     if(invalidAccount){
                         oscLiveLastError="VRChat account changed. Live Chatbox stopped.";
+                        stopOscLive();
+                        return;
+                    }
+                    if(emptyRotation){
+                        oscLiveLastError="No authorized chatboxes remain. Live Chatbox stopped.";
                         stopOscLive();
                         return;
                     }
@@ -203,8 +214,12 @@ public final class FloatingCompanionService extends Service {
             String account=VRChatSession.load(this).optString("userId","");
             if(!account.matches("usr_[0-9a-fA-F-]{36}"))
                 throw new SecurityException("Sign in to personal VRChat first.");
-            OscControlStore.statusLine(this); // Preserve legacy default chatbox.
-            // Named profiles are validated before they are saved.
+            // Validate the ACTUAL first outgoing slot, which may be an
+            // official TGC role tag with no personal status enabled.
+            if(OscControlStore.liveSlotCount(this)<1)
+                throw new IllegalStateException(
+                    "Select an unlocked official tag or enable your personal status.");
+            OscControlStore.liveChatboxAt(this,0);
             stopOscLive();
             oscLiveAccountId=account;
             oscLiveCurrentSlot=0;
