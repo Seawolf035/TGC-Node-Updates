@@ -47,7 +47,7 @@ jobs:
           assert 'edit.setOnClickListener(v->' in service
           assert 'editing[0]=!editing[0]' in service
           assert 'edit.setText(editing[0]?"Done":"Edit order")' in service
-          assert 'new Button[]{alerts,friends,invites}' in service
+          assert 'new Button[]{alerts,friendsShortcut,invites}' in service
           assert 'PinnedFriendAlerts.setEnabled(this,next)' in service
           assert 'public static synchronized void move(Context ctx' in pins
           assert 'versionCode 51' in Path('mobile-node-lab/mobile/build.gradle').read_text()
