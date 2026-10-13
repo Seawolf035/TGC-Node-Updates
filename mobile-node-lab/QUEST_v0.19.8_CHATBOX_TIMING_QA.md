@@ -58,3 +58,32 @@
    Live Chatbox runs. Manual sending still has priority and pauses Live.
 8. Ensure a headset/phone without an active VRChat account does not leak
    OSC settings between accounts. No regular production services are touched.
+
+## Quest-only universal Back control
+
+- Every Quest Companion Activity receives a pinned, in-app **← Back** button
+  through the Application lifecycle. This is a normal in-app view, not an
+  Android floating overlay; no new permissions or Quest floater are enabled.
+- The Back button dispatches to each Activity's existing back handling:
+  - Quest Tools uses its nested page history, then Home and Companion.
+  - Companion's Home/Explore/Tracking/Settings tabs have their own Quest-only
+    navigation history, including gesture and bottom-tab changes.
+  - A detail page returns to its calling screen instead of closing the entire
+    app.
+- Android phone Activities do NOT receive the extra button and retain
+  existing Android Back behavior.
+- Test locked/unlinked screens, Quest Tools tabs and subpages, group details,
+  favorites, the updater, and Tracking controls. Ensure the back button
+  remains available after screen redraws and doesn't cover an essential
+  action.
+- The application's Activity lifecycle hook does not create a floating
+  service or cross-app overlay.
+  
+## VRChat Full logging instructions
+
+- Tracking tab and Tracking controls for Quest AND phone prominently tell
+  people: **VRChat → Settings → Debug → Logging → FULL**.
+- Quest Tools Local Activity repeats the instruction rather than warning
+  ambiguously that Quest may not expose logs.
+- This is a user-set VRChat option; the Companion does not change it. A
+  tracking heartbeat alone doesn't prove that join/leave lines are emitted.
