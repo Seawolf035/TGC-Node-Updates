@@ -175,7 +175,10 @@ public class MobileDeployActivity extends Activity {
     infoDetails.addView(purpose);
     spacer(infoDetails,9);
     TextView sharing=title(
-        "Player join sightings may also be sent to the TGC network if tracking is enabled. Your complete raw log files are not uploaded. Quest support is planned for investigation, not available yet.",12);
+        "Player join sightings may also be sent to the TGC network if tracking is enabled. Your complete raw log files are not uploaded. " +
+        (QuestDevice.isQuestDevice()?
+          "Quest Shizuku tracking is verified; the optional folder-access mode is experimental.":
+          "Quest support is being explored."),12);
     sharing.setTextColor(CompanionStyle.MUTED);
     infoDetails.addView(sharing);
     action(infoDetails,"How to set up Shizuku",()->openShizukuLink(
