@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Build;
 import android.net.Uri;
+import android.provider.DocumentsContract;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Handler;
@@ -27,7 +28,7 @@ import org.json.JSONObject;
 /** Staff-facing setup and tracking. Diagnostic details are hidden behind Advanced. */
 public class MobileDeployActivity extends Activity {
   private EditText setup;
-  private TextView status,technicalStatus,feedback;
+  private TextView status,technicalStatus,feedback,questFolderStatus;
   private Button startControl,stopControl;
   private LinearLayout enrollment,advancedPane;
   private boolean advanced=false;
@@ -36,7 +37,7 @@ public class MobileDeployActivity extends Activity {
   private final Runnable autoRefresh=new Runnable(){
     @Override public void run(){refresh();handler.postDelayed(this,5000);}
   };
-  private static final int SHIZUKU_PERMISSION=7005;
+  private static final int SHIZUKU_PERMISSION=7005, QUEST_FOLDER_REQUEST=7152;
   private final Shizuku.OnRequestPermissionResultListener shizukuResult=(request,grant)->{
     if(request!=SHIZUKU_PERMISSION)return;
     runOnUiThread(()->{
@@ -125,6 +126,25 @@ public class MobileDeployActivity extends Activity {
 
     action(dashboard,"View player list and log",()->startActivity(
         new Intent(this,PlayerActivityLogActivity.class)),false);
+
+    if(QuestDevice.isQuestDevice()){
+      LinearLayout folder=CompanionStyle.card(this);
+      root.addView(folder,CompanionStyle.cardParams(this));
+      folder.addView(title("QUEST LOG ACCESS — EXPERIMENTAL",18));
+      spacer(folder,7);
+      TextView detail=title("Try tracking without Shizuku. Android must let you grant read-only access to Documents/Logs. Quest's folder picker and background behavior are unverified. The original Shizuku method remains recommended.",13);
+      detail.setTextColor(CompanionStyle.MUTED);
+      folder.addView(detail);
+      spacer(folder,9);
+      questFolderStatus=title("Checking folder access...",13);
+      questFolderStatus.setTextColor(CompanionStyle.ACCENT);
+      folder.addView(questFolderStatus);
+      spacer(folder,8);
+      action(folder,"Try without Shizuku · choose Documents/Logs",
+          this::pickQuestFolder,false);
+      action(folder,"Use Shizuku tracking (recommended)",
+          this::chooseShizukuTracking,false);
+    }
 
     // Keep setup and tracking controls accessible without scrolling through help text.
     // Expand this explanation only when the user asks for it.
@@ -231,17 +251,66 @@ public class MobileDeployActivity extends Activity {
       }
     });
   }
+  private boolean trackingActive(){
+    android.content.SharedPreferences s=getSharedPreferences("tgc_mobile_node_status",0);
+    long last=s.getLong("service_heartbeat_at",0);
+    return s.getBoolean("running",false)&&last>0&&
+        System.currentTimeMillis()-last<90000;
+  }
+  private void pickQuestFolder(){
+    if(!QuestDevice.isQuestDevice())return;
+    if(trackingActive()){
+      showStatus("Stop tracking before switching log sources.");return;
+    }
+    Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+    picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
+        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+    try{
+      startActivityForResult(picker,QUEST_FOLDER_REQUEST);
+    }catch(Exception e){
+      showStatus("Quest cannot open the Android folder picker. Use Shizuku tracking.");
+    }
+  }
+  @Override protected void onActivityResult(int request,int result,Intent data){
+    super.onActivityResult(request,result,data);
+    if(request!=QUEST_FOLDER_REQUEST)return;
+    if(result!=RESULT_OK||data==null||data.getData()==null){
+      showStatus("Folder access was not changed. Shizuku still works.");return;
+    }
+    try{
+      QuestSafLogWatcher.selectFolder(this,data.getData());
+      showStatus("Read-only Documents/Logs access granted. Folder mode is selected. Start tracking to test it.");
+      refresh();
+    }catch(Exception e){
+      showStatus("Folder access not granted: "+e.getMessage()+
+          ". Select Documents/Logs exactly, or use Shizuku.");
+    }
+  }
+  private void chooseShizukuTracking(){
+    if(trackingActive()){
+      showStatus("Stop tracking before switching log sources.");return;
+    }
+    QuestSafLogWatcher.selectShizuku(this);
+    showStatus("Shizuku tracking selected. The working method is restored.");
+    refresh();
+  }
   private void startNode(){
     try{
       if(MobileCredentials.load(this)==null){
         showStatus("Link this device before starting tracking.");return;
       }
-      if(!Shizuku.pingBinder()){
-        showStatus("The tracking service isn't available. Open Advanced tools for help.");return;
-      }
-      if(Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
-        Shizuku.requestPermission(SHIZUKU_PERMISSION);
-        showStatus("Allow the tracking permission when prompted.");return;
+      if(QuestSafLogWatcher.isSelected(this)){
+        if(!QuestSafLogWatcher.hasGrant(this)){
+          showStatus("Documents/Logs access is missing. Grant folder permission again or use Shizuku.");return;
+        }
+      }else{
+        if(!Shizuku.pingBinder()){
+          showStatus("The Shizuku tracking service is unavailable. Open Advanced tools for help.");return;
+        }
+        if(Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
+          Shizuku.requestPermission(SHIZUKU_PERMISSION);
+          showStatus("Allow the tracking permission when prompted.");return;
+        }
       }
       if(Build.VERSION.SDK_INT>=33 &&
          checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)
@@ -272,9 +341,12 @@ public class MobileDeployActivity extends Activity {
           "\n\nPlayers recorded: "+state.getInt("captured_total",0)+
           "\nSent: "+state.getInt("uploaded_total",0)+
           "\nNot sent yet: "+pending;
+        boolean folderMode=QuestSafLogWatcher.isSelected(this);
         String technical="Device: "+(r==null?"Not linked":r.nodeName)+
+          "\nTracking mode: "+(folderMode?"Quest folder (experimental)":"Shizuku")+
           "\nService heartbeat: "+(heartbeat==0?"Never":(now-heartbeat)/1000+" seconds ago")+
-          "\nShizuku: "+(Shizuku.pingBinder()?"Connected":"Disconnected")+
+          "\nShizuku: "+(folderMode?"Not required in folder mode":
+            Shizuku.pingBinder()?"Connected":"Disconnected")+
           "\nWatcher: "+state.getString("watcher","Not started")+
           "\nSource found: "+state.getBoolean("watch_source",false)+
           "\nWatcher polls: "+state.getInt("watch_polls",0)+
@@ -293,6 +365,13 @@ public class MobileDeployActivity extends Activity {
           }
           if(stopControl!=null)stopControl.setEnabled(r!=null&&online);
           if(advanced)technicalStatus.setText(technical);
+          if(questFolderStatus!=null){
+            boolean folderMode=QuestSafLogWatcher.isSelected(this);
+            questFolderStatus.setText("Selected mode: "+
+                (folderMode?"Folder (no Shizuku)":"Shizuku")+
+                "\nFolder permission: "+QuestSafLogWatcher.grantedPath(this)+
+                (online?"\nStop tracking before switching modes.":""));
+          }
         });
       }catch(Exception e){showStatus("Status temporarily unavailable. Try refreshing.");}
     });
