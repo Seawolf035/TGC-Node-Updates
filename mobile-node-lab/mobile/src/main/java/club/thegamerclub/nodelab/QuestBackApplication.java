@@ -6,7 +6,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import android.widget.Button;
 import android.widget.FrameLayout;
 
@@ -22,6 +24,7 @@ import android.widget.FrameLayout;
 public final class QuestBackApplication extends Application
         implements Application.ActivityLifecycleCallbacks {
     private static final int BACK_BUTTON_ID=0x7f0fa119;
+    private static final int BACK_RESERVED_CONTENT_TAG=0x7f0fa11a;
     private boolean licensePromptInFlight=false;
 
     @Override public void onCreate(){
@@ -69,6 +72,17 @@ public final class QuestBackApplication extends Application
         View decor=activity.getWindow().getDecorView();
         if(!(decor instanceof FrameLayout))return;
         FrameLayout root=(FrameLayout)decor;
+        // Reserve an actual header lane in the Activity's content container.
+        // Without this, a TOP|START decor button covers page titles and
+        // existing top-left Back controls on Quest Tools and other screens.
+        // This is applied once per Activity, not again on every resume.
+        View content=activity.findViewById(android.R.id.content);
+        if(content!=null && content.getTag(BACK_RESERVED_CONTENT_TAG)==null){
+            content.setTag(BACK_RESERVED_CONTENT_TAG,Boolean.TRUE);
+            content.setPadding(content.getPaddingLeft(),
+                content.getPaddingTop()+dp(activity,60),
+                content.getPaddingRight(),content.getPaddingBottom());
+        }
         View previous=root.findViewById(BACK_BUTTON_ID);
         if(previous!=null)return;
 
@@ -78,11 +92,26 @@ public final class QuestBackApplication extends Application
         back.setContentDescription("Back to previous Companion page");
         back.setElevation(dp(activity,9));
         FrameLayout.LayoutParams params=new FrameLayout.LayoutParams(
-            dp(activity,104),dp(activity,49),Gravity.END|Gravity.BOTTOM);
-        params.rightMargin=dp(activity,12);
-        // Keep clear of the Android nav bar and Companion bottom tab bar.
-        params.bottomMargin=dp(activity,85);
+            dp(activity,104),dp(activity,49),Gravity.TOP|Gravity.START);
+        params.leftMargin=dp(activity,12);
+        params.topMargin=dp(activity,8);
         root.addView(back,params);
+        // Place the button below any Quest system bar/cutout, and keep that
+        // position correct if window insets change. This is a normal app view,
+        // not a floating system overlay.
+        ViewCompat.setOnApplyWindowInsetsListener(back,(v,insets)->{
+            Insets safe=insets.getInsets(WindowInsetsCompat.Type.systemBars() |
+                WindowInsetsCompat.Type.displayCutout());
+            FrameLayout.LayoutParams p=(FrameLayout.LayoutParams)v.getLayoutParams();
+            int left=dp(activity,12)+safe.left;
+            int top=dp(activity,8)+safe.top;
+            if(p.leftMargin!=left || p.topMargin!=top){
+                p.leftMargin=left;p.topMargin=top;
+                v.setLayoutParams(p);
+            }
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(back);
         back.bringToFront();
         back.setOnClickListener(v->{
             if(activity.isFinishing()||activity.isDestroyed())return;
