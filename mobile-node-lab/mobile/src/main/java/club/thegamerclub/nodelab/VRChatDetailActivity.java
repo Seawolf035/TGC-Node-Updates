@@ -488,6 +488,32 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         detail(detail,"Short code",group.optString("shortCode",""));
         detail(detail,"Joining",group.optString("joinState",""));
         detail(detail,"Visibility",group.optString("privacy",""));
+        String groupId=group.optString("id","");
+        if(groupId.matches("grp_[0-9a-fA-F-]{36}")){
+            kicker("YOUR GROUP SHORTCUTS");
+            LinearLayout shortcuts=box();
+            boolean pinned=false;
+            try{pinned=GroupToolkitStore.contains(this,groupId);}
+            catch(Exception ignored){}
+            Button pin=CompanionStyle.button(this,
+                pinned?"★ Unpin this group":"☆ Pin this group",false);
+            shortcuts.addView(pin,CompanionStyle.buttonParams(this));
+            pin.setOnClickListener(v->{
+                try{
+                    boolean next=!GroupToolkitStore.contains(this,groupId);
+                    GroupToolkitStore.setPinned(this,groupId,
+                        group.optString("name","VRChat group"),next);
+                    pin.setText(next?"★ Unpin this group":"☆ Pin this group");
+                }catch(Exception ex){
+                    android.widget.Toast.makeText(this,
+                        "Cannot save shortcut: "+ex.getMessage(),
+                        android.widget.Toast.LENGTH_LONG).show();
+                }
+            });
+            shortcuts.addView(text(
+                "Pinned groups appear at the top of the floating Mini-VRCX group list.",
+                12,CompanionStyle.MUTED,false));
+        }
         JSONArray roles=group.optJSONArray("roles");
         if(roles!=null&&roles.length()>0){
             kicker("GROUP ROLES");
