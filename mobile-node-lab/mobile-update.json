@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.18.0",
-  "version_code": 43,
+  "version": "0.18.1",
+  "version_code": 44,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "232488f2d04a4b99f0b7f24c3b9669604479e32b481bff36406913f5a5ac748e",
-  "notes": "v0.18.0: Expanded full-screen and floating Mini-VRCX group toolkit: account-scoped pinned groups, member directory/search and named roles, group status, live instance filtering/sorting, instance details and confirmed personal self-invites, and permission-scoped read-only bans. Preserves v0.17.9 chatbox rotation, staff and VRChat auth, Shizuku, Relay and desktop Nodes."
+  "sha256": "a416884898a4e33cbd81eb9b2a29bcdfb710852a8357fc131296d9630bac7661",
+  "notes": "v0.18.1: Official TGC staff chatbox library seeded from Magic Chatbox export. Verified staff can select common presets; authenticated rank from Main Launcher and Relay unlocks highest rank plus all lower tiers. Only three explicit Discord IDs unlock The Royalty. Official selections rotate with existing personal chatboxes and are removed from active rotation on demotion or lease expiry. Existing v0.18.0 Mini-VRCX, Shizuku, Relay Node and OSC tools remain intact. Requires coordinated deployment of Relay and Main Launcher ranked staff sync for rank-specific presets."
 }
