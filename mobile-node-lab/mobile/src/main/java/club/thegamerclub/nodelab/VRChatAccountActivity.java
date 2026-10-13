@@ -103,9 +103,9 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
             if(session.optBoolean("needs2fa")){render2fa();return;}
         }catch(Exception e){VRChatSession.clear(this);}
         form.addView(label("Sign in with VRChat",19));gap(form,4);
-        TextView explain=label("Use your VRChat username and password. Your password is never saved on this device.",13);
+        TextView explain=label("Sign in with your VRChat account email address OR original username (not your display name), plus your password. Your password is never saved on this device.",13);
         explain.setTextColor(CompanionStyle.MUTED);form.addView(explain);gap(form,10);
-        user=field("USERNAME","VRChat username",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_NORMAL);
+        user=field("EMAIL OR ORIGINAL USERNAME","Email or original username",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_NORMAL);
         pass=field("PASSWORD","Enter your password",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         gap(form,8);
         action(form,"Sign in",this::login,true);
