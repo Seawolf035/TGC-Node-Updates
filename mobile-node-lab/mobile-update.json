@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.9",
-  "version_code": 61,
+  "version": "0.19.10",
+  "version_code": 62,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "591ab941d2c74a4281b6089a0728bdc5562bc37fb52a5240cd1496b2ae89d14b",
-  "notes": "v0.19.9: Replace repeated VRChat Full logging alerts with a first-time player tracking setup guide for new, unlinked devices. The one-time guide explains VRChat Settings > Debug > Logging > FULL, Quest Documents/Logs folder permission or Android phone Shizuku, and starting the watcher before joining an instance. Users acknowledge once; first-time tracking start reopens the guide if still incomplete. Existing linked installations automatically retain normal operation without an upgrade popup. The guide can always be reopened from Tracking controls > Advanced tools. Daily Tracking, Quest Tools, Quest folder details, and start-status messages no longer repeat the Full logging warning. The app never claims it can read or change VRChat logging settings. All Quest Tools navigation, universal Quest Back, chatbox timing, OSC, existing tracking modes, Node/Relay, avatars, and staff permissions remain unchanged. No Main Launcher or Relay deployments."
+  "sha256": "c10e14e741ab09556c0015c71360c594fdc54a310e2b156498773129ce2ff730",
+  "notes": "v0.19.10: Place the first-time VRChat Settings > Debug > Logging > FULL tracking setup guide directly on the main Tracking tab, with acknowledgement there and a small View setup guide control afterward. Tracking controls no longer owns a first-use modal or Advanced-only guide; attempting to start tracking before first acknowledgement returns to the Tracking tab. Existing linked installs preserve the previous v0.19.9 acknowledgement. Add a proprietary TGC Staff Companion end-user/staff user agreement shown for explicit first-use acceptance, with decline-to-exit and a Settings review link; license terms are versioned and locally recorded, do not claim exclusive rights in VRChat or third-party components, and do not prevent independently developed applications. Add an all-rights-reserved repository notice. The distribution repository remains public; no repo visibility change or Main Launcher / Relay deployment. Quest universal Back, Quest folder tracking, Android phone Shizuku and floater, OSC, avatars, staff authorization and Relay unchanged."
 }
