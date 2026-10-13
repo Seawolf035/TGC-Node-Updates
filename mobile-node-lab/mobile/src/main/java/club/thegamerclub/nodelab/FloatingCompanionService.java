@@ -1085,6 +1085,8 @@ public final class FloatingCompanionService extends Service {
         line.addView(text(oscLiveSummary(),12,
             oscLiveActive?CompanionStyle.GOOD:CompanionStyle.MUTED,false));
         action(line,"Configure / start Live Chatbox",true,()->go("mini_osc_status"));
+        paired(line,"Official TGC tags","Rotation settings",
+            ()->go("mini_osc_tags"),()->go("mini_osc_rotation"));
         line.addView(text("Build an optional chatbox line using a custom message, current time and phone battery level. Sending is user-controlled.",
             12,CompanionStyle.MUTED,false));
 
