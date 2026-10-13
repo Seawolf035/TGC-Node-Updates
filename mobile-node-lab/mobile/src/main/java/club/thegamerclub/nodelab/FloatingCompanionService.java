@@ -62,6 +62,22 @@ public final class FloatingCompanionService extends Service {
     private final ArrayDeque<String> backStack=new ArrayDeque<>();
     private FrameLayout bubble;
     private View statusDot;
+    private TextView oscVoiceBubbleBadge,oscVoiceInfo;
+    private Button oscVoiceToggle;
+    private LinearLayout oscVoiceQuickRelease;
+    // Experimental OSC PTT hold is process-local and is never persisted.
+    // These flags reflect what was SENT, not the actual VRChat microphone state.
+    private volatile boolean oscVoiceHoldRequested=false;
+    private boolean oscVoiceSending=false;
+    private volatile int oscVoiceEpoch=0;
+    private static final long OSC_VOICE_SAFETY_MS=300_000L;
+    private final Runnable oscVoiceSafety=()->{
+        if(oscVoiceHoldRequested){
+            sendOscVoiceHold(false);
+            Toast.makeText(this,"OSC mic hold auto-released after 5 minutes.",
+                Toast.LENGTH_LONG).show();
+        }
+    };
     private FrameLayout panel, panelModalLayer;
     private LinearLayout panelContent;
     private ScrollView panelScroller;
@@ -412,6 +428,7 @@ public final class FloatingCompanionService extends Service {
     }
     private void stopRequestedByUser(){
         stoppingExplicitly=true;
+        releaseOscVoiceOnExit();
         stopOscLive();
         OverlayPreferences.setDesired(this,false);
         handler.removeCallbacks(validate);
@@ -555,6 +572,15 @@ public final class FloatingCompanionService extends Service {
             Gravity.BOTTOM|Gravity.END);
         indicator.setMargins(0,0,dp(2),dp(2));
         circle.addView(led,indicator);
+        TextView micBadge=text("PTT",9,0xFFFFFFFF,true);
+        micBadge.setGravity(Gravity.CENTER);
+        micBadge.setBackground(CompanionStyle.shape(this,0xFFB72C32,8,0));
+        FrameLayout.LayoutParams badgeBounds=new FrameLayout.LayoutParams(
+            dp(30),dp(19),Gravity.TOP|Gravity.START);
+        badgeBounds.setMargins(dp(1),dp(1),0,0);
+        circle.addView(micBadge,badgeBounds);
+        micBadge.setVisibility(View.GONE);
+        oscVoiceBubbleBadge=micBadge;
         bubble=circle;statusDot=led;
         refreshPresenceDot();
         bubbleParams=params(dp(60),dp(60));
@@ -848,6 +874,12 @@ public final class FloatingCompanionService extends Service {
         tab(tabs,"OSC","osc");
         tab(tabs,"Tools","tools");
 
+        // Fast release stays outside the scrolling content on EVERY tab.
+        oscVoiceQuickRelease=vertical();
+        oscVoiceQuickRelease.setPadding(dp(12),dp(3),dp(12),dp(3));
+        container.addView(oscVoiceQuickRelease);
+        updateOscVoiceUi();
+
         ScrollView scroll=new ScrollView(this);
         panelScroller=scroll;
         scroll.setFillViewport(false);
@@ -967,6 +999,7 @@ public final class FloatingCompanionService extends Service {
         panelContent.removeAllViews();
         presenceActionLabel=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;recentStatus=null;
+        oscVoiceInfo=null;oscVoiceToggle=null;
         switch(selectedTab){
             case "social":showSocial();break;
             case "osc":showOscDashboard();break;
@@ -975,6 +1008,7 @@ public final class FloatingCompanionService extends Service {
             case "customize":showOverlaySettings();break;
             default:mini.show(panelContent,selectedTab);break;
         }
+        updateOscVoiceUi();
         // Each in-overlay page should start at its header, not inherit the
         // previous page's scroll offset (especially on a small phone).
         if(panelScroller!=null){
@@ -1075,6 +1109,25 @@ public final class FloatingCompanionService extends Service {
         top.addView(text("Enable OSC in VRChat's Action Menu. OSC uses 127.0.0.1:9000 and does not need Shizuku, a PC or the TGC Relay.",
             12,CompanionStyle.MUTED,false));
 
+        section(panelContent,"EXPERIMENTAL MICROPHONE INPUT");
+        LinearLayout mic=panelCard(panelContent);
+        mic.addView(text("OSC Push-to-Talk latch (Android test)",
+            14,CompanionStyle.TEXT,true));
+        oscVoiceInfo=text("",12,CompanionStyle.GOLD,false);
+        mic.addView(oscVoiceInfo);
+        oscVoiceToggle=action(mic,"Hold PTT via OSC (1)",true,()->
+            sendOscVoiceHold(!oscVoiceHoldRequested));
+        action(mic,"Send emergency PTT RELEASE (0)",false,()->
+            sendOscVoiceHold(false));
+        mic.addView(text(
+            "Experimental: VRChat Android may ignore /input/Voice. "+
+            "Check the VRChat microphone icon yourself; a sent OSC packet "+
+            "is NOT proof your microphone is broadcasting. Hold auto-releases "+
+            "after 5 minutes or when the floating service stops. "+
+            "Collapse the panel to keep holding; hide the bubble to release.",
+            11,CompanionStyle.MUTED,false));
+        updateOscVoiceUi();
+
         section(panelContent,"CHATBOX");
         LinearLayout chat=panelCard(panelContent);
         action(chat,"Compose & send chat text",true,()->go("mini_chat"));
@@ -1119,6 +1172,89 @@ public final class FloatingCompanionService extends Service {
         LinearLayout help=panelCard(panelContent);
         help.addView(text("All broadcasts and parameter writes are OFF until you deliberately send them. Local OSC packets are not delivery confirmations.",
             11,CompanionStyle.GOLD,false));
+    }
+    /** A local OSC input request only; VRChat does not acknowledge the mic state. */
+    private void sendOscVoiceHold(boolean hold){
+        if(hold && (!StaffGate.unlocked(this)||!QuestDevice.canRunOverlay(this)
+                ||!OverlayPreferences.desired(this)))return;
+        if(hold && oscVoiceSending){
+            Toast.makeText(this,"Please wait for the previous OSC mic command.",
+                Toast.LENGTH_SHORT).show();return;
+        }
+        // Release takes priority even while a press is queued, by invalidating
+        // its epoch. The single worker serializes all OSC press/release packets.
+        final int epoch=++oscVoiceEpoch;
+        oscVoiceHoldRequested=hold;
+        oscVoiceSending=true;
+        handler.removeCallbacks(oscVoiceSafety);
+        updateOscVoiceUi();
+        eventsWorker.execute(()->{
+            if(hold && (epoch!=oscVoiceEpoch || !StaffGate.unlocked(this)))return;
+            String error=null;
+            try{VRChatOscChat.sendVoiceInput(hold);}
+            catch(Exception e){
+                error=e.getMessage()==null?"Local OSC send failed":e.getMessage();
+            }
+            final String problem=error;
+            handler.post(()->{
+                if(epoch!=oscVoiceEpoch)return;
+                oscVoiceSending=false;
+                if(problem!=null){
+                    if(hold)oscVoiceHoldRequested=false;
+                    showPinnedFeedback("OSC voice command failed: "+problem);
+                }else if(hold){
+                    handler.postDelayed(oscVoiceSafety,OSC_VOICE_SAFETY_MS);
+                    showPinnedFeedback("OSC PTT press sent; check VRChat's mic icon.");
+                }else{
+                    showPinnedFeedback("OSC PTT release sent (client not verified).");
+                }
+                updateOscVoiceUi();
+            });
+        });
+    }
+    private void updateOscVoiceUi(){
+        if(oscVoiceBubbleBadge!=null)
+            oscVoiceBubbleBadge.setVisibility(oscVoiceHoldRequested?View.VISIBLE:View.GONE);
+        if(oscVoiceInfo!=null)oscVoiceInfo.setText(
+            oscVoiceHoldRequested?
+                (oscVoiceSending?"Sending PTT press/release…":
+                "OSC PTT HOLD SENT · actual mic state unknown"):
+                (oscVoiceSending?"Sending OSC release…":
+                "OSC PTT released / inactive · mic state unknown"));
+        if(oscVoiceToggle!=null){
+            oscVoiceToggle.setText(oscVoiceHoldRequested?
+                "RELEASE PTT via OSC (0)":
+                (oscVoiceSending?"Wait for release…":"Hold PTT via OSC (1)"));
+            oscVoiceToggle.setEnabled(!oscVoiceSending||oscVoiceHoldRequested);
+        }
+        if(oscVoiceQuickRelease!=null){
+            oscVoiceQuickRelease.removeAllViews();
+            if(oscVoiceHoldRequested){
+                oscVoiceQuickRelease.setVisibility(View.VISIBLE);
+                Button release=CompanionStyle.button(this,
+                    "RELEASE OSC PTT (mic state unverified)",true);
+                oscVoiceQuickRelease.addView(release,CompanionStyle.buttonParams(this));
+                release.setOnClickListener(v->sendOscVoiceHold(false));
+            }else oscVoiceQuickRelease.setVisibility(View.GONE);
+        }
+        refreshPresenceDot();
+    }
+    private void releaseOscVoiceOnExit(){
+        // Android can kill a process without onDestroy. Never suggest this is
+        // guaranteed. This is a best-effort redundant OFF packet on normal exit.
+        ++oscVoiceEpoch;
+        boolean wasActive=oscVoiceHoldRequested||oscVoiceSending;
+        oscVoiceHoldRequested=false;oscVoiceSending=false;
+        handler.removeCallbacks(oscVoiceSafety);
+        if(!wasActive)return;
+        Thread release=new Thread(()->{
+            try{VRChatOscChat.sendVoiceInput(false);}
+            catch(Exception ignored){}
+            try{Thread.sleep(120L);}catch(InterruptedException ignored){}
+            try{VRChatOscChat.sendVoiceInput(false);}
+            catch(Exception ignored){}
+        },"TGC-OSC-PTT-release");
+        release.start();
     }
     private void sendOscTyping(boolean typing){
         if(!StaffGate.unlocked(this))return;
@@ -1244,6 +1380,7 @@ public final class FloatingCompanionService extends Service {
         }
         if(bubble!=null){
             bubble.setContentDescription("TGC floating tools. "+presenceDescription+
+                (oscVoiceHoldRequested?". Experimental OSC PTT hold requested.":"")+
                 ". Tap to expand; drag to move.");
         }
         if(presenceLabel!=null)presenceLabel.setText(presenceDescription+"  ·  Edit ›");
@@ -1330,6 +1467,7 @@ public final class FloatingCompanionService extends Service {
         if(mini!=null)mini.close();
         dismissModal();
         panel=null;panelContent=null;panelModalLayer=null;panelScroller=null;
+        oscVoiceQuickRelease=null;oscVoiceToggle=null;oscVoiceInfo=null;
         recentRows=null;recentStatus=null;
         presenceLabel=null;presenceActionLabel=null;
         panelParams=null;
@@ -1346,6 +1484,7 @@ public final class FloatingCompanionService extends Service {
     }
     @Override public void onDestroy(){
         stoppingExplicitly=true;
+        releaseOscVoiceOnExit();
         stopOscLive();
         if(restoreRunnable[0]!=null)handler.removeCallbacks(restoreRunnable[0]);
         handler.removeCallbacks(validate);
