@@ -50,6 +50,8 @@ public final class OverlayMiniVrcx {
     private LinearLayout root;
     private String screen="",target="",kind="";
     private String selectedGroupId="";
+    private boolean onlyPopulatedGroupInstances=false;
+    private boolean sortGroupInstancesByOccupancy=true;
     private String avatarGroup="all";
     private boolean avatarGroupsExpanded=false;
     private String selectedAvatarId="";
@@ -1429,33 +1431,98 @@ public final class OverlayMiniVrcx {
         button(list,"Refresh all favorite lists",false,this::load);
     }
     private void showGroups(){
+        section(list,"PINNED GROUPS");
+        int pinnedCount=0;
+        try{
+            JSONArray saved=GroupToolkitStore.pinned(ctx);
+            pinnedCount=saved.length();
+            for(int i=0;i<saved.length();i++){
+                JSONObject row=saved.optJSONObject(i);
+                if(row==null)continue;
+                String id=row.optString("id","");
+                if(!id.matches("grp_[0-9a-fA-F-]{36}"))continue;
+                String label=row.optString("name","Group");
+                line(list,"★ "+label,"Open group dashboard",()->openGroupDashboard(id));
+            }
+        }catch(Exception e){
+            line(list,"Sign in for pinned groups",
+                "Local shortcuts are separated by VRChat account.",null);
+        }
+        if(pinnedCount==0)line(list,"No pinned groups",
+            "Open a group below and tap Pin for quick access.",null);
+        section(list,"YOUR VRCHAT GROUPS");
         int count=0;
         for(int i=0;i<loaded.length()&&count<limit;i++){
             JSONObject group=loaded.optJSONObject(i);if(group==null)continue;
             String name=group.optString("name",group.optString("groupName","Group"));
             String id=group.optString("id",group.optString("groupId",""));
             if(!id.matches("grp_[0-9a-fA-F-]{36}")||!matches(name+" "+id))continue;
-            line(list,name,group.optString("shortCode",id),()->{
-                selectedGroupId=id;target=id;memberOffset=0;banOffset=0;
-                host.navigate("mini_group");
-            });count++;
+            boolean pinned=false;
+            try{pinned=GroupToolkitStore.contains(ctx,id);}catch(Exception ignored){}
+            line(list,(pinned?"★ ":"")+name,
+                group.optString("shortCode",id)+" · "+
+                group.optInt("memberCount",0)+" members",
+                ()->openGroupDashboard(id));
+            count++;
         }
-        if(count==0)line(list,"No groups found","Your joined VRChat groups appear here.",null);
+        if(count==0)line(list,"No groups found",
+            "Your joined VRChat groups appear here.",null);
+    }
+    private void openGroupDashboard(String groupId){
+        if(!groupId.matches("grp_[0-9a-fA-F-]{36}"))return;
+        selectedGroupId=groupId;target=groupId;memberOffset=0;banOffset=0;
+        onlyPopulatedGroupInstances=false;
+        host.navigate("mini_group");
     }
     private void showGroup(){
         String id=selectedGroupId;
         LinearLayout c=card(list);
-        c.addView(text(profile.optString("name","VRChat group"),18,CompanionStyle.TEXT,true));
+        String name=profile.optString("name","VRChat group");
+        c.addView(text(name,18,CompanionStyle.TEXT,true));
+        String shortCode=profile.optString("shortCode","");
+        if(!shortCode.isEmpty())
+            c.addView(text(shortCode,12,CompanionStyle.ACCENT,true));
         c.addView(text(shortValue(profile.optString("description",""),1300),
             13,CompanionStyle.MUTED,false));
-        c.addView(text("Members: "+profile.optInt("memberCount",0),12,
-            CompanionStyle.ACCENT,false));
+        c.addView(text("Members: "+profile.optInt("memberCount",0)+
+            " · Online: "+profile.optInt("onlineMemberCount",0),
+            12,CompanionStyle.ACCENT,false));
+        c.addView(text("Joining: "+profile.optString("joinState","Unknown")+
+            " · Visibility: "+profile.optString("privacy","Unknown"),
+            12,CompanionStyle.MUTED,false));
+        JSONObject myMember=profile.optJSONObject("myMember");
+        if(myMember!=null){
+            String status=myMember.optString("membershipStatus","");
+            c.addView(text("Your membership: "+
+                (status.isEmpty()?"Member":status),
+                12,CompanionStyle.GOOD,true));
+        }
+        boolean pinned=false;
+        try{pinned=GroupToolkitStore.contains(ctx,id);}catch(Exception ignored){}
+        final boolean wasPinned=pinned;
+        button(c,pinned?"★ Unpin this group":"☆ Pin this group",false,()->{
+            try{
+                GroupToolkitStore.setPinned(ctx,id,name,!wasPinned);
+                drawList();
+            }catch(Exception e){message("Unable to save shortcut: "+e.getMessage());}
+        });
         button(c,"Copy group ID",false,()->copy("group ID",id));
         button(c,"Copy group link",false,
             ()->copy("group link","https://vrchat.com/home/group/"+id));
-        button(c,"Browse group members",true,()->{memberOffset=0;host.navigate("mini_members");});
-        button(c,"View active group instances",false,()->host.navigate("mini_instances"));
-        button(c,"Review group bans (read-only)",false,()->{banOffset=0;host.navigate("mini_bans");});
+        section(list,"GROUP TOOLS");
+        LinearLayout browse=card(list);
+        button(browse,"Browse and search group members",true,()->{
+            memberOffset=0;host.navigate("mini_members");
+        });
+        button(browse,"Active group instances",false,
+            ()->host.navigate("mini_instances"));
+        button(browse,"Group bans (read-only)",false,()->{
+            banOffset=0;host.navigate("mini_bans");
+        });
+        browse.addView(text(
+            "These tools use your personal VRChat account's existing permissions. "+
+            "Pinning a group does not grant administrative access.",
+            12,CompanionStyle.MUTED,false));
     }
     private String memberName(JSONObject member){
         JSONObject user=member.optJSONObject("user");
@@ -1505,33 +1572,68 @@ public final class OverlayMiniVrcx {
             }
         }
     }
+    private static int groupInstanceOccupancy(JSONObject instance){
+        int players=instance.optInt("n_users",-1);
+        if(players<0)players=instance.optInt("userCount",-1);
+        if(players<0)players=instance.optInt("memberCount",-1);
+        return Math.max(0,players);
+    }
     private void showGroupInstances(){
         section(list,"ACTIVE GROUP INSTANCES");
-        list.addView(text("Only instances this personal account is allowed to see",
+        LinearLayout controls=card(list);
+        controls.addView(text("Only instances your personal VRChat account can see",
             12,CompanionStyle.MUTED,false));
+        button(controls,onlyPopulatedGroupInstances?"Show all visible instances":
+            "Show populated instances only",false,()->{
+                onlyPopulatedGroupInstances=!onlyPopulatedGroupInstances;drawList();
+        });
+        button(controls,sortGroupInstancesByOccupancy?
+            "Sort: Most populated first":"Sort: VRChat order",false,()->{
+                sortGroupInstancesByOccupancy=!sortGroupInstancesByOccupancy;drawList();
+        });
+        button(controls,"Refresh group instances",false,this::load);
+
+        java.util.ArrayList<JSONObject> instances=new java.util.ArrayList<>();
         for(int i=0;i<loaded.length();i++){
-            JSONObject item=loaded.optJSONObject(i);if(item==null)continue;
+            JSONObject item=loaded.optJSONObject(i);
+            if(item==null)continue;
+            if(onlyPopulatedGroupInstances&&groupInstanceOccupancy(item)==0)continue;
+            instances.add(item);
+        }
+        if(sortGroupInstancesByOccupancy){
+            java.util.Collections.sort(instances,(a,b)->
+                Integer.compare(groupInstanceOccupancy(b),groupInstanceOccupancy(a)));
+        }
+        controls.addView(text(instances.size()+" visible matching instances",
+            12,CompanionStyle.ACCENT,true));
+        for(JSONObject item:instances){
             String loc=item.optString("location","");
             String name=item.optString("name",item.optString("instanceId","Group instance"));
-            String number=item.optString("n_users",
-                item.optString("userCount",item.optString("capacity","")));
+            JSONObject world=item.optJSONObject("world");
+            if(name.isEmpty()&&world!=null)name=world.optString("name","Group instance");
+            String region=item.optString("region","");
+            int occupants=groupInstanceOccupancy(item);
+            int capacity=item.optInt("capacity",world==null?0:world.optInt("capacity",0));
             LinearLayout c=card(list);
-            c.addView(text(shortValue(name,60),14,CompanionStyle.TEXT,true));
-            c.addView(text(shortValue(loc,150)+
-                (number.isEmpty()?"":" · "+number+" players/capacity"),12,
-                CompanionStyle.MUTED,false));
+            c.addView(text(shortValue(name,75),14,CompanionStyle.TEXT,true));
+            c.addView(text(occupants+" player"+(occupants==1?"":"s")+
+                (capacity>0?" / "+capacity+" capacity":"")+
+                (region.isEmpty()?"":" · "+region),
+                12,CompanionStyle.ACCENT,true));
             if(!loc.isEmpty()){
+                c.addView(text(shortValue(loc,115),11,CompanionStyle.MUTED,false));
                 button(c,"Copy location",false,()->copy("group instance location",loc));
                 if(loc.startsWith("wrld_")&&loc.contains(":")){
-                    button(c,"Instance details",false,()->location(loc));
+                    button(c,"View instance details",false,()->location(loc));
                     button(c,"Request self-invite",false,()->confirm(
                         "Send yourself an invite to this group instance?",
                         ()->write(()->VRChatApi.selfInvite(ctx,loc),"Invite requested")));
                 }
             }
         }
-        if(loaded.length()==0)line(list,"No visible group instances",
-            "There may be no active instances, or your account cannot see them.",null);
+        if(instances.isEmpty())line(list,"No matching visible instances",
+            "The group may have no active instances, or your account cannot see them. "+
+            "Disable the populated-only filter if needed.",null);
     }
     private void showBans(){
         section(list,"READ-ONLY GROUP BAN LIST");
