@@ -1,0 +1,67 @@
+name: Validate v0.18.6 floating quick controls
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.18.6-floating-quick-controls
+    paths:
+      - "mobile-node-lab/mobile/**"
+      - ".github/workflows/check-mobile-floating-quick-controls.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Check existing features and new quick controls
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          service=(root/'FloatingCompanionService.java').read_text()
+          mini=(root/'OverlayMiniVrcx.java').read_text()
+          prefs=(root/'OverlayPreferences.java').read_text()
+          pins=(root/'FriendPinStore.java').read_text()
+          assert 'micSidecar.setOnClickListener' in service
+          assert 'updateMicSidecarPosition();' in service
+          assert 'oscVoiceWorker.execute' in service
+          assert 'sendOscVoiceHold(!oscVoiceHoldRequested)' in service
+          assert 'OSC_VOICE_SAFETY_MS' in service
+          assert 'quickOscStartStop()' in service
+          assert 'toggleOscPause()' in service
+          assert 'sendQuickPhrase(String line)' in service
+          assert 'FriendPinStore.pins(this)' in service
+          assert 'mini.profile(uid)' in service
+          assert 'quickBarRow' in service and 'drawQuickBar()' in service
+          assert 'public static List<String> quickBar' in prefs
+          assert 'MAX_PINS=12' in pins and '_pins' in pins
+          assert 'FriendPinStore.setPinned(ctx,uid' in mini
+          assert 'FriendPinStore.setPinned(ctx,id' in mini
+          assert 'host.confirm(prompt,action)' in mini
+          assert 'versionCode 49' in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          print('New quick tools and previous OSC safeguards found')
+          PY
+      - name: Compile Android debug APK
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-v0.18.6-Floating-Quick-Controls-Debug
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
