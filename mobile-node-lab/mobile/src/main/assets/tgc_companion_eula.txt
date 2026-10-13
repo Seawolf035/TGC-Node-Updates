@@ -53,8 +53,8 @@ workflow. Complete raw VRChat log files are not intentionally uploaded by
 the tracking feature. The app may also use account verification, local
 preferences, and VRChat account session data to operate authorized
 features. Only enable logging or sharing you are authorized to use. Review
-the separate privacy documentation for further details; this license is
-not a substitute for a complete privacy notice.
+TGC's official staff channels for questions about personal-data handling.
+This agreement does not replace any privacy notice required by law.
 
 6. UPDATES AND THIRD-PARTY RIGHTS
 New releases may change features, requirements, or this agreement. A
