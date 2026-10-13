@@ -29,10 +29,11 @@ import org.json.JSONObject;
 public class MobileDeployActivity extends Activity {
   private EditText setup;
   private TextView status,technicalStatus,feedback,questFolderStatus;
-  private Button startControl,stopControl;
-  private LinearLayout enrollment,advancedPane;
+  private Button startControl,stopControl,questFolderControl,questFolderModeControl;
+  private LinearLayout enrollment,advancedPane,questFallbackContainer,questFallbackDetails;
+  private View unlinkControl;
   private boolean advanced=false;
-  private boolean helpExpanded=false;
+  private boolean helpExpanded=false,questFallbackExpanded=false;
   private final Handler handler=new Handler(Looper.getMainLooper());
   private final Runnable autoRefresh=new Runnable(){
     @Override public void run(){refresh();handler.postDelayed(this,5000);}
@@ -77,6 +78,7 @@ public class MobileDeployActivity extends Activity {
     Shizuku.addRequestPermissionResultListener(shizukuResult);
     advanced=getIntent().getBooleanExtra("advanced",false);
     helpExpanded=state!=null && state.getBoolean("shizuku_help_expanded",false);
+    questFallbackExpanded=state!=null && state.getBoolean("quest_fallback_expanded",false);
     ScrollView scroll=new ScrollView(this);
     scroll.setBackgroundColor(CompanionStyle.BG);
     LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
@@ -88,14 +90,18 @@ public class MobileDeployActivity extends Activity {
     root.addView(CompanionStyle.section(this,"DEVICE"));
     root.addView(title("Player tracking",28));
     spacer(root,7);
-    TextView intro=title("Track who joins and leaves your VRChat Mobile instances and keep useful player history.",14);
+    TextView intro=title(QuestDevice.isQuestDevice()?
+        "Track player joins and leaves in VRChat on your Quest. Grant access to the VRChat logs folder once.":
+        "Track who joins and leaves your VRChat Mobile instances and keep useful player history.",14);
     intro.setTextColor(CompanionStyle.MUTED);
     root.addView(intro);spacer(root,14);
     enrollment=CompanionStyle.card(this);
     root.addView(enrollment,CompanionStyle.cardParams(this));
     enrollment.addView(title("Link your device",20));
     spacer(enrollment,8);
-    TextView guide=title("Paste your staff setup link to connect this phone.",13);
+    TextView guide=title(QuestDevice.isQuestDevice()?
+        "Paste your staff setup link to connect this headset.":
+        "Paste your staff setup link to connect this phone.",13);
     guide.setTextColor(CompanionStyle.MUTED);enrollment.addView(guide);
     spacer(enrollment,12);
     setup=CompanionStyle.input(this,"Paste your setup link");
@@ -130,9 +136,10 @@ public class MobileDeployActivity extends Activity {
     if(QuestDevice.isQuestDevice()){
       LinearLayout folder=CompanionStyle.card(this);
       root.addView(folder,CompanionStyle.cardParams(this));
-      folder.addView(title("QUEST LOG ACCESS — EXPERIMENTAL",18));
+      folder.addView(title("QUEST LOG ACCESS",18));
       spacer(folder,7);
-      TextView detail=title("Try tracking without Shizuku. Android must let you grant read-only access to Documents/Logs. Quest's folder picker and background behavior are unverified. The original Shizuku method remains recommended.",13);
+      TextView detail=title(
+          "Recommended for Quest: grant read-only access to VRChat's Documents/Logs folder. No Shizuku installation is needed. Enable Full logging in VRChat first; start tracking before joining an instance.",13);
       detail.setTextColor(CompanionStyle.MUTED);
       folder.addView(detail);
       spacer(folder,9);
@@ -140,14 +147,15 @@ public class MobileDeployActivity extends Activity {
       questFolderStatus.setTextColor(CompanionStyle.ACCENT);
       folder.addView(questFolderStatus);
       spacer(folder,8);
-      action(folder,"Try without Shizuku · choose Documents/Logs",
-          this::pickQuestFolder,false);
-      action(folder,"Use Shizuku tracking (recommended)",
-          this::chooseShizukuTracking,false);
+      questFolderControl=action(folder,"Grant access to Documents/Logs",
+          this::pickQuestFolder,true);
+      questFolderModeControl=action(folder,"Use folder tracking (recommended)",
+          this::chooseFolderTracking,false);
     }
 
-    // Keep setup and tracking controls accessible without scrolling through help text.
-    // Expand this explanation only when the user asks for it.
+    // Phones still require Shizuku for log tracking. Quest users see the
+    // ordinary folder-permission setup first, not Shizuku instructions.
+    if(!QuestDevice.isQuestDevice()){
     LinearLayout info=CompanionStyle.card(this);
     root.addView(info,CompanionStyle.cardParams(this));
     Button infoToggle=CompanionStyle.button(this,
@@ -170,15 +178,12 @@ public class MobileDeployActivity extends Activity {
     infoDetails.addView(title("What does Shizuku do?",16));
     spacer(infoDetails,6);
     TextView purpose=title(
-        "Shizuku is an Android utility that, with your permission, lets apps use certain restricted system features. Here it is only used to let the Mobile Node read VRChat Mobile's log files. The same logs power your player list, join/leave history and instance changes, like desktop VRCX.",13);
+        "On Android phones, Shizuku is required for player tracking because it gives the Mobile Node authorized access to VRChat Mobile's protected logs. You can use other Companion features without it.",13);
     purpose.setTextColor(CompanionStyle.MUTED);
     infoDetails.addView(purpose);
     spacer(infoDetails,9);
     TextView sharing=title(
-        "Player join sightings may also be sent to the TGC network if tracking is enabled. Your complete raw log files are not uploaded. " +
-        (QuestDevice.isQuestDevice()?
-          "Quest Shizuku tracking is verified; the optional folder-access mode is experimental.":
-          "Quest support is being explored."),12);
+        "Player join sightings may also be sent to the TGC network if tracking is enabled. Your complete raw log files are not uploaded. Quest uses a separate folder-permission method by default.",12);
     sharing.setTextColor(CompanionStyle.MUTED);
     infoDetails.addView(sharing);
     action(infoDetails,"How to set up Shizuku",()->openShizukuLink(
@@ -195,6 +200,7 @@ public class MobileDeployActivity extends Activity {
       infoToggle.setText(helpExpanded?
           "▴ Hide Shizuku explanation":"ⓘ What is Shizuku? (optional)  ▾");
     });
+    }
 
     advancedPane=CompanionStyle.card(this);
     root.addView(advancedPane,CompanionStyle.cardParams(this));
@@ -203,16 +209,44 @@ public class MobileDeployActivity extends Activity {
     technicalStatus=title("",12);
     technicalStatus.setTextColor(CompanionStyle.MUTED);
     advancedPane.addView(technicalStatus);
-    action(advancedPane,"Unlink this device",this::unlinkConfirm,false);
+    if(QuestDevice.isQuestDevice()){
+      questFallbackContainer=new LinearLayout(this);
+      questFallbackContainer.setOrientation(LinearLayout.VERTICAL);
+      advancedPane.addView(questFallbackContainer);
+      Button fallbackToggle=action(questFallbackContainer,
+          "Alternative Quest method · Shizuku fallback",()->{
+            questFallbackExpanded=!questFallbackExpanded;
+            setAdvanced();
+          },false);
+      questFallbackDetails=new LinearLayout(this);
+      questFallbackDetails.setOrientation(LinearLayout.VERTICAL);
+      questFallbackContainer.addView(questFallbackDetails);
+      spacer(questFallbackDetails,6);
+      TextView fallbackInfo=title(
+          "Only use this if Documents/Logs folder permission cannot read VRChat logs. Shizuku requires separate setup and permission. Stop tracking before changing methods.",13);
+      fallbackInfo.setTextColor(CompanionStyle.MUTED);
+      questFallbackDetails.addView(fallbackInfo);
+      action(questFallbackDetails,"Switch Quest tracking to Shizuku",
+          this::chooseShizukuTracking,false);
+      action(questFallbackDetails,"Download Shizuku · official website",
+          ()->openShizukuLink("https://shizuku.rikka.app/download/"),false);
+      action(questFallbackDetails,"Shizuku setup instructions",
+          ()->openShizukuLink("https://shizuku.rikka.app/guide/setup/"),false);
+      action(questFallbackDetails,"Switch back to folder tracking",
+          this::chooseFolderTracking,false);
+    }
+    unlinkControl=action(advancedPane,"Unlink this device",this::unlinkConfirm,false);
     setAdvanced();
     refresh();
   }
   private void setAdvanced(){
     if(technicalStatus==null || advancedPane==null)return;
     technicalStatus.setVisibility(advanced?View.VISIBLE:View.GONE);
-    // The last child is the dangerous Unlink action, only shown in Advanced.
-    advancedPane.getChildAt(advancedPane.getChildCount()-1)
-      .setVisibility(advanced?View.VISIBLE:View.GONE);
+    if(unlinkControl!=null)unlinkControl.setVisibility(advanced?View.VISIBLE:View.GONE);
+    if(questFallbackContainer!=null)
+      questFallbackContainer.setVisibility(advanced?View.VISIBLE:View.GONE);
+    if(questFallbackDetails!=null)
+      questFallbackDetails.setVisibility(advanced&&questFallbackExpanded?View.VISIBLE:View.GONE);
     Button toggle=(Button)advancedPane.getChildAt(0);
     toggle.setText(advanced?"Hide advanced diagnostics":"Advanced tools");
     if(advanced)refresh();
@@ -271,30 +305,42 @@ public class MobileDeployActivity extends Activity {
     try{
       startActivityForResult(picker,QUEST_FOLDER_REQUEST);
     }catch(Exception e){
-      showStatus("Quest cannot open the Android folder picker. Use Shizuku tracking.");
+      showStatus("Quest could not open the folder picker. Advanced tools has the Shizuku fallback.");
     }
   }
   @Override protected void onActivityResult(int request,int result,Intent data){
     super.onActivityResult(request,result,data);
     if(request!=QUEST_FOLDER_REQUEST)return;
     if(result!=RESULT_OK||data==null||data.getData()==null){
-      showStatus("Folder access was not changed. Shizuku still works.");return;
+      showStatus("Folder selection canceled. Tracking method was not changed.");return;
     }
     try{
       QuestSafLogWatcher.selectFolder(this,data.getData());
-      showStatus("Read-only Documents/Logs access granted. Folder mode is selected. Start tracking to test it.");
+      showStatus("Documents/Logs access granted. Folder tracking is selected. Start tracking before joining VRChat.");
       refresh();
     }catch(Exception e){
       showStatus("Folder access not granted: "+e.getMessage()+
           ". Select Documents/Logs exactly, or use Shizuku.");
     }
   }
+  private void chooseFolderTracking(){
+    if(trackingActive()){
+      showStatus("Stop tracking before switching log sources.");return;
+    }
+    if(!QuestSafLogWatcher.hasGrant(this)){
+      showStatus("Select Documents/Logs to enable recommended Quest tracking.");
+      pickQuestFolder();return;
+    }
+    if(QuestSafLogWatcher.selectFolderMode(this))
+      showStatus("Folder tracking selected. Shizuku is not needed.");
+    refresh();
+  }
   private void chooseShizukuTracking(){
     if(trackingActive()){
       showStatus("Stop tracking before switching log sources.");return;
     }
     QuestSafLogWatcher.selectShizuku(this);
-    showStatus("Shizuku tracking selected. The working method is restored.");
+    showStatus("Shizuku fallback selected for Quest. Start tracking after Shizuku is running.");
     refresh();
   }
   private void startNode(){
@@ -304,7 +350,8 @@ public class MobileDeployActivity extends Activity {
       }
       if(QuestSafLogWatcher.isSelected(this)){
         if(!QuestSafLogWatcher.hasGrant(this)){
-          showStatus("Documents/Logs access is missing. Grant folder permission again or use Shizuku.");return;
+          showStatus("Grant Documents/Logs folder access to start Quest tracking.");
+          pickQuestFolder();return;
         }
       }else{
         if(!Shizuku.pingBinder()){
@@ -338,17 +385,24 @@ public class MobileDeployActivity extends Activity {
         long now=System.currentTimeMillis(),heartbeat=state.getLong("service_heartbeat_at",0);
         boolean online=state.getBoolean("running",false)&&heartbeat>0&&
             now-heartbeat<90_000;
+        boolean quest=QuestDevice.isQuestDevice();
+        boolean folderMode=QuestSafLogWatcher.isSelected(this);
+        boolean folderGrant=quest && QuestSafLogWatcher.hasGrant(this);
+        String selectedMethod=folderMode?"folder":"shizuku";
+        String activeMethod=online?state.getString("tracking_mode",selectedMethod):selectedMethod;
+        boolean activeFolder="folder".equals(activeMethod);
         String general=r==null?"This device isn't linked yet.":
           "Device linked\n\n"+
-          (online?"● Tracking is active":"○ Tracking is paused or reconnecting")+
+          (online?"● Tracking service is running":
+            quest&&folderMode&&!folderGrant?"○ VRChat logs folder access required":
+            "○ Tracking is paused or reconnecting")+
           "\n\nPlayers recorded: "+state.getInt("captured_total",0)+
           "\nSent: "+state.getInt("uploaded_total",0)+
           "\nNot sent yet: "+pending;
-        boolean folderMode=QuestSafLogWatcher.isSelected(this);
         String technical="Device: "+(r==null?"Not linked":r.nodeName)+
-          "\nTracking mode: "+(folderMode?"Quest folder (experimental)":"Shizuku")+
+          "\nTracking mode: "+(activeFolder?"Quest folder (read-only)":"Shizuku")+
           "\nService heartbeat: "+(heartbeat==0?"Never":(now-heartbeat)/1000+" seconds ago")+
-          "\nShizuku: "+(folderMode?"Not required in folder mode":
+          "\nShizuku: "+(activeFolder?"Not required in folder mode":
             Shizuku.pingBinder()?"Connected":"Disconnected")+
           "\nWatcher: "+state.getString("watcher","Not started")+
           "\nSource found: "+state.getBoolean("watch_source",false)+
@@ -364,22 +418,33 @@ public class MobileDeployActivity extends Activity {
           status.setText(general);
           if(startControl!=null){
             startControl.setEnabled(r!=null&&!online);
-            startControl.setText(online?"Tracking is running":"Start tracking");
+            startControl.setText(online?"Tracking is running":
+                quest&&folderMode&&!folderGrant?"Grant logs folder access":"Start tracking");
           }
           if(stopControl!=null)stopControl.setEnabled(r!=null&&online);
           if(advanced)technicalStatus.setText(technical);
           if(questFolderStatus!=null){
-            questFolderStatus.setText("Selected mode: "+
-                (folderMode?"Folder (no Shizuku)":"Shizuku")+
+            questFolderStatus.setText("Selected Quest mode: "+
+                (folderMode?"Folder access (recommended)":"Shizuku fallback")+
                 "\nFolder permission: "+QuestSafLogWatcher.grantedPath(this)+
-                (online?"\nStop tracking before switching modes.":""));
+                (online?"\nActive mode: "+(activeFolder?"Folder":"Shizuku")+
+                    "\nStop tracking before switching methods.":""));
+            if(questFolderControl!=null){
+              questFolderControl.setText(folderGrant?
+                  "Change Documents/Logs access":"Grant Documents/Logs permission");
+              questFolderControl.setEnabled(!online);
+            }
+            if(questFolderModeControl!=null){
+              questFolderModeControl.setVisibility(folderMode?View.GONE:View.VISIBLE);
+              questFolderModeControl.setEnabled(!online);
+            }
           }
         });
       }catch(Exception e){showStatus("Status temporarily unavailable. Try refreshing.");}
     });
   }
   private void unlinkConfirm(){
-    new AlertDialog.Builder(this).setTitle("Unlink this phone?")
+    new AlertDialog.Builder(this).setTitle("Unlink this device?")
       .setMessage("This stops tracking and clears this device's Node setup, unsent encounters and saved local player/log history. Your personal VRChat sign-in is separate.")
       .setNegativeButton("Cancel",null)
       .setPositiveButton("Unlink",(d,w)->{
@@ -387,7 +452,7 @@ public class MobileDeployActivity extends Activity {
         MobileCredentials.clear(this);
         try(MobileOutbox outbox=new MobileOutbox(this)){outbox.wipe();}
         StaffGate.lock();
-        showStatus("This phone has been unlinked. Contact a group owner if you need a new link.");
+        showStatus("This device has been unlinked. Contact a group owner if you need a new link.");
         enrollment.setVisibility(View.VISIBLE);
       }).show();
   }
@@ -398,6 +463,7 @@ public class MobileDeployActivity extends Activity {
   }
   @Override protected void onSaveInstanceState(Bundle state){
     state.putBoolean("shizuku_help_expanded",helpExpanded);
+    state.putBoolean("quest_fallback_expanded",questFallbackExpanded);
     super.onSaveInstanceState(state);
   }
   @Override protected void onPause(){handler.removeCallbacks(autoRefresh);super.onPause();}
