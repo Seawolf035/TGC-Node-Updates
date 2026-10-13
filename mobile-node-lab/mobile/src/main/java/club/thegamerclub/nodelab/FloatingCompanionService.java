@@ -536,8 +536,15 @@ public final class FloatingCompanionService extends Service {
             stopRequestedByUser();
             return START_NOT_STICKY;
         }
-        // Enforce Quest consent in the service itself. This covers direct
-        // starts, sticky Android restarts and recovery calls alike.
+        // Quest has no floating tools, even if an older build stored an
+        // experimental opt-in or Android attempts a sticky service restart.
+        // This never affects Quest System, tracking, OSC, or the phone overlay.
+        if(QuestDevice.isQuestDevice()){
+            OverlayPreferences.setDesired(this,false);
+            OverlayPreferences.setRecover(this,false);
+            stopRequestedByUser();
+            return START_NOT_STICKY;
+        }
         if(!QuestDevice.canRunOverlay(this)){
             stopRequestedByUser();
             return START_NOT_STICKY;
