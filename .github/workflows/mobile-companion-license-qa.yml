@@ -1,0 +1,76 @@
+name: Companion Quest license acceptance QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - fix/mobile-v0.19.11-quest-license-acceptance
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'mobile-node-lab/docs/v0.19.11-license-acceptance-qa.md'
+      - '.github/workflows/mobile-companion-license-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quest-license-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify consent and protect unaffected device/network paths
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          activity=(base/'CompanionLicenseActivity.java').read_text()
+          consent=(base/'CompanionLicense.java').read_text()
+          home=(base/'CompanionActivity.java').read_text()
+          watcher=(base/'MobileNodeService.java').read_text()
+          saf=(base/'QuestSafLogWatcher.java').read_text()
+          version=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          asset=Path('mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt').read_text()
+          manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
+          assert 'CheckBox' not in activity, 'Quest must not be gated by checkbox touch state'
+          assert 'accept.setEnabled(true)' in activity
+          assert 'CompanionLicense.accept(this)' in activity
+          assert 'persisted && CompanionLicense.accepted(this)' in activity
+          assert '.commit();' in consent, 'agreement must be committed before dismissing'
+          assert 'finishAffinity()' in activity, 'decline must exit without acceptance'
+          assert '2026-10-13.1' in consent and 'Version: 2026-10-13.1' in asset
+          assert "versionName '0.19.11'" in version and 'versionCode 63' in version
+          assert 'applicationId' in version and "club.thegamerclub.nodelab" in version
+          assert 'android:allowBackup="false"' in manifest
+          assert 'TrackingSetupGuide.acknowledged(this)' in home
+          assert 'View setup guide' in home
+          assert 'QuestSafLogWatcher.isSelected(this)' in watcher
+          assert 'Shizuku' in watcher and 'Documents/Logs' in saf
+          assert 'MainActivity' in manifest and 'QuestToolsActivity' in manifest
+          print('Consent, license-version, tracking-guide, Quest SAF and phone Shizuku checks OK.')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK (no signing or publishing)
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - name: Upload QA-only debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Companion-v0.19.11-QA-Only-Do-Not-Install-Over-Release
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
