@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.18.6",
-  "version_code": 49,
+  "version": "0.18.7",
+  "version_code": 50,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "f037974e8e0f8ee0293231696d3160bf98ac47549061a2f5fc5091297d87a624",
-  "notes": "v0.18.6: Four floating usability upgrades: tap a separate draggable-bubble-adjacent OSC PTT button to hold/release without expanding the panel; quick Live Chatbox start/pause/resume/stop, authorized official-only selector and direct one-tap sends for up to four saved phrases; pinned friend profiles with fast Social and invitation links; and a configurable 0-3-action bar fixed above long scrolled pages in addition to the existing six Home shortcuts. The PTT latch has a dedicated low-latency worker and retains five-minute and exit-release safeguards. All previous v0.18.5 official-only chatbox, world bookmarks, Mini-VRCX, moderation/Node/OSC utilities and staff authorization are preserved. No Main Launcher or Relay update required."
+  "sha256": "821aa05afc99dc1e9e5f184e7af16de705a05bfcf97c60a16677a45b95351214",
+  "notes": "v0.18.7: Manually reorder pinned VRChat friends with compact up/down rows directly on floating Social without jumping scroll positions. Add separate opt-in Android notifications for observed pinned-friend offline-to-online transitions: first complete snapshot silently seeds each account, newly pinned friends do not falsely notify, overlay polling runs about every 2.5-5 minutes, and WorkManager checks about every 15 minutes when floating tools are closed (Android may delay). Enable/disable from Social or the main Companion notification settings; permission handling and account-scoped state preserved. Retains v0.18.6 floating PTT button, OSC quick controls, bookmarks, verified rank-based chatboxes, Mini-VRCX and Mobile Node. No Main Launcher or Relay update required."
 }
