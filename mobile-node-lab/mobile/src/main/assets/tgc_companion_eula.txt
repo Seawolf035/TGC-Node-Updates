@@ -303,7 +303,7 @@ This is NOT an unrestricted public software license, a transfer of software owne
 38. APPLICABLE LAW AND MANDATORY RIGHTS
 
 38.1. The Agreement is subject to laws applicable to the actual Licensor and the user's use of the Companion, including mandatory privacy, consumer, copyright, contract, security-research, and interoperability rules.
-38.2. The app's community association with Maine or the United States does not, by itself, replace a deliberately drafted and enforceable jurisdiction or venue term.
+38.2. Neither a community's location nor the user's location, by itself, substitutes for a deliberately drafted and enforceable jurisdiction or venue term.
 38.3. This version does not impose arbitration or a specific court venue. Any such provision would require separate legal review and accurate identification of the contracting party.
 38.4. Legal exceptions that cannot be waived remain effective even if another provision appears broader.
 
