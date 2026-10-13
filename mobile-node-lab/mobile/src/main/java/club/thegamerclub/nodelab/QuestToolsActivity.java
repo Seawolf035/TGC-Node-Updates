@@ -571,8 +571,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
                     if(next.size()>=6){toast("Choose up to six");return;}
                     next.add(key);
                 }
-                OverlayPreferences.setShortcuts(this,next);
-                render();
+                try{OverlayPreferences.setShortcuts(this,next);render();}
+                catch(Exception e){toast(e.getMessage());}
             });
         }
     }
