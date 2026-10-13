@@ -182,7 +182,10 @@ public final class OscControlStore {
         saveArray(ctx,"rotating_chatboxes",next);
         if(next.length()==0 &&
             TgcOfficialChatboxes.selectedEligible(ctx).isEmpty())
-            setRotationEnabled(ctx,false);
+            // Revoked official tags must fail closed, even if the default
+            // is disabled. Never throw while deleting a local chatbox.
+            prefs(ctx).edit().putBoolean(
+                key(ctx,"chatbox_rotation_enabled"),false).apply();
     }
     /** Keep existing installs identical by default. Preferences are per VRChat account. */
     public static boolean includeDefaultChatbox(Context ctx){
