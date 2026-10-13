@@ -62,6 +62,9 @@ public final class FloatingCompanionService extends Service {
     private final ArrayDeque<String> backStack=new ArrayDeque<>();
     private FrameLayout bubble;
     private View statusDot;
+    private TextView micSidecar;
+    private WindowManager.LayoutParams micSidecarParams;
+    private LinearLayout quickBarRow;
     private TextView oscVoiceBubbleBadge,oscVoiceInfo;
     private Button oscVoiceToggle;
     private LinearLayout oscVoiceQuickRelease;
@@ -621,6 +624,7 @@ public final class FloatingCompanionService extends Service {
                             bubbleParams.x=Math.max(0,Math.min(screenWidth()-dp(60),initialX+dx));
                             bubbleParams.y=Math.max(dp(25),Math.min(screenHeight()-dp(82),initialY+dy));
                             if(bubble!=null)wm.updateViewLayout(bubble,bubbleParams);
+                            updateMicSidecarPosition();
                         }
                         return true;
                     case MotionEvent.ACTION_UP:
@@ -637,6 +641,40 @@ public final class FloatingCompanionService extends Service {
             }
         });
         wm.addView(circle,bubbleParams);
+        // Separate small, always-reachable action next to the draggable bubble.
+        // The main bubble remains 60dp and keeps its original tap/drag gestures.
+        try{
+            micSidecar=text("MIC\nOFF",10,CompanionStyle.TEXT,true);
+            micSidecar.setGravity(Gravity.CENTER);
+            micSidecar.setBackground(CompanionStyle.shape(this,
+                CompanionStyle.SURFACE,15,CompanionStyle.BORDER));
+            micSidecar.setElevation(dp(8));
+            micSidecar.setContentDescription("Toggle OSC push-to-talk");
+            micSidecar.setOnClickListener(v->sendOscVoiceHold(!oscVoiceHoldRequested));
+            micSidecarParams=params(dp(45),dp(49));
+            placeMicSidecar();
+            wm.addView(micSidecar,micSidecarParams);
+            updateOscVoiceUi();
+        }catch(Exception e){
+            // Failure to show the shortcut must not remove the working bubble.
+            micSidecar=null;micSidecarParams=null;
+        }
+    }
+    private void placeMicSidecar(){
+        if(bubbleParams==null||micSidecarParams==null)return;
+        int left=bubbleParams.x;
+        int rightSpace=screenWidth()-left-dp(60);
+        int proposed=rightSpace>=dp(52)?left+dp(63):left-dp(48);
+        micSidecarParams.x=Math.max(0,
+            Math.min(screenWidth()-dp(45),proposed));
+        micSidecarParams.y=Math.max(dp(5),
+            Math.min(screenHeight()-dp(55),bubbleParams.y+dp(5)));
+    }
+    private void updateMicSidecarPosition(){
+        if(micSidecar==null||micSidecarParams==null)return;
+        placeMicSidecar();
+        try{wm.updateViewLayout(micSidecar,micSidecarParams);}
+        catch(Exception ignored){}
     }
     private LinearLayout vertical(){
         LinearLayout out=new LinearLayout(this);
@@ -715,6 +753,7 @@ public final class FloatingCompanionService extends Service {
             bubbleParams.y));
         try{wm.updateViewLayout(bubble,bubbleParams);}
         catch(Exception ignored){}
+        updateMicSidecarPosition();
         saveBubblePosition();
     }
     private void saveBubblePosition(){
@@ -1230,6 +1269,17 @@ public final class FloatingCompanionService extends Service {
     private void updateOscVoiceUi(){
         if(oscVoiceBubbleBadge!=null)
             oscVoiceBubbleBadge.setVisibility(oscVoiceHoldRequested?View.VISIBLE:View.GONE);
+        if(micSidecar!=null){
+            micSidecar.setText(oscVoiceHoldRequested?"PTT\nHOLD":
+                oscVoiceSending?"MIC\nWAIT":"MIC\nOFF");
+            micSidecar.setTextColor(oscVoiceHoldRequested?
+                0xFFFFFFFF:CompanionStyle.TEXT);
+            micSidecar.setBackground(CompanionStyle.shape(this,
+                oscVoiceHoldRequested?0xFFB72C32:CompanionStyle.SURFACE,
+                15,CompanionStyle.BORDER));
+            micSidecar.setContentDescription(oscVoiceHoldRequested?
+                "Release OSC push-to-talk":"Hold OSC push-to-talk");
+        }
         if(oscVoiceInfo!=null)oscVoiceInfo.setText(
             oscVoiceHoldRequested?
                 (oscVoiceSending?"Sending PTT press/release…":
@@ -1509,6 +1559,10 @@ public final class FloatingCompanionService extends Service {
         verifier.shutdownNow();friendWorker.shutdownNow();eventsWorker.shutdownNow();
         presenceWorker.shutdownNow();
         dismissPanel();if(mini!=null)mini.shutdown();
+        if(micSidecar!=null){
+            try{wm.removeView(micSidecar);}catch(Exception ignored){}
+            micSidecar=null;micSidecarParams=null;
+        }
         if(bubble!=null){
             try{wm.removeView(bubble);}catch(Exception ignored){}
             bubble=null;statusDot=null;
