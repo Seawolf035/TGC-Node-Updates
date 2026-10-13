@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.18.2: Added local per-personal-account world bookmarks (up to 24, independent from VRChat favorite slots). Bookmark any world from native world details or floating Mini-VRCX, view a dedicated bookmarked worlds list, and open starred shortcuts above VRChat favorite worlds. Existing v0.18.1 staff rank-based official chatboxes, authenticated staff gating, Shizuku Mobile Node, group utilities, and OSC tools remain intact. Ranked presets still require the updated live Relay and Main Launcher ranked roster sync."
+            "notes": "v0.18.3: Floating tools usability update: confirmations for invites, friend requests, avatar and status changes, saved OSC items, Live Chatbox starts, private notes and tracking stop now appear centered over tool buttons with accessible Confirm/Cancel, never at the bottom of scrolled pages. Feedback is immediately visible. Official rank-gated TGC chatbox tags now have a direct shortcut on the OSC home panel and compact one-tap toggles that preserve scroll position. All previous v0.18.2 world bookmarks, Mini-VRCX, Shizuku, OSC, private VRChat session, staff rank authorization and Relay functionality remain intact."
           }
           JSON
           fi
