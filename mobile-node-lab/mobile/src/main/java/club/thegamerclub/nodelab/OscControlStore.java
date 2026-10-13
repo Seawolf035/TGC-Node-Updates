@@ -130,14 +130,24 @@ public final class OscControlStore {
     public static void setTypingAuto(Context ctx,boolean enabled){
         prefs(ctx).edit().putBoolean(key(ctx,"typing_auto"),enabled).apply();
     }
+    // Shared interval catalog and validation for Quest native tools, Android
+    // phone floating tools and each foreground OSC sender.
+    // 5 seconds is the minimum: UDP chatbox writes are locally rate-limited
+    // and excessively fast re-broadcasts can interfere with manual chat.
+    public static int[] liveIntervals(){
+        return new int[]{5,10,15,20,30,45,60,90,120};
+    }
+    public static boolean supportsLiveInterval(int seconds){
+        for(int allowed:liveIntervals())if(seconds==allowed)return true;
+        return false;
+    }
     public static int liveInterval(Context ctx){
         int seconds=prefs(ctx).getInt(key(ctx,"live_interval_seconds"),5);
-        return seconds==5||seconds==10||seconds==15||seconds==30?
-            seconds:5;
+        return supportsLiveInterval(seconds)?seconds:5;
     }
     public static void setLiveInterval(Context ctx,int seconds){
-        if(seconds!=5&&seconds!=10&&seconds!=15&&seconds!=30)
-            throw new IllegalArgumentException("Choose a 5, 10, 15 or 30 second interval.");
+        if(!supportsLiveInterval(seconds))
+            throw new IllegalArgumentException("Choose a supported Live Chatbox timing.");
         prefs(ctx).edit().putInt(key(ctx,"live_interval_seconds"),seconds).apply();
     }
     /** Additional named rotating chatboxes; the legacy status is optional. */
@@ -250,13 +260,20 @@ public final class OscControlStore {
         int official=TgcOfficialChatboxes.selectedEligible(ctx).size();
         return official+(officialOnly(ctx)?0:chatboxes(ctx).length());
     }
+    public static int[] rotationIntervals(){
+        return new int[]{10,15,20,30,45,60,90,120,180,300};
+    }
+    public static boolean supportsRotationInterval(int seconds){
+        for(int allowed:rotationIntervals())if(seconds==allowed)return true;
+        return false;
+    }
     public static int rotationInterval(Context ctx){
         int seconds=prefs(ctx).getInt(key(ctx,"chatbox_rotation_interval"),30);
-        return seconds==15||seconds==30||seconds==60||seconds==120?seconds:30;
+        return supportsRotationInterval(seconds)?seconds:30;
     }
     public static void setRotationInterval(Context ctx,int seconds){
-        if(seconds!=15&&seconds!=30&&seconds!=60&&seconds!=120)
-            throw new IllegalArgumentException("Choose a 15, 30, 60 or 120 second switch.");
+        if(!supportsRotationInterval(seconds))
+            throw new IllegalArgumentException("Choose a supported rotation timing.");
         prefs(ctx).edit().putInt(key(ctx,"chatbox_rotation_interval"),seconds).apply();
     }
     public static int liveSlotCount(Context ctx){
