@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.18.0: Expanded Mini-VRCX groups toolkit with per-account pinned groups in full and floating views, member/role and join information, enhanced group dashboard, and occupancy-filtered/sorted group instance tools. Preserves v0.17.9 rotating OSC chatboxes, all staff and VRChat authentication, Shizuku, Relay and desktop invite-network behavior."
+            "notes": "v0.18.0: Expanded full-screen and floating Mini-VRCX group toolkit: account-scoped pinned groups, member directory/search and named roles, group status, live instance filtering/sorting, instance details and confirmed personal self-invites, and permission-scoped read-only bans. Preserves v0.17.9 chatbox rotation, staff and VRChat auth, Shizuku, Relay and desktop Nodes."
           }
           JSON
           fi
