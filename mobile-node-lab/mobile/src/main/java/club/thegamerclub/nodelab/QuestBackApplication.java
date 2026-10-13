@@ -79,6 +79,9 @@ public final class QuestBackApplication extends Application
         View content=activity.findViewById(android.R.id.content);
         if(content!=null && content.getTag(BACK_RESERVED_CONTENT_TAG)==null){
             content.setTag(BACK_RESERVED_CONTENT_TAG,Boolean.TRUE);
+            // Fill the reserved upper-left lane with the same dark backdrop
+            // rather than exposing the platform's default light window color.
+            content.setBackgroundColor(CompanionStyle.BG);
             content.setPadding(content.getPaddingLeft(),
                 content.getPaddingTop()+dp(activity,60),
                 content.getPaddingRight(),content.getPaddingBottom());
