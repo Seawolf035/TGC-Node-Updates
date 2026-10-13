@@ -79,10 +79,9 @@ public final class OscControlStore {
         saveArray(ctx,"phrases",next);
     }
     public static void saveParameter(Context ctx,String name,String type)throws Exception{
-        String label=name==null?"":name.trim();
-        if(!label.matches("[A-Za-z_][A-Za-z0-9_]{0,63}"))
-            throw new IllegalArgumentException(
-                "Parameter names must use letters, digits and underscores.");
+        // Persist one canonical relative form for both full OSC addresses
+        // and shorter names; existing saved simple parameter names stay valid.
+        String label=AvatarOscParameterPath.relative(name);
         if(!"bool".equals(type)&&!"int".equals(type)&&!"float".equals(type))
             throw new IllegalArgumentException("Choose Bool, Int or Float.");
         JSONArray existing=parameters(ctx),updated=new JSONArray();
