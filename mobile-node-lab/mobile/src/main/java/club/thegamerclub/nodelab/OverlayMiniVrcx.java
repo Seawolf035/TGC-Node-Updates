@@ -2318,10 +2318,10 @@ public final class OverlayMiniVrcx {
             if(!StaffGate.unlocked(ctx))return;
             host.keyboard(false);message.clearFocus();
             final String nextLine=message.getText().toString();
-            final boolean clock=flags[0],battery=flags[1];
+            final boolean sendTime=flags[0],sendBattery=flags[1];
             final int speed=selected[0];
             try{
-                OscControlStore.previewChatbox(ctx,nextLine,clock,battery);
+                OscControlStore.previewChatbox(ctx,nextLine,sendTime,sendBattery);
             }catch(Exception ex){
                 feedback.setText("Cannot start: "+ex.getMessage());return;
             }
@@ -2330,8 +2330,8 @@ public final class OverlayMiniVrcx {
                 "service runs, even when collapsed.",()->{
                 try{
                     OscControlStore.setPrefix(ctx,nextLine);
-                    OscControlStore.setIncludeTime(ctx,clock);
-                    OscControlStore.setIncludeBattery(ctx,battery);
+                    OscControlStore.setIncludeTime(ctx,sendTime);
+                    OscControlStore.setIncludeBattery(ctx,sendBattery);
                     OscControlStore.setLiveInterval(ctx,speed);
                     OscControlStore.statusLine(ctx);
                     host.oscStartLive(speed);
