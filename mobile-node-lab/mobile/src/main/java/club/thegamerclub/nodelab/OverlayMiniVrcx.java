@@ -1062,6 +1062,28 @@ public final class OverlayMiniVrcx {
         button(info,"Refresh profile",false,this::load);
     }
     private void showWorlds(){
+        section(list,"BOOKMARKED WORLDS");
+        int savedCount=0;
+        try{
+            JSONArray saved=WorldBookmarkStore.bookmarks(ctx);
+            savedCount=saved.length();
+            for(int i=0;i<saved.length();i++){
+                JSONObject row=saved.optJSONObject(i);
+                if(row==null)continue;
+                String id=row.optString("id","");
+                String name=row.optString("name","World");
+                if(!id.matches("wrld_[0-9a-fA-F-]{36}")||!matches(name+" "+id))
+                    continue;
+                line(list,"★ "+name,"Local bookmark · Open world details",
+                    ()->world(id));
+            }
+        }catch(Exception e){
+            line(list,"Sign in to view your bookmarks",
+                "Bookmarks are separated by personal VRChat account.",null);
+        }
+        if(savedCount==0)line(list,"No bookmarked worlds",
+            "Open any world and tap Bookmark to save a local shortcut.",null);
+        section(list,"YOUR VRCHAT FAVORITES");
         int shown=0;
         for(int i=0;i<loaded.length()&&shown<limit;i++){
             JSONObject w=loaded.optJSONObject(i);if(w==null)continue;
@@ -1082,6 +1104,17 @@ public final class OverlayMiniVrcx {
         c.addView(text("Capacity: "+profile.optInt("capacity",0)+
             " · Visits: "+profile.optInt("visits",0),12,CompanionStyle.ACCENT,false));
         String id=target;
+        boolean pinned=false;
+        try{pinned=WorldBookmarkStore.contains(ctx,id);}
+        catch(Exception ignored){}
+        button(c,pinned?"★ Remove bookmark":"☆ Bookmark this world",false,()->{
+            try{
+                boolean next=!WorldBookmarkStore.contains(ctx,id);
+                WorldBookmarkStore.setBookmarked(ctx,id,
+                    profile.optString("name","VRChat world"),next);
+                drawList();
+            }catch(Exception e){message("Bookmark: "+e.getMessage());}
+        });
         button(c,"Copy world ID",false,()->copy("world ID",id));
         button(c,"Copy world link",false,
             ()->copy("world link","https://vrchat.com/home/world/"+id));
