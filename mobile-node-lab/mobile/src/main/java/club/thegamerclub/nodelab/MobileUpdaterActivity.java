@@ -61,6 +61,9 @@ public final class MobileUpdaterActivity extends Activity {
     root.addView(kicker);
     root.addView(text("Updates",28,CompanionStyle.TEXT));
     root.addView(text("Keep your Companion up to date. Your account, tracking, and settings stay in place when you update.",14,CompanionStyle.MUTED));
+    if(!CompanionLicense.accepted(this)){
+      root.addView(text("Update recovery mode: You can check and install official signed updates before agreeing to the license. Updating does not record acceptance or unlock Companion features. Return to the agreement afterward.",13,CompanionStyle.GOLD));
+    }
     LinearLayout body=CompanionStyle.card(this);
     root.addView(body,CompanionStyle.cardParams(this));
     status=text("Checking for updates...",14,CompanionStyle.ACCENT);
