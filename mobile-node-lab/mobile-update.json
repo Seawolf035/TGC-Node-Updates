@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.3",
-  "version_code": 55,
+  "version": "0.19.4",
+  "version_code": 56,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "462b64afbfda6eae75d0a9268a0763976737cd32d012b73022510aafa0896e69",
-  "notes": "v0.19.3: Quest Documents/Logs read-only folder permission is now the DEFAULT player tracking method; Shizuku is no longer required on Quest for the folder mode. Quest setup prominently requests folder permission and opens the Android picker when needed. The existing Shizuku Quest option remains available only in Tracking controls > Advanced tools > Alternative Quest method as a fallback, with no automatic fallback or silent replay. Existing explicit Shizuku selections are preserved until switched; upgrades from the old default request folder access first. Android PHONE player tracking still REQUIRES Shizuku with the existing protected-log watcher. Existing staff verification, SQLite outbox, Relay upload, GM4/GM1 invitation authority, phone floater and Quest tools are unchanged. No Main Launcher or Relay deployment changes."
+  "sha256": "82329f3124d7b6791354cf4296e6202d75dd4ffe00b4f504a1730f9bd1c35996",
+  "notes": "v0.19.4: Quest Home floating-tools button now opens Quest System directly, with the Quest-native toolkit identified consistently. Quest floating overlays are completely disabled, including legacy experimental opt-in, sticky service restarts, foreground recovery, and overlay controls; old Quest overlay preferences are cleared on Companion launch. Android phone floating tools and recovery are unchanged. Redundant account-menu shortcuts to avatar favorites, extended favorites, private notes, and inbox were removed from Settings; the features remain accessible from Home/Explore. Quest player tracking defaults to Documents/Logs folder permission with Shizuku nested under Advanced as a fallback; phone player tracking still requires Shizuku. Existing staff gating, phone interface outside these duplicate links, Relay, GM4/GM1, and Quest OSC stay unchanged. No Main Launcher or Relay deployments."
 }
