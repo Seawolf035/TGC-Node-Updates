@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.7",
-  "version_code": 59,
+  "version": "0.19.8",
+  "version_code": 60,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "f448737d5e61a8e8a5062121766b6ca73a4c66f6ab17a2f70a878ec36e83f635",
-  "notes": "v0.19.7: Fix VRChat Avatar OSC parameter controls rejecting nested parameter names. Both Go/IsFeral and /avatar/parameters/Go/IsFeral now save as the same canonical relative path and transmit the exact /avatar/parameters/Go/IsFeral UDP OSC address without double-prefixing. Supports validated slash-separated segments and nested path inputs up to 192 relative characters; malformed or unrelated OSC endpoints remain blocked. Companion Quest System and Android phone floating-tools parameter editors show an example and accept the full address. Existing simple saved controls, account-specific OSC storage, Bool/Int/Float payloads, chatbox/typing, Quest folder tracking, phone Shizuku, Relay, and GM4/GM1 are unchanged. UDP delivery still cannot prove the VRChat avatar reacted. No Main Launcher or Relay deployments."
+  "sha256": "eab2d6e01096f5aca38438af221a34b62762db3f5df424647dc25b59113b8c3b",
+  "notes": "v0.19.8: Rename Quest System to Quest Tools and remove redundant Quest native tools launchers from Home and Explore. Add a Quest-only in-app universal Back button across Companion screens; nested Quest Tools navigation and Companion tab history are respected, with no extra button on phones and no floating overlay. Expand Live Chatbox refresh intervals to 5, 10, 15, 20, 30, 45, 60, 90 and 120 seconds; expand rotation intervals to 10, 15, 20, 30, 45, 60, 90, 120, 180 and 300 seconds. Settings appear in three-column choices with matching validation in Quest and phone OSC senders. Add prominent instructions for VRChat Settings > Debug > Logging > FULL on Tracking, setup and Quest Tools screens, reminding users to start watching before joining an instance. Existing saved OSC settings, phone floater, Quest folder tracking and Shizuku fallback, account/staff data, and Relay/GM4/GM1 remain unchanged. No Main Launcher or Relay deployment changes."
 }
