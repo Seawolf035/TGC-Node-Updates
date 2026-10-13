@@ -2235,8 +2235,16 @@ public final class OverlayMiniVrcx {
                 OscControlStore.setPrefix(ctx,message.getText().toString());
                 OscControlStore.setIncludeTime(ctx,flags[0]);
                 OscControlStore.setIncludeBattery(ctx,flags[1]);
-                String line=OscControlStore.statusLine(ctx);
-                preview.setText("Preview: "+line);
+                if(OscControlStore.officialOnly(ctx)){
+                    preview.setText("Official tags only · personal status excluded");
+                }else if(!OscControlStore.includeDefaultChatbox(ctx)){
+                    preview.setText("Personal default status excluded from rotation");
+                }else{
+                    try{preview.setText("Preview: "+OscControlStore.statusLine(ctx));}
+                    catch(Exception empty){
+                        preview.setText("Personal status empty · add text, time or battery");
+                    }
+                }
                 note.setText("Preferences saved locally. Live sends use the latest values.");
                 return;
             }catch(Exception ex){
@@ -2254,10 +2262,36 @@ public final class OverlayMiniVrcx {
             charge.setText("Phone battery: "+(flags[1]?"ON":"OFF"));
             note.setText("Tap Save / Preview or Start to apply.");
         });
-        try{preview.setText("Preview: "+OscControlStore.statusLine(ctx));}
-        catch(Exception ex){preview.setText("Enter text or enable an information field.");}
+        try{
+            if(OscControlStore.officialOnly(ctx))
+                preview.setText("Official TGC tags only · personal status excluded");
+            else if(!OscControlStore.includeDefaultChatbox(ctx))
+                preview.setText("Personal default status excluded from rotation");
+            else preview.setText("Preview: "+OscControlStore.statusLine(ctx));
+        }catch(Exception ex){preview.setText("Enter text or enable an information field.");}
         button(content,"Save settings & preview",false,()->{
             host.keyboard(false);message.clearFocus();updatePreview.run();
+        });
+        button(content,"Clear personal status & use official tags only",false,()->{
+            if(TgcOfficialChatboxes.selectedEligible(ctx).isEmpty()){
+                message("Select an unlocked official TGC tag first.");
+                return;
+            }
+            confirm("Clear saved personal text, clock and battery, and use only "+
+                "your selected official TGC tags? This will not delete personal "+
+                "named chatboxes or official selections.",()->{
+                try{
+                    // Validate eligibility BEFORE clearing anything.
+                    OscControlStore.setOfficialOnly(ctx,true);
+                    OscControlStore.clearPersonalStatus(ctx);
+                    message.setText("");
+                    flags[0]=false;flags[1]=false;
+                    clock.setText("Time: OFF");charge.setText("Phone battery: OFF");
+                    preview.setText("Official TGC tags only · personal status cleared");
+                    note.setText("Saved. Only unlocked official tags will broadcast.");
+                    message("Personal status cleared. Official-only mode ON.");
+                }catch(Exception ex){message("Cannot clear status: "+ex.getMessage());}
+            });
         });
 
         section(list,"ROTATING CHATBOXES");
@@ -2270,10 +2304,25 @@ public final class OverlayMiniVrcx {
                 extra+" personal and "+official+" official chatboxes selected",
                 13,on?CompanionStyle.GOOD:CompanionStyle.MUTED,true));
             rotating.addView(text(
-                "Keep this default status, and add named messages to switch between. "+
-                "Switching speed is independent of the refresh speed below.",
+                "Your default and saved personal chatboxes can be excluded. "+
+                "Official-only mode broadcasts only your selected unlocked TGC tags.",
                 12,CompanionStyle.MUTED,false));
         }catch(Exception ignored){}
+        Button mode=CompanionStyle.button(ctx,
+            OscControlStore.officialOnly(ctx)?"✓ Official tags ONLY: ON":
+                "Official tags ONLY: OFF",false);
+        rotating.addView(mode,CompanionStyle.buttonParams(ctx));
+        mode.setOnClickListener(v->{
+            try{
+                boolean next=!OscControlStore.officialOnly(ctx);
+                OscControlStore.setOfficialOnly(ctx,next);
+                mode.setText(next?"✓ Official tags ONLY: ON":
+                    "Official tags ONLY: OFF");
+                preview.setText(next?
+                    "Official TGC tags only · personal status excluded":
+                    "Official-only OFF · personal settings restored");
+            }catch(Exception ex){message("Rotation mode: "+ex.getMessage());}
+        });
         button(rotating,"Manage rotating chatboxes",false,
             ()->host.navigate("mini_osc_rotation"));
 
@@ -2321,7 +2370,12 @@ public final class OverlayMiniVrcx {
             final boolean sendTime=flags[0],sendBattery=flags[1];
             final int speed=selected[0];
             try{
-                OscControlStore.previewChatbox(ctx,nextLine,sendTime,sendBattery);
+                if(OscControlStore.liveSlotCount(ctx)<1)
+                    throw new IllegalStateException(
+                        "Select an unlocked official tag first.");
+                if(!OscControlStore.officialOnly(ctx)&&
+                   OscControlStore.includeDefaultChatbox(ctx))
+                    OscControlStore.previewChatbox(ctx,nextLine,sendTime,sendBattery);
             }catch(Exception ex){
                 feedback.setText("Cannot start: "+ex.getMessage());return;
             }
@@ -2333,7 +2387,9 @@ public final class OverlayMiniVrcx {
                     OscControlStore.setIncludeTime(ctx,sendTime);
                     OscControlStore.setIncludeBattery(ctx,sendBattery);
                     OscControlStore.setLiveInterval(ctx,speed);
-                    OscControlStore.statusLine(ctx);
+                    // Only validate the active source; personal fields may be
+                    // deliberately empty in official-only rotation mode.
+                    OscControlStore.liveChatboxAt(ctx,0);
                     host.oscStartLive(speed);
                     drawList();
                 }catch(Exception ex){message("Cannot start: "+ex.getMessage());}
@@ -2413,9 +2469,9 @@ public final class OverlayMiniVrcx {
         LinearLayout intro=card(list);
         intro.addView(text("Rotating Live Chatboxes",18,CompanionStyle.TEXT,true));
         intro.addView(text(
-            "Your existing Live Chatbox is always the first slot. Add up to "+
-            "8 personal chatboxes and select eligible official staff messages. "+
-            "Nothing is transmitted by editing or saving.",
+            "Choose whether to include the default personal status, saved "+
+            "personal chatboxes, or only authorized official TGC tags. "+
+            "Nothing transmits until Live Chatbox is started.",
             12,CompanionStyle.MUTED,false));
         intro.addView(text(
             "Each message can have its own clock and battery fields. "+
@@ -2435,6 +2491,39 @@ public final class OverlayMiniVrcx {
             try{
                 OscControlStore.setRotationEnabled(ctx,!OscControlStore.rotationEnabled(ctx));
                 drawList();
+            }catch(Exception e){message(e.getMessage());}
+        });
+        TextView modeLabel=text(
+            OscControlStore.officialOnly(ctx)?
+                "● OFFICIAL ONLY · Default and saved personal chatboxes excluded":
+                "● MIXED MODE · Default and saved personal chatboxes available",
+            12,CompanionStyle.ACCENT,true);
+        settings.addView(modeLabel);
+        Button exclusive=CompanionStyle.button(ctx,
+            OscControlStore.officialOnly(ctx)?
+                "Official tags only: ON":"Official tags only: OFF",false);
+        settings.addView(exclusive,CompanionStyle.buttonParams(ctx));
+        exclusive.setOnClickListener(v->{
+            try{
+                boolean next=!OscControlStore.officialOnly(ctx);
+                OscControlStore.setOfficialOnly(ctx,next);
+                exclusive.setText(next?"Official tags only: ON":"Official tags only: OFF");
+                modeLabel.setText(next?
+                    "● OFFICIAL ONLY · Personal chatboxes excluded":
+                    "● MIXED MODE · Personal chatboxes available");
+            }catch(Exception e){message(e.getMessage());}
+        });
+        Button defaultToggle=CompanionStyle.button(ctx,
+            OscControlStore.includeDefaultChatbox(ctx)?
+                "Default personal status: INCLUDED":"Default personal status: EXCLUDED",
+            false);
+        settings.addView(defaultToggle,CompanionStyle.buttonParams(ctx));
+        defaultToggle.setOnClickListener(v->{
+            try{
+                boolean next=!OscControlStore.includeDefaultChatbox(ctx);
+                OscControlStore.setIncludeDefaultChatbox(ctx,next);
+                defaultToggle.setText(next?
+                    "Default personal status: INCLUDED":"Default personal status: EXCLUDED");
             }catch(Exception e){message(e.getMessage());}
         });
         settings.addView(text("Switch to next chatbox after:",13,
@@ -2465,7 +2554,12 @@ public final class OverlayMiniVrcx {
 
         section(list,"YOUR CHATBOXES");
         LinearLayout defaultBox=card(list);
-        defaultBox.addView(text("1 · Default Live Chatbox",14,CompanionStyle.TEXT,true));
+        defaultBox.addView(text("Default personal Live Chatbox",14,CompanionStyle.TEXT,true));
+        defaultBox.addView(text(OscControlStore.officialOnly(ctx)?
+            "Excluded by official-only mode":
+            OscControlStore.includeDefaultChatbox(ctx)?
+                "Included in rotation":"Excluded from rotation",
+            12,CompanionStyle.ACCENT,false));
         try{
             defaultBox.addView(text(OscControlStore.statusLine(ctx),12,
                 CompanionStyle.MUTED,false));
@@ -2496,7 +2590,7 @@ public final class OverlayMiniVrcx {
                 drawList();
             });
             button(entry,"Remove "+name,false,()->confirm(
-                "Delete chatbox “"+name+"”? The default Live Chatbox remains intact.",
+                "Delete chatbox “"+name+"”? Other chatboxes remain intact.",
                 ()->{
                     try{
                         OscControlStore.deleteChatbox(ctx,name);
