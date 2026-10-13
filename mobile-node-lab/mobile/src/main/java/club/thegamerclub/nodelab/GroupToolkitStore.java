@@ -17,7 +17,9 @@ public final class GroupToolkitStore {
     private GroupToolkitStore(){}
 
     private static String key(Context context){
-        String user=VRChatSession.load(context).optString("userId","");
+        String user;
+        try{user=VRChatSession.load(context).optString("userId","");}
+        catch(Exception e){throw new SecurityException("Sign in to your personal VRChat account first.",e);}
         if(!user.matches("usr_[0-9a-fA-F-]{36}"))
             throw new SecurityException("Sign in to a personal VRChat account first.");
         return user+"_pinned_groups";
@@ -39,7 +41,7 @@ public final class GroupToolkitStore {
         }
         return false;
     }
-    public static void setPinned(Context context,String groupId,String name,boolean pin){
+    public static void setPinned(Context context,String groupId,String name,boolean pin)throws Exception{
         if(groupId==null||!groupId.matches("grp_[0-9a-fA-F-]{36}"))
             throw new IllegalArgumentException("Invalid VRChat group ID.");
         JSONArray old=pinned(context),updated=new JSONArray();
