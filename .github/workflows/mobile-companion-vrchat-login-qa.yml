@@ -1,0 +1,65 @@
+name: Companion v0.19.13 VRChat login identifier QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - fix/mobile-v0.19.13-vrchat-login-identifier-label
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-vrchat-login-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify UI, authentication invariants and upgrade version
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          ui=(root/'VRChatAccountActivity.java').read_text()
+          api=(root/'VRChatApi.java').read_text()
+          updater=(root/'MobileUpdaterActivity.java').read_text()
+          gate=(root/'QuestBackApplication.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          license=(root/'CompanionLicense.java').read_text()
+          assert 'EMAIL OR ORIGINAL USERNAME' in ui
+          assert 'Email or original username' in ui
+          assert 'OR original username (not your display name)' in ui
+          assert 'Your password is never saved on this device.' in ui
+          assert 'Email or original username and password required' in api
+          assert 'VRChatApi.login(this,username,password)' in ui
+          assert 'pass.setText("");' in ui
+          assert 'Basic "+basic' in api
+          assert 'GET","/auth/user"' in api
+          assert 'VRChatApi.verify2fa(this,value,mode)' in ui
+          assert 'StaffGate.unlocked(this)' in ui
+          assert 'verifySameSigner(candidate)' in updater
+          assert 'SHA-256 mismatch' in updater
+          assert 'activity instanceof MobileUpdaterActivity' in gate
+          assert "versionCode 65" in gradle and "versionName '0.19.13'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          assert '2026-10-13.1' in license
+          print('PASS: email/original-username login copy; unchanged auth, 2FA, staff gating and signed update path.')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Assemble debug APK without publication
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
