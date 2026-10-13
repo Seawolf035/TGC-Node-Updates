@@ -290,7 +290,7 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
   private String reportLocked(String state){
     long now=System.currentTimeMillis();
     return "TGC Mobile Live Watch v0.3\n"+state+"\n\n"+
-      "Watching VRChat Play Store logs: "+(trackedPath!=null?"source found":"waiting for log")+"\n"+
+      "Watching VRChat output logs: "+(trackedPath!=null?"source found":"waiting for log")+"\n"+
       "Elapsed monitoring seconds: "+(startedAt==0?0:(now-startedAt)/1000)+"\n"+
       "Polling interval: 5 seconds\n"+
       "Polls completed: "+pollCount+"\n"+
@@ -380,6 +380,13 @@ public final class PrivilegedProbe extends IPrivilegedProbe.Stub {
   }
 
   private static File latestVrchatFile(){
+    // Quest VRChat writes output_log_*.txt into shared Documents/Logs.
+    // The read-only Shizuku probe already verifies access to this directory.
+    // Prefer it on Quest; do not change the ordinary Android phone watcher.
+    if(QuestDevice.isQuestDevice()){
+      File questLog=findLog(new File(FOLDERS[2]),0);
+      if(questLog!=null)return questLog;
+    }
     File newest=null;
     for(int i=0;i<2;i++){
       File folder=new File(FOLDERS[i]);
