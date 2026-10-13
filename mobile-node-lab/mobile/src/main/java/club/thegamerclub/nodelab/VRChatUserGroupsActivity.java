@@ -128,7 +128,7 @@ public final class VRChatUserGroupsActivity extends StaffProtectedActivity {
         root.addView(list,new LinearLayout.LayoutParams(-1,0,1f));
     }
     /** Group membership responses can be flat or contain a nested group object. */
-    private static JSONObject visibleGroup(JSONObject membership){
+    static JSONObject visibleGroup(JSONObject membership){
         if(membership==null)return null;
         JSONObject nested=membership.optJSONObject("group");
         if(nested==null)nested=membership.optJSONObject("groupDetails");
