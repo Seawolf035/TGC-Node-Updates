@@ -55,6 +55,8 @@ public final class FloatingCompanionService extends Service {
     private final ExecutorService verifier=Executors.newSingleThreadExecutor();
     private final ExecutorService friendWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService eventsWorker=Executors.newSingleThreadExecutor();
+    // Voice press/release must never sit behind API/log/phrase jobs.
+    private final ExecutorService oscVoiceWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService presenceWorker=Executors.newSingleThreadExecutor();
     private WindowManager wm;
     private WindowManager.LayoutParams panelParams;
@@ -656,7 +658,7 @@ public final class FloatingCompanionService extends Service {
         // Separate small, always-reachable action next to the draggable bubble.
         // The main bubble remains 60dp and keeps its original tap/drag gestures.
         try{
-            micSidecar=text("MIC\nOFF",10,CompanionStyle.TEXT,true);
+            micSidecar=text("PTT\nREL",10,CompanionStyle.TEXT,true);
             micSidecar.setGravity(Gravity.CENTER);
             micSidecar.setBackground(CompanionStyle.shape(this,
                 CompanionStyle.SURFACE,15,CompanionStyle.BORDER));
@@ -1283,7 +1285,7 @@ public final class FloatingCompanionService extends Service {
                 "Stop Live Chatbox":"Start Live Chatbox");
         if(oscQuickPause!=null){
             oscQuickPause.setVisibility(oscLiveActive?View.VISIBLE:View.GONE);
-            oscQuickPause.setText(oscLivePaused?"Resume rotation":"Pause rotation");
+            oscQuickPause.setText(oscLivePaused?"Resume Live Chatbox":"Pause Live Chatbox");
         }
     }
     private void toggleOscPause(){
@@ -1346,7 +1348,7 @@ public final class FloatingCompanionService extends Service {
             oscLiveActive?"Stop Live Chatbox":"Start Live Chatbox",true,
             this::quickOscStartStop);
         oscQuickPause=action(fast,
-            oscLivePaused?"Resume rotation":"Pause rotation",false,
+            oscLivePaused?"Resume Live Chatbox":"Pause Live Chatbox",false,
             this::toggleOscPause);
         refreshOscQuick();
         try{
@@ -1471,7 +1473,7 @@ public final class FloatingCompanionService extends Service {
         oscVoiceSending=true;
         handler.removeCallbacks(oscVoiceSafety);
         updateOscVoiceUi();
-        eventsWorker.execute(()->{
+        oscVoiceWorker.execute(()->{
             if(hold && (epoch!=oscVoiceEpoch || !StaffGate.unlocked(this)))return;
             String error=null;
             try{VRChatOscChat.sendVoiceInput(hold);}
@@ -1500,7 +1502,7 @@ public final class FloatingCompanionService extends Service {
             oscVoiceBubbleBadge.setVisibility(oscVoiceHoldRequested?View.VISIBLE:View.GONE);
         if(micSidecar!=null){
             micSidecar.setText(oscVoiceHoldRequested?"PTT\nHOLD":
-                oscVoiceSending?"MIC\nWAIT":"MIC\nOFF");
+                oscVoiceSending?"PTT\nWAIT":"PTT\nREL");
             micSidecar.setTextColor(oscVoiceHoldRequested?
                 0xFFFFFFFF:CompanionStyle.TEXT);
             micSidecar.setBackground(CompanionStyle.shape(this,
@@ -1788,7 +1790,7 @@ public final class FloatingCompanionService extends Service {
         handler.removeCallbacks(refreshTick);
         handler.removeCallbacks(presenceTick);
         verifier.shutdownNow();friendWorker.shutdownNow();eventsWorker.shutdownNow();
-        presenceWorker.shutdownNow();
+        oscVoiceWorker.shutdownNow();presenceWorker.shutdownNow();
         dismissPanel();if(mini!=null)mini.shutdown();
         if(micSidecar!=null){
             try{wm.removeView(micSidecar);}catch(Exception ignored){}
