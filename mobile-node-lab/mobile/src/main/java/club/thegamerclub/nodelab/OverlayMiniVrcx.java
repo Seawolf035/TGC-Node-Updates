@@ -201,6 +201,7 @@ public final class OverlayMiniVrcx {
         if(!"mini_profile".equals(screen)&&!"mini_note".equals(screen)&&
            !"mini_chat".equals(screen)&&!"mini_osc_status".equals(screen)&&
            !"mini_osc_rotation".equals(screen)&&
+           !"mini_osc_tags".equals(screen)&&
            !"mini_osc_presets".equals(screen)&&
            !"mini_osc_parameters".equals(screen)){
             Button refresh=CompanionStyle.button(ctx,"↻",false);
@@ -275,6 +276,7 @@ public final class OverlayMiniVrcx {
             case "mini_osc_presets":return "OSC quick phrases";
             case "mini_osc_status":return "OSC status line";
             case "mini_osc_rotation":return "Rotating chatboxes";
+            case "mini_osc_tags":return "Official TGC tags";
             case "mini_osc_parameters":return "Avatar OSC controls";
             case "mini_groups":return "Your groups";
             case "mini_group":return "Group details";
@@ -308,6 +310,7 @@ public final class OverlayMiniVrcx {
             case "mini_osc_presets":return "Reusable messages · nothing sends until you tap Send";
             case "mini_osc_status":return "Custom text, clock and battery via chatbox OSC";
             case "mini_osc_rotation":return "Saved chatboxes · automatic timed switching";
+            case "mini_osc_tags":return "Quick switches · rank-authorized official chatbox tags";
             case "mini_osc_parameters":return "Typed OSC writes to your current avatar";
             case "mini_presence":return "Choose a status, edit your message, then apply once";
             case "mini_find":return "Search people, worlds or players seen on this phone";
@@ -546,6 +549,7 @@ public final class OverlayMiniVrcx {
             case "mini_osc_presets":
             case "mini_osc_status":
             case "mini_osc_rotation":
+            case "mini_osc_tags":
             case "mini_osc_parameters":
                 drawList();break;
             case "mini_note":
@@ -596,6 +600,7 @@ public final class OverlayMiniVrcx {
             case "mini_osc_presets":showOscPresets();break;
             case "mini_osc_status":showOscStatus();break;
             case "mini_osc_rotation":showOscRotation();break;
+            case "mini_osc_tags":showOscTags();break;
             case "mini_osc_parameters":showOscParameters();break;
             case "mini_note":showNote();break;
             default:status("Choose a tool.");
@@ -2449,57 +2454,15 @@ public final class OverlayMiniVrcx {
             });
         }
 
-        section(list,"OFFICIAL TGC CHATBOX TAGS");
-        LinearLayout officialHeader=card(list);
-        final int tier=StaffGate.rankTier(ctx);
-        officialHeader.addView(text("Verified rank: "+StaffGate.rankLabel(ctx),
-            13,tier>0?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
-        TextView selectionCount=text(
-            TgcOfficialChatboxes.selectedEligible(ctx).size()+" enabled for rotation",
-            12,CompanionStyle.ACCENT,true);
-        officialHeader.addView(selectionCount);
-        officialHeader.addView(text(
-            "Tap an unlocked tag to enable/disable it. Higher-rank tags are locked. "+
-            "Selection never sends a message; Live Chatbox starts separately.",
-            11,CompanionStyle.MUTED,false));
-        String group="";
-        for(TgcOfficialChatboxes.Template official:TgcOfficialChatboxes.templates()){
-            if(!group.equals(official.rank)){
-                group=official.rank;
-                list.addView(text(group.toUpperCase(Locale.US),
-                    11,CompanionStyle.ACCENT,true));
-            }
-            boolean allowed=TgcOfficialChatboxes.eligible(ctx,official);
-            boolean selected=false;
-            try{selected=TgcOfficialChatboxes.isSelected(ctx,official.id);}
-            catch(Exception ignored){}
-            // A single compact, full-width toggle; no separate Add/Remove cards.
-            LinearLayout item=card(list);
-            LinearLayout row=new LinearLayout(ctx);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            item.addView(row);
-            LinearLayout details=new LinearLayout(ctx);
-            details.setOrientation(LinearLayout.VERTICAL);
-            row.addView(details,new LinearLayout.LayoutParams(0,-2,1f));
-            details.addView(text(official.text,13,
-                allowed?CompanionStyle.TEXT:CompanionStyle.MUTED,true));
-            details.addView(text(allowed?
-                (official.suggested?"Suggested preset":"Tap to toggle"):
-                "Locked · Requires "+official.rank,
-                10,allowed?CompanionStyle.MUTED:CompanionStyle.GOLD,false));
-            Switch toggle=new Switch(ctx);
-            toggle.setChecked(allowed&&selected);
-            toggle.setEnabled(allowed);
-            toggle.setContentDescription(official.text+" · "+
-                (allowed?"toggle rotation":"locked to "+official.rank));
-            row.addView(toggle,new LinearLayout.LayoutParams(dp(57),dp(45)));
-            if(allowed){
-                toggle.setOnCheckedChangeListener((control,on)->
-                    toggleOfficialTag(official,on,toggle,selectionCount));
-                // Entire row is tappable, but no nested extra button.
-                item.setOnClickListener(v->toggle.setChecked(!toggle.isChecked()));
-            }
-        }
+        section(list,"OFFICIAL TGC TAGS");
+        LinearLayout officialQuick=card(list);
+        officialQuick.addView(text(
+            "Select which rank-authorized staff tags join your Live Chatbox rotation.",
+            12,CompanionStyle.MUTED,false));
+        button(officialQuick,"Manage official tags · "+
+            TgcOfficialChatboxes.selectedEligible(ctx).size()+" enabled",
+            true,()->host.navigate("mini_osc_tags"));
+
         section(list,"YOUR CHATBOXES");
         LinearLayout defaultBox=card(list);
         defaultBox.addView(text("1 · Default Live Chatbox",14,CompanionStyle.TEXT,true));
@@ -2623,6 +2586,66 @@ public final class OverlayMiniVrcx {
         line(list,"No network dependency",
             "Rotation uses the existing local VRChat OSC sender only. "+
             "It never uploads chat content or profiles to TGC's Relay.",null);
+    }
+    private void showOscTags(){
+        LinearLayout overview=card(list);
+        overview.addView(text(
+            "One tap to toggle. Selected tags rotate only when Live Chatbox is "+
+            "explicitly started with rotation enabled.",
+            12,CompanionStyle.MUTED,false));
+        button(overview,"Rotation settings",false,
+            ()->host.navigate("mini_osc_rotation"));
+        section(list,"OFFICIAL TGC CHATBOX TAGS");
+        LinearLayout officialHeader=card(list);
+        final int tier=StaffGate.rankTier(ctx);
+        officialHeader.addView(text("Verified rank: "+StaffGate.rankLabel(ctx),
+            13,tier>0?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        TextView selectionCount=text(
+            TgcOfficialChatboxes.selectedEligible(ctx).size()+" enabled for rotation",
+            12,CompanionStyle.ACCENT,true);
+        officialHeader.addView(selectionCount);
+        officialHeader.addView(text(
+            "Tap an unlocked tag to enable/disable it. Higher-rank tags are locked. "+
+            "Selection never sends a message; Live Chatbox starts separately.",
+            11,CompanionStyle.MUTED,false));
+        String group="";
+        for(TgcOfficialChatboxes.Template official:TgcOfficialChatboxes.templates()){
+            if(!group.equals(official.rank)){
+                group=official.rank;
+                list.addView(text(group.toUpperCase(Locale.US),
+                    11,CompanionStyle.ACCENT,true));
+            }
+            boolean allowed=TgcOfficialChatboxes.eligible(ctx,official);
+            boolean selected=false;
+            try{selected=TgcOfficialChatboxes.isSelected(ctx,official.id);}
+            catch(Exception ignored){}
+            // A single compact, full-width toggle; no separate Add/Remove cards.
+            LinearLayout item=card(list);
+            LinearLayout row=new LinearLayout(ctx);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            item.addView(row);
+            LinearLayout details=new LinearLayout(ctx);
+            details.setOrientation(LinearLayout.VERTICAL);
+            row.addView(details,new LinearLayout.LayoutParams(0,-2,1f));
+            details.addView(text(official.text,13,
+                allowed?CompanionStyle.TEXT:CompanionStyle.MUTED,true));
+            details.addView(text(allowed?
+                (official.suggested?"Suggested preset":"Tap to toggle"):
+                "Locked · Requires "+official.rank,
+                10,allowed?CompanionStyle.MUTED:CompanionStyle.GOLD,false));
+            Switch toggle=new Switch(ctx);
+            toggle.setChecked(allowed&&selected);
+            toggle.setEnabled(allowed);
+            toggle.setContentDescription(official.text+" · "+
+                (allowed?"toggle rotation":"locked to "+official.rank));
+            row.addView(toggle,new LinearLayout.LayoutParams(dp(57),dp(45)));
+            if(allowed){
+                toggle.setOnCheckedChangeListener((control,on)->
+                    toggleOfficialTag(official,on,toggle,selectionCount));
+                // Entire row is tappable, but no nested extra button.
+                item.setOnClickListener(v->toggle.setChecked(!toggle.isChecked()));
+            }
+        }
     }
     private void showOscParameters(){
         LinearLayout intro=card(list);
