@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.8",
-  "version_code": 60,
+  "version": "0.19.9",
+  "version_code": 61,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "eab2d6e01096f5aca38438af221a34b62762db3f5df424647dc25b59113b8c3b",
-  "notes": "v0.19.8: Rename Quest System to Quest Tools and remove redundant Quest native tools launchers from Home and Explore. Add a Quest-only in-app universal Back button across Companion screens; nested Quest Tools navigation and Companion tab history are respected, with no extra button on phones and no floating overlay. Expand Live Chatbox refresh intervals to 5, 10, 15, 20, 30, 45, 60, 90 and 120 seconds; expand rotation intervals to 10, 15, 20, 30, 45, 60, 90, 120, 180 and 300 seconds. Settings appear in three-column choices with matching validation in Quest and phone OSC senders. Add prominent instructions for VRChat Settings > Debug > Logging > FULL on Tracking, setup and Quest Tools screens, reminding users to start watching before joining an instance. Existing saved OSC settings, phone floater, Quest folder tracking and Shizuku fallback, account/staff data, and Relay/GM4/GM1 remain unchanged. No Main Launcher or Relay deployment changes."
+  "sha256": "591ab941d2c74a4281b6089a0728bdc5562bc37fb52a5240cd1496b2ae89d14b",
+  "notes": "v0.19.9: Replace repeated VRChat Full logging alerts with a first-time player tracking setup guide for new, unlinked devices. The one-time guide explains VRChat Settings > Debug > Logging > FULL, Quest Documents/Logs folder permission or Android phone Shizuku, and starting the watcher before joining an instance. Users acknowledge once; first-time tracking start reopens the guide if still incomplete. Existing linked installations automatically retain normal operation without an upgrade popup. The guide can always be reopened from Tracking controls > Advanced tools. Daily Tracking, Quest Tools, Quest folder details, and start-status messages no longer repeat the Full logging warning. The app never claims it can read or change VRChat logging settings. All Quest Tools navigation, universal Quest Back, chatbox timing, OSC, existing tracking modes, Node/Relay, avatars, and staff permissions remain unchanged. No Main Launcher or Relay deployments."
 }
