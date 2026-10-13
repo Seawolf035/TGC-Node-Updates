@@ -1,6 +1,6 @@
 package club.thegamerclub.nodelab;
 
-import android.app.Service;
+import android.content.Context;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -47,7 +47,7 @@ public final class OverlayMiniVrcx {
         void oscStartLive(int intervalSeconds);
         void oscStopLive();
     }
-    private final Service ctx;
+    private final Context ctx;
     private final Host host;
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private LinearLayout root;
@@ -120,7 +120,7 @@ public final class OverlayMiniVrcx {
     private String pending="";
 
     private final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
-    public OverlayMiniVrcx(Service service,Host host){ctx=service;this.host=host;}
+    public OverlayMiniVrcx(Context context,Host host){ctx=context;this.host=host;}
     private int dp(float n){return CompanionStyle.dp(ctx,n);}
     private TextView text(String s,int n,int color,boolean bold){
         return CompanionStyle.text(ctx,s,n,color,bold);
