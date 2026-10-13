@@ -661,7 +661,9 @@ public final class CompanionActivity extends Activity {
             13,CompanionStyle.MUTED,false));
         space(explanation,8);
         explanation.addView(txt(
-            "Quest support is being explored, but isn't available yet.",
+            QuestDevice.isQuestDevice()?
+                "Quest 2 and Quest 3 tracking is verified with Shizuku. An optional experimental folder-access mode can be selected under Tracking controls; the folder picker may not work on every headset.":
+                "Quest support is being explored, but isn't available yet.",
             12,CompanionStyle.ACCENT,false));
     }
     private void renderSettings(){
