@@ -127,3 +127,123 @@ This is NOT an unrestricted public software license, a transfer of software owne
 15.2. Where materials are actually received in confidence, disclose them only to persons authorized to receive them and use them only for approved purposes.
 15.3. Public information, lawfully independent discoveries, authorized reporting of illegal activity, legally compelled disclosures, and statutory whistleblower protections are not restricted.
 15.4. Confidentiality that lawfully applies may survive staff departure or expiration of access; this clause does not transform publicly accessible Companion files into trade secrets.
+
+
+16. VRCHAT LOGGING, QUEST FOLDERS AND PHONE TRACKING
+
+16.1. When enabled, the Companion may read VRChat log entries to identify joins, leaves, instance transitions, and related supported events for permitted local displays and TGC staff workflows.
+16.2. On Quest, the official app may use user-granted read-only Android folder permission for VRChat's Documents/Logs. Shizuku is retained as an advanced Quest fallback; Android phone player tracking uses Shizuku where required.
+16.3. You must set VRChat's own logging level to FULL where needed. The Companion cannot independently set or guarantee that VRChat's logging configuration is correct.
+16.4. Tracking ordinarily begins at the end of the currently attached log rather than replaying all old activity. Tracking may miss activity during permissions failures, app shutdown, background restrictions, log rotation, API problems, or lack of emitted log events.
+16.5. Only monitor information you are authorized to view. Do not use collected identifiers, activity, or location data for stalking, harassment, unauthorized surveillance, or unrelated commercial profiling.
+16.6. TGC's interpretation of log entries can be imperfect; no log event alone proves an invitation was sent or an account committed misconduct.
+
+17. LOCAL ACTIVITY HISTORY AND DURABLE QUEUES
+
+17.1. The Companion may store local join/leave/instance event history and a recent player list. This local history is distinct from sightings intended for the Relay.
+17.2. Limited, eligible player sightings may enter a local SQLite outbox for reliable retry after connection failures. A queued or successfully posted event is not an independently verified invitation.
+17.3. Local retention may be bounded by record counts and time limits, but app updates, reinstallations, outages, and storage changes can affect availability. Do not depend on local data as a permanent forensic archive.
+17.4. Users remain responsible for safeguarding local databases and backups containing personal identifiers, avatar references, account settings, and network metadata.
+17.5. This Agreement does not create property rights in the individual VRChat users whose details appear in records.
+
+18. NETWORK SIGHTINGS AND DATA HANDLING
+
+18.1. When authorized Relay tracking is enabled, the Companion may send selected VRChat player sightings, identifiers, display names, timestamps, and related event metadata to the configured TGC service to support eligibility and invite-network workflows.
+18.2. The tracking design distinguishes local history from data queued for network transmission. Complete raw VRChat log files are not intentionally uploaded by the ordinary tracking function.
+18.3. Data transferred through the Relay may be handled by distinct TGC services subject to their own operational policies, limits, and legal obligations. This agreement does not establish a universal retention period or promise that no data will ever leave the device.
+18.4. Access to Relay records is not permission to publish personal information, scrape other staff records, or share private operational material outside authorized workflows.
+18.5. Data handling and privacy rights remain subject to applicable law and a separate, accurate privacy disclosure where required.
+
+19. VRCHAT ACCOUNT SESSIONS AND PERSONAL FEATURES
+
+19.1. The Companion may let a user authenticate a personal VRChat account to access friends, notifications, profiles, visible groups, worlds, status settings, and other VRChat account features.
+19.2. Supported versions are designed to store VRChat session material using device-side encryption; personal VRChat account credentials are separate from TGC Node enrollment credentials.
+19.3. The app does not grant its users authority to disclose hidden group memberships or view data that VRChat would not otherwise permit the currently authenticated account to see.
+19.4. Do not use someone else's VRChat account, reuse another person's session, scrape restricted interfaces, or circumvent VRChat entitlements or platform requirements.
+19.5. VRChat may change or withdraw endpoints, sessions, permissions, rate limits, or supported functionality independently of TGC.
+
+20. EXTENDED AVATAR FAVORITES AND CREATOR RIGHTS
+
+20.1. The Companion may provide local, account-separated Extended Avatar Favorites, including locally stored avatar identifiers, creator names, images/thumbnail references, and user-defined categories.
+20.2. Some Extended Favorites functions depend on a legitimate VRC+ entitlement, where required by VRChat and the application's implementation.
+20.3. Saving an avatar to a local Extended Favorites collection is not a transfer of the avatar creator's copyrights, permissions, or other rights, nor necessarily a change to VRChat's server-side favorite slots.
+20.4. You may not download, extract, republish, sell, or copy third-party avatar assets simply because their metadata appears in this app.
+20.5. The app is not responsible for avatars becoming unavailable, private, deleted, renamed, incompatible, or restricted by their creators or VRChat.
+
+21. OSC CHATBOX, TIMERS, AVATAR PARAMETERS AND LOCAL ACTIONS
+
+21.1. Supported app features may send local VRChat OSC chatbox input, saved messages, rotating chatbox content, typing indicators, voice controls, and numeric or Boolean avatar-parameter values.
+21.2. These controls act at the user's request and within compatible local VRChat environments. Network UDP delivery, a displayed button, or a saved parameter name does not prove VRChat accepted or applied the action.
+21.3. You remain responsible for OSC text you send and its effects. Do not use chatbox automation or parameter controls for harassment, spam, deception, or violations of VRChat rules.
+21.4. A saved avatar parameter path, including a nested name such as Go/IsFeral, does not create rights in another creator's avatar or its internal controls.
+21.5. Saved messages, rotation timings, and OSC preferences are device or account-related settings, not guaranteed long-term storage or availability.
+
+22. QUEST TOOLS, ANDROID FLOATING TOOLS AND PERMISSIONS
+
+22.1. The official Quest edition can include Quest Tools, device-local navigation and OSC functionality, and folder-based VRChat log access. Current official Quest releases intentionally disable Android-style floating overlays.
+22.2. The Android phone edition can offer an optional floating-tools interface and authorized Shizuku-assisted VRChat log access. These capabilities remain subject to Android's permissions and operating-system restrictions.
+22.3. No user is authorized by this agreement to defeat a device owner's consent, root another person's device, change another application's permission settings without consent, or circumvent system security.
+22.4. Features, permissions, battery behavior, and supported Quest/phone devices may change with updates. A compatibility failure is not by itself evidence of misconduct by any party.
+
+23. DATABASES, SCHEMAS, LOGS AND GENERATED MATERIALS
+
+23.1. Original software expression embodied in database designs, migration scripts, application code, or authored configuration templates may be protected where law recognizes such rights.
+23.2. Users retain whatever rights they actually have in their own original data, accounts, and personal content. TGC does not claim to own player names, independent factual records, or content belonging to VRChat or avatar creators.
+23.3. A user may not extract or publish confidential staff data or proprietary credentials merely because that data appears in a local database or API response.
+23.4. Technical logs, caches, preferences, and local data may change or be deleted during ordinary operations, updates, reset, or uninstall. Back up information only in authorized and lawful ways.
+23.5. These terms do not create a right to inspect private repositories or confidential network databases.
+
+24. PERSONAL DATA AND PRIVACY OBLIGATIONS
+
+24.1. VRChat player IDs, usernames, status/activity metadata, group data, and other information processed by the Companion may be personal data under applicable law even if visible on VRChat.
+24.2. TGC and Authorized Users must comply with applicable data-protection duties, lawful purposes, notice requirements, access controls, retention requirements, and individual rights.
+24.3. This agreement is not itself a comprehensive privacy policy. A separate accurate privacy notice may be needed to explain collection, purposes, retention, transfer recipients, user controls, security measures, contact details, and applicable rights.
+24.4. Acceptance of this license does not waive legally protected privacy rights, consent requirements, or the rights of persons whose information is processed.
+24.5. Never use app access as permission to dox, harass, or publish another person's private information.
+
+25. THIRD-PARTY LICENSES AND VRCHAT PLATFORM RIGHTS
+
+25.1. Android, Meta Quest, VRChat, Valve, Discord, Google services, open-source libraries, and other services remain owned or controlled by their respective rights holders.
+25.2. Any bundled third-party software has its own license and notice obligations, including any rights to inspect, modify, redistribute, or reverse engineer that component. This Agreement cannot override those rights.
+25.3. Rights granted by VRChat's APIs, platform rules, or third-party licenses are not conveyed or superseded by a proprietary TGC app license.
+25.4. TGC Staff Companion is not officially developed, approved, sponsored, endorsed, or operated by VRChat, Meta, Valve, Discord, or any other third-party service unless the relevant provider expressly states otherwise.
+25.5. TGC may restrict reuse of protectable original TGC components only to the extent permitted by applicable law and the actual underlying rights.
+
+26. TGC BRANDING, IDENTITY AND PUBLIC REPRESENTATION
+
+26.1. Original TGC Staff Companion names, community branding, logos, illustrations, and other identifying assets may be legally protected to the extent they qualify under copyright, trademark, or related law.
+26.2. Do not impersonate an official app developer, staff representative, Relay, Main Launcher, support agent, or distribution channel.
+26.3. Permission to run the official binary does not authorize an unofficial fork or rebranded installer to be marketed as an official TGC release.
+26.4. Lawful commentary, criticism, nominative references, screenshots for legitimate reporting, and other protected uses are not forbidden by this provision.
+26.5. No third-party trademarks are claimed as owned by TGC simply because they appear in the app or documentation.
+
+27. CONTRIBUTIONS, SUGGESTIONS AND MAINTENANCE
+
+27.1. Reporting a bug, suggesting a new feature, volunteering for staff, or submitting feedback does not by itself transfer ownership of preexisting TGC software or a contributor's own copyright.
+27.2. Source-code, design, and documentation contributions may require their own written contributor agreement or license, and contributors must possess the necessary rights to what they submit.
+27.3. No automatic assignment of contributor rights occurs solely from accepting this staff-use agreement. Any transfer of copyright must satisfy applicable law.
+27.4. Maintainers may receive limited permissions to fix, audit, test, or deploy protected software, subject to the scope of their actual authorization.
+27.5. Do not knowingly contribute secrets, illegally obtained source, or material licensed incompatibly with its proposed use.
+
+28. DEVELOPMENT BUILDS, QA AND UNRELEASED MATERIALS
+
+28.1. Test builds, experimental branches, staging deployments, and unreleased features may be provided for specific testing purposes. Testing participation is not permission for public deployment or sale.
+28.2. Material that is genuinely nonpublic and disclosed in confidence may be protected by confidentiality duties; a currently public GitHub build or file is not automatically secret.
+28.3. Do not publish another person's confidential credentials, private staff communications, or unannounced security vulnerabilities in a manner violating actual legal duties.
+28.4. Authorized testing must not exceed its stated access or risk limits. Security concerns should be reported responsibly to TGC staff.
+28.5. TGC may withdraw experimental features or change their behavior without promising ongoing support.
+
+29. OFFICIAL UPDATES, SIGNATURES AND DISTRIBUTION
+
+29.1. The Companion may provide official signed APKs, release metadata, and update feeds through a repository or other distribution channel controlled by TGC.
+29.2. A public installer download does not provide a transferable staff authorization, an unrestricted source-code license, or independent access to the TGC Relay.
+29.3. For security, users should obtain updates from official authorized sources and avoid unofficial packages with altered signing identities or embedded credentials.
+29.4. TGC may publish updates, change supported devices, retire features, or discontinue services subject to legal requirements and any binding commitments.
+29.5. Updates with materially changed license terms may require renewed explicit acceptance before in-app use.
+
+30. BACKUPS, ARCHIVING AND RECORDS
+
+30.1. Local backups may contain private settings, account identifiers, encrypted session information, or other sensitive records. Handle them according to applicable law and TGC policies.
+30.2. Unauthorized distribution of protected app material, staff data, or credentials through backups, archives, virtual machines, or snapshots is prohibited where legally enforceable.
+30.3. Legitimate personal backups, platform-permitted technical copies, statutory exceptions, and applicable third-party license rights remain unaffected.
+30.4. On termination or device disposal, take appropriate steps to remove credentials and private staff data where lawful and required. This does not override preservation orders or mandatory legal obligations.
