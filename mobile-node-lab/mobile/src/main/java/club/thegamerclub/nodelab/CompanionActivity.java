@@ -40,6 +40,7 @@ public final class CompanionActivity extends Activity {
     private boolean verifying=false,showingUnlocked=false,advanced=false;
     private boolean foreground=false;
     private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
+    private static final int PINNED_FRIEND_PERMISSION_REQUEST=3702;
     private TextView verificationNotice;
     private LinearLayout page,root;
     private String tab="home";
@@ -212,6 +213,7 @@ public final class CompanionActivity extends Activity {
         if(saved!=null){tab=saved.getString("tab","home");advanced=saved.getBoolean("advanced",false);}
         locked("Checking your staff access...");
         InboxAlertSettings.restore(this);
+        PinnedFriendAlerts.restore(this);
     }
     @Override protected void onSaveInstanceState(Bundle out){
         out.putString("tab",tab);out.putBoolean("advanced",advanced);
@@ -683,6 +685,33 @@ public final class CompanionActivity extends Activity {
             action(inboxSettings,"↗","Allow Android notifications",
                 "Grant notification access for new invites and requests",
                 this::requestInboxNotificationPermission);
+        page.addView(CompanionStyle.section(this,"PINNED FRIEND ONLINE ALERTS"));
+        LinearLayout friendAlertSettings=card();
+        boolean friendOpted=PinnedFriendAlerts.enabled(this);
+        boolean friendAllowed=PinnedFriendAlerts.permission(this);
+        friendAlertSettings.addView(txt(friendOpted?
+            (friendAllowed?"● Pinned friend alerts enabled":
+                "○ Allow Android notifications"):
+            "○ Pinned friend alerts are off",
+            15,friendOpted&&friendAllowed?
+                CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        space(friendAlertSettings,7);
+        friendAlertSettings.addView(txt(
+            "Get an Android notification when a pinned VRChat friend "+
+            "changes from offline to online. Only selected pins trigger alerts. "+
+            "The first complete friend check is a silent baseline. "+
+            "Checks happen every 2.5–5 minutes while the floating tools run, "+
+            "or approximately every 15 minutes in the background; Android may delay them.",
+            12,CompanionStyle.MUTED,false));
+        space(friendAlertSettings,8);
+        action(friendAlertSettings,"♧",
+            friendOpted?"Disable pinned friend alerts":"Enable pinned friend alerts",
+            "Separate from invitation and inbox notifications",
+            this::togglePinnedFriendAlerts);
+        if(friendOpted&&!friendAllowed)
+            action(friendAlertSettings,"↗","Allow Android notifications",
+                "Grant permission for pinned friend online alerts",
+                this::requestPinnedFriendNotificationPermission);
         page.addView(CompanionStyle.section(this,"FLOATING TOOLS"));
         LinearLayout floating=card();
         if(QuestDevice.isQuestDevice()){
@@ -763,6 +792,48 @@ public final class CompanionActivity extends Activity {
                 ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
         }
     }
+    private void togglePinnedFriendAlerts(){
+        if(!StaffGate.unlocked(this)){revalidate();return;}
+        if(PinnedFriendAlerts.enabled(this)){
+            PinnedFriendAlerts.setEnabled(this,false);
+            Toast.makeText(this,"Pinned friend alerts disabled",
+                Toast.LENGTH_SHORT).show();
+            renderUnlocked();return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Notify when pinned friends come online?")
+            .setMessage("Only friends you've pinned will generate online alerts. "+
+                "The first successful check is silent to avoid notifying for "+
+                "everyone already online. When the bubble is running, checks "+
+                "are usually every 2.5–5 minutes; background checks are about "+
+                "every 15 minutes and may be delayed by Android.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Enable",(d,which)->{
+                if(!PinnedFriendAlerts.permission(this))
+                    requestPinnedFriendNotificationPermission();
+                else{
+                    try{
+                        PinnedFriendAlerts.setEnabled(this,true);
+                        Toast.makeText(this,"Pinned friend alerts enabled",
+                            Toast.LENGTH_SHORT).show();
+                        renderUnlocked();
+                    }catch(Exception e){
+                        Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();
+                    }
+                }
+            }).show();
+    }
+    private void requestPinnedFriendNotificationPermission(){
+        if(android.os.Build.VERSION.SDK_INT>=33 &&
+           !PinnedFriendAlerts.permission(this))
+            requestPermissions(new String[]{
+                android.Manifest.permission.POST_NOTIFICATIONS},
+                PINNED_FRIEND_PERMISSION_REQUEST);
+        else{
+            PinnedFriendAlerts.setEnabled(this,true);
+            renderUnlocked();
+        }
+    }
     private void toggleInboxAlerts(){
         if(!StaffGate.unlocked(this)){revalidate();return;}
         if(InboxAlertSettings.enabled(this)){
@@ -801,6 +872,20 @@ public final class CompanionActivity extends Activity {
     @Override public void onRequestPermissionsResult(
         int requestCode,String[] permissions,int[] grantResults){
         super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        if(requestCode==PINNED_FRIEND_PERMISSION_REQUEST){
+            if(PinnedFriendAlerts.permission(this)){
+                try{
+                    PinnedFriendAlerts.setEnabled(this,true);
+                    Toast.makeText(this,"Pinned friend alerts enabled",
+                        Toast.LENGTH_SHORT).show();
+                }catch(Exception e){
+                    Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();
+                }
+            }else Toast.makeText(this,
+                "Notification permission was not granted",Toast.LENGTH_LONG).show();
+            if(StaffGate.unlocked(this))renderUnlocked();
+            return;
+        }
         if(requestCode!=NOTIFICATION_PERMISSION_REQUEST)return;
         if(InboxAlertSettings.permissionGranted(this)){
             InboxAlertSettings.setEnabled(this,true);
