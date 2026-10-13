@@ -180,15 +180,20 @@ public final class OscControlStore {
             if(item!=null&&!name.equals(item.optString("name","")))next.put(item);
         }
         saveArray(ctx,"rotating_chatboxes",next);
-        if(next.length()==0)setRotationEnabled(ctx,false);
+        if(next.length()==0 &&
+            TgcOfficialChatboxes.selectedEligible(ctx).isEmpty())
+            setRotationEnabled(ctx,false);
     }
     public static boolean rotationEnabled(Context ctx){
         return prefs(ctx).getBoolean(key(ctx,"chatbox_rotation_enabled"),false)
-            &&chatboxes(ctx).length()>0;
+            &&(chatboxes(ctx).length()>0||
+               !TgcOfficialChatboxes.selectedEligible(ctx).isEmpty());
     }
     public static void setRotationEnabled(Context ctx,boolean enabled){
-        if(enabled&&chatboxes(ctx).length()==0)
-            throw new IllegalArgumentException("Save at least one additional chatbox first.");
+        if(enabled&&chatboxes(ctx).length()==0&&
+           TgcOfficialChatboxes.selectedEligible(ctx).isEmpty())
+            throw new IllegalArgumentException(
+                "Save a personal chatbox or select an unlocked official TGC chatbox first.");
         prefs(ctx).edit().putBoolean(key(ctx,"chatbox_rotation_enabled"),enabled).apply();
     }
     public static int rotationInterval(Context ctx){
@@ -201,14 +206,24 @@ public final class OscControlStore {
         prefs(ctx).edit().putInt(key(ctx,"chatbox_rotation_interval"),seconds).apply();
     }
     public static int liveSlotCount(Context ctx){
-        return rotationEnabled(ctx)?1+chatboxes(ctx).length():1;
+        return rotationEnabled(ctx)?
+            1+chatboxes(ctx).length()+TgcOfficialChatboxes.selectedEligible(ctx).size():1;
     }
     public static String liveChatboxAt(Context ctx,int slot){
         if(slot<=0||!rotationEnabled(ctx))return statusLine(ctx);
-        JSONObject row=chatboxes(ctx).optJSONObject(slot-1);
-        if(row==null)return statusLine(ctx);
-        return buildStatusLine(ctx,row.optString("text",""),
-            row.optBoolean("time",false),row.optBoolean("battery",false));
+        JSONArray personal=chatboxes(ctx);
+        if(slot<=personal.length()){
+            JSONObject row=personal.optJSONObject(slot-1);
+            if(row==null)return statusLine(ctx);
+            return buildStatusLine(ctx,row.optString("text",""),
+                row.optBoolean("time",false),row.optBoolean("battery",false));
+        }
+        java.util.List<TgcOfficialChatboxes.Template> selected=
+            TgcOfficialChatboxes.selectedEligible(ctx);
+        int officialSlot=slot-personal.length()-1;
+        if(officialSlot<0||officialSlot>=selected.size())return statusLine(ctx);
+        // Official messages are fixed, no SFX and no implicit broadcast.
+        return VRChatOscChat.validate(selected.get(officialSlot).text);
     }
     public static String previewChatbox(Context ctx,String message,
                                         boolean clock,boolean battery){
