@@ -1381,9 +1381,9 @@ public final class FloatingCompanionService extends Service {
         pinned.addView(footer,footerParams);
         Button alerts=CompanionStyle.button(this,
             PinnedFriendAlerts.enabled(this)?"Alerts ON":"Alerts OFF",false);
-        Button friends=CompanionStyle.button(this,"Friends",false);
+        Button friendsShortcut=CompanionStyle.button(this,"Friends",false);
         Button invites=CompanionStyle.button(this,"Invites",false);
-        for(Button control:new Button[]{alerts,friends,invites}){
+        for(Button control:new Button[]{alerts,friendsShortcut,invites}){
             control.setTextSize(10);
             control.setAllCaps(false);
             control.setMinHeight(0);control.setMinimumHeight(0);
@@ -1409,7 +1409,7 @@ public final class FloatingCompanionService extends Service {
                     "Pinned friend alerts disabled.");
             }catch(Exception ex){showPinnedFeedback("Friend alerts: "+ex.getMessage());}
         });
-        friends.setOnClickListener(v->go("mini_friends"));
+        friendsShortcut.setOnClickListener(v->go("mini_friends"));
         invites.setOnClickListener(v->mini.inbox("invite"));
         section(panelContent,"FRIENDS");
         LinearLayout friends=panelCard(panelContent);
