@@ -78,7 +78,7 @@ public final class VRChatGroupToolsActivity extends StaffProtectedActivity {
         setContentView(scroll);
         CompanionStyle.safeArea(this,scroll);
         button(page,"‹  Back to group",false,this::finish);
-        page.addView(CompanionStyle.section(this,"MINI-VRCX · GROUP TOOLS"));
+        page.addView(CompanionStyle.section(this,"GROUP TOOLS"));
         page.addView(text(title(),23,CompanionStyle.TEXT,true));
         page.addView(text("Only information permitted for your signed-in VRChat account is shown.",
             12,CompanionStyle.MUTED,false));
