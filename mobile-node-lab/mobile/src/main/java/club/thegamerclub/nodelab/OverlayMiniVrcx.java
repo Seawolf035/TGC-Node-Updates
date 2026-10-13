@@ -1938,7 +1938,7 @@ public final class OverlayMiniVrcx {
         final String accountId=profile.optString("id","");
         final String currentStatus=profile.optString("status","");
         final String description=profile.optString("statusDescription","");
-        final String[] states={"active","join me","ask me","busy","offline"};
+        final String[] states={"active","join me","ask me","busy"};
         final String[] chosen={currentStatus};
         if(!java.util.Arrays.asList(states).contains(chosen[0]))chosen[0]="active";
         LinearLayout main=card(list);
