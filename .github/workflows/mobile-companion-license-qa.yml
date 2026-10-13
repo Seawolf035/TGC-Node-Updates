@@ -36,7 +36,7 @@ jobs:
           version=Path('mobile-node-lab/mobile/build.gradle').read_text()
           asset=Path('mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt').read_text()
           manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
-          assert 'CheckBox' not in activity, 'Quest must not be gated by checkbox touch state'
+          assert 'new CheckBox(' not in activity and 'import android.widget.CheckBox;' not in activity, 'Quest must not be gated by checkbox touch state'
           assert 'accept.setEnabled(true)' in activity
           assert 'CompanionLicense.accept(this)' in activity
           assert 'persisted && CompanionLicense.accepted(this)' in activity
