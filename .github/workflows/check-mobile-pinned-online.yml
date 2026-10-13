@@ -52,7 +52,7 @@ jobs:
           assert '!previous.optBoolean(id,false) && online' in alert
           assert 'setEnabled(Context ctx,boolean enable)' in alert
           assert 'PinnedFriendAlerts.recentOverlayObservation(ctx)' in worker
-          assert 'Pinned friend' in worker
+          assert 'Pinned VRChat friends online' in worker
           assert 'PinnedFriendAlerts.restore(this)' in activity
           assert 'togglePinnedFriendAlerts()' in activity
           assert 'versionCode 50' in Path('mobile-node-lab/mobile/build.gradle').read_text()
