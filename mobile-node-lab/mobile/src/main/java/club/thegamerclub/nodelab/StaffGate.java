@@ -18,13 +18,14 @@ import java.util.Locale;
 public final class StaffGate {
     private static final long OFFLINE_GRACE_MS=12L*60*1000; // max since last successful relay response
     private static volatile long approvedElapsed=0L;
-    private static volatile String verifiedNode="",verifiedDiscord="";
+    private static volatile String verifiedNode="",verifiedDiscord="",verifiedRank="";
     private StaffGate(){}
 
     public static synchronized void lock(){
         approvedElapsed=0L;
         verifiedNode="";
         verifiedDiscord="";
+        verifiedRank="";
     }
     public static boolean unlocked(Context context){
         long approved=approvedElapsed;
@@ -34,6 +35,24 @@ public final class StaffGate {
             MobileCredentials.Record c=MobileCredentials.load(context);
             return c!=null && c.nodeId.equals(verifiedNode) && c.discordId.equals(verifiedDiscord);
         }catch(Exception ignored){return false;}
+    }
+    /** Only a currently authorized, process-local Relay response can unlock ranks. */
+    public static int rankTier(Context context){
+        if(!unlocked(context))return 0;
+        switch(verifiedRank){
+            case "Trial Moderator":return 1;
+            case "Moderator":return 2;
+            case "Head Moderator":return 3;
+            case "Admin":return 4;
+            case "Head Admin":return 5;
+            case "Owner":return 6;
+            case "The Royalty":return 7;
+            default:return 0; // Old Relay or no rank: common-only, never elevate.
+        }
+    }
+    public static String rankLabel(Context context){
+        if(!unlocked(context))return "Not verified";
+        return verifiedRank.isEmpty()?"Rank unavailable":verifiedRank;
     }
     /** True only if the last attempt was online approved; never treat cached credentials as approval. */
     public static synchronized JSONObject verifyOnline(Context context) throws Exception{
@@ -79,6 +98,15 @@ public final class StaffGate {
             lock();
             throw new SecurityException("TGC staff deployment revoked or no longer authorized");
         }
+        String returnedRank=result.optString("staff_rank","");
+        // Defense in depth: even a malformed rank response cannot grant
+        // Royalty to a fourth ID. Backend roster sync also enforces this.
+        if("The Royalty".equals(returnedRank) &&
+            !"197820946608947201".equals(creds.discordId) &&
+            !"344278828014895104".equals(creds.discordId) &&
+            !"1385600758010876024".equals(creds.discordId))
+            returnedRank="";
+        verifiedRank=returnedRank;
         verifiedNode=creds.nodeId;
         verifiedDiscord=creds.discordId;
         approvedElapsed=SystemClock.elapsedRealtime();
