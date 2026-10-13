@@ -2,6 +2,7 @@ package club.thegamerclub.nodelab;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -21,6 +22,7 @@ import android.widget.FrameLayout;
 public final class QuestBackApplication extends Application
         implements Application.ActivityLifecycleCallbacks {
     private static final int BACK_BUTTON_ID=0x7f0fa119;
+    private boolean licensePromptInFlight=false;
 
     @Override public void onCreate(){
         super.onCreate();
@@ -28,8 +30,26 @@ public final class QuestBackApplication extends Application
     }
 
     @Override public void onActivityResumed(Activity activity){
-        if(!QuestDevice.isQuestDevice()||activity.isFinishing()||
-            activity.isDestroyed())return;
+        if(activity.isFinishing()||activity.isDestroyed())return;
+        // Both Quest and Android phone users must explicitly accept the
+        // proprietary staff agreement before interacting with app screens.
+        // This is an app-local terms screen, never a floating overlay.
+        if(activity instanceof CompanionLicenseActivity)return;
+        if(!CompanionLicense.accepted(activity)){
+            if(!licensePromptInFlight){
+                licensePromptInFlight=true;
+                try{
+                    activity.startActivity(new Intent(activity,
+                        CompanionLicenseActivity.class));
+                }catch(Exception e){
+                    licensePromptInFlight=false;
+                    activity.finish();
+                }
+            }
+            return;
+        }
+        licensePromptInFlight=false;
+        if(!QuestDevice.isQuestDevice())return;
         install(activity);
     }
 
@@ -70,5 +90,8 @@ public final class QuestBackApplication extends Application
     @Override public void onActivityPaused(Activity activity){}
     @Override public void onActivityStopped(Activity activity){}
     @Override public void onActivitySaveInstanceState(Activity activity,Bundle out){}
-    @Override public void onActivityDestroyed(Activity activity){}
+    @Override public void onActivityDestroyed(Activity activity){
+        if(activity instanceof CompanionLicenseActivity)
+            licensePromptInFlight=false;
+    }
 }
