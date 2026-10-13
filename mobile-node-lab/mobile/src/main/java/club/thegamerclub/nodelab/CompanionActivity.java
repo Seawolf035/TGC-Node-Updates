@@ -595,6 +595,7 @@ public final class CompanionActivity extends Activity {
         action(people,"✎","Private VRChat notes","Notes saved to your VRChat account",this::openNotes);
         page.addView(CompanionStyle.section(this,"PLACES & COMMUNITY"));
         LinearLayout places=card();
+        action(places,"★","Bookmarked worlds","Your personal world shortcuts",()->openBrowse("bookmarks"));
         action(places,"◇","Favorite worlds","Your saved places",()->openBrowse("worlds"));
         action(places,"↺","Recently visited","Worlds you've explored",()->openBrowse("recent"));
         action(places,"⌕","Find worlds","Search for something new",()->openBrowse("search_worlds"));
