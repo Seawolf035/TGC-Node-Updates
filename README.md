@@ -1,6 +1,6 @@
 # TGC Node Updates
 
-**License notice:** Original TGC Staff Companion code and artwork are proprietary and all rights are reserved, except for third-party material governed by its own licenses. The staff application's [license notice](PROPRIETARY_LICENSE.md) and [in-app agreement](mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt) explain the restrictions and exceptions. Public source visibility does not make it an open-source release.
+**License notice:** Original TGC Staff Companion code and artwork are proprietary and all rights are reserved, subject to third-party licenses and mandatory legal rights. The complete [43-section proprietary license](PROPRIETARY_LICENSE.md) mirrors the [in-app staff agreement](mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt). It explicitly covers Quest/phone tools, staff credentials, VRChat logs, Relay sightings and Main Launcher authority. Public source visibility does not itself make the original code an unrestricted open-source release.
 
 Downloads and update files for **The Gamer Club's VRChat invite network**.
 
