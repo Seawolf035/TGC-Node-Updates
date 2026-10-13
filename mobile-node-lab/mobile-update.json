@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.6",
-  "version_code": 58,
+  "version": "0.19.7",
+  "version_code": 59,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "e3702e653d3976079011ac2614b01179d132f734b8c34126c6adfe9b19ee2cbc",
-  "notes": "v0.19.6: Player profiles now provide View all visible groups, opening a searchable, alphabetical, read-only group directory using the signed-in VRChat user-groups endpoint. Group names, short codes, icons, and links to existing group details appear as VRChat permits; hidden memberships remain private. The profile keeps a short five-group preview instead of a 24-row wall. Removed the nonexistent Offline option from the full Status & Presets editor and compact Quest System/phone tools; the underlying status mutation API now rejects Offline. Existing saved Offline presets stay stored but cannot be loaded or applied and can still be deleted. Offline friend counts, filters and truthful offline indicators are unchanged. Quest folder permission, phone Shizuku, Quest System, phone floater, avatar favorites and staff/Relay authorization remain unchanged. No Main Launcher or Relay deployments."
+  "sha256": "f448737d5e61a8e8a5062121766b6ca73a4c66f6ab17a2f70a878ec36e83f635",
+  "notes": "v0.19.7: Fix VRChat Avatar OSC parameter controls rejecting nested parameter names. Both Go/IsFeral and /avatar/parameters/Go/IsFeral now save as the same canonical relative path and transmit the exact /avatar/parameters/Go/IsFeral UDP OSC address without double-prefixing. Supports validated slash-separated segments and nested path inputs up to 192 relative characters; malformed or unrelated OSC endpoints remain blocked. Companion Quest System and Android phone floating-tools parameter editors show an example and accept the full address. Existing simple saved controls, account-specific OSC storage, Bool/Int/Float payloads, chatbox/typing, Quest folder tracking, phone Shizuku, Relay, and GM4/GM1 are unchanged. UDP delivery still cannot prove the VRChat avatar reacted. No Main Launcher or Relay deployments."
 }
