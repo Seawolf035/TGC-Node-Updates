@@ -1,87 +1,129 @@
 TGC STAFF COMPANION
-PROPRIETARY END-USER LICENSE AND STAFF USER AGREEMENT
-Version: 2026-10-13.1
+COMPREHENSIVE PROPRIETARY SOFTWARE LICENSE AND STAFF USER AGREEMENT
 
-PLEASE READ BEFORE USING THIS APPLICATION.
+Agreement Version: 2026-10-13.2
+Effective Date: October 13, 2026
+Copyright © 2026 the lawful owners of original TGC Staff Companion materials.
+ALL RIGHTS RESERVED.
 
-1. WHO GRANTS THE LICENSE
-"TGC", "we", and "Licensor" mean the owners of the original copyrightable
-TGC Staff Companion software distributed for The Gamer Club. The original
-software, its original branding, and its nonpublic operational materials are
-proprietary, subject to the rights of third parties and applicable law.
-Copyright (c) 2026 the respective TGC Staff Companion rights holders.
-All rights reserved.
+PLEASE READ BEFORE USING THE OFFICIAL COMPANION.
 
-2. LIMITED PERSONAL STAFF LICENSE
-If you accept this agreement and remain authorized by TGC, you receive a
-limited, non-exclusive, non-transferable, revocable license to install and
-use the official binary application on your own compatible devices for
-authorized TGC staff purposes. This is a license, not a sale or permission
-to obtain, republish, or commercialize original application source code.
-Your staff authorization and access to services may end independently.
+This Agreement governs TGC Staff Companion (the “Software” or “Companion”), its official Android phone and Meta Quest builds, and original related source code, binaries, interfaces, documentation, databases, tools, artwork, and materials. It governs staff-authorized use of The Gamer Club (TGC) Companion, including local VRChat utilities and optional integration with TGC's separately authorized invite network.
 
-3. RESTRICTIONS
-Except with prior written permission from the appropriate rights holder or
-where expressly permitted by applicable law, you may not:
-- copy, distribute, republish, sell, rent, sublicense, or share modified
-  versions of the original application or its proprietary source code;
-- create or distribute modified or derivative versions based on the
-  protected TGC application code, assets, or original interface artwork;
-- decompile or reverse engineer the application to extract protected code
-  or evade authentication, except to the extent local law permits;
-- remove TGC proprietary notices or claim ownership of original TGC work;
-- disclose private staff credentials, enrollment links, keys, or
-  confidential TGC operational information obtained through the app;
-- bypass staff authorization or misuse the app to access information or
-  services for which you are not permitted.
-Nothing in this agreement prohibits lawful independent creation of
-original software, activities permitted by mandatory local law, or uses
-authorized by separate open-source or third-party licenses.
+This is NOT an unrestricted public software license, a transfer of software ownership, a license to third-party components, or a promise that independently developed apps with similar functions cannot exist. Acceptance is requested through the application's actual license screen; merely viewing the public repository does not itself create click-through contractual assent.
 
-4. STAFF ACCOUNT AND PLATFORM REQUIREMENTS
-Use the application only while authorized as TGC staff, safeguard your
-credentials, and follow applicable TGC policies, VRChat rules, and law.
-TGC may suspend app or network access when staff authorization is withdrawn
-or an account poses a security risk. The application is not operated by,
-endorsed by, or affiliated with VRChat, Meta, or Valve.
+1. DEFINITIONS AND SCOPE
 
-5. DEVICE DATA AND NETWORK ACTIVITY
-With tracking enabled, the Companion may read local VRChat log entries,
-display detected player and instance activity, and send selected player
-sightings and identifiers to authorized TGC network services for the invite
-workflow. Complete raw VRChat log files are not intentionally uploaded by
-the tracking feature. The app may also use account verification, local
-preferences, and VRChat account session data to operate authorized
-features. Only enable logging or sharing you are authorized to use. Review
-TGC's official staff channels for questions about personal-data handling.
-This agreement does not replace any privacy notice required by law.
+1.1. “Licensor” means the actual owner(s) lawfully entitled to license the original protectable TGC Staff Companion code, artwork, and materials, acting through authorized The Gamer Club representatives. The designation does not presume that the organization owns independently copyrighted contributions or assets supplied by others.
+1.2. “Software” includes official released binaries, protected original source, linked official modules, authored UI assets, documentation, and authorized development/test variants, but excludes third-party components except to the extent legally licensed by their owners.
+1.3. “TGC Network” refers to The Gamer Club's separately operated staff-verification, roster, Relay, Main Launcher, and invitation-related infrastructure. It is distinct from standalone local Companion functions.
+1.4. “Authorized User” means a user granted current permission to use official TGC Staff Companion functionality for an approved staff or testing purpose.
+1.5. “Written Permission” means documented authorization from a person legally able to grant the applicable right. A Discord role, deployment link, repository invitation, or device possession does not automatically grant permission to reuse proprietary code.
+1.6. Mandatory legal rights, including applicable privacy, consumer, accessibility, interoperability, and security-research exceptions, remain effective wherever a term cannot lawfully override them.
 
-6. UPDATES AND THIRD-PARTY RIGHTS
-New releases may change features, requirements, or this agreement. A
-materially revised agreement requires new acceptance before use. Any
-third-party software and open-source libraries retain their own license
-terms, including licenses that permit redistribution or reverse engineering
-of those specific components. This agreement covers only rights that TGC's
-software rights holders actually own or may lawfully license.
+2. OWNERSHIP AND INTELLECTUAL PROPERTY
 
-7. NO WARRANTY; LIABILITY
-TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE APPLICATION IS SUPPLIED "AS
-IS" WITHOUT WARRANTIES. IT MAY HAVE INTERRUPTIONS OR ERRORS. NOTHING HERE
-EXCLUDES LIABILITY, WARRANTIES, OR OTHER RIGHTS THAT CANNOT LAWFULLY BE
-EXCLUDED UNDER YOUR LOCAL LAW.
+2.1. Original protected Companion source code, object code, authored text, documentation, original interface art, and other protectable expression remain owned by their respective lawful rights holders.
+2.2. Neither installation nor an authorized staff role transfers copyright, trademark rights, confidential information, source-code ownership, or an interest in TGC's services.
+2.3. Any applicable copyright, trademark, patent, design, database, or trade-secret right is reserved only to the extent it actually exists and belongs to the party asserting it.
+2.4. Modification of code containing protected original TGC expression does not erase the rights attached to that material. Original contributions remain subject to their authors' rights unless separately assigned.
+2.5. General functions, ideas, public APIs, methods of operation, facts, standard protocols, and independent code are not claimed as exclusive simply because the Companion uses them.
 
-8. TERMINATION
-This limited license ends when your authorization ends or upon a material
-breach of these terms, subject to applicable law. Stop using the application
-and delete unauthorized copies when the license ends. Rights and legal
-exceptions that must survive termination remain unaffected.
+3. NO UNRESTRICTED PUBLIC LICENSE
 
-9. ACCEPTANCE, DECLINE AND QUESTIONS
-Selecting "I Agree & Continue" records the accepted agreement version and
-time locally on this device. Selecting "Decline & Exit" exits the app without
-recording consent. You may read this agreement again from Settings after
-acceptance. Questions about permissions, source-code licensing, or staff
-access should be directed to TGC through its official staff channels.
+3.1. Except where a particular component states otherwise, original TGC proprietary components are not released under an unrestricted, OSI-approved, or general open-source license.
+3.2. A copy obtainable through a public repository, official APK download, a staff member, a public workflow, or a hosted service does not by itself grant unrestricted reuse or commercial distribution of protected original TGC material.
+3.3. The TGC Node Updates repository presently exposes Companion source files publicly. Its public visibility is acknowledged; this license does NOT describe already public source as secret solely because it is proprietary.
+3.4. Rights arising under a repository host's applicable terms, legitimate third-party licenses, and applicable law remain in effect. In particular, any use or forking expressly allowed by those terms or mandatory law is not barred by a conflicting sentence here.
+3.5. ACCESS DOES NOT IMPLY BLANKET AUTHORIZATION. POSSESSION DOES NOT TRANSFER OWNERSHIP. PUBLIC VISIBILITY IS NOT AN UNRESTRICTED SOURCE-CODE LICENSE.
 
-This agreement does not guarantee that other developers cannot
-independently create software with similar functionality.
+4. LIMITED OFFICIAL STAFF LICENSE
+
+4.1. Subject to your affirmative acceptance and current TGC authorization, Licensor grants you a personal, limited, nonexclusive, nontransferable, revocable license to install and run the official unmodified Companion binary on compatible devices for authorized TGC staff duties or approved testing.
+4.2. This permission does not include commercial resale, sublicensing, public deployment of modified builds, use of TGC-protected source in outside projects, or claims that an unofficial release is approved.
+4.3. Additional written permission is required where licensing rights exist and the user proposes source-code distribution, nonstandard deployments, maintained forks, commercial integration, or access to confidential infrastructure.
+4.4. The app may contain independently useful local tools. Their technical availability does not give users authorization to use TGC-only services or violate a third-party platform's rules.
+4.5. Authorization may be limited by person, role, group, environment, device, purpose, version, duration, or revocation.
+
+5. STAFF ELIGIBILITY, ACCOUNT AND DEVICE AUTHORIZATION
+
+5.1. Staff enrollment, relevant VRChat community membership, active approval, and TGC Network permissions are controlled separately from this license acceptance. License acceptance does not create staff membership.
+5.2. Staff roles may be changed or revoked; a former staff member may lose access to staff-only services or features without any transfer of ownership.
+5.3. Do not impersonate another user, transfer or reuse someone else's enrollment credentials, share restricted setup links, or invite unauthorized third parties to use your device's staff identity.
+5.4. Administrative, development, or volunteer status in one community or app does not automatically provide authority over the Companion source or a production backend.
+5.5. TGC may limit or revoke services for legitimate staff eligibility or security reasons subject to law and any binding separate agreement.
+
+6. FEATURES ACTUALLY PROVIDED BY THE COMPANION
+
+6.1. Depending on device and account access, the Companion can include friends, player profiles, visible group lists, worlds, notifications, statuses, staff-facing activity tracking, native Quest tools, Android phone floating tools, avatar collections, saved chatboxes, and OSC utilities.
+6.2. Features that access VRChat account data require appropriate VRChat authentication and VRChat-side permissions. VRC+ may be required for extended local avatar-favorite features.
+6.3. The application cannot independently force VRChat to display OSC chatbox messages or change a parameter merely because a local packet was sent.
+6.4. The available controls may change as VRChat, Android, Quest, network providers, account entitlements, and supported APIs change.
+6.5. This Agreement licenses permitted use of TGC-owned software; it does not grant ownership of users' avatars, other people's VRChat groups, or third-party creations.
+
+7. THE TGC INVITE NETWORK AND MAIN LAUNCHER
+
+7.1. With tracking enabled and authorized enrollment, a Node can detect relevant local player activity and send selected player sightings to TGC's configured Invite Relay.
+7.2. The Relay, verification system, staff rules, and separately operated Main Launcher determine whether data can participate in TGC's group-invitation workflow. A Node sighting, Relay acknowledgment, or local activity entry IS NOT evidence that a group invite was issued.
+7.3. Installing, inspecting, cloning, or modifying the Companion does not grant valid TGC staff credentials, the ability to operate the Main Launcher, a right to use the Relay, or permission to issue TGC invitations.
+7.4. Do not forge network sightings, enrollment responses, staff identities, or invite events. Do not operate unauthorized replicas against TGC endpoints or bypass their authorization.
+7.5. The Companion also includes local VRChat-related functions that may operate without a connected Main Launcher. It is inaccurate to describe every part of the app as dependent on that program.
+
+8. AUTHENTICATION, TOKENS AND CREDENTIALS
+
+8.1. Protect staff deployment records, owner-issued Relay URLs or tokens, private enrollment links, verification secrets, VRChat sessions, encryption keys, and any other authentication material.
+8.2. Do not publish or sell private credentials, share a personal account session, extract tokens to impersonate another user, or use a credential beyond the authority granted to its holder.
+8.3. The Companion is designed to store relevant staff deployment credentials and personal VRChat session information locally using Android encryption where supported, as separate categories of data. No encryption design can guarantee protection on every compromised device.
+8.4. VRChat authentication alone does not grant TGC staff privileges. A staff enrollment token does not grant ownership or control over a VRChat account.
+8.5. Promptly alert TGC owners or responsible staff to suspected leaked TGC tokens, impersonation, or unauthorized network access.
+
+9. SOURCE CODE AND PUBLIC REPOSITORY MATERIALS
+
+9.1. Where original source code is copyright-protected by a TGC rights holder, users do not receive a general right to incorporate it into competing products or distribute modified copies merely because GitHub makes it viewable.
+9.2. Rights that GitHub's applicable terms confer, rights under third-party licenses, lawful quotation, copying exceptions, or independent code ownership are preserved.
+9.3. Source code already posted publicly is not made confidential retroactively by this notice. Nonpublic secrets, private staff files, and restricted infrastructure information may be confidential where a legal duty to protect them applies.
+9.4. Technical ability to clone source is not a grant to enroll unauthorized staff Nodes in TGC services.
+9.5. Separate source-maintainer permissions may specify allowed branches, testing activities, code access, and approved distributions.
+
+10. FORKS, MODIFICATIONS AND DERIVATIVE WORKS
+
+10.1. Except with appropriate permission or applicable rights, users may not distribute or commercialize modified programs that copy protectable original TGC code or artwork, including renamed builds, packages, copied modules, ports, and translations.
+10.2. Renaming functions, changing colors, rewriting syntax, or changing app branding does not automatically make a protected derivative work independent if substantial protected expression remains copied.
+10.3. A hosting-platform-permitted fork, lawful interoperability project, third-party-licensed component, or genuinely independently developed application is not forbidden merely because it resembles the Companion.
+10.4. No user may impersonate the official Companion, TGC owner, or official update channel through an unauthorized fork.
+
+11. REPRODUCTION, COPYING AND REDISTRIBUTION
+
+11.1. Without appropriate permission, do not publicly redistribute TGC-protected source, repackaged installers, modified official APKs, original TGC artwork, or proprietary operational materials.
+11.2. Restricted distribution methods can include repositories, Discord attachments, app stores, websites, cloud drives, mirrors, container images, VM snapshots, and offline media.
+11.3. Official signed Companion releases and public update files supplied by TGC may be used as authorized. Necessary copies permitted by hosting-platform terms, third-party licenses, or law are unaffected.
+11.4. Sharing an independently licensed open-source module under its own valid license is not automatically a violation of this restriction.
+11.5. Redistribution of an installer must never imply staff authority or include another person's embedded credentials.
+
+12. HOSTED INSTANCES AND DEPLOYMENT
+
+12.1. An official Companion installation is not permission to host a replacement TGC Relay, expose TGC staff-only API endpoints, publish restricted service configuration, or run a public invitation network using TGC credentials.
+12.2. Only authorized maintainers may access protected production configuration, private staff databases, service credentials, or TGC internal deployment systems.
+12.3. Testing permission is limited to the environment and scope authorized. It does not imply production deployment permission or entitlement to private data.
+12.4. TGC has no obligation to provide Relay access, Main Launcher access, credentials, or technical support to an otherwise unauthorized copy of the Companion.
+
+13. REVERSE ENGINEERING AND INTEROPERABILITY
+
+13.1. Where permitted by law, the Licensor may restrict decompilation, disassembly, circumvention of protected TGC authentication, and extraction of proprietary nonpublic implementation for unauthorized distribution or misuse.
+13.2. This provision cannot override mandatory rights to observe, study, test, perform lawful security research, achieve interoperability, or use independently licensed third-party components.
+13.3. Public APIs and protocols operated by VRChat or another party remain subject to their actual applicable permissions; TGC does not claim them as its property.
+13.4. Reverse engineering to steal staff tokens or evade TGC access controls is not authorized by this license.
+
+14. SECURITY AND ACCESS CONTROLS
+
+14.1. Do not spoof enrollment, forge a staff role, bypass TGC authentication, tamper with verification, maliciously probe restricted endpoints, or use compromised credentials to gain unauthorized access.
+14.2. Report discovered security problems through TGC's appropriate owner/staff channel. Good-faith reports do not grant unlimited authorization for disruptive testing.
+14.3. Use secure devices and avoid publishing unredacted logs, screenshots containing secrets, personal session cookies, or private authentication data.
+14.4. TGC may revoke network credentials, restrict deployments, or investigate suspected misuse consistent with law and its internal policies.
+
+15. CONFIDENTIAL MATERIALS AND STAFF INFORMATION
+
+15.1. Nonpublic staff rosters, internal moderation decisions, enrollment data, private API configurations, unreleased proprietary features, secrets, private repository content, and confidential operational documentation may be protected by confidentiality obligations.
+15.2. Where materials are actually received in confidence, disclose them only to persons authorized to receive them and use them only for approved purposes.
+15.3. Public information, lawfully independent discoveries, authorized reporting of illegal activity, legally compelled disclosures, and statutory whistleblower protections are not restricted.
+15.4. Confidentiality that lawfully applies may survive staff departure or expiration of access; this clause does not transform publicly accessible Companion files into trade secrets.
