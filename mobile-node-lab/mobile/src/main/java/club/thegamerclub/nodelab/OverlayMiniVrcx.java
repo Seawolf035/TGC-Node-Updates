@@ -2844,9 +2844,9 @@ public final class OverlayMiniVrcx {
         intro.addView(text("Avatar OSC parameters",17,
             CompanionStyle.TEXT,true));
         intro.addView(text(
-            "Control parameters in your CURRENT VRChat avatar. Add the exact "+
-            "parameter name from its OSC configuration. These are local "+
-            "one-shot actions, not background automation.",
+            "Control parameters in your CURRENT VRChat avatar. Enter a simple "+
+            "name, a nested name such as Go/IsFeral, or its full OSC address. "+
+            "These are local one-shot actions, not background automation.",
             12,CompanionStyle.MUTED,false));
         JSONArray saved;
         try{saved=OscControlStore.parameters(ctx);}
@@ -2862,7 +2862,7 @@ public final class OverlayMiniVrcx {
             JSONObject item=saved.optJSONObject(i);if(item==null)continue;
             final String name=item.optString("name","");
             final String type=item.optString("type","");
-            if(!name.matches("[A-Za-z_][A-Za-z0-9_]{0,63}"))continue;
+            if(!AvatarOscParameterPath.isValid(name))continue;
             LinearLayout box=card(list);
             box.addView(text(name+" · "+type.toUpperCase(Locale.US),
                 14,CompanionStyle.TEXT,true));
@@ -2904,11 +2904,16 @@ public final class OverlayMiniVrcx {
         }
         section(list,"ADD PARAMETER");
         LinearLayout add=card(list);
-        EditText name=CompanionStyle.input(ctx,"Exact avatar parameter name");
+        EditText name=CompanionStyle.input(ctx,
+            "Go/IsFeral or /avatar/parameters/Go/IsFeral");
         name.setSingleLine(true);
-        name.setFilters(new InputFilter[]{new InputFilter.LengthFilter(64)});
+        name.setFilters(new InputFilter[]{new InputFilter.LengthFilter(
+            AvatarOscParameterPath.MAX_INPUT_LENGTH)});
         oscTextEntry(name);
         add.addView(name,new LinearLayout.LayoutParams(-1,dp(43)));
+        add.addView(text("Both forms send to /avatar/parameters/Go/IsFeral. "+
+            "Use the exact name and capitalization from the avatar.",12,
+            CompanionStyle.MUTED,false));
         add.addView(text("TYPE",12,CompanionStyle.ACCENT,true));
         LinearLayout types=new LinearLayout(ctx);
         types.setOrientation(LinearLayout.HORIZONTAL);
