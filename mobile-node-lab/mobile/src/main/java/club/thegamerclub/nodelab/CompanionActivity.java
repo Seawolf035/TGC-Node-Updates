@@ -779,6 +779,9 @@ public final class CompanionActivity extends Activity {
             ()->needsStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
         action(account,"♜","Staff access","View your linked device",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
+        action(account,"§","License & user agreement",
+            "Review the proprietary TGC Staff Companion terms",
+            ()->startActivity(new Intent(this,CompanionLicenseActivity.class)));
         action(account,"♢","Verification code",
             "Find and copy your TGC or Cult invite code",this::openInviteCode);
         // Inbox is already on Home and Explore. Avoid a third identical link.
