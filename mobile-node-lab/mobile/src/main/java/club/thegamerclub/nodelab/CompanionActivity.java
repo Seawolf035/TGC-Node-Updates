@@ -38,6 +38,7 @@ public final class CompanionActivity extends Activity {
     };
     private final Handler main=new Handler(Looper.getMainLooper());
     private boolean verifying=false,showingUnlocked=false,advanced=false;
+    private boolean trackingGuideExpanded=false;
     private boolean foreground=false;
     private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
     private static final int PINNED_FRIEND_PERMISSION_REQUEST=3702;
@@ -241,13 +242,19 @@ public final class CompanionActivity extends Activity {
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
         enforceQuestOverlaySetting();
+        TrackingSetupGuide.initialize(this);
         if(saved!=null){
             tab=saved.getString("tab","home");
             advanced=saved.getBoolean("advanced",false);
+            trackingGuideExpanded=saved.getBoolean("tracking_guide_expanded",false);
             java.util.ArrayList<String> history=saved.getStringArrayList("quest_tab_history");
             if(history!=null && QuestDevice.isQuestDevice())
                 for(int i=history.size()-1;i>=0;i--)
                     questTabs.push(history.get(i));
+        }
+        if(getIntent().getBooleanExtra("open_tracking_setup",false)){
+            tab="tracking";
+            trackingGuideExpanded=true;
         }
         locked("Checking your staff access...");
         InboxAlertSettings.restore(this);
@@ -255,6 +262,7 @@ public final class CompanionActivity extends Activity {
     }
     @Override protected void onSaveInstanceState(Bundle out){
         out.putString("tab",tab);out.putBoolean("advanced",advanced);
+        out.putBoolean("tracking_guide_expanded",trackingGuideExpanded);
         if(QuestDevice.isQuestDevice())
             out.putStringArrayList("quest_tab_history",
                 new java.util.ArrayList<>(questTabs));
@@ -657,10 +665,65 @@ public final class CompanionActivity extends Activity {
         action(places,"◉","Favorite avatars","View saved avatars and switch your avatar",this::openAvatars);
         action(places,"★","Extended avatar favorites","Private categorized avatar collections • VRC+",this::openExtendedAvatars);
     }
+    /** Inline first-run setup on Tracking; never buried inside controls.
+     * Acknowledgement is instructional, not evidence that VRChat is set to Full.
+     */
+    private void renderTrackingSetup(){
+        final boolean acknowledged=TrackingSetupGuide.acknowledged(this);
+        if(!acknowledged||trackingGuideExpanded){
+            page.addView(CompanionStyle.section(this,"FIRST-TIME TRACKING SETUP"));
+            LinearLayout guide=card();
+            guide.addView(txt(acknowledged?"Tracking setup guide":
+                "Complete this once before tracking",19,CompanionStyle.TEXT,true));
+            space(guide,10);
+            guide.addView(txt(
+                "1. In VRChat, open Settings → Debug → Logging and set it to FULL.",
+                15,CompanionStyle.GOLD,true));
+            space(guide,7);
+            guide.addView(txt(
+                "The Companion cannot read or change VRChat's logging setting.",
+                12,CompanionStyle.MUTED,false));
+            space(guide,11);
+            guide.addView(txt(QuestDevice.isQuestDevice()?
+                "2. Grant read-only access to Documents/Logs on Quest. Shizuku is an advanced fallback.":
+                "2. Authorize Shizuku for Android phone player tracking.",
+                14,CompanionStyle.TEXT,false));
+            space(guide,11);
+            guide.addView(txt(
+                "3. Start tracking before joining a VRChat instance or waiting for new players. Older joins are not replayed.",
+                14,CompanionStyle.TEXT,false));
+            space(guide,13);
+            if(!acknowledged){
+                action(guide,"✓","I understand · Continue",
+                    "Acknowledge this setup once; it doesn't verify VRChat settings.",
+                    ()->{
+                        TrackingSetupGuide.acknowledge(this);
+                        trackingGuideExpanded=false;
+                        renderUnlocked();
+                    });
+            }else{
+                action(guide,"‹","Close setup guide",
+                    "Return to your normal Tracking screen",
+                    ()->{trackingGuideExpanded=false;renderUnlocked();});
+            }
+        }else{
+            android.widget.Button review=CompanionStyle.button(this,
+                "View setup guide",false);
+            review.setTextSize(12);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(39));
+            lp.bottomMargin=dp(8);
+            page.addView(review,lp);
+            review.setOnClickListener(v->{
+                trackingGuideExpanded=true;
+                renderUnlocked();
+            });
+        }
+    }
     private void renderTracking(){
         headline("ACTIVITY","Player tracking",QuestDevice.isQuestDevice()?
             "See who joins and leaves while playing VRChat on your Quest.":
             "See who joins and leaves while playing VRChat Mobile.");
+        renderTrackingSetup();
         android.content.SharedPreferences s=getSharedPreferences("tgc_mobile_node_status",0);
         long heartbeat=s.getLong("service_heartbeat_at",0);
         boolean active=s.getBoolean("running",false) && heartbeat>0 &&
@@ -685,8 +748,6 @@ public final class CompanionActivity extends Activity {
             ()->openPlayerLog("current"));
         action(stats,"⚙","Tracking controls","Start, stop or check your tracking",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
-        // One-time VRChat Full logging instructions now live in the tracking
-        // onboarding guide instead of occupying the daily Tracking dashboard.
         page.addView(CompanionStyle.section(this,"HOW TRACKING WORKS"));
         LinearLayout explanation=card();
         boolean questTracking=QuestDevice.isQuestDevice();
