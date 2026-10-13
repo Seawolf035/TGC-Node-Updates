@@ -195,7 +195,7 @@ public final class VRChatApi {
     }
     /** Apply only the signed-in user's status and status message; other profile fields are untouched. */
     public static JSONObject updatePresence(Context context,String status,String description)throws Exception{
-        if(!status.matches("active|ask me|busy|join me|offline"))
+        if(!status.matches("active|ask me|busy|join me"))
             throw new IllegalArgumentException("Invalid VRChat status");
         if(description==null||description.length()>32)
             throw new IllegalArgumentException("VRChat status message must be 32 characters or less");
