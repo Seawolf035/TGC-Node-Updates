@@ -676,6 +676,17 @@ public final class OverlayMiniVrcx {
         button(list,"Activity feed",false,()->host.navigate("mini_activity"));
     }
     private void showFriends(){
+        int pinnedCount=0;
+        try{pinnedCount=FriendPinStore.pins(ctx).length();}
+        catch(Exception ignored){}
+        button(list,"★ Pinned friends ("+pinnedCount+") · "+
+            ("pinned".equals(friendFilter)?"Show all":"Show pinned only"),
+            "pinned".equals(friendFilter),()->{
+                friendFilter="pinned".equals(friendFilter)?"all":"pinned";
+                limit=65;drawList();
+            });
+        list.addView(text("Tap a friend to open their profile. Tap ☆ to pin "+
+            "them for quick access from Social.",11,CompanionStyle.MUTED,false));
         chips(list,"All","Online","Offline",
             ()->{friendFilter="all";limit=65;drawList();},
             ()->{friendFilter="online";limit=65;drawList();},
@@ -694,6 +705,10 @@ public final class OverlayMiniVrcx {
             if(!matches(name+" "+loc))continue;
             if("online".equals(friendFilter)&&!active)continue;
             if("offline".equals(friendFilter)&&active)continue;
+            if("pinned".equals(friendFilter)){
+                try{if(!FriendPinStore.contains(ctx,f.optString("id","")))continue;}
+                catch(Exception ex){continue;}
+            }
             matchingTotal++;
             if(!grouped.containsKey(loc))grouped.put(loc,new ArrayList<>());
             grouped.get(loc).add(f);
@@ -729,15 +744,34 @@ public final class OverlayMiniVrcx {
                 final String uid=f.optString("id","");
                 String name=f.optString("displayName",uid);
                 String message=f.optString("statusDescription","");
-                TextView entry=text("› "+shortValue(name,48)+
+                LinearLayout friendRow=new LinearLayout(ctx);
+                friendRow.setGravity(Gravity.CENTER_VERTICAL);
+                card.addView(friendRow,new LinearLayout.LayoutParams(-1,-2));
+                TextView entry=text("› "+shortValue(name,40)+
                     "  •  "+VRChatPresenceIndicator.label(f.optString("status",""))+
-                    (message.isEmpty()?"":" · "+shortValue(message,55)),
+                    (message.isEmpty()?"":" · "+shortValue(message,48)),
                     12,CompanionStyle.TEXT,false);
-                entry.setPadding(0,dp(8),0,dp(8));
-                card.addView(entry);
+                entry.setPadding(0,dp(8),dp(4),dp(8));
+                friendRow.addView(entry,new LinearLayout.LayoutParams(0,-2,1f));
                 if(validUser(uid)){
                     entry.setOnClickListener(v->profile(uid));
                     entry.setContentDescription("View "+name+"'s VRChat profile");
+                    boolean pinned=false;
+                    try{pinned=FriendPinStore.contains(ctx,uid);}
+                    catch(Exception ignored){}
+                    Button pin=CompanionStyle.button(ctx,pinned?"★":"☆",false);
+                    pin.setTextSize(17);
+                    pin.setContentDescription((pinned?"Unpin ":"Pin ")+name);
+                    friendRow.addView(pin,new LinearLayout.LayoutParams(dp(43),dp(43)));
+                    final String displayName=name;
+                    pin.setOnClickListener(v->{
+                        try{
+                            boolean next=!FriendPinStore.contains(ctx,uid);
+                            FriendPinStore.setPinned(ctx,uid,displayName,next);
+                            pin.setText(next?"★":"☆");
+                            pin.setContentDescription((next?"Unpin ":"Pin ")+displayName);
+                        }catch(Exception ex){message("Friend pin: "+ex.getMessage());}
+                    });
                 }
                 shown++;
             }
@@ -1058,6 +1092,20 @@ public final class OverlayMiniVrcx {
                     "Friend request sent")));
         }
         if(friend){
+            boolean pinned=false;
+            try{pinned=FriendPinStore.contains(ctx,id);}
+            catch(Exception ignored){}
+            Button pin=CompanionStyle.button(ctx,pinned?
+                "★ Unpin friend shortcut":"☆ Pin friend for quick access",false);
+            info.addView(pin,CompanionStyle.buttonParams(ctx));
+            pin.setOnClickListener(v->{
+                try{
+                    boolean next=!FriendPinStore.contains(ctx,id);
+                    FriendPinStore.setPinned(ctx,id,name,next);
+                    pin.setText(next?"★ Unpin friend shortcut":
+                        "☆ Pin friend for quick access");
+                }catch(Exception e){message("Friend pin: "+e.getMessage());}
+            });
             button(info,"Request an invite from this friend",true,()->confirm(
                 "Ask "+name+" for a VRChat invite?",
                 ()->write(()->VRChatApi.requestInvite(ctx,id),"Invite requested")));
