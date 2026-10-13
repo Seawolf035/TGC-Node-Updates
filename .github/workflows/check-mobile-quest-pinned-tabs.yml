@@ -1,0 +1,51 @@
+name: Validate Quest pinned quick actions (candidate only)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.19.1-quest-pinned-quick-tabs
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'mobile-node-lab/QUEST_PINNED_QUICK_TABS_CANDIDATE_QA.md'
+      - '.github/workflows/check-mobile-quest-pinned-tabs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Validate fixed Quest toolbar and phone isolation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          native=(base/'QuestToolsActivity.java').read_text()
+          assert 'if(!QuestDevice.isQuestDevice())' in native
+          assert 'new OverlayMiniVrcx(this,' in native
+          assert 'if(isHub() && !"shortcuts".equals(page))' in native
+          assert 'root.addView(quick,new LinearLayout.LayoutParams(-1,-2));' in native
+          assert 'body.addView(quick)' not in native
+          assert native.index('root.addView(quick,') < native.index('scroll=new ScrollView(this)')
+          assert 'FloatingCompanionService' in native
+          assert 'versionCode 52' in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          print('Quest pinned quick actions are outside the scroll area; source remains at code 52.')
+          PY
+      - name: Compile Android debug without signing or publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
