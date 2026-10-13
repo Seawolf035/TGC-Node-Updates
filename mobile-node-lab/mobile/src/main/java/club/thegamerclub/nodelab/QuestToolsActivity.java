@@ -36,6 +36,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
     private ScrollView scroll;
     private TextView oscSummary;
     private Button micButton,liveButton,pauseButton;
+    private boolean restoreNativePageAfterPause=false;
     private OverlayMiniVrcx mini;
     private final Runnable statusTick=new Runnable(){
         @Override public void run(){
@@ -107,11 +108,17 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
     }
     @Override protected void onResume(){
         super.onResume();
+        if(restoreNativePageAfterPause && mini!=null &&
+           !isFinishing() && StaffGate.unlocked(this)){
+            restoreNativePageAfterPause=false;
+            render(); // Mini-VRCX screens cancel IO on pause; load a fresh view.
+        }
         main.removeCallbacks(statusTick);
         main.post(statusTick);
     }
     @Override protected void onPause(){
         main.removeCallbacks(statusTick);
+        restoreNativePageAfterPause=mini!=null && !isHub();
         if(mini!=null)mini.close();
         super.onPause();
     }
