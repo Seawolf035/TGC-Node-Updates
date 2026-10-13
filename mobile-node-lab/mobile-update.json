@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.18.8",
-  "version_code": 51,
+  "version": "0.19.0",
+  "version_code": 52,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "fa1ba92b8057db40b3cb9e2de5c524e467c2ea1c41a3c09bb0f3bdfa65597acc",
-  "notes": "v0.18.8: Floating Social pinned friends now display as a much tighter, tap-to-open list with no visible move arrows by default. Use Edit order to reveal 36dp up/down movement controls, immediately save changes without resetting scroll, then tap Done to return to compact mode. The pinned toolbar now uses small Alerts, Friends and Invites buttons rather than a large alert button and help paragraph. Pin data, account-scoped ordering, opt-in online notification baselines, all v0.18.7 alerts, OSC PTT and Live Chatbox, Mini-VRCX and tracking continue unchanged. No Main Launcher or Relay update."
+  "sha256": "2298e3a8d12216e95e87d8482168c6dad41ac89aa46dab8799e27ea12f7890b4",
+  "notes": "v0.19.0: Quest-native VRChat toolkit accessible ONLY on Meta Quest from the existing Main Companion Home, Explore and Settings. Home/Social/OSC/Tools screens reuse all existing Mini-VRCX pages including profiles, friends, online-pinned reordering, inbox/invites, private notes, bookmarks, world/group browsing, search, activity, verification, official rank-locked chatboxes, quick phrases and avatar parameters. New overlay-free Quest foreground OSC service offers explicit start/stop/pause of Live Chatbox and experimental PTT hold/release with five-minute timeout, permanent notification and emergency release. Ordinary Android phone navigation and floating overlay remain unchanged; Quest floater is still off by default. Quest log capture and in-game OSC reception still depend on device/VRChat behavior. No Relay/Main Launcher changes."
 }
