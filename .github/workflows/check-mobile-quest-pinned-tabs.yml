@@ -43,8 +43,28 @@ jobs:
           assert 'body.addView(quick)' not in native
           assert native.index('root.addView(quick,') < native.index('scroll=new ScrollView(this)')
           assert 'FloatingCompanionService' in native
+          watcher=(base/'PrivilegedProbe.java').read_text()
+          node=(base/'MobileNodeService.java').read_text()
+          assert 'if(QuestDevice.isQuestDevice())' in watcher
+          assert 'File questLog=findLog(new File(FOLDERS[2]),0);' in watcher
+          assert 'if(questLog!=null)return questLog;' in watcher
+          assert 'for(int i=0;i<2;i++)' in watcher
+          assert 'SHIZUKU_VERSION=5' in node
+          assert 'Watching VRChat output logs: ' in watcher
           assert 'versionCode 52' in Path('mobile-node-lab/mobile/build.gradle').read_text()
-          print('Quest pinned quick actions are outside the scroll area; source remains at code 52.')
+          # Synthetic lines matching the supplied private Quest logs; no user data in CI.
+          import re
+          event='usr_11111111-2222-3333-4444-555555555555'
+          world='wrld_11111111-2222-3333-4444-555555555555'
+          sample=[
+            '2026.10.13 08:15:30 Debug - [Behaviour] OnPlayerJoined TestUser ('+event+')',
+            '2026.10.13 08:17:59 Debug - [Behaviour] OnPlayerLeft TestUser ('+event+')',
+            '2026.10.13 08:18:03 Debug - [Behaviour] Joining '+world+':12345~region(us)'
+          ]
+          assert re.search(r'OnPlayerJoined\\s+.*?\\s+\\((usr_[a-fA-F0-9-]{36})\\)',sample[0])
+          assert re.search(r'OnPlayerLeft\\s+.*?\\s+\\((usr_[a-fA-F0-9-]{36})\\)',sample[1])
+          assert re.search(r'\\bJoining\\s+(wrld_[a-fA-F0-9-]{36}:[^\\s]+)',sample[2])
+          print('Quest quick tabs fixed; Quest log directory selected only on Quest; synthetic events recognized.')
           PY
       - name: Compile Android debug without signing or publishing
         working-directory: mobile-node-lab
