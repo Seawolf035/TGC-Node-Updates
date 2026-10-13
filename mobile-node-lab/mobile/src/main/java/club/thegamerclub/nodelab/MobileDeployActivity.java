@@ -369,7 +369,6 @@ public class MobileDeployActivity extends Activity {
           if(stopControl!=null)stopControl.setEnabled(r!=null&&online);
           if(advanced)technicalStatus.setText(technical);
           if(questFolderStatus!=null){
-            boolean folderMode=QuestSafLogWatcher.isSelected(this);
             questFolderStatus.setText("Selected mode: "+
                 (folderMode?"Folder (no Shizuku)":"Shizuku")+
                 "\nFolder permission: "+QuestSafLogWatcher.grantedPath(this)+
