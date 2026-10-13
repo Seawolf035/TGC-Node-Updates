@@ -89,10 +89,17 @@ public final class QuestSafLogWatcher extends IPrivilegedProbe.Stub {
             throw new IllegalArgumentException("Select the Documents/Logs folder, not Documents or device root");
         ContentResolver resolver=ctx.getContentResolver();
         resolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        boolean persisted=false;
+        for(UriPermission permission:resolver.getPersistedUriPermissions()){
+            if(permission.isReadPermission() && uri.equals(permission.getUri())){
+                persisted=true;break;
+            }
+        }
+        // Never switch away from working Shizuku unless SAF permission survived.
+        if(!persisted)throw new SecurityException(
+            "Android did not retain read permission for this folder");
         ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
             .putString(TREE,uri.toString()).putString(MODE,FOLDER).apply();
-        if(!hasGrant(ctx))throw new SecurityException(
-            "Android did not retain read permission for this folder");
     }
     private static boolean isLogsTree(Uri uri){
         try{
