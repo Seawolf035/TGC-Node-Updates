@@ -31,13 +31,9 @@ public class MobileDeployActivity extends Activity {
   private TextView status,technicalStatus,feedback,questFolderStatus;
   private Button startControl,stopControl,questFolderControl,questFolderModeControl;
   private LinearLayout enrollment,advancedPane,questFallbackContainer,questFallbackDetails;
-  private View unlinkControl,setupGuideControl;
+  private View unlinkControl;
   private boolean advanced=false;
   private boolean helpExpanded=false,questFallbackExpanded=false;
-  private static final String FIRST_SETUP_PREF="tgc_tracking_first_setup_v1";
-  private static final String FIRST_SETUP_MIGRATED="installation_checked";
-  private static final String FIRST_SETUP_ACK="logging_guide_acknowledged";
-  private boolean setupGuideOpen=false;
   private final Handler handler=new Handler(Looper.getMainLooper());
   private final Runnable autoRefresh=new Runnable(){
     @Override public void run(){refresh();handler.postDelayed(this,5000);}
@@ -64,49 +60,6 @@ public class MobileDeployActivity extends Activity {
     b.setOnClickListener(v->callback.run());
     return b;
   }
-  /** Preserve existing linked devices when introducing first-setup guidance.
-   * New/unlinked installs see the tutorial once; reconnects retain progress.
-   * This is only user acknowledgement, NEVER proof of VRChat's logging state.
-   */
-  private void initializeFirstSetup(){
-    android.content.SharedPreferences p=getSharedPreferences(FIRST_SETUP_PREF,0);
-    if(p.getBoolean(FIRST_SETUP_MIGRATED,false))return;
-    boolean previouslyLinked=false;
-    try{previouslyLinked=MobileCredentials.load(this)!=null;}
-    catch(Exception ignored){}
-    p.edit().putBoolean(FIRST_SETUP_MIGRATED,true)
-        .putBoolean(FIRST_SETUP_ACK,previouslyLinked).apply();
-  }
-  private boolean setupAcknowledged(){
-    return getSharedPreferences(FIRST_SETUP_PREF,0).getBoolean(FIRST_SETUP_ACK,false);
-  }
-  private void showFirstSetupGuide(){
-    if(setupGuideOpen||isFinishing()||isDestroyed())return;
-    setupGuideOpen=true;
-    boolean quest=QuestDevice.isQuestDevice();
-    String method=quest?
-        "2. In Companion, allow read-only access to Documents/Logs on this Quest. Shizuku is only an advanced fallback.":
-        "2. For Android phone player tracking, set up and authorize Shizuku in Companion.";
-    AlertDialog dialog=new AlertDialog.Builder(this)
-        .setTitle("First-time player tracking setup")
-        .setMessage(
-            "1. In VRChat, open Settings → Debug → Logging and select FULL. "+
-            "The Companion cannot change VRChat's logging setting for you.\n\n"+
-            method+"\n\n"+
-            "3. Start Companion tracking, then enter an instance or wait for "+
-            "new players to join. Old log entries are not replayed.\n\n"+
-            "You only need to acknowledge this setup guide once. You can "+
-            "reopen it later under Advanced tools.")
-        .setNegativeButton("Not yet",null)
-        .setPositiveButton("I understand · Continue",(d,w)->{
-            getSharedPreferences(FIRST_SETUP_PREF,0).edit()
-                .putBoolean(FIRST_SETUP_ACK,true).apply();
-            showStatus("Setup guide acknowledged. Make sure VRChat logging is set to Full before tracking.");
-        })
-        .create();
-    dialog.setOnDismissListener(d->setupGuideOpen=false);
-    dialog.show();
-  }
   private void openShizukuLink(String url){
     try{
       startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url))
@@ -126,7 +79,7 @@ public class MobileDeployActivity extends Activity {
     advanced=getIntent().getBooleanExtra("advanced",false);
     helpExpanded=state!=null && state.getBoolean("shizuku_help_expanded",false);
     questFallbackExpanded=state!=null && state.getBoolean("quest_fallback_expanded",false);
-    initializeFirstSetup();
+    TrackingSetupGuide.initialize(this);
     ScrollView scroll=new ScrollView(this);
     scroll.setBackgroundColor(CompanionStyle.BG);
     LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
@@ -257,8 +210,6 @@ public class MobileDeployActivity extends Activity {
     technicalStatus=title("",12);
     technicalStatus.setTextColor(CompanionStyle.MUTED);
     advancedPane.addView(technicalStatus);
-    setupGuideControl=action(advancedPane,"Reopen first-time tracking setup guide",
-        this::showFirstSetupGuide,false);
     if(QuestDevice.isQuestDevice()){
       questFallbackContainer=new LinearLayout(this);
       questFallbackContainer.setOrientation(LinearLayout.VERTICAL);
@@ -288,17 +239,11 @@ public class MobileDeployActivity extends Activity {
     unlinkControl=action(advancedPane,"Unlink this device",this::unlinkConfirm,false);
     setAdvanced();
     refresh();
-    // Present the onboarding only to first-time/unlinked installs. Existing
-    // linked upgrades do not get an unexpected modal during routine tracking.
-    if(state==null && !setupAcknowledged())
-      handler.post(this::showFirstSetupGuide);
   }
   private void setAdvanced(){
     if(technicalStatus==null || advancedPane==null)return;
     technicalStatus.setVisibility(advanced?View.VISIBLE:View.GONE);
     if(unlinkControl!=null)unlinkControl.setVisibility(advanced?View.VISIBLE:View.GONE);
-    if(setupGuideControl!=null)
-      setupGuideControl.setVisibility(advanced?View.VISIBLE:View.GONE);
     if(questFallbackContainer!=null)
       questFallbackContainer.setVisibility(advanced?View.VISIBLE:View.GONE);
     if(questFallbackDetails!=null)
@@ -400,14 +345,18 @@ public class MobileDeployActivity extends Activity {
     refresh();
   }
   private void startNode(){
-    if(!setupAcknowledged()){
-      showStatus("Review the one-time VRChat logging setup before starting tracking.");
-      showFirstSetupGuide();
-      return;
-    }
     try{
       if(MobileCredentials.load(this)==null){
         showStatus("Link this device before starting tracking.");return;
+      }
+      if(!TrackingSetupGuide.acknowledged(this)){
+        // First-run setup is part of the main Tracking screen, not a dialog
+        // or an Advanced menu inside tracking controls.
+        showStatus("Complete the setup guide on the Tracking tab first.");
+        startActivity(new Intent(this,CompanionActivity.class)
+            .putExtra("open_tracking_setup",true));
+        finish();
+        return;
       }
       if(QuestSafLogWatcher.isSelected(this)){
         if(!QuestSafLogWatcher.hasGrant(this)){
