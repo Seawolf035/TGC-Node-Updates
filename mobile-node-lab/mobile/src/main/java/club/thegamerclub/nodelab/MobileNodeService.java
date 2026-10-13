@@ -35,6 +35,9 @@ public final class MobileNodeService extends Service {
   private final Handler handler=new Handler(Looper.getMainLooper());
   private volatile boolean running=false, bound=false, shuttingDown=false, trackingStarted=false;
   private volatile IPrivilegedProbe watcher;
+  // App-UID SAF mode uses no Shizuku; opt-in on Quest only.
+  private volatile boolean useFolderMode=false;
+  private QuestSafLogWatcher folderWatcher;
   private MobileOutbox outbox;
   private volatile long lastAuth=0;
   private volatile String watcherState="Waiting for Shizuku";
@@ -42,9 +45,10 @@ public final class MobileNodeService extends Service {
   private volatile long lastEventTime=0;
 
   private final Shizuku.OnBinderReceivedListener onBinderReceived=()->{
-    if(running && watcher==null){bound=false;connectWatcher();}
+    if(running && !useFolderMode && watcher==null){bound=false;connectWatcher();}
   };
   private final Shizuku.OnBinderDeadListener onBinderDead=()->{
+    if(useFolderMode)return;
     watcher=null;bound=false;trackingStarted=false;
     watcherState="Shizuku stopped / disconnected";
     persist();
@@ -105,8 +109,12 @@ public final class MobileNodeService extends Service {
       running=false;persist();stopSelf();return START_NOT_STICKY;
     }
     if(!running){
+      useFolderMode=QuestSafLogWatcher.isSelected(this);
+      folderWatcher=useFolderMode?new QuestSafLogWatcher(this):null;
       running=true;shuttingDown=false;
-      watcherState="Foreground service started, waiting for Shizuku";
+      watcherState=useFolderMode?
+        "Quest folder watcher starting (no Shizuku required)":
+        "Foreground service started, waiting for Shizuku";
       relayState="Waiting to verify deployment";
       persist();
       collection.execute(this::collectorLoop);
@@ -115,7 +123,7 @@ public final class MobileNodeService extends Service {
     return START_STICKY;
   }
   private void connectWatcher(){
-    if(!running || shuttingDown || bound || watcher!=null)return;
+    if(!running || shuttingDown || useFolderMode || bound || watcher!=null)return;
     try{
       if(!Shizuku.pingBinder()){
         watcherState="Shizuku connection not ready. Open Shizuku and confirm Running.";
@@ -137,8 +145,12 @@ public final class MobileNodeService extends Service {
   private void collectorLoop(){
     while(running&&!shuttingDown){
       try{
-        if(watcher==null)connectWatcher();
-        IPrivilegedProbe active=watcher;
+        IPrivilegedProbe active;
+        if(useFolderMode)active=folderWatcher;
+        else{
+          if(watcher==null)connectWatcher();
+          active=watcher;
+        }
         if(active!=null){
           if(!trackingStarted){
             // Preserve the local observed roster if we simply reconnect to an
@@ -149,9 +161,17 @@ public final class MobileNodeService extends Service {
             if(!alreadyWatching)outbox.resetCurrentPlayers();
             trackingStarted=true;
           }
+          // Folder reader runs in this foreground service under our own app UID.
+          // Shizuku's authorized service independently polls in its own thread.
+          if(useFolderMode && folderWatcher!=null)folderWatcher.pollOnce();
           JSONObject stats=new JSONObject(active.getWatchStats());
-          watcherState=stats.optBoolean("watching")?"Watching VRChat output logs":
-            "Shizuku connected but watcher not running";
+          watcherState=stats.optBoolean("watching")?
+            (useFolderMode?"Watching Quest Documents/Logs (folder permission)":
+              "Watching VRChat output logs"):
+            (useFolderMode?"Quest folder watcher is not running":
+              "Shizuku connected but watcher not running");
+          if(useFolderMode && stats.optInt("read_errors")>0)
+            watcherState+="; last error: "+stats.optString("last_error","unknown");
           getSharedPreferences("tgc_mobile_node_status",0).edit()
             .putInt("watch_polls",stats.optInt("polls"))
             .putInt("watch_joins",stats.optInt("joins"))
@@ -171,7 +191,9 @@ public final class MobileNodeService extends Service {
       }catch(Exception e){
         watcherState="Watcher error: "+e.getClass().getSimpleName();
         // The Shizuku binder might have restarted; force clean reconnection.
-        watcher=null;bound=false;trackingStarted=false;
+        if(!useFolderMode){
+          watcher=null;bound=false;trackingStarted=false;
+        }
       }
       persist();
       sleep(5000);
@@ -297,7 +319,7 @@ public final class MobileNodeService extends Service {
     running=false;
     watcherState=reason;
     relayState="Stopped";
-    IPrivilegedProbe active=watcher;
+    IPrivilegedProbe active=useFolderMode?folderWatcher:watcher;
     if(active!=null){try{active.stopWatching();}catch(Exception ignored){}}
     persist();
     stopForeground(STOP_FOREGROUND_REMOVE);
@@ -306,6 +328,7 @@ public final class MobileNodeService extends Service {
   @Override public void onDestroy(){
     shuttingDown=true;running=false;
     collection.shutdownNow();upload.shutdownNow();
+    if(folderWatcher!=null)folderWatcher.stopWatching();
     Shizuku.removeBinderReceivedListener(onBinderReceived);
     Shizuku.removeBinderDeadListener(onBinderDead);
     if(bound){
