@@ -687,7 +687,7 @@ public final class CompanionActivity extends Activity {
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
         action(account,"♢","Verification code",
             "Find and copy your TGC or Cult invite code",this::openInviteCode);
-        action(account,"✉","Your inbox","Notifications and friend requests",()->openInbox("all"));
+        // Inbox is already on Home and Explore. Avoid a third identical link.
         // Avatar collections and private notes are already in Explore. Keep
         // Settings focused on account configuration instead of duplicate links.
         action(account,"☼","Status & presets","Edit your status and saved presets",this::openStatus);
