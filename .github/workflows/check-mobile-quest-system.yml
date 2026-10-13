@@ -1,0 +1,69 @@
+name: Validate Quest System UI v0.19.4
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.19.4-quest-system-ui
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'mobile-node-lab/QUEST_v0.19.4_UI_QA.md'
+      - '.github/workflows/check-mobile-quest-system.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Validate Quest hard gate and phone separation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          device=(root/'QuestDevice.java').read_text()
+          service=(root/'FloatingCompanionService.java').read_text()
+          home=(root/'CompanionActivity.java').read_text()
+          quest=(root/'QuestToolsActivity.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'return !isQuestDevice();' in device
+          assert 'experimentalOverlayAllowed' not in device
+          assert 'setExperimentalOverlayAllowed' not in device
+          assert 'if(QuestDevice.isQuestDevice()){' in service
+          assert 'OverlayPreferences.setRecover(this,false);' in service
+          assert 'OverlayPreferences.setDesired(this,false);' in service
+          assert 'return START_NOT_STICKY;' in service
+          assert 'if(!QuestDevice.isQuestDevice())return;' in home
+          assert 'OverlayPreferences.setDesired(this,false);' in home
+          assert 'OverlayPreferences.setRecover(this,false);' in home
+          assert 'quest?"Quest System":"Show floating tools"' in home
+          assert 'if(QuestDevice.isQuestDevice()){\n                openQuestTools();' in home
+          assert 'tab="settings";renderUnlocked();' not in home
+          assert 'toggleQuestOverlayExperimental' not in home
+          assert 'experimental Quest floater' not in home
+          assert 'questSystem?"QUEST SYSTEM":"FLOATING TOOLS"' in home
+          assert 'Quest System is a normal app screen' in home
+          assert 'Quest System' in quest and 'TGC · QUEST SYSTEM' in quest
+          assert 'if(!QuestDevice.isQuestDevice()){finish();return;}' in quest
+          assert 'this::openExtendedAvatars' in home
+          assert 'this::openNotes' in home
+          assert 'versionCode 56' in gradle and "versionName '0.19.4'" in gradle
+          print('Quest floater permanently gated, phone toggles preserved, navigation correct.')
+          PY
+      - name: Compile Android debug APK only
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
