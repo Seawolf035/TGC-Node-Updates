@@ -513,6 +513,21 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
             shortcuts.addView(text(
                 "Pinned groups appear at the top of the floating Mini-VRCX group list.",
                 12,CompanionStyle.MUTED,false));
+            kicker("ADVANCED GROUP TOOLS");
+            LinearLayout tools=box();
+            for(String mode:new String[]{"members","instances","bans"}){
+                String label="members".equals(mode)?"Browse / search members":
+                    "instances".equals(mode)?"Active group instances":
+                    "Visible group bans (read-only)";
+                Button control=CompanionStyle.button(this,label,"members".equals(mode));
+                tools.addView(control,CompanionStyle.buttonParams(this));
+                control.setOnClickListener(v->startActivity(
+                    new Intent(this,VRChatGroupToolsActivity.class)
+                        .putExtra("groupId",groupId).putExtra("mode",mode)));
+            }
+            tools.addView(text("VRChat's personal account permissions apply. "+
+                "No group moderation actions are performed by these tools.",
+                12,CompanionStyle.MUTED,false));
         }
         JSONArray roles=group.optJSONArray("roles");
         if(roles!=null&&roles.length()>0){
