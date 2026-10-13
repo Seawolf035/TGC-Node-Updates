@@ -769,6 +769,63 @@ public final class FloatingCompanionService extends Service {
             default:go(OverlayPreferences.destination(key));break;
         }
     }
+    private void drawQuickBar(){
+        if(quickBarRow==null)return;
+        quickBarRow.removeAllViews();
+        List<String> keys=OverlayPreferences.quickBar(this);
+        quickBarRow.setVisibility(keys.isEmpty()?View.GONE:View.VISIBLE);
+        for(String key:keys){
+            String shortName;
+            switch(key){
+                case "inbox":shortName="Inbox";break;
+                case "friends":shortName="Friends";break;
+                case "status":shortName="Status";break;
+                case "instance":shortName="Instance";break;
+                case "chat":shortName="Chat";break;
+                case "verify":shortName="Code";break;
+                case "activity":shortName="Activity";break;
+                case "players":shortName="Players";break;
+                case "recent":shortName="Recent";break;
+                case "search":shortName="Search";break;
+                case "joins":shortName="Joins";break;
+                case "groups":shortName="Groups";break;
+                case "worlds":shortName="Worlds";break;
+                default:shortName=OverlayPreferences.name(key);break;
+            }
+            Button control=CompanionStyle.button(this,shortName,false);
+            control.setTextSize(11);
+            control.setAllCaps(false);
+            control.setContentDescription("Quick action: "+OverlayPreferences.name(key));
+            LinearLayout.LayoutParams param=new LinearLayout.LayoutParams(0,dp(38),1f);
+            param.setMargins(dp(2),0,dp(2),0);
+            quickBarRow.addView(control,param);
+            control.setOnClickListener(v->openShortcut(key));
+        }
+    }
+    private void changeQuickAction(String key){
+        List<String> keys=new ArrayList<>(OverlayPreferences.quickBar(this));
+        if(keys.contains(key))keys.remove(key);
+        else{
+            if(keys.size()>=3){
+                Toast.makeText(this,"Choose at most three quick actions",
+                    Toast.LENGTH_SHORT).show();return;
+            }
+            keys.add(key);
+        }
+        OverlayPreferences.setQuickBar(this,keys);
+        drawQuickBar();
+        buildTab();
+    }
+    private void moveQuickAction(String key,int distance){
+        List<String> keys=new ArrayList<>(OverlayPreferences.quickBar(this));
+        int first=keys.indexOf(key),next=first+distance;
+        if(first<0||next<0||next>=keys.size())return;
+        java.util.Collections.swap(keys,first,next);
+        OverlayPreferences.setQuickBar(this,keys);
+        drawQuickBar();
+        buildTab();
+    }
+
     private void pinnedShortcuts(LinearLayout parent){
         List<String> pinned=OverlayPreferences.shortcuts(this);
         for(int i=0;i<pinned.size();i+=2){
@@ -815,6 +872,26 @@ public final class FloatingCompanionService extends Service {
             snapBubbleToEdge();
             buildTab();
         });
+        section(panelContent,"PERSISTENT QUICK BAR");
+        LinearLayout quickSettings=panelCard(panelContent);
+        quickSettings.addView(text(
+            "Choose up to three buttons that stay visible under the tabs on "+
+            "every floating tool page. This is separate from Home shortcuts.",
+            12,CompanionStyle.MUTED,false));
+        List<String> activeQuick=OverlayPreferences.quickBar(this);
+        for(String key:OverlayPreferences.SHORTCUTS){
+            boolean picked=activeQuick.contains(key);
+            action(quickSettings,(picked?"✓ ":"＋ ")+OverlayPreferences.name(key),
+                picked,()->changeQuickAction(key));
+            if(picked)
+                paired(quickSettings,"↑ Earlier","↓ Later",
+                    ()->moveQuickAction(key,-1),()->moveQuickAction(key,1));
+        }
+        action(quickSettings,"Hide persistent quick bar",false,()->{
+            OverlayPreferences.setQuickBar(this,new ArrayList<>());
+            buildTab();
+        });
+
         section(panelContent,"PINNED HOME SHORTCUTS");
         LinearLayout pins=panelCard(panelContent);
         pins.addView(text(
@@ -927,6 +1004,13 @@ public final class FloatingCompanionService extends Service {
         tab(tabs,"Social","social");
         tab(tabs,"OSC","osc");
         tab(tabs,"Tools","tools");
+
+        // User-selected shortcuts never scroll away on long Mini-VRCX pages.
+        quickBarRow=new LinearLayout(this);
+        quickBarRow.setGravity(Gravity.CENTER_VERTICAL);
+        quickBarRow.setPadding(dp(9),0,dp(9),dp(3));
+        container.addView(quickBarRow);
+        drawQuickBar();
 
         // Fast release stays outside the scrolling content on EVERY tab.
         oscVoiceQuickRelease=vertical();
@@ -1047,6 +1131,7 @@ public final class FloatingCompanionService extends Service {
     }
     private void buildTab(){
         if(panelContent==null)return;
+        drawQuickBar();
         dismissModal();
         // Stop in-overlay periodic lookups when navigating away from a detail page.
         if(mini!=null)mini.close();
@@ -1532,6 +1617,7 @@ public final class FloatingCompanionService extends Service {
         if(mini!=null)mini.close();
         dismissModal();
         panel=null;panelContent=null;panelModalLayer=null;panelScroller=null;
+        quickBarRow=null;
         oscVoiceQuickRelease=null;oscVoiceToggle=null;oscVoiceInfo=null;
         recentRows=null;recentStatus=null;
         presenceLabel=null;presenceActionLabel=null;
