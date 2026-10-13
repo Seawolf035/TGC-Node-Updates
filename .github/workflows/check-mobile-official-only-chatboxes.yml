@@ -1,0 +1,63 @@
+name: Validate v0.18.5 official-only chatbox rotation
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.18.5-official-only-chatboxes
+    paths:
+      - "mobile-node-lab/mobile/**"
+      - ".github/workflows/check-mobile-official-only-chatboxes.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Check official-only implementation invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          source=(root/'OscControlStore.java').read_text()
+          overlay=(root/'OverlayMiniVrcx.java').read_text()
+          service=(root/'FloatingCompanionService.java').read_text()
+          assert 'include_default_chatbox' in source
+          assert 'official_only_chatboxes' in source
+          assert 'return official||!includeDefaultChatbox(ctx)?0:1;' in source
+          assert 'official?0:chatboxes(ctx).length()' in source
+          assert 'setOfficialOnly(Context ctx,boolean on)' in source
+          assert 'setIncludeDefaultChatbox(Context ctx,boolean included)' in source
+          assert 'clearPersonalStatus(Context ctx)' in source
+          assert 'TgcOfficialChatboxes.selectedEligible(ctx)' in source
+          assert 'Clear personal status & use official tags only' in overlay
+          assert 'Official tags only: ON' in overlay
+          assert 'OscControlStore.liveChatboxAt(ctx,0)' in overlay
+          assert 'OscControlStore.liveChatboxAt(this,0)' in service
+          assert 'if(count<1)' in service and 'stopOscLive();' in service
+          assert 'versionCode 48' in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          print('Chatbox source filtering and fail-closed startup checked')
+          PY
+      - name: Compile Android debug
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-v0.18.5-Official-Only-Debug
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
