@@ -1076,7 +1076,7 @@ public final class FloatingCompanionService extends Service {
             12,CompanionStyle.MUTED,false));
         section(panelContent,"YOUR ACCOUNT");
         LinearLayout personal=panelCard(panelContent);
-        paired(personal,"Favorite avatars","Saved worlds",
+        paired(personal,"Favorite avatars","World bookmarks & favorites",
             ()->go("mini_avatars"),()->go("mini_worlds"));
         paired(personal,"Recent worlds","Current instance",
             ()->go("mini_recent"),()->go("mini_now"));
