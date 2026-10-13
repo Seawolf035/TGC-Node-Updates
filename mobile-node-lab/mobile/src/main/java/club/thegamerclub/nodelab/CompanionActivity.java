@@ -409,7 +409,7 @@ public final class CompanionActivity extends Activity {
         space(toolsColumn,7);
         final boolean quest=QuestDevice.isQuestDevice();
         android.widget.Button overlay=CompanionStyle.button(this,
-            quest?"Quest System":"Show floating tools",true);
+            quest?"Quest Tools":"Show floating tools",true);
         homeOverlayButton=overlay;
         overlay.setTextSize(12);
         toolsColumn.addView(overlay,new LinearLayout.LayoutParams(-1,dp(43)));
@@ -453,11 +453,7 @@ public final class CompanionActivity extends Activity {
         hero.setPadding(dp(14),dp(12),dp(14),dp(12));
         hero.setBackground(CompanionStyle.gradient(this,0xFF1A4159,0xFF15283E,17));
         homeButtons(hero);
-        if(QuestDevice.isQuestDevice())
-            action(hero,"⌘","Quest native tools",
-                "All your VRChat utilities without a floating overlay",
-                this::openQuestTools);
-
+        // Quest has one primary entry point: the Quest Tools button above.
         LinearLayout shortcutsHeading=new LinearLayout(this);
         shortcutsHeading.setGravity(Gravity.CENTER_VERTICAL);
         page.addView(shortcutsHeading);
@@ -486,7 +482,7 @@ public final class CompanionActivity extends Activity {
         LinearLayout second=new LinearLayout(this);
         summary.addView(second);
         metric(second,"Friends online*","—","♧",CompanionStyle.ACCENT,t->homeFriendsLabel=t);
-        metric(second,QuestDevice.isQuestDevice()?"Quest System":"Floating tools",
+        metric(second,QuestDevice.isQuestDevice()?"Quest Tools":"Floating tools",
             QuestDevice.isQuestDevice()?"READY":"—","◉",CompanionStyle.GOOD,
             t->homeOverlayLabel=t);
         TextView freshness=txt("* Based on friends checked in the last five minutes.",
@@ -538,9 +534,9 @@ public final class CompanionActivity extends Activity {
             homeOverlayLabel.setText(quest?"READY":overlayRunning?"ON":"OFF");
         if(homeOverlayStatus!=null)
             homeOverlayStatus.setText(quest?
-                "⌘ Quest native tools":overlayRunning?"● Tools on":"○ Tools off");
+                "⌘ Quest Tools ready":overlayRunning?"● Tools on":"○ Tools off");
         if(homeOverlayButton!=null)
-            homeOverlayButton.setText(quest?"Quest System":
+            homeOverlayButton.setText(quest?"Quest Tools":
                 overlayRunning?"Hide floating tools":"Show floating tools");
     }
     private void loadHomeHistory(){
@@ -590,13 +586,8 @@ public final class CompanionActivity extends Activity {
     }
     private void renderExplore(){
         headline("EXPLORE","Your VRChat","Everything you want to discover, without leaving the app.");
-        if(QuestDevice.isQuestDevice()){
-            page.addView(CompanionStyle.section(this,"QUEST-NATIVE VRCHAT TOOLKIT"));
-            LinearLayout questTools=card();
-            action(questTools,"⌘","Open Quest native tools",
-                "All floating-tool features through normal app screens",
-                this::openQuestTools);
-        }
+        // Quest Tools is launched from the Home status bar; no duplicate
+        // launcher on Explore.
         page.addView(CompanionStyle.section(this,"MESSAGES & INVITES"));
         LinearLayout messages=card();
         action(messages,"✉","Notifications","All incoming VRChat notifications",()->openInbox("all"));
@@ -743,14 +734,14 @@ public final class CompanionActivity extends Activity {
                 this::requestPinnedFriendNotificationPermission);
         boolean questSystem=QuestDevice.isQuestDevice();
         page.addView(CompanionStyle.section(this,
-            questSystem?"QUEST SYSTEM":"FLOATING TOOLS"));
+            questSystem?"QUEST TOOLS":"FLOATING TOOLS"));
         LinearLayout floating=card();
         if(questSystem){
-            floating.addView(txt("Quest System replaces floating tools",16,
+            floating.addView(txt("Quest Tools replaces floating tools",16,
                 CompanionStyle.ACCENT,true));
             space(floating,7);
             floating.addView(txt(
-                "Open Quest System directly from the Home screen. It provides "+
+                "Open Quest Tools directly from the Home screen. It provides "+
                 "native VRChat tools without a floating overlay. Floating "+
                 "windows and experimental floater recovery are permanently "+
                 "disabled on Quest. Your tracking Node runs independently.",
@@ -790,7 +781,7 @@ public final class CompanionActivity extends Activity {
             this::showBackgroundHealth);
         background.addView(txt(questSystem?
             "Android power settings can interrupt tracking or delay alerts. "+
-            "Quest System is a normal app screen, not an overlay, and doesn't "+
+            "Quest Tools is a normal app screen, not an overlay, and doesn't "+
             "run an extra floating service.":
             "Android power settings can delay alerts or interrupt background "+
             "services. Tracking and floating tools run independently; you can "+
@@ -948,7 +939,7 @@ public final class CompanionActivity extends Activity {
         boolean quest=QuestDevice.isQuestDevice();
         String details=
             "Player tracking: "+(nodeLive?"Running":"Not currently running")+
-            (quest?"\nQuest System: available from Home (no floating window)":
+            (quest?"\nQuest Tools: available from Home (no floating window)":
               "\nFloating tools: "+(overlayLive?"Running":"Not currently running")+
               "\nAutomatic floating recovery: "+
                 (OverlayPreferences.recover(this)?"Enabled":"Off"))+
@@ -956,7 +947,7 @@ public final class CompanionActivity extends Activity {
                 InboxAlertSettings.enabled(this)?"Android permission needed":"Off")+
             "\nBattery status: "+battery+
             (quest?
-              "\n\nQuest System does not run a floating overlay. Android may "+
+              "\n\nQuest Tools does not run a floating overlay. Android may "+
               "delay background notifications or interrupt the independent tracking Node.":
               "\n\nAndroid may postpone scheduled inbox checks or stop services under "+
               "memory and battery pressure. The Node's ongoing tracking and the "+
