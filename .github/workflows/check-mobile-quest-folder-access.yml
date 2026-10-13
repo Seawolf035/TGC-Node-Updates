@@ -49,7 +49,8 @@ jobs:
           assert 'useFolderMode=QuestSafLogWatcher.isSelected(this)' in service
           assert 'if(useFolderMode && folderWatcher!=null)folderWatcher.pollOnce()' in service
           assert 'captureFromWatcher(active)' in service and 'captureLocalActivity(active)' in service
-          assert 'if(!useFolderMode && watcher==null)' in service
+          assert 'if(useFolderMode)active=folderWatcher;' in service
+          assert 'if(watcher==null)connectWatcher();' in service
           assert 'startActivityForResult(picker,QUEST_FOLDER_REQUEST)' in setup
           assert 'QuestSafLogWatcher.selectShizuku(this)' in setup
           assert 'if(QuestSafLogWatcher.isSelected(this))' in setup
