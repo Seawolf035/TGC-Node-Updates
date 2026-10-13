@@ -470,6 +470,31 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
             }
             detail(stats,"Platforms",platforms.toString());
         }
+        String worldId=world.optString("id",id);
+        if(valid("world",worldId)){
+            kicker("LOCAL WORLD BOOKMARKS");
+            LinearLayout shortcuts=box();
+            boolean bookmarked=false;
+            try{bookmarked=WorldBookmarkStore.contains(this,worldId);}
+            catch(Exception ignored){}
+            Button save=CompanionStyle.button(this,
+                bookmarked?"★ Remove world bookmark":"☆ Bookmark this world",false);
+            shortcuts.addView(save,CompanionStyle.buttonParams(this));
+            save.setOnClickListener(v->{
+                try{
+                    boolean next=!WorldBookmarkStore.contains(this,worldId);
+                    WorldBookmarkStore.setBookmarked(this,worldId,
+                        world.optString("name","VRChat world"),next);
+                    save.setText(next?"★ Remove world bookmark":"☆ Bookmark this world");
+                }catch(Exception e){
+                    Toast.makeText(this,"Couldn't save bookmark: "+e.getMessage(),
+                        Toast.LENGTH_LONG).show();
+                }
+            });
+            shortcuts.addView(text(
+                "Local to this device and your VRChat account; does not change your VRChat favorites.",
+                12,CompanionStyle.MUTED,false));
+        }
         kicker("CREATOR");
         LinearLayout creator=box();
         link(creator,world.optString("authorName","World creator"),"View creator profile",
