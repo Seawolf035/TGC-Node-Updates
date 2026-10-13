@@ -15,6 +15,7 @@ import android.widget.ImageView;
 import android.text.InputType;
 import android.text.InputFilter;
 import android.widget.TextView;
+import android.widget.Switch;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.text.DateFormat;
@@ -39,6 +40,8 @@ public final class OverlayMiniVrcx {
         void keyboard(boolean focus);
         void onPresenceChanged(String status);
         void scrollToTop();
+        void confirm(String prompt,Runnable action);
+        void feedback(String message);
         boolean isOscLiveActive();
         String oscLiveDescription();
         void oscStartLive(int intervalSeconds);
@@ -115,7 +118,7 @@ public final class OverlayMiniVrcx {
     private String oscEditingChatbox="";
     private boolean typingActive=false;
     private String pending="";
-    private Runnable pendingAction;
+
     private final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
     public OverlayMiniVrcx(Service service,Host host){ctx=service;this.host=host;}
     private int dp(float n){return CompanionStyle.dp(ctx,n);}
@@ -132,7 +135,7 @@ public final class OverlayMiniVrcx {
                 catch(Exception ignored){}
             });
         }
-        revision++;root=null;list=null;search=null;pendingAction=null;
+        revision++;root=null;list=null;search=null;
         host.keyboard(false);
     }
     public void shutdown(){close();io.shutdownNow();}
@@ -168,10 +171,8 @@ public final class OverlayMiniVrcx {
         if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText(label,value));
         message("Copied "+label);
     }
-    private void message(String text){
-        if(root==null)return;
-        TextView n=text(text,12,CompanionStyle.GOLD,false);
-        root.addView(n,1);
+    private void message(String value){
+        if(root!=null)host.feedback(value);
     }
     public void show(LinearLayout parent,String page){
         close();
@@ -2411,6 +2412,21 @@ public final class OverlayMiniVrcx {
             "restrictions, staff access or Android battery controls.",
             null);
     }
+    private void toggleOfficialTag(TgcOfficialChatboxes.Template tag,boolean selected,
+                                   Switch toggle,TextView count){
+        try{
+            TgcOfficialChatboxes.setSelected(ctx,tag.id,selected);
+            count.setText(TgcOfficialChatboxes.selectedEligible(ctx).size()+
+                " enabled for rotation");
+        }catch(Exception error){
+            // Avoid a second callback while restoring the persisted value.
+            toggle.setOnCheckedChangeListener(null);
+            toggle.setChecked(!selected);
+            toggle.setOnCheckedChangeListener((view,on)->
+                toggleOfficialTag(tag,on,toggle,count));
+            message("Cannot change tag: "+error.getMessage());
+        }
+    }
     /** Rotation settings are local to the signed-in personal VRChat account.
      * All broadcast starts and staff/Quest checks stay in FloatingCompanionService.
      */
@@ -2471,44 +2487,55 @@ public final class OverlayMiniVrcx {
             });
         }
 
-        section(list,"TGC OFFICIAL STAFF CHATBOXES");
+        section(list,"OFFICIAL TGC CHATBOX TAGS");
         LinearLayout officialHeader=card(list);
-        int tier=StaffGate.rankTier(ctx);
+        final int tier=StaffGate.rankTier(ctx);
         officialHeader.addView(text("Verified rank: "+StaffGate.rankLabel(ctx),
-            14,tier>0?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+            13,tier>0?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        TextView selectionCount=text(
+            TgcOfficialChatboxes.selectedEligible(ctx).size()+" enabled for rotation",
+            12,CompanionStyle.ACCENT,true);
+        officialHeader.addView(selectionCount);
         officialHeader.addView(text(
-            "All verified staff can use common messages. Your highest verified "+
-            "rank unlocks its official message and every lower tier. "+
-            "The Royalty is restricted to three approved Discord IDs.",
-            12,CompanionStyle.MUTED,false));
-        officialHeader.addView(text(
-            "Messages are read-only presets. Select any unlocked message to "+
-            "include it in your rotation; sending still requires Start and Confirm. "+
-            "Previously selected messages above a downgraded rank are not sent.",
-            12,CompanionStyle.MUTED,false));
+            "Tap an unlocked tag to enable/disable it. Higher-rank tags are locked. "+
+            "Selection never sends a message; Live Chatbox starts separately.",
+            11,CompanionStyle.MUTED,false));
+        String group="";
         for(TgcOfficialChatboxes.Template official:TgcOfficialChatboxes.templates()){
+            if(!group.equals(official.rank)){
+                group=official.rank;
+                list.addView(text(group.toUpperCase(Locale.US),
+                    11,CompanionStyle.ACCENT,true));
+            }
             boolean allowed=TgcOfficialChatboxes.eligible(ctx,official);
             boolean selected=false;
             try{selected=TgcOfficialChatboxes.isSelected(ctx,official.id);}
             catch(Exception ignored){}
-            LinearLayout entry=card(list);
-            entry.addView(text(official.text,15,CompanionStyle.TEXT,true));
-            entry.addView(text(
-                official.rank+(official.suggested?" · Source cycle default":"")+
-                (allowed?" · UNLOCKED":" · LOCKED"),
-                12,allowed?CompanionStyle.ACCENT:CompanionStyle.MUTED,false));
+            // A single compact, full-width toggle; no separate Add/Remove cards.
+            LinearLayout item=card(list);
+            LinearLayout row=new LinearLayout(ctx);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            item.addView(row);
+            LinearLayout details=new LinearLayout(ctx);
+            details.setOrientation(LinearLayout.VERTICAL);
+            row.addView(details,new LinearLayout.LayoutParams(0,-2,1f));
+            details.addView(text(official.text,13,
+                allowed?CompanionStyle.TEXT:CompanionStyle.MUTED,true));
+            details.addView(text(allowed?
+                (official.suggested?"Suggested preset":"Tap to toggle"):
+                "Locked · Requires "+official.rank,
+                10,allowed?CompanionStyle.MUTED:CompanionStyle.GOLD,false));
+            Switch toggle=new Switch(ctx);
+            toggle.setChecked(allowed&&selected);
+            toggle.setEnabled(allowed);
+            toggle.setContentDescription(official.text+" · "+
+                (allowed?"toggle rotation":"locked to "+official.rank));
+            row.addView(toggle,new LinearLayout.LayoutParams(dp(57),dp(45)));
             if(allowed){
-                button(entry,selected?"✓ Remove from rotation":"Add to rotation",
-                    selected,()->{
-                    try{
-                        boolean current=TgcOfficialChatboxes.isSelected(ctx,official.id);
-                        TgcOfficialChatboxes.setSelected(ctx,official.id,!current);
-                        drawList();
-                    }catch(Exception ex){message("Official preset: "+ex.getMessage());}
-                });
-            }else{
-                entry.addView(text("Requires verified "+official.rank+" access.",
-                    11,CompanionStyle.MUTED,false));
+                toggle.setOnCheckedChangeListener((control,on)->
+                    toggleOfficialTag(official,on,toggle,selectionCount));
+                // Entire row is tappable, but no nested extra button.
+                item.setOnClickListener(v->toggle.setChecked(!toggle.isChecked()));
             }
         }
         section(list,"YOUR CHATBOXES");
@@ -2926,13 +2953,9 @@ public final class OverlayMiniVrcx {
     }
     private interface Action{void run()throws Exception;}
     private void confirm(String prompt,Runnable action){
-        if(root==null)return;
-        if(pendingAction!=null){pendingAction=null;pending="";}
-        LinearLayout approval=card(list);
-        approval.addView(text(prompt,13,CompanionStyle.GOLD,true));
-        button(approval,"Confirm",true,()->{pendingAction=null;action.run();});
-        button(approval,"Cancel",false,()->{list.removeView(approval);});
-        pendingAction=action;pending=prompt;
+        if(root==null || !StaffGate.unlocked(ctx))return;
+        // The host modal covers the floating tool buttons without scrolling.
+        host.confirm(prompt,action);
     }
     private void write(Action action,String success){
         write(action,success,null);
