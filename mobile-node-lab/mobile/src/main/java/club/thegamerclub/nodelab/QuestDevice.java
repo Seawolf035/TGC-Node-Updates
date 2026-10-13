@@ -9,11 +9,11 @@ import java.util.Locale;
  * inside Quest VR. The rest of the Companion remains available as normal.
  *
  * Quest detection uses the headset's own Build identifiers; no network or
- * installed-app inventory is required. Experimental opt-in is stored locally.
+ * installed-app inventory is required. Floating overlays are never supported
+ * on Quest: use the native Quest System activity instead.
  */
 public final class QuestDevice {
-    private static final String PREF="tgc_quest_compatibility";
-    private static final String OVERLAY_ALLOWED="experimental_floating_tools";
+    // The old experimental Quest floater opt-in is intentionally retired.
     private QuestDevice(){}
 
     private static String normalized(String value){
@@ -44,15 +44,9 @@ public final class QuestDevice {
             (questAlias(device)||questAlias(product)||
              model.contains("meta quest"));
     }
-    public static boolean experimentalOverlayAllowed(Context ctx){
-        return ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE)
-            .getBoolean(OVERLAY_ALLOWED,false);
-    }
     public static boolean canRunOverlay(Context ctx){
-        return !isQuestDevice()||experimentalOverlayAllowed(ctx);
-    }
-    public static void setExperimentalOverlayAllowed(Context ctx,boolean enabled){
-        ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
-            .putBoolean(OVERLAY_ALLOWED,enabled).apply();
+        // Hard gate also protects direct service starts and recovery attempts,
+        // including devices with the old "experimental_floating_tools" pref.
+        return !isQuestDevice();
     }
 }
