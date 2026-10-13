@@ -46,6 +46,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             case "friends_online":return "Online friends";
             case "friends_offline":return "Offline friends";
             case "worlds":return "Favorite worlds";
+            case "bookmarks":return "Bookmarked worlds";
             case "recent":return "Recently visited";
             case "groups":return "My groups";
             case "encounters":return "Recently encountered";
@@ -61,7 +62,11 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         if(mode==null)mode="friends_online";
         render();
     }
-    @Override protected void onResume(){super.onResume();if(!StaffGate.unlocked(this))finish();}
+    @Override protected void onResume(){
+        super.onResume();
+        if(!StaffGate.unlocked(this)){finish();return;}
+        if("bookmarks".equals(mode)&&adapter!=null)load(true);
+    }
     private void render(){
         getWindow().setStatusBarColor(CompanionStyle.BG);
         getWindow().setNavigationBarColor(CompanionStyle.BG);
@@ -152,7 +157,8 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             (hasMore?" · More available":""));
     }
     private boolean paged(){
-        return !"groups".equals(mode)&&!"encounters".equals(mode);
+        return !"groups".equals(mode)&&!"encounters".equals(mode)&&
+            !"bookmarks".equals(mode);
     }
     private void updatePaging(){
         if(moreButton==null)return;
@@ -171,7 +177,8 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         if(!reset && (!hasMore || !paged()))return;
         int requestedOffset=reset||!term.equals(activeQuery)?0:offset;
         String key=mode+"|"+term+"|"+requestedOffset;
-        if(key.equals(lastFetchKey)&&System.currentTimeMillis()-lastFetch<10_000L){
+        if(!"bookmarks".equals(mode)&&key.equals(lastFetchKey)&&
+            System.currentTimeMillis()-lastFetch<10_000L){
             count.setText("Up to date. You can refresh again in a few seconds.");return;
         }
         if(reset||!term.equals(activeQuery)){
@@ -189,6 +196,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             try{
                 JSONArray data;
                 if(mode.equals("groups"))data=VRChatApi.groups(this);
+                else if(mode.equals("bookmarks"))data=WorldBookmarkStore.bookmarks(this);
                 else if(mode.equals("encounters")){
                     try(MobileOutbox outbox=new MobileOutbox(this)){
                         data=outbox.recentEncounters(100);
@@ -257,8 +265,15 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             }catch(Exception ignored){}
             String code=item.optString("shortCode","");
             e.description=(code.isEmpty()?"":code+"  ·  ")+item.optInt("memberCount",0)+" members";
-        }else if(mode.equals("worlds")||mode.equals("recent")||mode.equals("search_worlds")){
-            e.kind="world";e.glyph="◇";e.description=item.optInt("capacity",0)+" capacity";
+        }else if(mode.equals("worlds")||mode.equals("recent")||
+                 mode.equals("search_worlds")||mode.equals("bookmarks")){
+            e.kind="world";e.glyph="◇";
+            boolean bookmarked=false;
+            try{bookmarked=WorldBookmarkStore.contains(this,e.id);}
+            catch(Exception ignored){}
+            if(bookmarked)e.title="★ "+e.title;
+            e.description=mode.equals("bookmarks")?"Local world bookmark":
+                item.optInt("capacity",0)+" capacity";
             String description=item.optString("description","").replace('\n',' ').trim();
             if(!description.isEmpty())e.description+="  ·  "+description;
         }else if(mode.equals("encounters")){
