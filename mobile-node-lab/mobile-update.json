@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.17.9",
-  "version_code": 42,
+  "version": "0.18.0",
+  "version_code": 43,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "1fe1f80789d804b942397991d6bd25775e8869e2b289a11f01ed651beb84708a",
-  "notes": "v0.17.9: Add account-scoped rotating Live Chatbox profiles (8 additional, each with custom text, time and battery), optional 15/30/60/120-second switching independent of 5/10/15/30-second refresh. Preserve v0.17.8 manual priority, explicit broadcast Start/Stop, OSC parameter controls, credentials, and Node/Relay separation."
+  "sha256": "232488f2d04a4b99f0b7f24c3b9669604479e32b481bff36406913f5a5ac748e",
+  "notes": "v0.18.0: Expanded full-screen and floating Mini-VRCX group toolkit: account-scoped pinned groups, member directory/search and named roles, group status, live instance filtering/sorting, instance details and confirmed personal self-invites, and permission-scoped read-only bans. Preserves v0.17.9 chatbox rotation, staff and VRChat auth, Shizuku, Relay and desktop Nodes."
 }
