@@ -94,6 +94,23 @@ public final class VRChatOscChat {
         if(manual)lastManualAt=lastSendAt;
     }
 
+    /**
+     * VRChat's documented /input/Voice action: integer 1 = pressed, 0 =
+     * released. When toggle voice is disabled this is the PTT input.
+     * The Android client may ignore input-controller OSC; UDP gives no
+     * indication of whether the microphone is actually transmitting.
+     */
+    static byte[] voiceInputPacket(boolean pressed) throws IOException{
+        ByteArrayOutputStream out=new ByteArrayOutputStream();
+        oscString(out,"/input/Voice");
+        oscString(out,",i");
+        new DataOutputStream(out).writeInt(pressed?1:0);
+        return out.toByteArray();
+    }
+    public static synchronized void sendVoiceInput(boolean pressed)throws Exception{
+        transmit(voiceInputPacket(pressed));
+    }
+
     /** OSC /chatbox/typing, a true/false type tag without payload bytes. */
     public static synchronized void sendTyping(boolean typing)throws Exception{
         long now=SystemClock.elapsedRealtime();
