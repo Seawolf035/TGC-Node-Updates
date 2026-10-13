@@ -1239,7 +1239,12 @@ public final class FloatingCompanionService extends Service {
         action(quick,"Customize shortcuts",false,()->go("customize"));
     }
     private LinearLayout recentRows;
-    private void renderPinnedRows(LinearLayout rows){
+    /**
+     * Compact read-only view by default. Reordering is deliberately hidden
+     * until Edit order is selected, so normal profile shortcuts remain easy
+     * to tap without hitting an accidental move button.
+     */
+    private void renderPinnedRows(LinearLayout rows,boolean editing){
         if(rows==null)return;
         rows.removeAllViews();
         try{
@@ -1253,50 +1258,77 @@ public final class FloatingCompanionService extends Service {
             }catch(Exception ignored){}
             if(pinned.length()==0){
                 rows.addView(text(
-                    "No friends pinned yet. Add ★ from Friends or a profile.",
-                    12,CompanionStyle.MUTED,false));
+                    "No pinned friends. Add ★ in Friends or a profile.",
+                    11,CompanionStyle.MUTED,false));
                 return;
             }
-            boolean recent=at>0 && System.currentTimeMillis()-at<8*60_000L;
+            boolean recent=at>0&&System.currentTimeMillis()-at<8*60_000L;
+            int validIndex=0;
             for(int i=0;i<pinned.length();i++){
                 JSONObject row=pinned.optJSONObject(i);
                 if(row==null)continue;
                 final String id=row.optString("id","");
                 if(!id.matches("usr_[0-9a-fA-F-]{36}"))continue;
+                final int position=i;
+                validIndex++;
                 LinearLayout line=new LinearLayout(this);
                 line.setGravity(Gravity.CENTER_VERTICAL);
-                rows.addView(line,new LinearLayout.LayoutParams(-1,dp(43)));
+                // Regular rows are 32dp rather than 43dp. Edit rows reserve
+                // slightly larger tap targets for movement arrows.
+                final int rowHeight=editing?38:32;
+                rows.addView(line,new LinearLayout.LayoutParams(-1,dp(rowHeight)));
                 String name=row.optString("name","Friend");
                 JSONObject snapshot=current.optJSONObject(id);
+                boolean online=recent&&snapshot!=null&&
+                    snapshot.optBoolean("online",false);
                 String state=snapshot==null?" · ?":
-                    !recent?" · last seen":
-                    snapshot.optBoolean("online",false)?" · ● online":" · offline";
-                TextView label=text((i+1)+". "+name+state,11,
-                    recent&&snapshot!=null&&snapshot.optBoolean("online",false)?
-                        CompanionStyle.GOOD:CompanionStyle.TEXT,false);
+                    !recent?" · last seen":online?" · ● online":" · offline";
+                TextView label=text(validIndex+". "+name+state,11,
+                    online?CompanionStyle.GOOD:CompanionStyle.TEXT,false);
                 label.setSingleLine(true);
                 label.setEllipsize(android.text.TextUtils.TruncateAt.END);
-                label.setPadding(dp(2),0,dp(4),0);
-                label.setContentDescription("Open pinned friend "+name);
-                line.addView(label,new LinearLayout.LayoutParams(0,dp(39),1f));
+                label.setPadding(dp(2),0,dp(2),0);
                 label.setGravity(Gravity.CENTER_VERTICAL);
-                label.setOnClickListener(v->mini.profile(id));
-                Button up=CompanionStyle.button(this,"↑",false);
-                Button down=CompanionStyle.button(this,"↓",false);
-                up.setTextSize(14);down.setTextSize(14);
-                up.setContentDescription("Move "+name+" earlier");
-                down.setContentDescription("Move "+name+" later");
-                line.addView(up,new LinearLayout.LayoutParams(dp(39),dp(39)));
-                line.addView(down,new LinearLayout.LayoutParams(dp(39),dp(39)));
-                up.setEnabled(i>0);down.setEnabled(i<pinned.length()-1);
-                up.setOnClickListener(v->{
-                    try{FriendPinStore.move(this,id,-1);renderPinnedRows(rows);}
-                    catch(Exception e){showPinnedFeedback(e.getMessage());}
-                });
-                down.setOnClickListener(v->{
-                    try{FriendPinStore.move(this,id,1);renderPinnedRows(rows);}
-                    catch(Exception e){showPinnedFeedback(e.getMessage());}
-                });
+                line.addView(label,new LinearLayout.LayoutParams(0,-1,1f));
+                if(!editing){
+                    label.setOnClickListener(v->mini.profile(id));
+                    label.setContentDescription("Open pinned friend "+name);
+                    label.setClickable(true);
+                }else{
+                    label.setContentDescription("Pinned friend "+name+
+                        ", position "+validIndex);
+                    Button up=CompanionStyle.button(this,"↑",false);
+                    Button down=CompanionStyle.button(this,"↓",false);
+                    up.setTextSize(12);down.setTextSize(12);
+                    up.setMinHeight(0);down.setMinHeight(0);
+                    up.setMinimumHeight(0);down.setMinimumHeight(0);
+                    up.setMinWidth(0);down.setMinWidth(0);
+                    up.setMinimumWidth(0);down.setMinimumWidth(0);
+                    up.setContentDescription("Move "+name+" earlier");
+                    down.setContentDescription("Move "+name+" later");
+                    LinearLayout.LayoutParams arrowUp=
+                        new LinearLayout.LayoutParams(dp(36),dp(35));
+                    LinearLayout.LayoutParams arrowDown=
+                        new LinearLayout.LayoutParams(dp(36),dp(35));
+                    arrowUp.setMargins(dp(2),0,0,0);
+                    arrowDown.setMargins(dp(2),0,0,0);
+                    line.addView(up,arrowUp);
+                    line.addView(down,arrowDown);
+                    up.setEnabled(position>0);
+                    down.setEnabled(position<pinned.length()-1);
+                    up.setOnClickListener(v->{
+                        try{
+                            FriendPinStore.move(this,id,-1);
+                            renderPinnedRows(rows,true);
+                        }catch(Exception e){showPinnedFeedback(e.getMessage());}
+                    });
+                    down.setOnClickListener(v->{
+                        try{
+                            FriendPinStore.move(this,id,1);
+                            renderPinnedRows(rows,true);
+                        }catch(Exception e){showPinnedFeedback(e.getMessage());}
+                    });
+                }
             }
         }catch(Exception e){
             rows.addView(text("Sign in to view pinned friend shortcuts.",
@@ -1306,39 +1338,79 @@ public final class FloatingCompanionService extends Service {
     private void showSocial(){
         section(panelContent,"PINNED FRIENDS");
         LinearLayout pinned=panelCard(panelContent);
-        pinned.addView(text(
-            "Compact shortcuts · use ↑ / ↓ to choose your own order.",
-            11,CompanionStyle.MUTED,false));
+        // Compact inline toolbar. Moving controls are hidden until Edit mode.
+        LinearLayout toolbar=new LinearLayout(this);
+        toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        pinned.addView(toolbar,new LinearLayout.LayoutParams(-1,dp(36)));
+        int count=0;
+        try{count=FriendPinStore.pins(this).length();}
+        catch(Exception ignored){}
+        TextView countLabel=text(count+" pinned",11,
+            CompanionStyle.ACCENT,true);
+        toolbar.addView(countLabel,new LinearLayout.LayoutParams(0,-2,1f));
+        final boolean[] editing={false};
+        Button edit=CompanionStyle.button(this,"Edit order",false);
+        edit.setTextSize(11);
+        edit.setMinHeight(0);edit.setMinimumHeight(0);
+        edit.setAllCaps(false);
+        edit.setContentDescription("Edit pinned friend order");
+        toolbar.addView(edit,new LinearLayout.LayoutParams(dp(106),dp(34)));
+        TextView editingHint=text("Use ↑ / ↓ to reorder · saved instantly",
+            10,CompanionStyle.MUTED,false);
+        editingHint.setVisibility(View.GONE);
+        pinned.addView(editingHint);
         LinearLayout pinnedRows=vertical();
         pinned.addView(pinnedRows);
-        renderPinnedRows(pinnedRows);
+        renderPinnedRows(pinnedRows,false);
+        edit.setOnClickListener(v->{
+            editing[0]=!editing[0];
+            edit.setText(editing[0]?"Done":"Edit order");
+            edit.setContentDescription(editing[0]?
+                "Finish editing pinned friend order":"Edit pinned friend order");
+            editingHint.setVisibility(editing[0]?View.VISIBLE:View.GONE);
+            renderPinnedRows(pinnedRows,editing[0]);
+        });
 
+        // Keep online alert and friend management controls in a single short
+        // line instead of a large full-width button and paragraph.
+        LinearLayout footer=new LinearLayout(this);
+        footer.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams footerParams=
+            new LinearLayout.LayoutParams(-1,dp(38));
+        footerParams.setMargins(0,dp(5),0,0);
+        pinned.addView(footer,footerParams);
         Button alerts=CompanionStyle.button(this,
-            PinnedFriendAlerts.enabled(this)?
-                "Online alerts: ON":"Online alerts: OFF",false);
-        pinned.addView(alerts,CompanionStyle.buttonParams(this));
+            PinnedFriendAlerts.enabled(this)?"Alerts ON":"Alerts OFF",false);
+        Button friends=CompanionStyle.button(this,"Friends",false);
+        Button invites=CompanionStyle.button(this,"Invites",false);
+        for(Button control:new Button[]{alerts,friends,invites}){
+            control.setTextSize(10);
+            control.setAllCaps(false);
+            control.setMinHeight(0);control.setMinimumHeight(0);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(36),1);
+            lp.setMargins(dp(1),0,dp(1),0);
+            footer.addView(control,lp);
+        }
+        alerts.setContentDescription("Pinned friend online alerts");
         alerts.setOnClickListener(v->{
-            if(!PinnedFriendAlerts.enabled(this)&&!PinnedFriendAlerts.permission(this)){
-                showPinnedFeedback("Allow Android notifications in the full Companion first.");
+            if(!PinnedFriendAlerts.enabled(this)&&
+               !PinnedFriendAlerts.permission(this)){
+                showPinnedFeedback(
+                    "Allow Android notifications in the full Companion first.");
                 open(CompanionActivity.class,null,null);
                 return;
             }
             try{
                 boolean next=!PinnedFriendAlerts.enabled(this);
                 PinnedFriendAlerts.setEnabled(this,next);
-                alerts.setText(next?"Online alerts: ON":"Online alerts: OFF");
+                alerts.setText(next?"Alerts ON":"Alerts OFF");
                 showPinnedFeedback(next?
-                    "Pinned friend alerts enabled. First check sets a baseline.":
+                    "Pinned friend alerts enabled; first check sets a baseline.":
                     "Pinned friend alerts disabled.");
             }catch(Exception ex){showPinnedFeedback("Friend alerts: "+ex.getMessage());}
         });
-        pinned.addView(text(
-            "When enabled, alerts appear only for pinned friends changing "+
-            "from offline to online. Floating checks usually take 2.5–5 min; "+
-            "background checks are about every 15 min and may be delayed.",
-            10,CompanionStyle.MUTED,false));
-        paired(pinned,"Manage friends","Invitations",
-            ()->go("mini_friends"),()->mini.inbox("invite"));
+        friends.setOnClickListener(v->go("mini_friends"));
+        invites.setOnClickListener(v->mini.inbox("invite"));
         section(panelContent,"FRIENDS");
         LinearLayout friends=panelCard(panelContent);
         action(friends,"Friends & locations",true,()->go("mini_friends"));
