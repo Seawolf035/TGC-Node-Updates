@@ -240,24 +240,30 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
             tabs.addView(tab,p);
             tab.setOnClickListener(view->switchTab(v[1]));
         }
-        // Pin the configurable three-action bar beneath the main Quest tabs.
-        // It must not scroll with page content; the ordinary Android floater is unchanged.
-        if(isHub() && !"shortcuts".equals(page)){
-            List<String> bar=OverlayPreferences.quickBar(this);
-            if(!bar.isEmpty()){
-                LinearLayout quick=new LinearLayout(this);
-                quick.setPadding(dp(12),dp(2),dp(12),dp(2));
-                root.addView(quick,new LinearLayout.LayoutParams(-1,-2));
-                for(String key:bar){
-                    Button q=CompanionStyle.button(this,
-                        OverlayPreferences.name(key),false);
-                    q.setTextSize(11);
-                    LinearLayout.LayoutParams p=
-                        new LinearLayout.LayoutParams(0,dp(37),1f);
-                    p.setMargins(dp(2),0,dp(2),dp(4));
-                    quick.addView(q,p);
-                    q.setOnClickListener(v->openShortcut(key));
-                }
+        // Keep the user-configured three-button bar as a fixed sibling of
+        // the ScrollView on EVERY Quest Tools page, including nested mini
+        // pages and the shortcuts editor. Previously it disappeared as soon
+        // as isHub() was false, which felt like the buttons moved with pages.
+        // Rebuild it from saved preferences after navigation so button edits
+        // are reflected without moving the bar into scrolling content.
+        List<String> bar=OverlayPreferences.quickBar(this);
+        if(!bar.isEmpty()){
+            LinearLayout quick=new LinearLayout(this);
+            quick.setGravity(Gravity.CENTER_VERTICAL);
+            quick.setBackgroundColor(CompanionStyle.SURFACE);
+            quick.setPadding(dp(12),dp(5),dp(12),dp(5));
+            root.addView(quick,new LinearLayout.LayoutParams(-1,dp(51)));
+            for(String key:bar){
+                Button q=CompanionStyle.button(this,
+                    OverlayPreferences.name(key),false);
+                q.setTextSize(11);
+                q.setSingleLine(true);
+                q.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                LinearLayout.LayoutParams p=
+                    new LinearLayout.LayoutParams(0,dp(39),1f);
+                p.setMargins(dp(2),0,dp(2),0);
+                quick.addView(q,p);
+                q.setOnClickListener(v->openShortcut(key));
             }
         }
         scroll=new ScrollView(this);
