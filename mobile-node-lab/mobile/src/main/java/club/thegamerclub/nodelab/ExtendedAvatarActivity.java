@@ -32,7 +32,7 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
     private long verifiedAt=0L;
     private boolean busy=false;
     private TextView message,total;
-    private Button add,collection,refresh;
+    private Button add,collection,refresh,manual;
     private EditText search;
     private int dp(float n){return CompanionStyle.dp(this,n);}
     private TextView text(String label,int size,int color,boolean strong){
@@ -86,7 +86,7 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
         LinearLayout.LayoutParams a=new LinearLayout.LayoutParams(dp(162),dp(43));
         a.leftMargin=dp(7);filters.addView(add,a);
         add.setOnClickListener(v->browseFavorites());
-        Button manual=CompanionStyle.button(this,"Add by avatar link / ID · Advanced",false);
+        manual=CompanionStyle.button(this,"Add by avatar link / ID · Advanced",false);
         LinearLayout.LayoutParams mp=CompanionStyle.buttonParams(this);
         mp.setMargins(dp(14),dp(1),dp(14),dp(7));
         root.addView(manual,mp);
@@ -118,6 +118,7 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
     private void controls(){
         boolean allowed=!accountId.isEmpty()&&!busy&&StaffGate.unlocked(this);
         add.setEnabled(allowed);
+        manual.setEnabled(allowed);
         collection.setEnabled(allowed);
         search.setEnabled(allowed);
         refresh.setEnabled(!busy);
@@ -239,22 +240,29 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
         message.setText("Checking avatar and VRC+ membership…");
         final String original=accountId;
         worker.execute(()->{
-            String error=null;
+            String error=null,result="";
             try{
                 String verified=VRChatApi.requireActiveVRCPlus(this);
                 if(!original.equals(verified))throw new SecurityException("VRChat account changed. Refresh this screen.");
-                JSONObject detail=VRChatApi.avatar(this,id);
-                if(!id.equals(detail.optString("id","")))
-                    throw new SecurityException("VRChat returned a different avatar.");
                 try(ExtendedAvatarStore db=new ExtendedAvatarStore(this)){
-                    db.add(original,detail,cat);
+                    String current=db.categoryFor(original,id);
+                    if(cat.equals(current))result="Already saved in "+cat+".";
+                    else if(current!=null){
+                        db.move(original,id,cat);
+                        result="Moved avatar to "+cat+".";
+                    }else{
+                        JSONObject detail=VRChatApi.avatar(this,id);
+                        if(!id.equals(detail.optString("id","")))
+                            throw new SecurityException("VRChat returned a different avatar.");
+                        db.add(original,detail,cat);
+                        result="Avatar saved to "+cat+".";
+                    }
                 }
             }catch(Exception ex){error=ex.getMessage();}
-            final String issue=error;
+            final String issue=error,outcome=result;
             runOnUiThread(()->{
                 busy=false;if(isFinishing()||isDestroyed())return;
-                message.setText(issue==null?"Avatar saved in Extended Favorites.":
-                    "Couldn't save avatar: "+issue);
+                message.setText(issue==null?outcome:"Couldn't save avatar: "+issue);
                 controls();
                 if(issue==null)reload();
             });
