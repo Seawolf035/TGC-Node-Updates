@@ -1,5 +1,7 @@
 # TGC Node Updates
 
+**License notice:** Original TGC Staff Companion code and artwork are proprietary and all rights are reserved, except for third-party material governed by its own licenses. The staff application's [license notice](PROPRIETARY_LICENSE.md) and [in-app agreement](mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt) explain the restrictions and exceptions. Public source visibility does not make it an open-source release.
+
 Downloads and update files for **The Gamer Club's VRChat invite network**.
 
 The Nodes and Staff Launcher check [`manifest.json`](manifest.json) for new releases. This repository holds the update packages; the Main Launcher manages the network itself.
