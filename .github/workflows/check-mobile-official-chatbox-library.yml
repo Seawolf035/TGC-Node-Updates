@@ -1,0 +1,42 @@
+name: Validate official TGC role-locked OSC chatboxes
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.18.1-role-locked-chatbox-library
+    paths:
+      - "mobile-node-lab/mobile/**"
+      - "mobile-node-lab/build.gradle"
+      - "mobile-node-lab/gradle.properties"
+      - "mobile-node-lab/settings.gradle"
+      - ".github/workflows/check-mobile-official-chatbox-library.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile debug APK
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-0.18.1-role-chatboxes-debug
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
