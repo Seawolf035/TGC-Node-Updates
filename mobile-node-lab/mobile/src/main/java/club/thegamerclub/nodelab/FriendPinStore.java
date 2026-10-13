@@ -50,6 +50,27 @@ public final class FriendPinStore {
                 return true;
         return false;
     }
+    /** Manual order of saved friend shortcuts. Reordering never changes friendships. */
+    public static synchronized void move(Context ctx,String uid,int direction){
+        if(!StaffGate.unlocked(ctx))throw new SecurityException("Verified staff required.");
+        if(direction!=1&&direction!=-1)
+            throw new IllegalArgumentException("Move one row at a time.");
+        JSONArray current=pins(ctx);
+        int position=-1;
+        for(int i=0;i<current.length();i++)
+            if(uid.equals(current.optJSONObject(i).optString("id",""))){
+                position=i;break;
+            }
+        int next=position+direction;
+        if(position<0||next<0||next>=current.length())return;
+        JSONArray reordered=new JSONArray();
+        for(int i=0;i<current.length();i++){
+            int source=i==position?next:(i==next?position:i);
+            reordered.put(current.optJSONObject(source));
+        }
+        ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
+            .putString(key(ctx),reordered.toString()).apply();
+    }
     public static void setPinned(Context ctx,String uid,String name,boolean on)
         throws Exception{
         if(!StaffGate.unlocked(ctx))
