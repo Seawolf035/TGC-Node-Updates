@@ -2258,9 +2258,10 @@ public final class OverlayMiniVrcx {
         LinearLayout rotating=card(list);
         try{
             int extra=OscControlStore.chatboxes(ctx).length();
+            int official=TgcOfficialChatboxes.selectedEligible(ctx).size();
             boolean on=OscControlStore.rotationEnabled(ctx);
             rotating.addView(text((on?"● Rotating ":"○ Rotation OFF · ")+
-                extra+" saved additional chatbox"+(extra==1?"":"es"),
+                extra+" personal and "+official+" official chatboxes selected",
                 13,on?CompanionStyle.GOOD:CompanionStyle.MUTED,true));
             rotating.addView(text(
                 "Keep this default status, and add named messages to switch between. "+
@@ -2397,7 +2398,7 @@ public final class OverlayMiniVrcx {
         intro.addView(text("Rotating Live Chatboxes",18,CompanionStyle.TEXT,true));
         intro.addView(text(
             "Your existing Live Chatbox is always the first slot. Add up to "+
-            "8 more named messages and optionally switch between them. "+
+            "8 personal chatboxes and select eligible official staff messages. "+
             "Nothing is transmitted by editing or saving.",
             12,CompanionStyle.MUTED,false));
         intro.addView(text(
@@ -2437,6 +2438,46 @@ public final class OverlayMiniVrcx {
             });
         }
 
+        section(list,"TGC OFFICIAL STAFF CHATBOXES");
+        LinearLayout officialHeader=card(list);
+        int tier=StaffGate.rankTier(ctx);
+        officialHeader.addView(text("Verified rank: "+StaffGate.rankLabel(ctx),
+            14,tier>0?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        officialHeader.addView(text(
+            "All verified staff can use common messages. Your highest verified "+
+            "rank unlocks its official message and every lower tier. "+
+            "The Royalty is restricted to three approved Discord IDs.",
+            12,CompanionStyle.MUTED,false));
+        officialHeader.addView(text(
+            "Messages are read-only presets. Select any unlocked message to "+
+            "include it in your rotation; sending still requires Start and Confirm. "+
+            "Previously selected messages above a downgraded rank are not sent.",
+            12,CompanionStyle.MUTED,false));
+        for(TgcOfficialChatboxes.Template official:TgcOfficialChatboxes.templates()){
+            boolean allowed=TgcOfficialChatboxes.eligible(ctx,official);
+            boolean selected=false;
+            try{selected=TgcOfficialChatboxes.isSelected(ctx,official.id);}
+            catch(Exception ignored){}
+            LinearLayout entry=card(list);
+            entry.addView(text(official.text,15,CompanionStyle.TEXT,true));
+            entry.addView(text(
+                official.rank+(official.suggested?" · Source cycle default":"")+
+                (allowed?" · UNLOCKED":" · LOCKED"),
+                12,allowed?CompanionStyle.ACCENT:CompanionStyle.MUTED,false));
+            if(allowed){
+                button(entry,selected?"✓ Remove from rotation":"Add to rotation",
+                    selected,()->{
+                    try{
+                        boolean current=TgcOfficialChatboxes.isSelected(ctx,official.id);
+                        TgcOfficialChatboxes.setSelected(ctx,official.id,!current);
+                        drawList();
+                    }catch(Exception ex){message("Official preset: "+ex.getMessage());}
+                });
+            }else{
+                entry.addView(text("Requires verified "+official.rank+" access.",
+                    11,CompanionStyle.MUTED,false));
+            }
+        }
         section(list,"YOUR CHATBOXES");
         LinearLayout defaultBox=card(list);
         defaultBox.addView(text("1 · Default Live Chatbox",14,CompanionStyle.TEXT,true));
