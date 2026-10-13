@@ -31,6 +31,8 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
     private AvatarFavoritesRepository.Snapshot favoriteLists;
     private String selectedGroup="all";
     private String statusWarning="";
+    private final java.util.HashSet<String> savedExtended=new java.util.HashSet<>();
+    private boolean pickerMode=false;
     private EditText filter;
     private boolean loading=false;
     private int dp(float n){return CompanionStyle.dp(this,n);}
@@ -40,9 +42,14 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         if(!StaffGate.unlocked(this)){finish();return;}
+        pickerMode=getIntent().getBooleanExtra("extended_picker",false);
         render();fetch();
     }
-    @Override protected void onResume(){super.onResume();if(!StaffGate.unlocked(this))finish();}
+    @Override protected void onResume(){
+        super.onResume();
+        if(!StaffGate.unlocked(this)){finish();return;}
+        refreshExtendedSaved();
+    }
     private void render(){
         getWindow().setStatusBarColor(CompanionStyle.BG);
         getWindow().setNavigationBarColor(CompanionStyle.BG);
@@ -54,18 +61,24 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
         Button back=CompanionStyle.button(this,"‹",false);back.setTextSize(25);
         head.addView(back,new LinearLayout.LayoutParams(dp(51),dp(47)));
         back.setOnClickListener(v->finish());
-        TextView heading=text("Favorite avatars",22,CompanionStyle.TEXT,true);
+        TextView heading=text(pickerMode?"Choose an avatar":"Favorite avatars",
+            22,CompanionStyle.TEXT,true);
         heading.setPadding(dp(13),0,0,0);head.addView(heading);
         Button extended=CompanionStyle.button(this,"Local avatar collections • VRC+",true);
         LinearLayout.LayoutParams extendedP=CompanionStyle.buttonParams(this);
         extendedP.setMargins(dp(15),dp(4),dp(15),dp(3));
         root.addView(extended,extendedP);
+        extended.setVisibility(pickerMode?View.GONE:View.VISIBLE);
         extended.setOnClickListener(v->{
             if(!StaffGate.unlocked(this)){finish();return;}
             startActivity(new Intent(this,ExtendedAvatarActivity.class));
         });
         status=text("Loading VRChat favorite lists…",13,CompanionStyle.MUTED,false);
         status.setPadding(dp(17),dp(11),dp(17),dp(8));root.addView(status);
+        if(pickerMode){
+            TextView help=text("Tap ☆ Save beside any avatar to choose a local Extended Favorites category. No avatar ID is needed.",13,CompanionStyle.MUTED,false);
+            help.setPadding(dp(17),0,dp(17),dp(8));root.addView(help);
+        }
         groupPicker=CompanionStyle.button(this,"All favorite lists ▾",false);
         LinearLayout.LayoutParams gp=CompanionStyle.buttonParams(this);
         gp.setMargins(dp(15),dp(3),dp(15),dp(9));
@@ -232,16 +245,41 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
                     .setTitle(name)
                     .setMessage(msg.toString())
                     .setNegativeButton("Close",null)
-                    .setNeutralButton("Save to Extended",(d,w)->{
+                    .setNeutralButton(savedExtended.contains(id)?
+                        "Move in Extended":"Save to Extended",(d,w)->{
                         if(!StaffGate.unlocked(this)){finish();return;}
-                        startActivity(new Intent(this,ExtendedAvatarActivity.class)
-                            .putExtra("avatar_id",id));
+                        saveToExtended(data);
                     })
                     .setPositiveButton("Use this avatar",(d,w)->confirmSelection(id,name))
                     .show();
                 updateSummary();
             });
         });
+    }
+    /** The Saved badges are read only from this account's private local database. */
+    private void refreshExtendedSaved(){
+        if(!StaffGate.unlocked(this))return;
+        worker.execute(()->{
+            java.util.HashSet<String> next=new java.util.HashSet<>();
+            try{
+                JSONObject session=VRChatSession.load(this);
+                String user=session==null?"":session.optString("userId","");
+                try(ExtendedAvatarStore db=new ExtendedAvatarStore(this)){
+                    next=db.savedIds(user);
+                }
+            }catch(Exception ignored){}
+            final java.util.HashSet<String> snapshot=next;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
+                savedExtended.clear();
+                savedExtended.addAll(snapshot);
+                adapter.notifyDataSetChanged();
+            });
+        });
+    }
+    private void saveToExtended(JSONObject avatar){
+        if(!StaffGate.unlocked(this)){finish();return;}
+        ExtendedAvatarSaveFlow.open(this,avatar,worker,this::refreshExtendedSaved);
     }
     private void confirmSelection(String id,String name){
         new AlertDialog.Builder(this).setTitle("Change your VRChat avatar?")
@@ -262,8 +300,11 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
     private final class Holder extends RecyclerView.ViewHolder{
         final TextView title,author;
         final ImageView image;
-        Holder(LinearLayout row,TextView title,TextView author,ImageView image){
+        final Button save;
+        Holder(LinearLayout row,TextView title,TextView author,
+            ImageView image,Button save){
             super(row);this.title=title;this.author=author;this.image=image;
+            this.save=save;
         }
     }
     private final class AvatarAdapter extends RecyclerView.Adapter<Holder>{
@@ -297,8 +338,12 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
             labels.addView(title);
             TextView author=text("",12,CompanionStyle.MUTED,false);
             labels.addView(author);
-            row.addView(text("›",28,CompanionStyle.ACCENT,false));
-            return new Holder(row,title,author,image);
+            Button quickSave=CompanionStyle.button(VRChatAvatarActivity.this,"☆ Save",false);
+            quickSave.setTextSize(12);
+            LinearLayout.LayoutParams qp=new LinearLayout.LayoutParams(dp(93),dp(46));
+            qp.rightMargin=dp(4);
+            row.addView(quickSave,qp);
+            return new Holder(row,title,author,image,quickSave);
         }
         @Override public void onBindViewHolder(Holder h,int position){
             JSONObject item=shown.get(position);
@@ -306,6 +351,13 @@ public final class VRChatAvatarActivity extends StaffProtectedActivity {
             h.author.setText("By "+item.optString("authorName","Unknown creator"));
             CompanionImages.load(h.image,CompanionImages.preferred(item,
                 "thumbnailImageUrl","imageUrl"));
+            String id=item.optString("id","");
+            boolean saved=savedExtended.contains(id);
+            h.save.setText(saved?"★ Saved":"☆ Save");
+            h.save.setContentDescription(saved?
+                "Move "+item.optString("name","avatar")+" in Extended Favorites":
+                "Save "+item.optString("name","avatar")+" to Extended Favorites");
+            h.save.setOnClickListener(v->saveToExtended(item));
             h.itemView.setOnClickListener(v->inspect(item));
         }
         @Override public int getItemCount(){return shown.size();}
