@@ -104,6 +104,9 @@ public final class FloatingCompanionService extends Service {
     // It uses this already-authorized floating foreground service while its
     // bubble exists, even when the panel is collapsed.
     private volatile boolean oscLiveActive=false;
+    private volatile boolean oscLivePaused=false;
+    private TextView oscQuickStatus;
+    private Button oscQuickStartStop,oscQuickPause;
     private boolean oscLiveBusy=false;
     private int oscLiveIntervalSeconds=5;
     private volatile int oscLiveGeneration=0;
@@ -122,6 +125,10 @@ public final class FloatingCompanionService extends Service {
             }
             // A manual chat message wins; allow it to stay visible long enough
             // to be read before resuming the periodic status line.
+            if(oscLivePaused){
+                handler.postDelayed(this,2000L);
+                return;
+            }
             if(VRChatOscChat.sinceManualChatMs()<20_000L){
                 handler.postDelayed(this,5_000L);
                 return;
@@ -229,8 +236,10 @@ public final class FloatingCompanionService extends Service {
             oscLiveSwitchElapsed=android.os.SystemClock.elapsedRealtime();
             oscLiveIntervalSeconds=seconds;
             oscLiveActive=true;
+            oscLivePaused=false;
             oscLiveLastError="";
             handler.post(oscLiveTick);
+            refreshOscQuick();
             updateForegroundText("Live OSC Chatbox · every "+seconds+" seconds");
         }catch(Exception e){
             Toast.makeText(this,"Live Chatbox unavailable: "+e.getMessage(),
@@ -239,15 +248,18 @@ public final class FloatingCompanionService extends Service {
     }
     private void stopOscLive(){
         oscLiveActive=false;
+        oscLivePaused=false;
         oscLiveGeneration++;
         handler.removeCallbacks(oscLiveTick);
         oscLiveBusy=false;
+        refreshOscQuick();
         if(!stoppingExplicitly&&bubble!=null)
             updateForegroundText("Floating tools ready");
     }
     private String oscLiveSummary(){
         if(!oscLiveActive)return "OFF · Only sends when you press Send";
-        String label="ON · Refresh every "+oscLiveIntervalSeconds+" seconds";
+        String label=(oscLivePaused?"PAUSED":"ON")+
+            " · Refresh every "+oscLiveIntervalSeconds+" seconds";
         try{
             int slots=OscControlStore.liveSlotCount(this);
             if(slots>1)
@@ -1139,6 +1151,7 @@ public final class FloatingCompanionService extends Service {
         presenceActionLabel=null;
         nodeStatus=null;nodeStats=null;trackingToggle=null;recentStatus=null;
         oscVoiceInfo=null;oscVoiceToggle=null;
+        oscQuickStatus=null;oscQuickStartStop=null;oscQuickPause=null;
         switch(selectedTab){
             case "social":showSocial();break;
             case "osc":showOscDashboard();break;
@@ -1240,6 +1253,59 @@ public final class FloatingCompanionService extends Service {
         action(players,"My VRChat groups",false,()->go("mini_groups"));
     }
     /** Dedicated fourth tab: all local VRChat Mobile OSC controls live here. */
+    private void refreshOscQuick(){
+        if(oscQuickStatus!=null)oscQuickStatus.setText(oscLiveSummary());
+        if(oscQuickStartStop!=null)
+            oscQuickStartStop.setText(oscLiveActive?
+                "Stop Live Chatbox":"Start Live Chatbox");
+        if(oscQuickPause!=null){
+            oscQuickPause.setVisibility(oscLiveActive?View.VISIBLE:View.GONE);
+            oscQuickPause.setText(oscLivePaused?"Resume rotation":"Pause rotation");
+        }
+    }
+    private void toggleOscPause(){
+        if(!oscLiveActive)return;
+        oscLivePaused=!oscLivePaused;
+        if(!oscLivePaused){
+            handler.removeCallbacks(oscLiveTick);
+            handler.post(oscLiveTick);
+        }
+        refreshOscQuick();
+        showPinnedFeedback(oscLivePaused?
+            "Live Chatbox paused; no OSC status packets until resumed.":
+            "Live Chatbox resumed.");
+    }
+    private void quickOscStartStop(){
+        if(oscLiveActive){
+            stopOscLive();
+            showPinnedFeedback("Live Chatbox stopped.");
+            return;
+        }
+        try{
+            if(OscControlStore.liveSlotCount(this)<1)
+                throw new IllegalStateException("Select an eligible chatbox first.");
+            OscControlStore.liveChatboxAt(this,0);
+        }catch(Exception e){
+            showPinnedFeedback("Cannot start: "+e.getMessage());return;
+        }
+        final int speed=OscControlStore.liveInterval(this);
+        showPinnedConfirmation("Start Live Chatbox every "+speed+
+            " seconds? Sends the selected rotating chatboxes until stopped.",()->
+            startOscLive(speed));
+    }
+    private void sendQuickPhrase(String line){
+        if(!StaffGate.unlocked(this))return;
+        eventsWorker.execute(()->{
+            String error=null;
+            try{VRChatOscChat.send(line,false);}
+            catch(Exception e){error=e.getMessage();}
+            final String result=error;
+            handler.post(()->showPinnedFeedback(result==null?
+                "OSC chat sent locally; verify it appeared in VRChat.":
+                "OSC chat: "+result));
+        });
+    }
+
     private void showOscDashboard(){
         section(panelContent,"OSC · VRCHAT MOBILE");
         LinearLayout top=panelCard(panelContent);
@@ -1247,6 +1313,61 @@ public final class FloatingCompanionService extends Service {
             14,CompanionStyle.TEXT,true));
         top.addView(text("Enable OSC in VRChat's Action Menu. OSC uses 127.0.0.1:9000 and does not need Shizuku, a PC or the TGC Relay.",
             12,CompanionStyle.MUTED,false));
+
+        section(panelContent,"FAST CHATBOX CONTROLS");
+        LinearLayout fast=panelCard(panelContent);
+        oscQuickStatus=text(oscLiveSummary(),12,
+            oscLiveActive?CompanionStyle.GOOD:CompanionStyle.MUTED,false);
+        fast.addView(oscQuickStatus);
+        oscQuickStartStop=action(fast,
+            oscLiveActive?"Stop Live Chatbox":"Start Live Chatbox",true,
+            this::quickOscStartStop);
+        oscQuickPause=action(fast,
+            oscLivePaused?"Resume rotation":"Pause rotation",false,
+            this::toggleOscPause);
+        refreshOscQuick();
+        try{
+            boolean exclusive=OscControlStore.officialOnly(this);
+            Button only=action(fast,exclusive?
+                "✓ Official TGC tags only":"Use official TGC tags only",
+                false,()->{});
+            only.setOnClickListener(v->{
+                try{
+                    boolean next=!OscControlStore.officialOnly(this);
+                    OscControlStore.setOfficialOnly(this,next);
+                    only.setText(next?"✓ Official TGC tags only":
+                        "Use official TGC tags only");
+                    refreshOscQuick();
+                    showPinnedFeedback(next?"Only authorized official tags will rotate.":
+                        "Personal chatboxes are included again where enabled.");
+                }catch(Exception ex){showPinnedFeedback(ex.getMessage());}
+            });
+        }catch(Exception ignored){}
+        paired(fast,"Edit status","Official tags",
+            ()->go("mini_osc_status"),()->go("mini_osc_tags"));
+
+        section(panelContent,"SEND SAVED PHRASE");
+        LinearLayout quickPhrases=panelCard(panelContent);
+        int phraseCount=0;
+        try{
+            JSONArray phrases=OscControlStore.phrases(this);
+            for(int i=0;i<phrases.length()&&phraseCount<4;i++){
+                JSONObject entry=phrases.optJSONObject(i);
+                if(entry==null)continue;
+                String value=entry.optString("text","");
+                if(value.isEmpty())continue;
+                final String line=value;
+                String name=entry.optString("name","Saved phrase");
+                action(quickPhrases,"Send · "+name,false,()->
+                    sendQuickPhrase(line));
+                phraseCount++;
+            }
+        }catch(Exception ignored){}
+        if(phraseCount==0)quickPhrases.addView(text(
+            "Save a quick phrase to send it with one tap here.",
+            12,CompanionStyle.MUTED,false));
+        action(quickPhrases,"All saved phrases",false,
+            ()->go("mini_osc_presets"));
 
         section(panelContent,"EXPERIMENTAL MICROPHONE INPUT");
         LinearLayout mic=panelCard(panelContent);
@@ -1619,6 +1740,7 @@ public final class FloatingCompanionService extends Service {
         panel=null;panelContent=null;panelModalLayer=null;panelScroller=null;
         quickBarRow=null;
         oscVoiceQuickRelease=null;oscVoiceToggle=null;oscVoiceInfo=null;
+        oscQuickStatus=null;oscQuickStartStop=null;oscQuickPause=null;
         recentRows=null;recentStatus=null;
         presenceLabel=null;presenceActionLabel=null;
         panelParams=null;
