@@ -18,8 +18,8 @@ import java.util.concurrent.Executors;
 /** VRCX-inspired status presets; local presets, live VRChat account presence. */
 public final class PresenceActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
-    private final String[] states={"active","join me","ask me","busy","offline"};
-    private final String[] labels={"Online","Join Me","Ask Me","Do Not Disturb","Offline"};
+    private final String[] states={"active","join me","ask me","busy"};
+    private final String[] labels={"Online","Join Me","Ask Me","Do Not Disturb"};
     private String accountId="",chosen="active";
     private boolean busy=false;
     private EditText description;
@@ -103,7 +103,7 @@ public final class PresenceActivity extends StaffProtectedActivity {
         root.addView(CompanionStyle.section(this,"YOUR SAVED PRESETS"));
         saved=card(root);
         saved.addView(text("Loading presets...",13,CompanionStyle.MUTED,false));
-        root.addView(text("Presets are private to this phone and VRChat account. Only Apply changes your live VRChat status.",
+        root.addView(text("Presets are private to this device and VRChat account. Only Apply changes your live VRChat status.",
             12,CompanionStyle.MUTED,false));
         controls();
     }
@@ -132,6 +132,10 @@ public final class PresenceActivity extends StaffProtectedActivity {
     private int indexOf(String value){
         for(int i=0;i<states.length;i++)if(states[i].equals(value))return i;
         return 0;
+    }
+    private boolean isSelectable(String status){
+        for(String state:states)if(state.equals(status))return true;
+        return false;
     }
     private void load(){
         if(busy||!StaffGate.unlocked(this))return;
@@ -182,14 +186,20 @@ public final class PresenceActivity extends StaffProtectedActivity {
             String status=p.optString("status","active");
             String desc=p.optString("description","");
             TextView name=text(title,16,CompanionStyle.TEXT,true);saved.addView(name);
-            TextView detail=text(status+(desc.isEmpty()?"":" · "+desc),12,CompanionStyle.MUTED,false);
+            boolean supported=isSelectable(status);
+            TextView detail=text((supported?status:"Unavailable status: "+status)+
+                (desc.isEmpty()?"":" · "+desc),12,
+                supported?CompanionStyle.MUTED:CompanionStyle.GOLD,false);
             saved.addView(detail);
             LinearLayout buttons=new LinearLayout(this);
             buttons.setGravity(Gravity.CENTER_VERTICAL);
             saved.addView(buttons);
-            Button use=CompanionStyle.button(this,"Load preset",false);
+            Button use=CompanionStyle.button(this,
+                supported?"Load preset":"Status unavailable",false);
             buttons.addView(use,new LinearLayout.LayoutParams(0,dp(43),1f));
+            use.setEnabled(supported);
             use.setOnClickListener(v->{
+                if(!isSelectable(status))return;
                 chosen=status;chosenLabel.setText("Selected: "+labels[indexOf(chosen)]);
                 paintStatuses();
                 description.setText(desc);
@@ -244,6 +254,9 @@ public final class PresenceActivity extends StaffProtectedActivity {
     private void confirmApply(){
         if(busy||accountId.isEmpty()||!StaffGate.unlocked(this))return;
         String status=chosen,desc=description.getText().toString().trim();
+        if(!isSelectable(status)){
+            feedback.setText("That status is not available in VRChat.");return;
+        }
         new AlertDialog.Builder(this).setTitle("Update your VRChat status?")
             .setMessage("Set your status to "+labels[indexOf(status)]+
                 (desc.isEmpty()?"":("\n\n"+desc))+"?")
@@ -251,7 +264,7 @@ public final class PresenceActivity extends StaffProtectedActivity {
             .setPositiveButton("Update",(d,w)->apply(status,desc)).show();
     }
     private void apply(String status,String desc){
-        if(busy)return;
+        if(busy||!isSelectable(status))return;
         busy=true;controls();feedback.setText("Updating your status…");
         String original=accountId;
         io.execute(()->{
