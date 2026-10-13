@@ -1,0 +1,68 @@
+name: Validate v0.18.7 pinned online alerts
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.18.7-pinned-friend-alerts
+    paths:
+      - "mobile-node-lab/mobile/**"
+      - ".github/workflows/check-mobile-pinned-online.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Validate online-transition alert safeguards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          pins=(root/'FriendPinStore.java').read_text()
+          alert=(root/'PinnedFriendAlerts.java').read_text()
+          worker=(root/'PinnedFriendAlertWorker.java').read_text()
+          floating=(root/'FloatingCompanionService.java').read_text()
+          activity=(root/'CompanionActivity.java').read_text()
+          assert 'void move(Context ctx,String uid,int direction)' in pins
+          assert 'renderPinnedRows(pinnedRows)' in floating
+          assert 'FriendPinStore.move(this,id,-1)' in floating
+          assert 'FriendPinStore.move(this,id,1)' in floating
+          assert 'PinnedFriendAlerts.observe(' in floating
+          assert 'VRChatApi.friendSnapshot' in floating
+          assert 'private static final String PERIODIC=' in alert
+          assert '15,TimeUnit.MINUTES' in alert
+          assert 'boolean seeded=' in alert
+          assert 'previous.has(id)' in alert
+          assert '!previous.optBoolean(id,false) && online' in alert
+          assert 'setEnabled(Context ctx,boolean enable)' in alert
+          assert 'PinnedFriendAlerts.recentOverlayObservation(ctx)' in worker
+          assert 'Pinned friend' in worker
+          assert 'PinnedFriendAlerts.restore(this)' in activity
+          assert 'togglePinnedFriendAlerts()' in activity
+          assert 'versionCode 50' in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          print('All pinned friend online alert and ordering checks passed')
+          PY
+      - name: Compile Android debug APK
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-v0.18.7-Pinned-Friend-Alerts-Debug
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
