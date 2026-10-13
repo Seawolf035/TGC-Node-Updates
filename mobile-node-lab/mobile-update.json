@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.10",
-  "version_code": 62,
+  "version": "0.19.11",
+  "version_code": 63,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "c10e14e741ab09556c0015c71360c594fdc54a310e2b156498773129ce2ff730",
-  "notes": "v0.19.10: Place the first-time VRChat Settings > Debug > Logging > FULL tracking setup guide directly on the main Tracking tab, with acknowledgement there and a small View setup guide control afterward. Tracking controls no longer owns a first-use modal or Advanced-only guide; attempting to start tracking before first acknowledgement returns to the Tracking tab. Existing linked installs preserve the previous v0.19.9 acknowledgement. Add a proprietary TGC Staff Companion end-user/staff user agreement shown for explicit first-use acceptance, with decline-to-exit and a Settings review link; license terms are versioned and locally recorded, do not claim exclusive rights in VRChat or third-party components, and do not prevent independently developed applications. Add an all-rights-reserved repository notice. The distribution repository remains public; no repo visibility change or Main Launcher / Relay deployment. Quest universal Back, Quest folder tracking, Android phone Shizuku and floater, OSC, avatars, staff authorization and Relay unchanged."
+  "sha256": "8b2ab3ea7fe971fed2b4736751a4a3b59813da8bc61abd95bcdba1a4204cf853",
+  "notes": "v0.19.11 (code 63): Repair first-launch license acceptance on Quest and Android without resetting app data. The full agreement stays scrollable, while a compact permanently visible action bar provides explicit Agree & Continue and Decline & Exit controls. Remove the potentially inaccessible checkbox gate and avoid text-selection intercepting Quest scrolling. Verify the agreement version and timestamp were saved to local preferences before dismissing; fail closed if the agreement is unavailable. The agreement text and version 2026-10-13.1 have NOT changed; the comprehensive proprietary rewrite remains unpublished. Preserve the main Tracking tab Full logging guide, Quest read-only SAF Documents/Logs folder access, phone Shizuku, Quest Tools, Quest universal Back, OSC controls, staff grants, Relay authorization, GM3 identification, GM4 membership checks, and GM1-only invite sending. No data wipe, package/signature change, Main Launcher or Relay production change."
 }
