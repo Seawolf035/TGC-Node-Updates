@@ -141,7 +141,7 @@ public final class OscControlStore {
             throw new IllegalArgumentException("Choose a 5, 10, 15 or 30 second interval.");
         prefs(ctx).edit().putInt(key(ctx,"live_interval_seconds"),seconds).apply();
     }
-    /** Additional named rotating chatboxes; the legacy status remains slot zero. */
+    /** Additional named rotating chatboxes; the legacy status is optional. */
     public static void saveChatbox(Context ctx,String previousName,String newName,
                                    String message,boolean clock,boolean battery)throws Exception{
         String label=validLabel(newName);
@@ -184,17 +184,69 @@ public final class OscControlStore {
             TgcOfficialChatboxes.selectedEligible(ctx).isEmpty())
             setRotationEnabled(ctx,false);
     }
+    /** Keep existing installs identical by default. Preferences are per VRChat account. */
+    public static boolean includeDefaultChatbox(Context ctx){
+        return prefs(ctx).getBoolean(key(ctx,"include_default_chatbox"),true);
+    }
+    /** When enabled, excludes BOTH default status and custom personal chatboxes. */
+    public static boolean officialOnly(Context ctx){
+        return prefs(ctx).getBoolean(key(ctx,"official_only_chatboxes"),false);
+    }
+    public static void setOfficialOnly(Context ctx,boolean on){
+        if(!StaffGate.unlocked(ctx))
+            throw new SecurityException("Verified staff access required.");
+        if(on&&TgcOfficialChatboxes.selectedEligible(ctx).isEmpty())
+            throw new IllegalArgumentException(
+                "Select an unlocked official TGC chatbox tag first.");
+        android.content.SharedPreferences.Editor edit=prefs(ctx).edit()
+            .putBoolean(key(ctx,"official_only_chatboxes"),on);
+        if(on)edit.putBoolean(key(ctx,"chatbox_rotation_enabled"),true);
+        edit.apply();
+    }
+    public static void setIncludeDefaultChatbox(Context ctx,boolean included){
+        if(!StaffGate.unlocked(ctx))
+            throw new SecurityException("Verified staff access required.");
+        if(!included&&!officialOnly(ctx)&&chatboxes(ctx).length()==0&&
+           TgcOfficialChatboxes.selectedEligible(ctx).isEmpty())
+            throw new IllegalArgumentException(
+                "Save a personal chatbox or select an unlocked official tag first.");
+        android.content.SharedPreferences.Editor edit=prefs(ctx).edit()
+            .putBoolean(key(ctx,"include_default_chatbox"),included);
+        if(!included)edit.putBoolean(key(ctx,"chatbox_rotation_enabled"),true);
+        edit.apply();
+    }
+    /** Clear only the three personal default fields, never any official selection. */
+    public static void clearPersonalStatus(Context ctx){
+        if(!StaffGate.unlocked(ctx))
+            throw new SecurityException("Verified staff access required.");
+        prefs(ctx).edit()
+            .putString(key(ctx,"prefix"),"")
+            .putBoolean(key(ctx,"include_time"),false)
+            .putBoolean(key(ctx,"include_battery"),false).apply();
+    }
     public static boolean rotationEnabled(Context ctx){
+        // Official-only must never silently fall back to the legacy personal line.
+        if(officialOnly(ctx))
+            return prefs(ctx).getBoolean(key(ctx,"chatbox_rotation_enabled"),false)
+                &&!TgcOfficialChatboxes.selectedEligible(ctx).isEmpty();
         return prefs(ctx).getBoolean(key(ctx,"chatbox_rotation_enabled"),false)
             &&(chatboxes(ctx).length()>0||
                !TgcOfficialChatboxes.selectedEligible(ctx).isEmpty());
     }
     public static void setRotationEnabled(Context ctx,boolean enabled){
-        if(enabled&&chatboxes(ctx).length()==0&&
-           TgcOfficialChatboxes.selectedEligible(ctx).isEmpty())
+        if(!StaffGate.unlocked(ctx))
+            throw new SecurityException("Verified staff access required.");
+        if(!enabled&&(officialOnly(ctx)||!includeDefaultChatbox(ctx)))
             throw new IllegalArgumentException(
-                "Save a personal chatbox or select an unlocked official TGC chatbox first.");
+                "Turn on the default personal status before disabling rotation.");
+        if(enabled&&effectiveExtras(ctx)==0)
+            throw new IllegalArgumentException(
+                "Save a personal chatbox or select an unlocked official TGC tag first.");
         prefs(ctx).edit().putBoolean(key(ctx,"chatbox_rotation_enabled"),enabled).apply();
+    }
+    private static int effectiveExtras(Context ctx){
+        int official=TgcOfficialChatboxes.selectedEligible(ctx).size();
+        return official+(officialOnly(ctx)?0:chatboxes(ctx).length());
     }
     public static int rotationInterval(Context ctx){
         int seconds=prefs(ctx).getInt(key(ctx,"chatbox_rotation_interval"),30);
@@ -206,24 +258,43 @@ public final class OscControlStore {
         prefs(ctx).edit().putInt(key(ctx,"chatbox_rotation_interval"),seconds).apply();
     }
     public static int liveSlotCount(Context ctx){
-        return rotationEnabled(ctx)?
-            1+chatboxes(ctx).length()+TgcOfficialChatboxes.selectedEligible(ctx).size():1;
+        boolean official=officialOnly(ctx);
+        if(rotationEnabled(ctx)){
+            return (official||!includeDefaultChatbox(ctx)?0:1)
+                +(official?0:chatboxes(ctx).length())
+                +TgcOfficialChatboxes.selectedEligible(ctx).size();
+        }
+        // No eligible official tags after rank loss => fail closed, not default.
+        return official||!includeDefaultChatbox(ctx)?0:1;
     }
     public static String liveChatboxAt(Context ctx,int slot){
-        if(slot<=0||!rotationEnabled(ctx))return statusLine(ctx);
-        JSONArray personal=chatboxes(ctx);
-        if(slot<=personal.length()){
-            JSONObject row=personal.optJSONObject(slot-1);
-            if(row==null)return statusLine(ctx);
-            return buildStatusLine(ctx,row.optString("text",""),
-                row.optBoolean("time",false),row.optBoolean("battery",false));
+        int count=liveSlotCount(ctx);
+        if(count<1)
+            throw new IllegalStateException(
+                "No authorized chatboxes to broadcast. Select an unlocked tag.");
+        if(slot<0||slot>=count)
+            throw new IllegalArgumentException("Chatbox slot is no longer available.");
+        if(!rotationEnabled(ctx))return statusLine(ctx);
+        int offset=slot;
+        if(!officialOnly(ctx)&&includeDefaultChatbox(ctx)){
+            if(offset==0)return statusLine(ctx);
+            offset--;
+        }
+        if(!officialOnly(ctx)){
+            JSONArray personal=chatboxes(ctx);
+            if(offset<personal.length()){
+                JSONObject row=personal.optJSONObject(offset);
+                if(row==null)throw new IllegalStateException("Saved chatbox is unavailable.");
+                return buildStatusLine(ctx,row.optString("text",""),
+                    row.optBoolean("time",false),row.optBoolean("battery",false));
+            }
+            offset-=personal.length();
         }
         java.util.List<TgcOfficialChatboxes.Template> selected=
             TgcOfficialChatboxes.selectedEligible(ctx);
-        int officialSlot=slot-personal.length()-1;
-        if(officialSlot<0||officialSlot>=selected.size())return statusLine(ctx);
-        // Official messages are fixed, no SFX and no implicit broadcast.
-        return VRChatOscChat.validate(selected.get(officialSlot).text);
+        if(offset<0||offset>=selected.size())
+            throw new IllegalStateException("Official chatbox authorization changed.");
+        return VRChatOscChat.validate(selected.get(offset).text);
     }
     public static String previewChatbox(Context ctx,String message,
                                         boolean clock,boolean battery){
