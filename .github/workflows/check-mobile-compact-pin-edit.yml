@@ -1,0 +1,63 @@
+name: Validate v0.18.8 compact friend edit mode
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.18.8-compact-pin-edit-mode
+    paths:
+      - "mobile-node-lab/mobile/**"
+      - ".github/workflows/check-mobile-compact-pin-edit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Validate compact rows and edit-only movement
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          service=(root/'FloatingCompanionService.java').read_text()
+          pins=(root/'FriendPinStore.java').read_text()
+          assert 'renderPinnedRows(LinearLayout rows,boolean editing)' in service
+          assert 'final int rowHeight=editing?38:32' in service
+          assert 'if(!editing){' in service
+          assert 'label.setOnClickListener(v->mini.profile(id))' in service
+          assert 'Button up=CompanionStyle.button(this,"↑",false)' in service
+          assert 'Button down=CompanionStyle.button(this,"↓",false)' in service
+          assert 'FriendPinStore.move(this,id,-1)' in service
+          assert 'FriendPinStore.move(this,id,1)' in service
+          assert 'edit.setOnClickListener(v->' in service
+          assert 'editing[0]=!editing[0]' in service
+          assert 'edit.setText(editing[0]?"Done":"Edit order")' in service
+          assert 'new Button[]{alerts,friends,invites}' in service
+          assert 'PinnedFriendAlerts.setEnabled(this,next)' in service
+          assert 'public static synchronized void move(Context ctx' in pins
+          assert 'versionCode 51' in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          print('Compact view, edit-mode controls and retained alert preferences verified')
+          PY
+      - name: Compile Android debug APK
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-v0.18.8-Compact-Pinned-Friends-Debug
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
