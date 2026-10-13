@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.18.7: Manually reorder pinned VRChat friends with compact up/down rows directly on floating Social without jumping scroll positions. Add separate opt-in Android notifications for observed pinned-friend offline-to-online transitions: first complete snapshot silently seeds each account, newly pinned friends do not falsely notify, overlay polling runs about every 2.5-5 minutes, and WorkManager checks about every 15 minutes when floating tools are closed (Android may delay). Enable/disable from Social or the main Companion notification settings; permission handling and account-scoped state preserved. Retains v0.18.6 floating PTT button, OSC quick controls, bookmarks, verified rank-based chatboxes, Mini-VRCX and Mobile Node. No Main Launcher or Relay update required."
+            "notes": "v0.18.8: Floating Social pinned friends now display as a much tighter, tap-to-open list with no visible move arrows by default. Use Edit order to reveal 36dp up/down movement controls, immediately save changes without resetting scroll, then tap Done to return to compact mode. The pinned toolbar now uses small Alerts, Friends and Invites buttons rather than a large alert button and help paragraph. Pin data, account-scoped ordering, opt-in online notification baselines, all v0.18.7 alerts, OSC PTT and Live Chatbox, Mini-VRCX and tracking continue unchanged. No Main Launcher or Relay update."
           }
           JSON
           fi
