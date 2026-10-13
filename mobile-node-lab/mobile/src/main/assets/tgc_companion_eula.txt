@@ -1,0 +1,88 @@
+TGC STAFF COMPANION
+PROPRIETARY END-USER LICENSE AND STAFF USER AGREEMENT
+Version: 2026-10-13.1
+Draft for review by the project's rights holder and qualified legal counsel.
+
+PLEASE READ BEFORE USING THIS APPLICATION.
+
+1. WHO GRANTS THE LICENSE
+"TGC", "we", and "Licensor" mean the owners of the original copyrightable
+TGC Staff Companion software distributed for The Gamer Club. The original
+software, its original branding, and its nonpublic operational materials are
+proprietary, subject to the rights of third parties and applicable law.
+Copyright (c) 2026 the respective TGC Staff Companion rights holders.
+All rights reserved.
+
+2. LIMITED PERSONAL STAFF LICENSE
+If you accept this agreement and remain authorized by TGC, you receive a
+limited, non-exclusive, non-transferable, revocable license to install and
+use the official binary application on your own compatible devices for
+authorized TGC staff purposes. This is a license, not a sale or permission
+to obtain, republish, or commercialize original application source code.
+Your staff authorization and access to services may end independently.
+
+3. RESTRICTIONS
+Except with prior written permission from the appropriate rights holder or
+where expressly permitted by applicable law, you may not:
+- copy, distribute, republish, sell, rent, sublicense, or share modified
+  versions of the original application or its proprietary source code;
+- create or distribute modified or derivative versions based on the
+  protected TGC application code, assets, or original interface artwork;
+- decompile or reverse engineer the application to extract protected code
+  or evade authentication, except to the extent local law permits;
+- remove TGC proprietary notices or claim ownership of original TGC work;
+- disclose private staff credentials, enrollment links, keys, or
+  confidential TGC operational information obtained through the app;
+- bypass staff authorization or misuse the app to access information or
+  services for which you are not permitted.
+Nothing in this agreement prohibits lawful independent creation of
+original software, activities permitted by mandatory local law, or uses
+authorized by separate open-source or third-party licenses.
+
+4. STAFF ACCOUNT AND PLATFORM REQUIREMENTS
+Use the application only while authorized as TGC staff, safeguard your
+credentials, and follow applicable TGC policies, VRChat rules, and law.
+TGC may suspend app or network access when staff authorization is withdrawn
+or an account poses a security risk. The application is not operated by,
+endorsed by, or affiliated with VRChat, Meta, or Valve.
+
+5. DEVICE DATA AND NETWORK ACTIVITY
+With tracking enabled, the Companion may read local VRChat log entries,
+display detected player and instance activity, and send selected player
+sightings and identifiers to authorized TGC network services for the invite
+workflow. Complete raw VRChat log files are not intentionally uploaded by
+the tracking feature. The app may also use account verification, local
+preferences, and VRChat account session data to operate authorized
+features. Only enable logging or sharing you are authorized to use. Review
+the separate privacy documentation for further details; this license is
+not a substitute for a complete privacy notice.
+
+6. UPDATES AND THIRD-PARTY RIGHTS
+New releases may change features, requirements, or this agreement. A
+materially revised agreement requires new acceptance before use. Any
+third-party software and open-source libraries retain their own license
+terms, including licenses that permit redistribution or reverse engineering
+of those specific components. This agreement covers only rights that TGC's
+software rights holders actually own or may lawfully license.
+
+7. NO WARRANTY; LIABILITY
+TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE APPLICATION IS SUPPLIED "AS
+IS" WITHOUT WARRANTIES. IT MAY HAVE INTERRUPTIONS OR ERRORS. NOTHING HERE
+EXCLUDES LIABILITY, WARRANTIES, OR OTHER RIGHTS THAT CANNOT LAWFULLY BE
+EXCLUDED UNDER YOUR LOCAL LAW.
+
+8. TERMINATION
+This limited license ends when your authorization ends or upon a material
+breach of these terms, subject to applicable law. Stop using the application
+and delete unauthorized copies when the license ends. Rights and legal
+exceptions that must survive termination remain unaffected.
+
+9. ACCEPTANCE, DECLINE AND QUESTIONS
+Selecting "I Agree & Continue" records the accepted agreement version and
+time locally on this device. Selecting "Decline & Exit" exits the app without
+recording consent. You may read this agreement again from Settings after
+acceptance. Questions about permissions, source-code licensing, or staff
+access should be directed to TGC through its official staff channels.
+
+This agreement does not guarantee that other developers cannot
+independently create software with similar functionality.
