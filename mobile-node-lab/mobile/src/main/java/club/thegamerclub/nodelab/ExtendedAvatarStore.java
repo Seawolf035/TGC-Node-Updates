@@ -73,10 +73,27 @@ public final class ExtendedAvatarStore extends SQLiteOpenHelper {
         }finally{db.endTransaction();}
     }
     public synchronized boolean contains(String user,String avatar){
-        if(!validUser(user)||!validAvatar(avatar))return false;
+        return categoryFor(user,avatar)!=null;
+    }
+    /** Null means not saved. Lookup is always restricted to the signed-in account. */
+    public synchronized String categoryFor(String user,String avatar){
+        if(!validUser(user)||!validAvatar(avatar))return null;
         try(Cursor c=getReadableDatabase().rawQuery(
-            "SELECT 1 FROM saved_avatar WHERE account_id=? AND avatar_id=?",
-            new String[]{user,avatar})){return c.moveToFirst();}
+            "SELECT group_name FROM saved_avatar WHERE account_id=? AND avatar_id=? LIMIT 1",
+            new String[]{user,avatar})){
+            return c.moveToFirst()?c.getString(0):null;
+        }
+    }
+    /** For displaying Saved badges in the normal VRChat favorites browser. */
+    public synchronized java.util.HashSet<String> savedIds(String user){
+        java.util.HashSet<String> ids=new java.util.HashSet<>();
+        if(!validUser(user))return ids;
+        try(Cursor c=getReadableDatabase().rawQuery(
+            "SELECT avatar_id FROM saved_avatar WHERE account_id=?",
+            new String[]{user})){
+            while(c.moveToNext())ids.add(c.getString(0));
+        }
+        return ids;
     }
     public synchronized JSONArray list(String user,String category,String filter){
         if(!validUser(user))throw new IllegalArgumentException("Invalid VRChat user");
