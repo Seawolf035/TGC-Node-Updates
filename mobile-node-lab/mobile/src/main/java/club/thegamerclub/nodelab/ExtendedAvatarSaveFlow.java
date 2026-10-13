@@ -123,6 +123,9 @@ public final class ExtendedAvatarSaveFlow {
                 if(position<0)return;
                 String category=position==customPosition?
                     custom.getText().toString().trim():names.get(position);
+                if(position==customPosition&&category.isEmpty()){
+                    custom.setError("Enter a new category name.");return;
+                }
                 try{category=ExtendedAvatarStore.category(category);}
                 catch(Exception e){custom.setError(e.getMessage());return;}
                 final String selected=category;
