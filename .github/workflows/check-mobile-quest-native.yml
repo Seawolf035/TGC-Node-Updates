@@ -1,0 +1,69 @@
+name: Validate v0.19.0 Quest-native tools and phone isolation
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.19.0-quest-native-tools
+    paths:
+      - "mobile-node-lab/mobile/**"
+      - ".github/workflows/check-mobile-quest-native.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Assert Quest feature isolation and safety boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          d=Path('mobile-node-lab/mobile/src/main')
+          root=d/'java/club/thegamerclub/nodelab'
+          native=(root/'QuestToolsActivity.java').read_text()
+          service=(root/'QuestOscService.java').read_text()
+          floater=(root/'FloatingCompanionService.java').read_text()
+          mini=(root/'OverlayMiniVrcx.java').read_text()
+          main=(root/'CompanionActivity.java').read_text()
+          manifest=(d/'AndroidManifest.xml').read_text()
+          assert 'QuestDevice.isQuestDevice()' in native
+          assert 'if(!QuestDevice.isQuestDevice())' in native
+          assert 'new OverlayMiniVrcx(this,' in native
+          assert 'private final Context ctx;' in mini
+          assert 'new OverlayMiniVrcx(this,' in floater
+          assert 'QuestDevice.isQuestDevice()' in main
+          assert '.QuestToolsActivity" android:exported="false"' in manifest
+          assert '.QuestOscService" android:enabled="true" android:exported="false"' in manifest
+          assert 'START_NOT_STICKY' in service
+          assert '300_000L' in service
+          assert 'VOICE_RELEASE' in service
+          assert 'lastError' in service
+          assert 'FriendPinStore.move(this,id,move)' in native
+          assert 'PinnedFriendAlerts.setEnabled(this,next)' in native
+          assert 'OscControlStore.setOfficialOnly(this,next)' in native
+          assert 'versionCode 52' in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          print('Quest gate, non-exported components, reused pages and safety constraints checked')
+          PY
+      - name: Compile Android debug
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-v0.19.0-Quest-Native-Debug
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
