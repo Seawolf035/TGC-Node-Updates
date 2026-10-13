@@ -103,7 +103,7 @@ public final class VRChatApi {
         session.put("needs2fa",false);
     }
     public static JSONObject login(Context context,String username,String password)throws Exception{
-        if(username.trim().isEmpty()||password.isEmpty())throw new IllegalArgumentException("Username and password required");
+        if(username.trim().isEmpty()||password.isEmpty())throw new IllegalArgumentException("Email or original username and password required");
         String basic=Base64.encodeToString((username+":"+password).getBytes(StandardCharsets.UTF_8),Base64.NO_WRAP);
         // Username/password only used for this one HTTPS call; never persisted.
         Response response=request("GET","/auth/user",null,"Basic "+basic,null);
