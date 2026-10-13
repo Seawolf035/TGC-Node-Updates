@@ -38,13 +38,26 @@ public final class CompanionLicenseActivity extends Activity {
         root.addView(heading);
         heading.addView(text("TGC STAFF COMPANION",12,CompanionStyle.ACCENT,true));
         heading.addView(text("User agreement & license",23,CompanionStyle.TEXT,true));
-        heading.addView(text("Agreement "+CompanionLicense.VERSION,
+        heading.addView(text("Agreement "+CompanionLicense.VERSION+
+            " · 43 sections · Read before accepting",
             12,CompanionStyle.MUTED,false));
 
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(false);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         TextView license=text(body,14,CompanionStyle.TEXT,false);
+        // Make the expanded 43-section agreement navigable and legible on
+        // smaller Quest/Android screens. Keep text selectable for review.
+        android.text.SpannableString styled=new android.text.SpannableString(body);
+        java.util.regex.Matcher headingMatcher=java.util.regex.Pattern.compile(
+            "(?m)^\\d+\\. [A-Z][A-Z ,/-]+$").matcher(body);
+        while(headingMatcher.find()){
+            styled.setSpan(new android.text.style.StyleSpan(
+                android.graphics.Typeface.BOLD),headingMatcher.start(),
+                headingMatcher.end(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        license.setText(styled);
+        license.setLineSpacing(dp(3),1.04f);
         license.setTextIsSelectable(true);
         license.setPadding(dp(19),dp(15),dp(19),dp(19));
         scroll.addView(license);
