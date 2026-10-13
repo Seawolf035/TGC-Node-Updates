@@ -623,7 +623,9 @@ public final class CompanionActivity extends Activity {
         action(places,"★","Extended avatar favorites","Private categorized avatar collections • VRC+",this::openExtendedAvatars);
     }
     private void renderTracking(){
-        headline("ACTIVITY","Player tracking","See who joins and leaves while playing VRChat Mobile.");
+        headline("ACTIVITY","Player tracking",QuestDevice.isQuestDevice()?
+            "See who joins and leaves while playing VRChat on your Quest.":
+            "See who joins and leaves while playing VRChat Mobile.");
         android.content.SharedPreferences s=getSharedPreferences("tgc_mobile_node_status",0);
         long heartbeat=s.getLong("service_heartbeat_at",0);
         boolean active=s.getBoolean("running",false) && heartbeat>0 &&
@@ -650,21 +652,26 @@ public final class CompanionActivity extends Activity {
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
         page.addView(CompanionStyle.section(this,"HOW TRACKING WORKS"));
         LinearLayout explanation=card();
-        explanation.addView(txt("Shizuku is optional.",16,CompanionStyle.TEXT,true));
+        boolean questTracking=QuestDevice.isQuestDevice();
+        explanation.addView(txt(questTracking?
+            "Quest: folder permission, no Shizuku required.":
+            "Phone: Shizuku required for player tracking.",
+            16,CompanionStyle.TEXT,true));
         space(explanation,7);
-        explanation.addView(txt(
-            "The Companion works without Shizuku for friends, profiles, notifications, worlds and avatars.",
+        explanation.addView(txt(questTracking?
+            "In Tracking controls, grant read-only access to Documents/Logs, enable Full logging in VRChat, and start tracking before joining an instance. No Shizuku installation is needed for the default Quest method.":
+            "On Android phones, player tracking reads protected VRChat Mobile logs through Shizuku. Other Companion features, including friends, profiles, notifications, worlds and avatars, work without Shizuku.",
             13,CompanionStyle.MUTED,false));
         space(explanation,8);
         explanation.addView(txt(
-            "If you play VRChat on your phone, Shizuku only lets the Mobile Node read the game's log files. Those logs also give you a player list, join/leave history and world changes in this app. Join sightings can help the TGC network; your full logs stay on your phone.",
+            "Join sightings can help the TGC network; complete raw VRChat logs are never uploaded.",
             13,CompanionStyle.MUTED,false));
-        space(explanation,8);
-        explanation.addView(txt(
-            QuestDevice.isQuestDevice()?
-                "Quest 2 and Quest 3 tracking is verified with Shizuku. An optional experimental folder-access mode can be selected under Tracking controls; the folder picker may not work on every headset.":
-                "Quest support is being explored, but isn't available yet.",
-            12,CompanionStyle.ACCENT,false));
+        if(questTracking){
+            space(explanation,8);
+            explanation.addView(txt(
+                "If folder access fails, open Tracking controls → Advanced tools → Alternative Quest method to enable the Shizuku fallback.",
+                12,CompanionStyle.ACCENT,false));
+        }
     }
     private void renderSettings(){
         headline("PREFERENCES","Settings","Your account, device and Companion.");
