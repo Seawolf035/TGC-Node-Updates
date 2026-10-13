@@ -51,7 +51,7 @@ jobs:
           assert 'for(int i=0;i<2;i++)' in watcher
           assert 'SHIZUKU_VERSION=5' in node
           assert 'Watching VRChat output logs: ' in watcher
-          assert 'versionCode 52' in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'versionCode 53' in Path('mobile-node-lab/mobile/build.gradle').read_text()
           # Synthetic lines matching the supplied private Quest logs; no user data in CI.
           import re
           event='usr_11111111-2222-3333-4444-555555555555'
