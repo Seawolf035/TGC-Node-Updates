@@ -56,6 +56,10 @@ jobs:
           assert 'if(!status.matches("active|ask me|busy|join me"))' in api
           assert '{"active","join me","ask me","busy"}' in presence
           assert '{"active","join me","ask me","busy"}' in tools
+          assert 'case "mini_user_groups":' in tools
+          assert 'VRChatApi.visibleUserGroups(ctx,groupSubjectUserId)' in tools
+          assert 'VRChatUserGroupsActivity.visibleGroup(' in tools
+          assert 'button(info,"View visible groups"' in tools
           assert 'supported?"Load preset":"Status unavailable"' in presence
           assert 'use.setEnabled(supported)' in presence
           assert 'Offline friends' in (base/'CompanionActivity.java').read_text()
