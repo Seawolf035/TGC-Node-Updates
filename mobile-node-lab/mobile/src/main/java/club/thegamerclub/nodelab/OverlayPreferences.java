@@ -71,6 +71,28 @@ public final class OverlayPreferences {
         if(keys.isEmpty())throw new IllegalArgumentException("Choose at least one shortcut");
         prefs(ctx).edit().putString("pinned",android.text.TextUtils.join(",",keys)).apply();
     }
+    /** Three fixed-position shortcuts available above every scrolled tool page. */
+    public static List<String> quickBar(Context ctx){
+        String data=prefs(ctx).getString("quick_bar","friends,chat,status");
+        LinkedHashSet<String> valid=new LinkedHashSet<>();
+        for(String item:data.split(",")){
+            if(Arrays.asList(SHORTCUTS).contains(item))valid.add(item);
+            if(valid.size()>=3)break;
+        }
+        return new ArrayList<>(valid);
+    }
+    public static void setQuickBar(Context ctx,List<String> entries){
+        LinkedHashSet<String> valid=new LinkedHashSet<>();
+        for(String item:entries){
+            if(!Arrays.asList(SHORTCUTS).contains(item))
+                throw new IllegalArgumentException("Unknown quick action.");
+            valid.add(item);
+            if(valid.size()>3)throw new IllegalArgumentException(
+                "Choose at most three quick actions.");
+        }
+        prefs(ctx).edit().putString("quick_bar",
+            android.text.TextUtils.join(",",valid)).apply();
+    }
     public static String name(String key){
         switch(key){
             case "inbox":return "Notifications";
