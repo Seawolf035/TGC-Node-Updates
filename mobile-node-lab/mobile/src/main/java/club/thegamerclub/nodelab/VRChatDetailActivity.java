@@ -536,7 +536,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
                 }
             });
             shortcuts.addView(text(
-                "Pinned groups appear at the top of the floating Mini-VRCX group list.",
+                "Pinned groups appear in your saved group shortcuts.",
                 12,CompanionStyle.MUTED,false));
             kicker("ADVANCED GROUP TOOLS");
             LinearLayout tools=box();
