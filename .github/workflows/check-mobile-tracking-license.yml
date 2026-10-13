@@ -1,0 +1,77 @@
+name: Validate Tracking-tab Setup and Staff License v0.19.10
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.19.10-tracking-tab-onboarding
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'mobile-node-lab/QUEST_v0.19.10_TRACKING_LICENSE_QA.md'
+      - '.github/workflows/check-mobile-tracking-license.yml'
+      - 'PROPRIETARY_LICENSE.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Source and legal safety checks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          main=(base/'CompanionActivity.java').read_text()
+          controls=(base/'MobileDeployActivity.java').read_text()
+          guide=(base/'TrackingSetupGuide.java').read_text()
+          gate=(base/'QuestBackApplication.java').read_text()
+          terms=(base/'CompanionLicense.java').read_text()
+          agreement=(base/'CompanionLicenseActivity.java').read_text()
+          asset=Path('mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt').read_text()
+          manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'renderTrackingSetup();' in main
+          assert 'FIRST-TIME TRACKING SETUP' in main
+          assert 'I understand · Continue' in main
+          assert 'View setup guide' in main
+          assert 'TrackingSetupGuide.acknowledge(this)' in main
+          assert 'TrackingSetupGuide.initialize(this)' in main
+          assert 'logging_guide_acknowledged' in guide
+          assert 'alreadyLinked=MobileCredentials.load(ctx)!=null' in guide
+          assert 'showFirstSetupGuide' not in controls
+          assert 'Reopen first-time tracking setup guide' not in controls
+          assert 'open_tracking_setup' in controls
+          assert 'TrackingSetupGuide.acknowledged(this)' in controls
+          assert 'CompanionLicenseActivity.class' in gate
+          assert 'CompanionLicense.accepted(activity)' in gate
+          assert 'CompanionLicense.accept(this)' in agreement
+          assert 'agreed.isChecked()' in agreement
+          assert 'finishAffinity()' in agreement
+          assert 'License & user agreement' in main
+          assert 'android:name=".CompanionLicenseActivity" android:exported="false"' in manifest
+          assert '2026-10-13.1' in asset and '2026-10-13.1' in terms
+          assert 'independent' in asset.lower()
+          assert 'third-party' in asset.lower()
+          assert 'All rights reserved.' in asset
+          assert Path('PROPRIETARY_LICENSE.md').exists()
+          assert 'versionCode 62' in gradle and "versionName '0.19.10'" in gradle
+          print('Tracking inline setup, license gating, copyright notices and version verified')
+          PY
+      - name: Compile Android debug APK
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
