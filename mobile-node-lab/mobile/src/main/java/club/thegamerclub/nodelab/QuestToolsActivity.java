@@ -226,7 +226,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         heading.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
         titles.addView(text("TGC · QUEST SYSTEM",11,CompanionStyle.ACCENT,true));
         titles.addView(text(isHub()?"Quest System":
-            "Mini-VRCX · "+page.replace("mini_","").replace('_',' '),
+            "Quest tools · "+page.replace("mini_","").replace('_',' '),
             19,CompanionStyle.TEXT,true));
         LinearLayout tabs=new LinearLayout(this);
         root.addView(tabs);
