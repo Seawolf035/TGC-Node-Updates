@@ -685,18 +685,8 @@ public final class CompanionActivity extends Activity {
             ()->openPlayerLog("current"));
         action(stats,"⚙","Tracking controls","Start, stop or check your tracking",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
-        page.addView(CompanionStyle.section(this,"VRCHAT LOGGING — REQUIRED"));
-        LinearLayout logSetup=card();
-        logSetup.addView(txt(
-            "Open VRChat → Settings → Debug → Logging and select FULL. "+
-            "Without Full logging, player joins/leaves may not appear even "+
-            "when the Companion says tracking is running.",
-            13,CompanionStyle.GOLD,true));
-        space(logSetup,8);
-        logSetup.addView(txt(
-            "Start tracking before entering a VRChat instance or waiting "+
-            "for new players to join. The watcher starts at the end of the current log.",
-            12,CompanionStyle.MUTED,false));
+        // One-time VRChat Full logging instructions now live in the tracking
+        // onboarding guide instead of occupying the daily Tracking dashboard.
         page.addView(CompanionStyle.section(this,"HOW TRACKING WORKS"));
         LinearLayout explanation=card();
         boolean questTracking=QuestDevice.isQuestDevice();
@@ -706,8 +696,8 @@ public final class CompanionActivity extends Activity {
             16,CompanionStyle.TEXT,true));
         space(explanation,7);
         explanation.addView(txt(questTracking?
-            "In Tracking controls, grant read-only access to Documents/Logs, enable Full logging in VRChat, and start tracking before joining an instance. No Shizuku installation is needed for the default Quest method.":
-            "On Android phones, player tracking reads protected VRChat Mobile logs through Shizuku. Set VRChat logging to Full before tracking; other Companion features work without Shizuku.",
+            "In Tracking controls, grant read-only access to Documents/Logs and start tracking before joining an instance. No Shizuku installation is needed for the default Quest method.":
+            "On Android phones, player tracking reads protected VRChat Mobile logs through Shizuku. Other Companion features work without Shizuku.",
             13,CompanionStyle.MUTED,false));
         space(explanation,8);
         explanation.addView(txt(
