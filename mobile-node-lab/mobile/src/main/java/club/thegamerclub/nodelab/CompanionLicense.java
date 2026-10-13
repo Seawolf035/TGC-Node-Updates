@@ -15,10 +15,11 @@ public final class CompanionLicense {
         return VERSION.equals(context.getSharedPreferences(PREFS,0)
             .getString("accepted_version",""));
     }
-    public static void accept(Context context){
-        context.getSharedPreferences(PREFS,0).edit()
+    /** Persist consent before dismissing the gate; never auto-accept. */
+    public static boolean accept(Context context){
+        return context.getSharedPreferences(PREFS,0).edit()
             .putString("accepted_version",VERSION)
-            .putLong("accepted_at",System.currentTimeMillis()).apply();
+            .putLong("accepted_at",System.currentTimeMillis()).commit();
     }
     public static String text(Context context){
         try(InputStream source=context.getAssets().open("tgc_companion_eula.txt");
