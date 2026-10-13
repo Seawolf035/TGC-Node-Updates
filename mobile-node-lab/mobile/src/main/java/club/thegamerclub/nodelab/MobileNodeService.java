@@ -29,7 +29,7 @@ public final class MobileNodeService extends Service {
   public static final String START="club.thegamerclub.nodelab.START_NODE";
   public static final String STOP="club.thegamerclub.nodelab.STOP_NODE";
   private static final String CHANNEL="tgc_mobile_node";
-  private static final int NOTIFICATION_ID=221, SHIZUKU_VERSION=4;
+  private static final int NOTIFICATION_ID=221, SHIZUKU_VERSION=5;
   private final ExecutorService collection=Executors.newSingleThreadExecutor();
   private final ExecutorService upload=Executors.newSingleThreadExecutor();
   private final Handler handler=new Handler(Looper.getMainLooper());
