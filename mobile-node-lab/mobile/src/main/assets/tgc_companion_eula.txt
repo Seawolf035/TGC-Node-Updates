@@ -247,3 +247,100 @@ This is NOT an unrestricted public software license, a transfer of software owne
 30.2. Unauthorized distribution of protected app material, staff data, or credentials through backups, archives, virtual machines, or snapshots is prohibited where legally enforceable.
 30.3. Legitimate personal backups, platform-permitted technical copies, statutory exceptions, and applicable third-party license rights remain unaffected.
 30.4. On termination or device disposal, take appropriate steps to remove credentials and private staff data where lawful and required. This does not override preservation orders or mandatory legal obligations.
+
+
+31. NO TRANSFER OF RIGHTS OR IMPLIED STAFF AUTHORITY
+
+31.1. No broad software intellectual-property license arises solely from installing the Companion, joining The Gamer Club, serving as volunteer staff, paying for an account, receiving an APK, or having a technical administrator role.
+31.2. A user authorized to operate a specific Node is not automatically allowed to issue invitations, manage the Relay, view private roster data, modify the Main Launcher, or redistribute source.
+31.3. Permission for a particular use, device, environment, or time period does not automatically authorize a broader purpose.
+31.4. Rights expressly granted by mandatory law, actual third-party ownership, open-source component licenses, or hosting-provider terms are not negated by a claim of no implied license.
+31.5. Separate written permissions may grant additional rights where the person granting them has legal authority to do so.
+
+32. TERMINATION, STAFF REMOVAL AND REVOCATION
+
+32.1. The limited official staff-use license may terminate on expiration, withdrawal of required authorization, or a material breach, in accordance with applicable law and any binding separate agreement.
+32.2. When authorization ends, discontinue unauthorized use of protected TGC services, credentials, and copies. Return or delete confidential information where lawfully required, subject to legal-hold, statutory retention, and independent-license exceptions.
+32.3. Revoking Relay enrollment, TGC staff access, or a device token does not necessarily remove all locally stored data or cause independent local tools to stop working immediately.
+32.4. TGC may revoke access to its own systems without claiming a right to control third-party VRChat accounts.
+32.5. Confidentiality and intellectual-property duties survive only to the extent required by enforceable agreements and applicable law.
+
+33. UNAUTHORIZED COPIES AND IMPERSONATION
+
+33.1. An illegally distributed copy of protected original Companion material remains subject to the lawful owner's rights.
+33.2. Renaming a package, changing a UI label, modifying an icon, or incrementing a version number does not automatically legalize unauthorized reproduction of protected expression.
+33.3. An unofficial APK may not be falsely described as a signed official TGC release or used to impersonate an owner-authorized Relay Node.
+33.4. A completely independent implementation that does not unlawfully copy original protected expression or defeat restricted network access is not made unauthorized simply by providing similar features.
+
+34. REPORTING SUSPECTED MISUSE OR SECURITY ISSUES
+
+34.1. Users may report suspected source-code theft, unofficial impersonating installers, leaked staff keys, unauthorized Relay use, privacy concerns, and related abuse to The Gamer Club's official owner/staff channels.
+34.2. Reports should include only the facts and evidence reasonably necessary, and should not disclose other people's personal data, tokens, or protected communications without lawful justification.
+34.3. Reports do not authorize hacking, harassment, doxxing, or actions beyond the reporter's legitimate access.
+34.4. Rights to contact law enforcement, regulators, legal counsel, or other authorized recipients remain unaffected.
+
+35. ENFORCEMENT AND LAWFUL REMEDIES
+
+35.1. Where the claimant owns the relevant rights and the law allows it, unauthorized reproduction, distribution, misuse of confidential material, credential abuse, or breach of applicable license obligations may result in revocation, takedown requests, damages, or other lawful remedies.
+35.2. No remedy is automatic; its availability depends on actual copyright ownership, the existence of an enforceable obligation, facts, evidence, and applicable law.
+35.3. The Licensor reserves rights it lawfully possesses but does not claim exclusivity over independently developed ideas, public standards, third-party APIs, or factual VRChat information.
+35.4. Nothing authorizes TGC to pursue unlawful self-help, evade due process, or violate another person's mandatory legal rights.
+
+36. NO WARRANTY
+
+36.1. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED “AS IS” AND “AS AVAILABLE.”
+36.2. THE LICENSOR DOES NOT WARRANT UNINTERRUPTED UPTIME, ERROR-FREE LOG PARSING, ERROR-FREE VRCHAT API ACCESS, CONTINUED QUEST/ANDROID COMPATIBILITY, CORRECT OSC EXECUTION, OR CONTINUED ACCESS TO THE RELAY OR MAIN LAUNCHER.
+36.3. SOFTWARE BEHAVIOR MAY CHANGE WHEN VRCHAT, META, ANDROID, THIRD-PARTY SERVICES, OR THE TGC NETWORK CHANGE.
+36.4. THIS SECTION DOES NOT LIMIT GUARANTEES OR OTHER RIGHTS THAT CANNOT LAWFULLY BE EXCLUDED.
+
+37. LIMITATION OF LIABILITY
+
+37.1. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR DISCLAIMS LIABILITY FOR INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, OR SIMILAR DAMAGES ARISING FROM LICENSED OR UNLICENSED USE, INTERRUPTION, OR UNAVAILABILITY OF THE SOFTWARE.
+37.2. THE DISCLAIMER DOES NOT LIMIT RESPONSIBILITY FOR FRAUD, INTENTIONAL MISCONDUCT, PERSONAL INJURY, OR OTHER LIABILITY THAT CANNOT LAWFULLY BE EXCLUDED.
+37.3. THIS AGREEMENT DOES NOT DETERMINE THE LEGAL RESPONSIBILITY OF INDEPENDENT THIRD PARTIES OR OVERRIDE NON-WAIVABLE PRIVACY RIGHTS.
+37.4. ANY AGREED LIABILITY LIMITS IN A SEPARATE CONTRACT APPLY ONLY IF LAWFUL AND VALID FOR THE RELEVANT PARTIES.
+
+38. APPLICABLE LAW AND MANDATORY RIGHTS
+
+38.1. The Agreement is subject to laws applicable to the actual Licensor and the user's use of the Companion, including mandatory privacy, consumer, copyright, contract, security-research, and interoperability rules.
+38.2. The app's community association with Maine or the United States does not, by itself, replace a deliberately drafted and enforceable jurisdiction or venue term.
+38.3. This version does not impose arbitration or a specific court venue. Any such provision would require separate legal review and accurate identification of the contracting party.
+38.4. Legal exceptions that cannot be waived remain effective even if another provision appears broader.
+
+39. SEVERABILITY
+
+39.1. If a provision is found invalid, unlawful, or unenforceable, it shall be interpreted as narrowly as permissible and the remainder will continue to apply to the extent lawful.
+39.2. An invalid restriction does not create new ownership rights or undermine mandatory rights in third-party components.
+39.3. A court's treatment of one provision does not automatically determine the status of unrelated rights.
+
+40. NO WAIVER
+
+40.1. Failure or delay in enforcing an applicable right does not, by itself, waive that right to the extent recognized by law.
+40.2. A permitted exception or one-time staff authorization is confined to its stated scope.
+40.3. No sentence in this Agreement supersedes legal rights created independently of it, including applicable platform terms and statutory exceptions.
+
+41. ENTIRE AGREEMENT AND SEPARATE PERMISSIONS
+
+41.1. This document states the default end-user license for the official proprietary TGC Staff Companion materials under the Licensor's control.
+41.2. A separately authorized written license, contribution agreement, employment contract, third-party component license, or mandatory law controls its own subject matter where it validly differs from this Agreement.
+41.3. A TGC staff role alone does not expand the copyright license. A public GitHub page alone does not create an unrestricted source-code license.
+41.4. A valid written permission may specify persons, files, features, time periods, environments, and revocation conditions, subject to applicable law.
+
+42. CHANGES AND AFFIRMATIVE ACCEPTANCE
+
+42.1. TGC may publish future versions of this Agreement with an identified version and effective date. Materially changed terms require renewed acceptance through the official Companion's versioned acceptance interface.
+42.2. Selecting “I Agree & Continue” after checking the agreement checkbox records the accepted agreement version and acceptance timestamp locally on the device.
+42.3. Selecting “Decline & Exit” ends the app session without recording agreement. You may review the accepted text again through Settings → License & user agreement.
+42.4. Mere access to this public repository, possession of an APK, or viewing these terms does not automatically constitute affirmative in-app acceptance.
+42.5. Where another law or separate license grants non-waivable rights, declining these particular staff terms does not eliminate those independent rights.
+
+43. CONTACT, PERMISSION REQUESTS AND FINAL RESERVATION
+
+43.1. Direct requests to use TGC-owned protected source, publish a modified Companion, integrate protected components, redistribute official installers outside authorized channels, access restricted network services, use original TGC artwork, or obtain maintainer permission to TGC's official owner/staff channels.
+43.2. The person granting permission must actually control the relevant rights. TGC cannot grant rights to third-party libraries, avatars, VRChat platform code, independent contributions, or privately owned data it does not own.
+43.3. This Agreement is tailored to current TGC Staff Companion functions and is a legal draft requiring qualified review before broad distribution. Confirm the identity of the actual contracting copyright holder, third-party obligations, and legally required privacy disclosures before relying on enforcement.
+43.4. ALL RIGHTS IN PROTECTED ORIGINAL TGC SOFTWARE THAT ARE NOT EXPRESSLY OR OTHERWISE LAWFULLY GRANTED REMAIN RESERVED BY THEIR LAWFUL OWNERS.
+43.5. This is not a claim that no one may independently develop similar software, nor a guarantee that legal terms alone will conceal source files already accessible online.
+
+END OF AGREEMENT — VERSION 2026-10-13.2
+COPYRIGHT © 2026 THE LAWFUL RIGHTS HOLDERS OF ORIGINAL TGC STAFF COMPANION MATERIALS. ALL RIGHTS RESERVED.
