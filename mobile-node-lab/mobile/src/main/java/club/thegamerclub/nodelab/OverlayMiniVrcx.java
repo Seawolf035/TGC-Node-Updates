@@ -52,6 +52,7 @@ public final class OverlayMiniVrcx {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private LinearLayout root;
     private String screen="",target="",kind="";
+    private String groupSubjectUserId="",groupSubjectUserName="Player";
     private String selectedGroupId="";
     private JSONArray selectedGroupRoles=new JSONArray();
     private boolean onlyPopulatedGroupInstances=false;
@@ -256,6 +257,7 @@ public final class OverlayMiniVrcx {
             screen.equals("mini_log")||screen.equals("mini_activity")||
             screen.equals("mini_worlds")||
             screen.equals("mini_avatars")||screen.equals("mini_groups")||
+            screen.equals("mini_user_groups")||
             screen.equals("mini_search")||screen.equals("mini_members")||
             screen.equals("mini_find");
     }
@@ -270,6 +272,7 @@ public final class OverlayMiniVrcx {
             case "mini_inbox":return "Notifications";
             case "mini_verify":return "Verification code";
             case "mini_profile":return "Player profile";
+            case "mini_user_groups":return "Visible player groups";
             case "mini_worlds":return "Saved worlds";
             case "mini_avatars":return "Favorite avatars";
             case "mini_chat":return "In-game text chat";
@@ -305,6 +308,7 @@ public final class OverlayMiniVrcx {
             case "mini_inbox":return "Use your personal VRChat account without switching apps";
             case "mini_verify":return "Read and copy your private invite code without leaving VRChat";
             case "mini_profile":return "Personal VRChat account profile details";
+            case "mini_user_groups":return "Groups VRChat permits your account to see · hidden memberships stay private";
             case "mini_note":return "Notes are saved to your personal VRChat account";
             case "mini_chat":return "Send directly to VRChat Mobile through local OSC";
             case "mini_osc_presets":return "Reusable messages · nothing sends until you tap Send";
@@ -454,6 +458,23 @@ public final class OverlayMiniVrcx {
             case "mini_profile":
                 execute(()->VRChatApi.getUserProfile(ctx,target),
                     result->{profile=(JSONObject)result;drawList();});break;
+            case "mini_user_groups":
+                execute(()->{
+                    JSONArray raw=VRChatApi.visibleUserGroups(ctx,groupSubjectUserId);
+                    java.util.HashSet<String> unique=new java.util.HashSet<>();
+                    ArrayList<JSONObject> sorted=new ArrayList<>();
+                    for(int i=0;i<raw.length()&&i<5000;i++){
+                        JSONObject item=VRChatUserGroupsActivity.visibleGroup(
+                            raw.optJSONObject(i));
+                        if(item!=null&&unique.add(item.optString("id","")))
+                            sorted.add(item);
+                    }
+                    Collections.sort(sorted,(a,b)->a.optString("name","")
+                        .compareToIgnoreCase(b.optString("name","")));
+                    JSONArray result=new JSONArray();
+                    for(JSONObject item:sorted)result.put(item);
+                    return result;
+                },result->{loaded=(JSONArray)result;drawList();});break;
             case "mini_world":
                 execute(()->VRChatApi.getWorld(ctx,target),
                     result->{profile=(JSONObject)result;drawList();});break;
@@ -582,6 +603,7 @@ public final class OverlayMiniVrcx {
             case "mini_inbox":showInbox();break;
             case "mini_verify":showVerification();break;
             case "mini_profile":showProfile();break;
+            case "mini_user_groups":showUserGroups();break;
             case "mini_world":showWorld();break;
             case "mini_instance":showInstance();break;
             case "mini_worlds":showWorlds();break;
@@ -1083,6 +1105,11 @@ public final class OverlayMiniVrcx {
             }
         }
         section(info,"ACTIONS");
+        button(info,"View visible groups",false,()->{
+            groupSubjectUserId=id;
+            groupSubjectUserName=name;
+            host.navigate("mini_user_groups");
+        });
         button(info,"View / write personal note",false,()->note(id));
         if(!friend&&!requestState.contains("outgoing")&&
            !requestState.contains("incoming")){
@@ -1114,6 +1141,28 @@ public final class OverlayMiniVrcx {
         button(info,"Copy VRChat profile link",false,
             ()->copy("profile link","https://vrchat.com/home/user/"+id));
         button(info,"Refresh profile",false,this::load);
+    }
+    private void showUserGroups(){
+        section(list,shortValue(groupSubjectUserName,55)+" · GROUPS");
+        list.addView(text(
+            "Only groups VRChat makes visible to your signed-in account are listed.",
+            12,CompanionStyle.MUTED,false));
+        int matched=0;
+        for(int i=0;i<loaded.length()&&matched<limit;i++){
+            JSONObject item=loaded.optJSONObject(i);
+            if(item==null)continue;
+            String id=item.optString("id","");
+            if(!id.matches("grp_[0-9a-fA-F-]{36}"))continue;
+            String name=item.optString("name","Group");
+            String code=item.optString("shortCode","");
+            if(!matches(name+" "+code))continue;
+            line(list,name,code,()->openGroupDashboard(id));
+            matched++;
+        }
+        if(matched==0)line(list,"No matching visible groups",
+            "No group memberships were returned or match your filter.",null);
+        if(matched>=limit)button(list,"Show more groups",false,
+            ()->{limit+=65;drawList();});
     }
     private void showWorlds(){
         section(list,"BOOKMARKED WORLDS");
