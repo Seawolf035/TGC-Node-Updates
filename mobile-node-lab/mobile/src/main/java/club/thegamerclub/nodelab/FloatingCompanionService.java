@@ -309,8 +309,13 @@ public final class FloatingCompanionService extends Service {
                     try{
                         JSONObject session=VRChatSession.load(FloatingCompanionService.this);
                         FriendLogStore.account(session);
-                        FriendLogStore.observe(FloatingCompanionService.this,session,
-                            VRChatApi.friendSnapshot(FloatingCompanionService.this));
+                        JSONArray full=VRChatApi.friendSnapshot(FloatingCompanionService.this);
+                        FriendLogStore.observe(FloatingCompanionService.this,session,full);
+                        if(PinnedFriendAlerts.active(FloatingCompanionService.this)){
+                            PinnedFriendAlertWorker.notifyOnline(FloatingCompanionService.this,
+                                PinnedFriendAlerts.observe(FloatingCompanionService.this,
+                                    session,full));
+                        }
                     }catch(Exception ignored){
                         // Preserve the previous complete snapshot during auth/network failures.
                     }finally{handler.post(()->friendBusy=false);}
@@ -1234,28 +1239,104 @@ public final class FloatingCompanionService extends Service {
         action(quick,"Customize shortcuts",false,()->go("customize"));
     }
     private LinearLayout recentRows;
+    private void renderPinnedRows(LinearLayout rows){
+        if(rows==null)return;
+        rows.removeAllViews();
+        try{
+            JSONArray pinned=FriendPinStore.pins(this);
+            JSONObject current=new JSONObject();
+            long at=0L;
+            try{
+                JSONObject session=VRChatSession.load(this);
+                current=FriendLogStore.snapshot(this,session);
+                at=FriendLogStore.lastPoll(this,session);
+            }catch(Exception ignored){}
+            if(pinned.length()==0){
+                rows.addView(text(
+                    "No friends pinned yet. Add ★ from Friends or a profile.",
+                    12,CompanionStyle.MUTED,false));
+                return;
+            }
+            boolean recent=at>0 && System.currentTimeMillis()-at<8*60_000L;
+            for(int i=0;i<pinned.length();i++){
+                JSONObject row=pinned.optJSONObject(i);
+                if(row==null)continue;
+                final String id=row.optString("id","");
+                if(!id.matches("usr_[0-9a-fA-F-]{36}"))continue;
+                LinearLayout line=new LinearLayout(this);
+                line.setGravity(Gravity.CENTER_VERTICAL);
+                rows.addView(line,new LinearLayout.LayoutParams(-1,dp(43)));
+                String name=row.optString("name","Friend");
+                JSONObject snapshot=current.optJSONObject(id);
+                String state=snapshot==null?" · ?":
+                    !recent?" · last seen":
+                    snapshot.optBoolean("online",false)?" · ● online":" · offline";
+                TextView label=text((i+1)+". "+name+state,11,
+                    recent&&snapshot!=null&&snapshot.optBoolean("online",false)?
+                        CompanionStyle.GOOD:CompanionStyle.TEXT,false);
+                label.setSingleLine(true);
+                label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                label.setPadding(dp(2),0,dp(4),0);
+                label.setContentDescription("Open pinned friend "+name);
+                line.addView(label,new LinearLayout.LayoutParams(0,dp(39),1f));
+                label.setGravity(Gravity.CENTER_VERTICAL);
+                label.setOnClickListener(v->mini.profile(id));
+                Button up=CompanionStyle.button(this,"↑",false);
+                Button down=CompanionStyle.button(this,"↓",false);
+                up.setTextSize(14);down.setTextSize(14);
+                up.setContentDescription("Move "+name+" earlier");
+                down.setContentDescription("Move "+name+" later");
+                line.addView(up,new LinearLayout.LayoutParams(dp(39),dp(39)));
+                line.addView(down,new LinearLayout.LayoutParams(dp(39),dp(39)));
+                up.setEnabled(i>0);down.setEnabled(i<pinned.length()-1);
+                up.setOnClickListener(v->{
+                    try{FriendPinStore.move(this,id,-1);renderPinnedRows(rows);}
+                    catch(Exception e){showPinnedFeedback(e.getMessage());}
+                });
+                down.setOnClickListener(v->{
+                    try{FriendPinStore.move(this,id,1);renderPinnedRows(rows);}
+                    catch(Exception e){showPinnedFeedback(e.getMessage());}
+                });
+            }
+        }catch(Exception e){
+            rows.addView(text("Sign in to view pinned friend shortcuts.",
+                12,CompanionStyle.MUTED,false));
+        }
+    }
     private void showSocial(){
         section(panelContent,"PINNED FRIENDS");
         LinearLayout pinned=panelCard(panelContent);
-        int pinnedTotal=0;
-        try{
-            JSONArray shortcuts=FriendPinStore.pins(this);
-            pinnedTotal=shortcuts.length();
-            for(int i=0;i<shortcuts.length()&&i<5;i++){
-                JSONObject entry=shortcuts.optJSONObject(i);
-                if(entry==null)continue;
-                String uid=entry.optString("id","");
-                if(!uid.matches("usr_[0-9a-fA-F-]{36}"))continue;
-                String display=entry.optString("name","Friend");
-                action(pinned,"★ "+display,false,()->mini.profile(uid));
+        pinned.addView(text(
+            "Compact shortcuts · use ↑ / ↓ to choose your own order.",
+            11,CompanionStyle.MUTED,false));
+        LinearLayout pinnedRows=vertical();
+        pinned.addView(pinnedRows);
+        renderPinnedRows(pinnedRows);
+
+        Button alerts=CompanionStyle.button(this,
+            PinnedFriendAlerts.enabled(this)?
+                "Online alerts: ON":"Online alerts: OFF",false);
+        pinned.addView(alerts,CompanionStyle.buttonParams(this));
+        alerts.setOnClickListener(v->{
+            if(!PinnedFriendAlerts.enabled(this)&&!PinnedFriendAlerts.permission(this)){
+                showPinnedFeedback("Allow Android notifications in the full Companion first.");
+                open(CompanionActivity.class,null,null);
+                return;
             }
-        }catch(Exception e){
-            pinned.addView(text("Sign in to view your friend shortcuts.",
-                12,CompanionStyle.MUTED,false));
-        }
-        if(pinnedTotal==0)pinned.addView(text(
-            "Pin friends from their Mini-VRCX profiles or the friends list.",
-            12,CompanionStyle.MUTED,false));
+            try{
+                boolean next=!PinnedFriendAlerts.enabled(this);
+                PinnedFriendAlerts.setEnabled(this,next);
+                alerts.setText(next?"Online alerts: ON":"Online alerts: OFF");
+                showPinnedFeedback(next?
+                    "Pinned friend alerts enabled. First check sets a baseline.":
+                    "Pinned friend alerts disabled.");
+            }catch(Exception ex){showPinnedFeedback("Friend alerts: "+ex.getMessage());}
+        });
+        pinned.addView(text(
+            "When enabled, alerts appear only for pinned friends changing "+
+            "from offline to online. Floating checks usually take 2.5–5 min; "+
+            "background checks are about every 15 min and may be delayed.",
+            10,CompanionStyle.MUTED,false));
         paired(pinned,"Manage friends","Invitations",
             ()->go("mini_friends"),()->mini.inbox("invite"));
         section(panelContent,"FRIENDS");
