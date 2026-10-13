@@ -61,9 +61,9 @@ jobs:
             '2026.10.13 08:17:59 Debug - [Behaviour] OnPlayerLeft TestUser ('+event+')',
             '2026.10.13 08:18:03 Debug - [Behaviour] Joining '+world+':12345~region(us)'
           ]
-          assert re.search(r'OnPlayerJoined\\s+.*?\\s+\\((usr_[a-fA-F0-9-]{36})\\)',sample[0])
-          assert re.search(r'OnPlayerLeft\\s+.*?\\s+\\((usr_[a-fA-F0-9-]{36})\\)',sample[1])
-          assert re.search(r'\\bJoining\\s+(wrld_[a-fA-F0-9-]{36}:[^\\s]+)',sample[2])
+          assert re.search(r'OnPlayerJoined\s+.*?\s+\((usr_[a-fA-F0-9-]{36})\)',sample[0])
+          assert re.search(r'OnPlayerLeft\s+.*?\s+\((usr_[a-fA-F0-9-]{36})\)',sample[1])
+          assert re.search(r'\bJoining\s+(wrld_[a-fA-F0-9-]{36}:[^\s]+)',sample[2])
           print('Quest quick tabs fixed; Quest log directory selected only on Quest; synthetic events recognized.')
           PY
       - name: Compile Android debug without signing or publishing
