@@ -1598,7 +1598,8 @@ public final class OverlayMiniVrcx {
         int players=instance.optInt("n_users",-1);
         if(players<0)players=instance.optInt("userCount",-1);
         if(players<0)players=instance.optInt("memberCount",-1);
-        return Math.max(0,players);
+        // -1 means unavailable, not proof the instance has zero players.
+        return players;
     }
     private void showGroupInstances(){
         section(list,"ACTIVE GROUP INSTANCES");
@@ -1638,7 +1639,8 @@ public final class OverlayMiniVrcx {
             int capacity=item.optInt("capacity",world==null?0:world.optInt("capacity",0));
             LinearLayout c=card(list);
             c.addView(text(shortValue(name,75),14,CompanionStyle.TEXT,true));
-            c.addView(text(occupants+" player"+(occupants==1?"":"s")+
+            c.addView(text((occupants<0?"Population unknown":
+                occupants+" player"+(occupants==1?"":"s"))+
                 (capacity>0?" / "+capacity+" capacity":"")+
                 (region.isEmpty()?"":" · "+region),
                 12,CompanionStyle.ACCENT,true));
