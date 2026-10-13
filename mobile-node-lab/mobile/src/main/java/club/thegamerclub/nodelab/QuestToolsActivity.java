@@ -224,8 +224,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         LinearLayout titles=vertical();
         titles.setPadding(dp(9),0,0,0);
         heading.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
-        titles.addView(text("TGC · QUEST NATIVE TOOLS",11,CompanionStyle.ACCENT,true));
-        titles.addView(text(isHub()?"VRChat Companion":
+        titles.addView(text("TGC · QUEST SYSTEM",11,CompanionStyle.ACCENT,true));
+        titles.addView(text(isHub()?"Quest System":
             "Mini-VRCX · "+page.replace("mini_","").replace('_',' '),
             19,CompanionStyle.TEXT,true));
         LinearLayout tabs=new LinearLayout(this);
