@@ -531,9 +531,11 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         LinearLayout logs=card("LOCAL ACTIVITY");
         pair(logs,"Observed players","mini_current","Join & leave log","mini_joins");
         pair(logs,"Player history","mini_players","Friend changes","mini_log");
-        logs.addView(text("Player tracking requires compatible VRChat logs. "+
-            "Quest may not expose logs; an empty list is not a tracking failure.",
-            11,CompanionStyle.MUTED,false));
+        logs.addView(text(
+            "REQUIRED: In VRChat, open Settings → Debug → Logging and select FULL. "+
+            "Quest tracking reads Documents/Logs with permission. "+
+            "Start tracking before joining an instance; new joins appear after they happen.",
+            12,CompanionStyle.GOLD,false));
         Button tracking=button(logs,"Open tracking controls",false,()->
             startActivity(new Intent(this,MobileDeployActivity.class)));
         LinearLayout app=card("MAIN APP");
