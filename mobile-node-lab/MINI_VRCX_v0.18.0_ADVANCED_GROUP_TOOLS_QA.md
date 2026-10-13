@@ -12,6 +12,7 @@ The existing Mini-VRCX features (friends, notifications, users/worlds/groups sea
 - The floating Mini-VRCX **My Groups** view shows pinned group shortcuts first, then all groups already returned by VRChat. The full-screen groups browser marks pinned entries with a star.
 - The enhanced group overview shows online/member counts, join/visibility state and, where VRChat returns them, the current member's roles and membership status.
 - The group dashboard still provides member browsing and server-side member search, visible group instances, and a read-only ban list. It does **not** grant moderation authority.
+- The **full-screen native group profile** now opens a dedicated staff-gated group tools page with searchable/paged members, named member roles where available, visible group instances (population sort/filter, details, copy location, explicitly confirmed self-invite), and permission-scoped read-only bans. This also works when the floating overlay is not running.
 - Visible group instances can be filtered to populated ones, sorted by reported occupancy, refreshed and opened for additional details. Each retains existing copy-location and **explicitly confirmed** self-invite options. VRChat permission and server API checks remain authoritative.
 - No Main Launcher, Relay or desktop Node protocol changes. Nothing is uploaded to the Relay, and no TGC server-side role granting or ban mutation is added.
 
@@ -29,8 +30,8 @@ The existing Mini-VRCX features (friends, notifications, users/worlds/groups sea
 3. Full Companion → Explore → My Groups → group detail: pin/unpin a group. Confirm its star appears in the full-screen directory after refresh.
 4. Sign into a different personal VRChat account: pinned shortcuts must not leak into the second account. Switch back: original pins remain.
 5. On a group with roles, check current-account group role names and membership information; verify missing/hidden API fields don't crash the page.
-6. Group members: page forward/back and server-side search as before. Open a member's personal profile. Verify permissions and error handling.
-7. Group instances: test default sorting, populated-only filter, empty-group behavior, refreshing and displayed occupancy/capacity (VRChat fields can vary). Verify no false invite action for a malformed location.
+6. Group members: page forward/back and server-side search in both the floating and native group-tools views. Open a member's personal profile. Verify permissions and error handling.
+7. Group instances: test default sorting, populated-only filter, empty-group behavior, refreshing and displayed occupancy/capacity in both floating and native views (VRChat fields can vary). Verify no false invite action for a malformed location.
 8. Copy a visible instance location, open instance details, request and **confirm** a personal self-invite; verify the instance is accessible to the signed-in account. Decline confirm: no request sent.
 9. The read-only group-ban view stays read-only even for group moderators; no ban or kick action is introduced.
 10. Verify staff revocation and Quest overlay restrictions still stop/deny the floating service. Verify other Core/OSC features and offline Relay queues.
