@@ -1233,6 +1233,29 @@ public final class FloatingCompanionService extends Service {
     }
     private LinearLayout recentRows;
     private void showSocial(){
+        section(panelContent,"PINNED FRIENDS");
+        LinearLayout pinned=panelCard(panelContent);
+        int pinnedTotal=0;
+        try{
+            JSONArray shortcuts=FriendPinStore.pins(this);
+            pinnedTotal=shortcuts.length();
+            for(int i=0;i<shortcuts.length()&&i<5;i++){
+                JSONObject entry=shortcuts.optJSONObject(i);
+                if(entry==null)continue;
+                String uid=entry.optString("id","");
+                if(!uid.matches("usr_[0-9a-fA-F-]{36}"))continue;
+                String display=entry.optString("name","Friend");
+                action(pinned,"★ "+display,false,()->mini.profile(uid));
+            }
+        }catch(Exception e){
+            pinned.addView(text("Sign in to view your friend shortcuts.",
+                12,CompanionStyle.MUTED,false));
+        }
+        if(pinnedTotal==0)pinned.addView(text(
+            "Pin friends from their Mini-VRCX profiles or the friends list.",
+            12,CompanionStyle.MUTED,false));
+        paired(pinned,"Manage friends","Invitations",
+            ()->go("mini_friends"),()->mini.inbox("invite"));
         section(panelContent,"FRIENDS");
         LinearLayout friends=panelCard(panelContent);
         action(friends,"Friends & locations",true,()->go("mini_friends"));
