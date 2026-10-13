@@ -156,8 +156,8 @@ public final class QuestOscService extends Service {
         catch(Exception e){stopAll();stopSelf();return START_NOT_STICKY;}
         if(START_LIVE.equals(action)){
             int requested=intent.getIntExtra("seconds",10);
-            if(requested!=5&&requested!=10&&requested!=15&&requested!=30)
-                requested=10;
+            if(!OscControlStore.supportsLiveInterval(requested))
+                requested=OscControlStore.liveInterval(this);
             try{
                 String account=VRChatSession.load(this).optString("userId","");
                 if(!account.matches("usr_[0-9a-fA-F-]{36}"))
