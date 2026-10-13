@@ -133,11 +133,12 @@ public final class VRChatOscChat {
      */
     public static void sendParameter(String name,String type,String raw)
         throws Exception {
-        if(name==null||!name.matches("[A-Za-z_][A-Za-z0-9_]{0,63}"))
-            throw new IllegalArgumentException("Parameter name must contain letters, digits or underscores.");
+        // A parameter can be a nested path (Go/IsFeral), or the full
+        // /avatar/parameters/Go/IsFeral address. Do not double-prefix.
+        final String address=AvatarOscParameterPath.address(name);
         if(type==null)throw new IllegalArgumentException("Choose a parameter type.");
         ByteArrayOutputStream buffer=new ByteArrayOutputStream();
-        oscString(buffer,"/avatar/parameters/"+name);
+        oscString(buffer,address);
         switch(type){
             case "bool":{
                 if(!"true".equals(raw)&&!"false".equals(raw))
