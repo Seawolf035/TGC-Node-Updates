@@ -1,0 +1,58 @@
+name: Validate v0.18.3 floating action UX
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.18.3-floating-actions-ux
+    paths:
+      - "mobile-node-lab/mobile/**"
+      - ".github/workflows/check-mobile-floating-actions.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Static checks for fixed modal and shortcut
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          service=(base/'FloatingCompanionService.java').read_text()
+          overlay=(base/'OverlayMiniVrcx.java').read_text()
+          assert 'new FrameLayout(this)' in service
+          assert 'panelModalLayer.bringToFront()' in service or 'owner.bringToFront()' in service
+          assert 'showPinnedConfirmation' in service and 'showPinnedFeedback' in service
+          assert 'host.confirm(prompt,action)' in overlay
+          assert 'Switch toggle=new Switch(ctx)' in overlay
+          assert 'mini_osc_tags' in overlay and 'mini_osc_tags' in service
+          assert 'confirmBox.setVisibility' not in overlay
+          assert 'pendingAction' not in overlay
+          assert 'pendingStop' not in service
+          assert "versionCode 46" in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          print('Floating modal, tag shortcut and code 46 verified')
+          PY
+      - name: Compile debug APK
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Staff-Companion-v0.18.3-Floating-UX-Debug
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
