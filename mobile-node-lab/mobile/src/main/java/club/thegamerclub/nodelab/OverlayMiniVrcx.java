@@ -2006,7 +2006,7 @@ public final class OverlayMiniVrcx {
                         chosen[0]=state;
                         paint.run();
                         input.setText(savedMessage);
-                        confirmBox.setVisibility(View.GONE);
+                        // Selection updates the draft without opening a confirmation.
                     });
             }
         };
