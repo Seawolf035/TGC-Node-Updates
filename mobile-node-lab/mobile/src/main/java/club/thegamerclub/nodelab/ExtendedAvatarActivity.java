@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** VRCX-like on-device avatar collections. Requires confirmed active VRC+ subscription. */
+/** Companion on-device avatar collections. Requires confirmed active VRC+ subscription. */
 public final class ExtendedAvatarActivity extends StaffProtectedActivity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ArrayList<JSONObject> avatars=new ArrayList<>();
@@ -49,6 +49,7 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
         super.onResume();
         if(!StaffGate.unlocked(this)){finish();return;}
         if(System.currentTimeMillis()-verifiedAt>5*60_000L)verify();
+        else if(!accountId.isEmpty()&&!busy)reload();
     }
     private void render(){
         getWindow().setStatusBarColor(CompanionStyle.BG);
@@ -81,10 +82,15 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
         collection=CompanionStyle.button(this,"All categories ▾",false);
         filters.addView(collection,new LinearLayout.LayoutParams(0,dp(43),1f));
         collection.setOnClickListener(v->chooseCategory());
-        add=CompanionStyle.button(this,"+ Save avatar",true);
-        LinearLayout.LayoutParams a=new LinearLayout.LayoutParams(dp(143),dp(43));
+        add=CompanionStyle.button(this,"+ From favorites",true);
+        LinearLayout.LayoutParams a=new LinearLayout.LayoutParams(dp(162),dp(43));
         a.leftMargin=dp(7);filters.addView(add,a);
-        add.setOnClickListener(v->promptAdd(incomingAvatar));
+        add.setOnClickListener(v->browseFavorites());
+        Button manual=CompanionStyle.button(this,"Add by avatar link / ID · Advanced",false);
+        LinearLayout.LayoutParams mp=CompanionStyle.buttonParams(this);
+        mp.setMargins(dp(14),dp(1),dp(14),dp(7));
+        root.addView(manual,mp);
+        manual.setOnClickListener(v->promptAdd(""));
         search=CompanionStyle.input(this,"Search saved avatars or creators");
         LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,dp(49));
         sp.setMargins(dp(14),dp(4),dp(14),dp(7));root.addView(search,sp);
@@ -145,7 +151,10 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
                 if(!incomingAvatar.isEmpty()){
                     String idToAdd=incomingAvatar;
                     incomingAvatar="";
-                    promptAdd(idToAdd);
+                    JSONObject selected=new JSONObject();
+                    try{selected.put("id",idToAdd);}
+                    catch(Exception ignored){}
+                    ExtendedAvatarSaveFlow.open(this,selected,worker,this::reload);
                 }
             });
         });
@@ -177,11 +186,16 @@ public final class ExtendedAvatarActivity extends StaffProtectedActivity {
                 }).setNegativeButton("Cancel",null).show();
         }catch(Exception e){message.setText("Couldn't load categories.");}
     }
+    private void browseFavorites(){
+        if(accountId.isEmpty()||busy||!StaffGate.unlocked(this))return;
+        startActivity(new Intent(this,VRChatAvatarActivity.class)
+            .putExtra("extended_picker",true));
+    }
     private void promptAdd(String preset){
         if(busy||accountId.isEmpty()||!StaffGate.unlocked(this))return;
         LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);
         form.setPadding(dp(16),dp(8),dp(16),0);
-        TextView hint=text("Save an avatar by ID or copy it from normal VRChat favorites. This does not use a VRChat favorite slot.",
+        TextView hint=text("Advanced: manually add an avatar by its link or ID. To browse your normal VRChat favorites without IDs, use + From favorites.",
             13,CompanionStyle.MUTED,false);
         form.addView(hint);
         Button paste=CompanionStyle.button(this,"Paste avatar link or ID",false);
