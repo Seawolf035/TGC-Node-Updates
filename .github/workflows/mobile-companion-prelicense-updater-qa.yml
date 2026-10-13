@@ -36,8 +36,8 @@ jobs:
           manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
           gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
           assert 'if(activity instanceof CompanionLicenseActivity)return;' in gate
-          assert 'if(activity instanceof MobileUpdaterActivity)return;' in gate
-          assert gate.index('if(activity instanceof MobileUpdaterActivity)return;') < gate.index('if(!CompanionLicense.accepted(activity))')
+          assert re.search(r'if\(activity instanceof MobileUpdaterActivity &&\s*!CompanionLicense.accepted\(activity\)\)return;', gate)
+          assert gate.index('if(activity instanceof MobileUpdaterActivity &&') < gate.index('if(!CompanionLicense.accepted(activity))')
           assert gate.count('instanceof MobileUpdaterActivity') == 1, 'Updater must be a narrow exception'
           assert 'startActivity(new Intent(this,MobileUpdaterActivity.class))' in screen
           assert screen.count('recovery.setOnClickListener(v->openUpdates());') == 1
