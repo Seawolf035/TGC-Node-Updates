@@ -34,6 +34,10 @@ public class MobileDeployActivity extends Activity {
   private View unlinkControl;
   private boolean advanced=false;
   private boolean helpExpanded=false,questFallbackExpanded=false;
+  private static final String FIRST_SETUP_PREF="tgc_tracking_first_setup_v1";
+  private static final String FIRST_SETUP_MIGRATED="installation_checked";
+  private static final String FIRST_SETUP_ACK="logging_guide_acknowledged";
+  private boolean setupGuideOpen=false;
   private final Handler handler=new Handler(Looper.getMainLooper());
   private final Runnable autoRefresh=new Runnable(){
     @Override public void run(){refresh();handler.postDelayed(this,5000);}
@@ -60,6 +64,49 @@ public class MobileDeployActivity extends Activity {
     b.setOnClickListener(v->callback.run());
     return b;
   }
+  /** Preserve existing linked devices when introducing first-setup guidance.
+   * New/unlinked installs see the tutorial once; reconnects retain progress.
+   * This is only user acknowledgement, NEVER proof of VRChat's logging state.
+   */
+  private void initializeFirstSetup(){
+    android.content.SharedPreferences p=getSharedPreferences(FIRST_SETUP_PREF,0);
+    if(p.getBoolean(FIRST_SETUP_MIGRATED,false))return;
+    boolean previouslyLinked=false;
+    try{previouslyLinked=MobileCredentials.load(this)!=null;}
+    catch(Exception ignored){}
+    p.edit().putBoolean(FIRST_SETUP_MIGRATED,true)
+        .putBoolean(FIRST_SETUP_ACK,previouslyLinked).apply();
+  }
+  private boolean setupAcknowledged(){
+    return getSharedPreferences(FIRST_SETUP_PREF,0).getBoolean(FIRST_SETUP_ACK,false);
+  }
+  private void showFirstSetupGuide(){
+    if(setupGuideOpen||isFinishing()||isDestroyed())return;
+    setupGuideOpen=true;
+    boolean quest=QuestDevice.isQuestDevice();
+    String method=quest?
+        "2. In Companion, allow read-only access to Documents/Logs on this Quest. Shizuku is only an advanced fallback.":
+        "2. For Android phone player tracking, set up and authorize Shizuku in Companion.";
+    AlertDialog dialog=new AlertDialog.Builder(this)
+        .setTitle("First-time player tracking setup")
+        .setMessage(
+            "1. In VRChat, open Settings → Debug → Logging and select FULL. "+
+            "The Companion cannot change VRChat's logging setting for you.\n\n"+
+            method+"\n\n"+
+            "3. Start Companion tracking, then enter an instance or wait for "+
+            "new players to join. Old log entries are not replayed.\n\n"+
+            "You only need to acknowledge this setup guide once. You can "+
+            "reopen it later under Advanced tools.")
+        .setNegativeButton("Not yet",null)
+        .setPositiveButton("I understand · Continue",(d,w)->{
+            getSharedPreferences(FIRST_SETUP_PREF,0).edit()
+                .putBoolean(FIRST_SETUP_ACK,true).apply();
+            showStatus("Setup guide acknowledged. Make sure VRChat logging is set to Full before tracking.");
+        })
+        .create();
+    dialog.setOnDismissListener(d->setupGuideOpen=false);
+    dialog.show();
+  }
   private void openShizukuLink(String url){
     try{
       startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url))
@@ -79,6 +126,7 @@ public class MobileDeployActivity extends Activity {
     advanced=getIntent().getBooleanExtra("advanced",false);
     helpExpanded=state!=null && state.getBoolean("shizuku_help_expanded",false);
     questFallbackExpanded=state!=null && state.getBoolean("quest_fallback_expanded",false);
+    initializeFirstSetup();
     ScrollView scroll=new ScrollView(this);
     scroll.setBackgroundColor(CompanionStyle.BG);
     LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
@@ -125,12 +173,6 @@ public class MobileDeployActivity extends Activity {
     feedback=title("",13);
     feedback.setTextColor(CompanionStyle.ACCENT);
     dashboard.addView(feedback);
-    spacer(dashboard,12);
-    TextView loggingReminder=title(
-        "REQUIRED: In VRChat, open Settings → Debug → Logging and set the logging level to FULL. Otherwise player joins and leaves may not be recorded. Start Companion tracking before entering an instance.",
-        13);
-    loggingReminder.setTextColor(CompanionStyle.GOLD);
-    dashboard.addView(loggingReminder);
     spacer(dashboard,14);
     startControl=action(dashboard,"Start tracking",this::startNode,true);
     stopControl=action(dashboard,"Stop tracking",this::stopNode,false);
@@ -145,7 +187,7 @@ public class MobileDeployActivity extends Activity {
       folder.addView(title("QUEST LOG ACCESS",18));
       spacer(folder,7);
       TextView detail=title(
-          "Recommended for Quest: grant read-only access to VRChat's Documents/Logs folder. No Shizuku installation is needed. Set VRChat logging to FULL in Settings → Debug → Logging before starting tracking.",13);
+          "Recommended for Quest: grant read-only access to VRChat's Documents/Logs folder. No Shizuku installation is needed. Use the first-time setup guide for VRChat logging instructions.",13);
       detail.setTextColor(CompanionStyle.MUTED);
       folder.addView(detail);
       spacer(folder,9);
@@ -215,6 +257,8 @@ public class MobileDeployActivity extends Activity {
     technicalStatus=title("",12);
     technicalStatus.setTextColor(CompanionStyle.MUTED);
     advancedPane.addView(technicalStatus);
+    action(advancedPane,"Reopen first-time tracking setup guide",
+        this::showFirstSetupGuide,false);
     if(QuestDevice.isQuestDevice()){
       questFallbackContainer=new LinearLayout(this);
       questFallbackContainer.setOrientation(LinearLayout.VERTICAL);
@@ -244,6 +288,10 @@ public class MobileDeployActivity extends Activity {
     unlinkControl=action(advancedPane,"Unlink this device",this::unlinkConfirm,false);
     setAdvanced();
     refresh();
+    // Present the onboarding only to first-time/unlinked installs. Existing
+    // linked upgrades do not get an unexpected modal during routine tracking.
+    if(state==null && !setupAcknowledged())
+      handler.post(this::showFirstSetupGuide);
   }
   private void setAdvanced(){
     if(technicalStatus==null || advancedPane==null)return;
@@ -350,6 +398,11 @@ public class MobileDeployActivity extends Activity {
     refresh();
   }
   private void startNode(){
+    if(!setupAcknowledged()){
+      showStatus("Review the one-time VRChat logging setup before starting tracking.");
+      showFirstSetupGuide();
+      return;
+    }
     try{
       if(MobileCredentials.load(this)==null){
         showStatus("Link this device before starting tracking.");return;
@@ -374,7 +427,7 @@ public class MobileDeployActivity extends Activity {
       Intent intent=new Intent(this,MobileNodeService.class).setAction(MobileNodeService.START);
       if(Build.VERSION.SDK_INT>=26)startForegroundService(intent);
       else startService(intent);
-      showStatus("Starting tracking. Set VRChat Settings → Debug → Logging to FULL; then join an instance.");
+      showStatus("Starting tracking. Your status will update shortly.");
     }catch(Exception e){showStatus("Couldn't start tracking: "+e.getMessage());}
   }
   private void stopNode(){
