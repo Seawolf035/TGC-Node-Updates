@@ -50,6 +50,7 @@ public final class OverlayMiniVrcx {
     private LinearLayout root;
     private String screen="",target="",kind="";
     private String selectedGroupId="";
+    private JSONArray selectedGroupRoles=new JSONArray();
     private boolean onlyPopulatedGroupInstances=false;
     private boolean sortGroupInstancesByOccupancy=true;
     private String avatarGroup="all";
@@ -498,7 +499,12 @@ public final class OverlayMiniVrcx {
                     result->{loaded=(JSONArray)result;drawList();});break;
             case "mini_group":
                 execute(()->VRChatApi.getGroup(ctx,selectedGroupId),
-                    result->{profile=(JSONObject)result;drawList();});break;
+                    result->{
+                        profile=(JSONObject)result;
+                        JSONArray roles=profile.optJSONArray("roles");
+                        selectedGroupRoles=roles==null?new JSONArray():roles;
+                        drawList();
+                    });break;
             case "mini_members":
                 execute(()->{
                     String term=term();
@@ -1471,6 +1477,7 @@ public final class OverlayMiniVrcx {
     private void openGroupDashboard(String groupId){
         if(!groupId.matches("grp_[0-9a-fA-F-]{36}"))return;
         selectedGroupId=groupId;target=groupId;memberOffset=0;banOffset=0;
+        selectedGroupRoles=new JSONArray();
         onlyPopulatedGroupInstances=false;
         host.navigate("mini_group");
     }
@@ -1575,7 +1582,25 @@ public final class OverlayMiniVrcx {
             if(!matches(name+" "+id))continue;
             String role="";
             JSONArray roles=e.optJSONArray("roleIds");
-            if(roles!=null&&roles.length()>0)role=" · "+roles.length()+" group role(s)";
+            if(roles!=null&&roles.length()>0){
+                StringBuilder names=new StringBuilder();
+                for(int k=0;k<roles.length();k++){
+                    String roleId=roles.optString(k,"");
+                    for(int j=0;j<selectedGroupRoles.length();j++){
+                        JSONObject available=selectedGroupRoles.optJSONObject(j);
+                        if(available!=null&&roleId.equals(available.optString("id",""))){
+                            String title=available.optString("name","");
+                            if(!title.isEmpty()){
+                                if(names.length()>0)names.append(", ");
+                                names.append(title);
+                            }
+                            break;
+                        }
+                    }
+                }
+                role=names.length()>0?" · "+shortValue(names.toString(),140):
+                    " · "+roles.length()+" group role(s)";
+            }
             final String uid=id;
             line(list,name,"Member"+role+
                 (e.optString("joinedAt","").isEmpty()?"":" · Joined "+e.optString("joinedAt")),
