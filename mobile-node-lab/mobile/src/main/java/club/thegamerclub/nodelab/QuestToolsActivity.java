@@ -240,21 +240,14 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
             tabs.addView(tab,p);
             tab.setOnClickListener(view->switchTab(v[1]));
         }
-        scroll=new ScrollView(this);
-        scroll.setFillViewport(true);
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
-        body=vertical();
-        body.setPadding(dp(12),dp(10),dp(12),dp(22));
-        scroll.addView(body);
-        if(!isHub()){
-            mini.show(body,page);
-            return;
-        }
-        if(!"shortcuts".equals(page)){
+        // Pin the configurable three-action bar beneath the main Quest tabs.
+        // It must not scroll with page content; the ordinary Android floater is unchanged.
+        if(isHub() && !"shortcuts".equals(page)){
             List<String> bar=OverlayPreferences.quickBar(this);
             if(!bar.isEmpty()){
                 LinearLayout quick=new LinearLayout(this);
-                body.addView(quick);
+                quick.setPadding(dp(12),dp(2),dp(12),dp(2));
+                root.addView(quick,new LinearLayout.LayoutParams(-1,-2));
                 for(String key:bar){
                     Button q=CompanionStyle.button(this,
                         OverlayPreferences.name(key),false);
@@ -266,6 +259,16 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
                     q.setOnClickListener(v->openShortcut(key));
                 }
             }
+        }
+        scroll=new ScrollView(this);
+        scroll.setFillViewport(true);
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
+        body=vertical();
+        body.setPadding(dp(12),dp(10),dp(12),dp(22));
+        scroll.addView(body);
+        if(!isHub()){
+            mini.show(body,page);
+            return;
         }
         switch(page){
             case "home":showHome();break;
