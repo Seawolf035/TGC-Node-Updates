@@ -1,0 +1,125 @@
+name: Validate OSC Nested Avatar Parameters v0.19.7
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.19.7-nested-osc-parameters
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'mobile-node-lab/OSC_v0.19.7_NESTED_PARAMETERS_QA.md'
+      - '.github/workflows/check-mobile-osc-nested-parameters.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Validate storage, sender, and UI use same parameter-path rules
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          validator=(root/'AvatarOscParameterPath.java').read_text()
+          sender=(root/'VRChatOscChat.java').read_text()
+          store=(root/'OscControlStore.java').read_text()
+          ui=(root/'OverlayMiniVrcx.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'MAX_RELATIVE_LENGTH=192' in validator
+          assert 'PREFIX="/avatar/parameters/"' in validator
+          assert 'String address=AvatarOscParameterPath.address(name)' in sender
+          assert 'oscString(buffer,address)' in sender
+          assert 'String label=AvatarOscParameterPath.relative(name)' in store
+          assert 'AvatarOscParameterPath.isValid(name)' in ui
+          assert 'new InputFilter.LengthFilter(' in ui
+          assert 'AvatarOscParameterPath.MAX_INPUT_LENGTH' in ui
+          assert 'Go/IsFeral' in ui
+          assert 'versionCode 59' in gradle and "versionName '0.19.7'" in gradle
+          print('Sender, saved controls, and Quest/phone parameter UI share the validator.')
+          PY
+      - name: Run JVM OSC address and real UDP packet regression tests
+        run: |
+          mkdir -p /tmp/osc-unit/android/os /tmp/osc-unit/club/thegamerclub/nodelab /tmp/osc-classes
+          cat > /tmp/osc-unit/android/os/SystemClock.java <<'JAVA'
+          package android.os;
+          public final class SystemClock {
+              public static long elapsedRealtime(){ return System.currentTimeMillis(); }
+          }
+          JAVA
+          cat > /tmp/osc-unit/club/thegamerclub/nodelab/OscParameterSmoke.java <<'JAVA'
+          package club.thegamerclub.nodelab;
+          import java.net.*;
+          import java.nio.charset.StandardCharsets;
+          public class OscParameterSmoke {
+              private static void eq(String expected,String actual){
+                  if(!expected.equals(actual))
+                      throw new AssertionError("Expected "+expected+" got "+actual);
+              }
+              private static void reject(String input){
+                  try{
+                      AvatarOscParameterPath.relative(input);
+                      throw new AssertionError("Accepted invalid input: "+input);
+                  }catch(IllegalArgumentException expected){}
+              }
+              private static String readAddress(DatagramSocket receiver) throws Exception{
+                  byte[] bytes=new byte[1024];
+                  DatagramPacket packet=new DatagramPacket(bytes,bytes.length);
+                  receiver.receive(packet);
+                  String text=new String(packet.getData(),0,packet.getLength(),
+                      StandardCharsets.US_ASCII);
+                  int zero=text.indexOf(0);
+                  return zero<0?text:text.substring(0,zero);
+              }
+              public static void main(String[] args)throws Exception{
+                  String target="/avatar/parameters/Go/IsFeral";
+                  eq("Go/IsFeral",AvatarOscParameterPath.relative(target));
+                  eq("Go/IsFeral",AvatarOscParameterPath.relative("Go/IsFeral"));
+                  eq("IsFeral",AvatarOscParameterPath.relative("IsFeral"));
+                  eq(target,AvatarOscParameterPath.address(target));
+                  eq(target,AvatarOscParameterPath.address("Go/IsFeral"));
+                  eq("/avatar/parameters/IsFeral",
+                      AvatarOscParameterPath.address("IsFeral"));
+                  reject("Go//IsFeral");
+                  reject("Go/");
+                  reject("/avatar/parameters//Go");
+                  reject("/input/Voice");
+                  reject("/chatbox/input");
+                  reject("Go/Is Feral");
+                  reject(" ");
+                  reject(null);
+                  try(DatagramSocket receiver=new DatagramSocket(
+                      new InetSocketAddress(InetAddress.getByName("127.0.0.1"),9000))){
+                      receiver.setSoTimeout(2000);
+                      VRChatOscChat.sendParameter(target,"bool","true");
+                      eq(target,readAddress(receiver));
+                      VRChatOscChat.sendParameter("Go/IsFeral","bool","false");
+                      eq(target,readAddress(receiver));
+                      VRChatOscChat.sendParameter("Go/IsFeral","int","22");
+                      eq(target,readAddress(receiver));
+                      VRChatOscChat.sendParameter("Go/IsFeral","float","0.5");
+                      eq(target,readAddress(receiver));
+                  }
+                  System.out.println("Nested OSC addresses and UDP serialization passed.");
+              }
+          }
+          JAVA
+          javac -d /tmp/osc-classes             /tmp/osc-unit/android/os/SystemClock.java             mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/AvatarOscParameterPath.java             mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/VRChatOscChat.java             /tmp/osc-unit/club/thegamerclub/nodelab/OscParameterSmoke.java
+          java -cp /tmp/osc-classes club.thegamerclub.nodelab.OscParameterSmoke
+      - name: Compile Android debug APK
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
