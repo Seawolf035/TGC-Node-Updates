@@ -74,7 +74,7 @@ public final class FloatingCompanionService extends Service {
     private long lastPresenceFetch=0L,lastFriendFetch=0L;
     private Button trackingToggle;
     private String selectedTab="home", statusNote="";
-    private boolean verifying=false, friendBusy=false, eventBusy=false, pendingStop=false;
+    private boolean verifying=false, friendBusy=false, eventBusy=false;
     private boolean panelVisible=false;
     private boolean restoring=false,stoppingExplicitly=false;
     private int restoreAttempts=0;
@@ -910,7 +910,7 @@ public final class FloatingCompanionService extends Service {
         container.addView(b,p);
         b.setOnClickListener(v->{
             if(key.equals(selectedTab))return;
-            selectedTab=key;pendingStop=false;backStack.clear();
+            selectedTab=key;backStack.clear();
             dismissPanel();togglePanel();
         });
     }
@@ -989,12 +989,10 @@ public final class FloatingCompanionService extends Service {
         if(selectedTab.equals(destination))return;
         backStack.push(selectedTab);
         selectedTab=destination;
-        pendingStop=false;
         buildTab();
     }
     private void goBack(){
         selectedTab=backStack.isEmpty()?"home":backStack.pop();
-        pendingStop=false;
         buildTab();
     }
     private void setOverlayKeyboard(boolean focusable){
@@ -1195,22 +1193,19 @@ public final class FloatingCompanionService extends Service {
     private void toggleTracking(){
         if(!StaffGate.unlocked(this)){stopSelf();return;}
         if(nodeRunning()){
-            if(!pendingStop){
-                pendingStop=true;
-                statusNote="Tap again to confirm stopping tracking.";
-                if(trackingToggle!=null)trackingToggle.setText("Confirm stop tracking");
-                handler.postDelayed(()->{
-                    if(pendingStop){pendingStop=false;refreshStatus();}
-                },8000L);
-                return;
-            }
-            pendingStop=false;
-            try{
-                startService(new Intent(this,MobileNodeService.class).setAction(MobileNodeService.STOP));
-                statusNote="Stopping tracking…";
-            }catch(Exception error){statusNote="Could not stop tracking. Check tracking settings.";}
+            showPinnedConfirmation("Stop VRChat player tracking on this phone?",()->{
+                try{
+                    startService(new Intent(this,MobileNodeService.class)
+                        .setAction(MobileNodeService.STOP));
+                    statusNote="Stopping tracking…";
+                }catch(Exception error){
+                    statusNote="Could not stop tracking. Check tracking settings.";
+                }
+                refreshStatus();
+                handler.postDelayed(this::refreshStatus,2200L);
+            });
+            return;
         }else{
-            pendingStop=false;
             try{
                 if(MobileCredentials.load(this)==null){
                     statusNote="Link this phone in Tracking first.";
@@ -1264,8 +1259,7 @@ public final class FloatingCompanionService extends Service {
         nodeStatus.setText(label);
         nodeStatus.setTextColor(live?CompanionStyle.GOOD:CompanionStyle.GOLD);
         if(trackingToggle!=null){
-            trackingToggle.setText(pendingStop?"Confirm stop tracking":
-                live?"Stop tracking":"Start tracking");
+            trackingToggle.setText(live?"Stop tracking":"Start tracking");
         }
         if(nodeStats!=null){
             nodeStats.setText("Players: "+pref.getInt("captured_total",0)+
