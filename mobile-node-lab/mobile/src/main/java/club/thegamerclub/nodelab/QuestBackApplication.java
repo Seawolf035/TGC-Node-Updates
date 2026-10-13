@@ -39,7 +39,9 @@ public final class QuestBackApplication extends Application
         // cannot prevent installing a repaired signed APK. This Activity is
         // internal (not exported) and performs no staff/VRChat operations.
         // Never interpret opening or completing an update as license consent.
-        if(activity instanceof MobileUpdaterActivity)return;
+        // When consent already exists, retain normal Quest Back injection.
+        if(activity instanceof MobileUpdaterActivity &&
+            !CompanionLicense.accepted(activity))return;
         if(!CompanionLicense.accepted(activity)){
             if(!licensePromptInFlight){
                 licensePromptInFlight=true;
