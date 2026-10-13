@@ -21,6 +21,43 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
+      - name: Check Quest-only universal Back, OSC intervals, and logging guidance
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          home=(root/'CompanionActivity.java').read_text()
+          quest=(root/'QuestToolsActivity.java').read_text()
+          back=(root/'QuestBackApplication.java').read_text()
+          deploy=(root/'MobileDeployActivity.java').read_text()
+          ui=(root/'OverlayMiniVrcx.java').read_text()
+          store=(root/'OscControlStore.java').read_text()
+          sender=(root/'QuestOscService.java').read_text()
+          phone=(root/'FloatingCompanionService.java').read_text()
+          manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'Quest Tools' in home and 'Quest Tools' in quest
+          assert 'Quest System' not in home and 'Quest System' not in quest
+          assert 'action(hero,"⌘","Quest native tools"' not in home
+          assert 'action(questTools,"⌘","Open Quest native tools"' not in home
+          assert 'android:name=".QuestBackApplication"' in manifest
+          assert 'if(!QuestDevice.isQuestDevice()' in back
+          assert 'activity.onBackPressed();' in back
+          assert 'questTabs.push(tab);' in home and 'tab=questTabs.pop();' in home
+          assert 'private void goBack()' in quest
+          assert 'return !isQuestDevice();' in (root/'QuestDevice.java').read_text()
+          assert 'new int[]{5,10,15,20,30,45,60,90,120}' in store
+          assert 'new int[]{10,15,20,30,45,60,90,120,180,300}' in store
+          assert 'OscControlStore.liveIntervals()' in ui
+          assert 'OscControlStore.rotationIntervals()' in ui
+          assert 'OscControlStore.supportsLiveInterval(requested)' in sender
+          assert 'OscControlStore.supportsLiveInterval(seconds)' in phone
+          assert 'Logging' in deploy and 'FULL' in deploy
+          assert 'Logging' in home and 'FULL' in home
+          assert 'Logging' in quest and 'FULL' in quest
+          assert 'versionCode 60' in gradle and "versionName '0.19.8'" in gradle
+          print('Quest Back, phone isolation, tools naming, chatbox timing, Full logging verified.')
+          PY
       - name: Compile debug APK
         working-directory: mobile-node-lab
         run: gradle :mobile:assembleDebug --no-daemon --stacktrace
