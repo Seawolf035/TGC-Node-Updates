@@ -416,17 +416,40 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
                     represented.optString("shortCode",""),"group",gId);
             }
         }
+        // The profile may include only a partial preview. The dedicated
+        // browser requests the complete set visible to the signed-in account.
         JSONObject groupResponse=user.optJSONObject("groups");
-        JSONArray groups=groupResponse==null?user.optJSONArray("groups"):groupResponse.optJSONArray("list");
-        if(groups!=null && groups.length()>0){
-            kicker("VISIBLE GROUPS");
-            LinearLayout container=box();
-            for(int i=0;i<Math.min(groups.length(),24);i++){
-                JSONObject group=groups.optJSONObject(i);
-                if(group==null)continue;
-                String groupId=group.optString("groupId",group.optString("id",""));
-                link(container,group.optString("name","Group"),
-                    group.optString("shortCode",""),"group",groupId);
+        JSONArray groups=groupResponse==null?user.optJSONArray("groups"):
+            groupResponse.optJSONArray("list");
+        kicker("GROUPS");
+        LinearLayout container=box();
+        Button browse=CompanionStyle.button(this,"View all visible groups",true);
+        container.addView(browse,CompanionStyle.buttonParams(this));
+        final String target=id;
+        final String username=user.optString("displayName","Player");
+        browse.setOnClickListener(v->{
+            if(!StaffGate.unlocked(this)){finish();return;}
+            startActivity(new Intent(this,VRChatUserGroupsActivity.class)
+                .putExtra("user_id",target).putExtra("user_name",username));
+        });
+        container.addView(text(
+            "Browse the groups VRChat permits your account to see. Hidden group memberships are not available.",
+            12,CompanionStyle.MUTED,false));
+        if(groups!=null&&groups.length()>0){
+            space(container,10);
+            container.addView(text("PROFILE PREVIEW",
+                11,CompanionStyle.ACCENT,true));
+            for(int i=0;i<Math.min(groups.length(),5);i++){
+                JSONObject entry=groups.optJSONObject(i);
+                if(entry==null)continue;
+                JSONObject group=entry.optJSONObject("group");
+                String groupId=entry.optString("groupId",
+                    group==null?entry.optString("id",""):group.optString("id",""));
+                String name=group==null?entry.optString("name","Group"):
+                    group.optString("name",entry.optString("name","Group"));
+                String code=group==null?entry.optString("shortCode",""):
+                    group.optString("shortCode",entry.optString("shortCode",""));
+                link(container,name,code,"group",groupId);
             }
         }
         JSONArray worlds=user.optJSONArray("publicWorlds");
