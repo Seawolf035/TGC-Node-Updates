@@ -5,7 +5,7 @@
 ## Scope
 
 - Quest-only `QuestToolsActivity.java`: the user-configured 3-action quick bar remains fixed directly below the Home/Social/OSC/Tools tab row while the page scrolls.
-- No changes to `FloatingCompanionService.java`, ordinary phone navigation, shared Mini-VRCX controls, Shizuku watcher, Android signing, credentials, Relay, or Main Launcher.
+- No changes to `FloatingCompanionService.java`, ordinary phone navigation, shared Mini-VRCX controls, signing, credentials, Relay, or Main Launcher. A separate Quest-only Shizuku log path enhancement is documented in `QUEST_v0.19.1_LOG_WATCHER_QA.md`; the ordinary Android phone's live log directories remain unchanged.
 - Existing behavior retained: the quick bar appears on the main Quest hubs, not the Shortcuts editor or detailed Mini-VRCX pages.
 
 ## Test on Quest 2
