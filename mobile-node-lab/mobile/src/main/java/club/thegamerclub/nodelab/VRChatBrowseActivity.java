@@ -252,6 +252,9 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             e.description=(status.isEmpty()?"":status+"  ·  ")+description;
         }else if(mode.equals("groups")){
             e.kind="group";e.glyph="◈";e.id=item.optString("groupId",item.optString("id",""));
+            try{
+                if(GroupToolkitStore.contains(this,e.id))e.title="★ "+e.title;
+            }catch(Exception ignored){}
             String code=item.optString("shortCode","");
             e.description=(code.isEmpty()?"":code+"  ·  ")+item.optInt("memberCount",0)+" members";
         }else if(mode.equals("worlds")||mode.equals("recent")||mode.equals("search_worlds")){
