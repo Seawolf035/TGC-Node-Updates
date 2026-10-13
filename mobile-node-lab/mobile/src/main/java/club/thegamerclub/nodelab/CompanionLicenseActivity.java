@@ -1,6 +1,7 @@
 package club.thegamerclub.nodelab;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -95,6 +96,17 @@ public final class CompanionLicenseActivity extends Activity {
         accept.setContentDescription("Agree to license "+CompanionLicense.VERSION+" and continue");
         LinearLayout.LayoutParams acceptParams=new LinearLayout.LayoutParams(0,dp(48),1.3f);
         controls.addView(accept,acceptParams);
+
+        // Recovery path intentionally reachable BEFORE acceptance: only
+        // update checking, signature-verified download and Android installer.
+        // It does not unlock any Companion features or record consent.
+        Button update=CompanionStyle.button(this,"Check for Updates",false);
+        update.setContentDescription("Check for and install official Companion updates without accepting the agreement");
+        LinearLayout.LayoutParams updateParams=new LinearLayout.LayoutParams(-1,dp(46));
+        updateParams.topMargin=dp(7);
+        actions.addView(update,updateParams);
+        update.setOnClickListener(v->openUpdates());
+
         // The button itself is the affirmative consent control. No checkbox
         // and no scroll-to-end gate that could trap users on small Quest panels.
         accept.setEnabled(true);
@@ -122,11 +134,18 @@ public final class CompanionLicenseActivity extends Activity {
         CompanionStyle.safeArea(this,root);
         root.addView(text(
             "Unable to load the user agreement. Acceptance is unavailable. " +
-            "Try updating the official app without clearing its data.",
+            "You can check for an official update without deleting app data.",
             16,CompanionStyle.TEXT,true));
-        Button exit=CompanionStyle.button(this,"Exit",true);
+        Button recovery=CompanionStyle.button(this,"Check for Updates",true);
+        root.addView(recovery,CompanionStyle.buttonParams(this));
+        recovery.setOnClickListener(v->openUpdates());
+        Button exit=CompanionStyle.button(this,"Exit",false);
         root.addView(exit,CompanionStyle.buttonParams(this));
         exit.setOnClickListener(v->exitWithoutAgreement());
+    }
+
+    private void openUpdates(){
+        startActivity(new Intent(this,MobileUpdaterActivity.class));
     }
 
     private void exitWithoutAgreement(){
