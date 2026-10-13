@@ -2432,20 +2432,33 @@ public final class OverlayMiniVrcx {
             12,CompanionStyle.MUTED,false));
         final int[] selected={interval};
         LinearLayout speeds=new LinearLayout(ctx);
-        speeds.setOrientation(LinearLayout.HORIZONTAL);
+        speeds.setOrientation(LinearLayout.VERTICAL);
         intervalCard.addView(speeds);
-        int[] seconds={5,10,15,30};
+        int[] seconds=OscControlStore.liveIntervals();
         ArrayList<Button> options=new ArrayList<>();
-        for(int n:seconds){
-            Button choice=CompanionStyle.button(ctx,n+"s",false);
+        LinearLayout speedRow=null;
+        for(int i=0;i<seconds.length;i++){
+            final int n=seconds[i];
+            if(i%3==0){
+                speedRow=new LinearLayout(ctx);
+                speedRow.setOrientation(LinearLayout.HORIZONTAL);
+                speeds.addView(speedRow);
+            }
+            Button choice=CompanionStyle.button(ctx,n>=60?(n/60)+
+                (n%60==0?"m":"m "+(n%60)+"s"):n+"s",false);
             choice.setTextSize(12);
-            speeds.addView(choice,new LinearLayout.LayoutParams(0,dp(45),1f));
+            LinearLayout.LayoutParams btn=new LinearLayout.LayoutParams(0,dp(44),1f);
+            btn.setMargins(dp(2),0,dp(2),dp(4));
+            speedRow.addView(choice,btn);
             options.add(choice);
         }
         Runnable paint=()->{
-            for(int i=0;i<seconds.length;i++)
-                options.get(i).setText((seconds[i]==selected[0]?"✓ ":"")+
-                    seconds[i]+" sec");
+            for(int i=0;i<seconds.length;i++){
+                int value=seconds[i];
+                String label=value>=60?(value/60)+
+                    (value%60==0?"m":"m "+(value%60)+"s"):value+"s";
+                options.get(i).setText((value==selected[0]?"✓ ":"")+label);
+            }
         };
         for(int i=0;i<seconds.length;i++){
             final int value=seconds[i];
@@ -2573,7 +2586,8 @@ public final class OverlayMiniVrcx {
             12,CompanionStyle.MUTED,false));
         intro.addView(text(
             "Each message can have its own clock and battery fields. "+
-            "Your normal 5/10/15/30-second refresh stays unchanged.",
+            "Your separate Live Chatbox refresh timing stays independent. "+
+            "Long intervals may let chatbox text disappear between sends.",
             12,CompanionStyle.MUTED,false));
 
         section(list,"ROTATION");
@@ -2627,14 +2641,25 @@ public final class OverlayMiniVrcx {
         settings.addView(text("Switch to next chatbox after:",13,
             CompanionStyle.ACCENT,true));
         LinearLayout switchTimes=new LinearLayout(ctx);
-        switchTimes.setOrientation(LinearLayout.HORIZONTAL);
+        switchTimes.setOrientation(LinearLayout.VERTICAL);
         settings.addView(switchTimes);
-        int[] times={15,30,60,120};
-        for(int value:times){
+        int[] times=OscControlStore.rotationIntervals();
+        LinearLayout switchRow=null;
+        for(int i=0;i<times.length;i++){
+            final int value=times[i];
+            if(i%3==0){
+                switchRow=new LinearLayout(ctx);
+                switchRow.setOrientation(LinearLayout.HORIZONTAL);
+                switchTimes.addView(switchRow);
+            }
+            String label=value>=60?(value/60)+
+                (value%60==0?"m":"m "+(value%60)+"s"):value+"s";
             Button choice=CompanionStyle.button(ctx,
-                (seconds==value?"✓ ":"")+(value==120?"2m":value+"s"),seconds==value);
+                (seconds==value?"✓ ":"")+label,seconds==value);
             choice.setTextSize(12);
-            switchTimes.addView(choice,new LinearLayout.LayoutParams(0,dp(43),1f));
+            LinearLayout.LayoutParams btn=new LinearLayout.LayoutParams(0,dp(43),1f);
+            btn.setMargins(dp(2),0,dp(2),dp(4));
+            switchRow.addView(choice,btn);
             choice.setOnClickListener(v->{
                 try{OscControlStore.setRotationInterval(ctx,value);drawList();}
                 catch(Exception e){message(e.getMessage());}
