@@ -62,8 +62,16 @@ public final class QuestSafLogWatcher extends IPrivilegedProbe.Stub {
         this.context=context.getApplicationContext();
     }
     public static boolean isSelected(Context ctx){
-        return QuestDevice.isQuestDevice() && FOLDER.equals(
-            ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE).getString(MODE,SHIZUKU));
+        // Quest defaults to the user-granted Documents/Logs folder. Only an
+        // explicit advanced-menu choice uses Shizuku. Phones never use SAF.
+        return QuestDevice.isQuestDevice() && !SHIZUKU.equals(
+            ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE).getString(MODE,FOLDER));
+    }
+    public static boolean selectFolderMode(Context ctx){
+        if(!QuestDevice.isQuestDevice() || !hasGrant(ctx))return false;
+        ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
+            .putString(MODE,FOLDER).apply();
+        return true;
     }
     public static void selectShizuku(Context ctx){
         ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
@@ -84,7 +92,7 @@ public final class QuestSafLogWatcher extends IPrivilegedProbe.Stub {
     }
     public static void selectFolder(Context ctx,Uri uri){
         if(!QuestDevice.isQuestDevice())throw new SecurityException(
-            "Folder experiment is only available on Quest");
+            "Folder tracking is only available on Quest");
         if(uri==null||!"content".equals(uri.getScheme())||!isLogsTree(uri))
             throw new IllegalArgumentException("Select the Documents/Logs folder, not Documents or device root");
         ContentResolver resolver=ctx.getContentResolver();
@@ -95,7 +103,8 @@ public final class QuestSafLogWatcher extends IPrivilegedProbe.Stub {
                 persisted=true;break;
             }
         }
-        // Never switch away from working Shizuku unless SAF permission survived.
+        // Never switch away from an explicitly selected Shizuku fallback
+        // unless SAF permission survived.
         if(!persisted)throw new SecurityException(
             "Android did not retain read permission for this folder");
         ctx.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
