@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.18.4: Experimental Android OSC microphone PTT latch via /input/Voice (integer press 1 / release 0). Floating OSC tab adds one-tap hold/release, permanent quick release while held, a PTT indicator on the collapsed bubble, emergency release, five-minute auto-release and best-effort release when the floating service exits. VRChat Android OSC voice-input support remains unverified: packets cannot prove the mic is active. All v0.18.3 Mini-VRCX usability, rank-gated chatbox tags, world bookmarks, Shizuku, Node tracking and account security remain intact. No Relay/Main Launcher update required."
+            "notes": "v0.18.5: Official-only Live Chatbox rotation: optionally exclude the default personal status and saved personal chatboxes without deleting them, select only rank-authorized official TGC tags, and clear saved personal text/time/battery through a confirmation. Live start accepts a valid official-only slot even when the default personal status is empty, and live sends stop rather than fall back after all eligible tags disappear. Existing v0.18.4 confirmed-working experimental OSC Android PTT toggle, quick release, v0.18.3 floating controls, world bookmarks, Mini-VRCX, staff auth, and Shizuku/Relay Node remain intact."
           }
           JSON
           fi
