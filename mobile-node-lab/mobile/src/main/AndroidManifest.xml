@@ -54,6 +54,7 @@
  <activity android:name=".VRChatDetailActivity" android:exported="false"/>
  <activity android:name=".MobileUpdaterActivity" android:exported="false"/>
  <activity android:name=".MobileDeployActivity" android:exported="false"/>
+ <activity android:name=".CompanionLicenseActivity" android:exported="false"/>
  <activity android:name=".CompanionActivity" android:exported="true">
   <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
  </activity>
