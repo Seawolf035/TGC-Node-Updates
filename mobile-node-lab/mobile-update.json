@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.4",
-  "version_code": 56,
+  "version": "0.19.5",
+  "version_code": 57,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "82329f3124d7b6791354cf4296e6202d75dd4ffe00b4f504a1730f9bd1c35996",
-  "notes": "v0.19.4: Quest Home floating-tools button now opens Quest System directly, with the Quest-native toolkit identified consistently. Quest floating overlays are completely disabled, including legacy experimental opt-in, sticky service restarts, foreground recovery, and overlay controls; old Quest overlay preferences are cleared on Companion launch. Android phone floating tools and recovery are unchanged. Redundant account-menu shortcuts to avatar favorites, extended favorites, private notes, and inbox were removed from Settings; the features remain accessible from Home/Explore. Quest player tracking defaults to Documents/Logs folder permission with Shizuku nested under Advanced as a fallback; phone player tracking still requires Shizuku. Existing staff gating, phone interface outside these duplicate links, Relay, GM4/GM1, and Quest OSC stay unchanged. No Main Launcher or Relay deployments."
+  "sha256": "980c27af95881261e0bafffce8ab302d8a0629d5dd80a31d58d1a1dd0e924cf1",
+  "notes": "v0.19.5: Extended Avatar Favorites can now be saved directly from any normal VRChat favorite avatar card using a Save button and native category chooser; no avatar ID copying or intermediate screen is required. Saved avatars display a Saved state and may be moved between local categories without duplicate rows. Extended Favorites now offers + From favorites as the primary import method; manual avatar link/ID entry remains available as an advanced option. Existing VRC+ entitlement checks, account-scoped SQLite data and non-server favorite behavior remain unchanged. The remaining visible Mini-VRCX references in Quest tools, group tools and pinned group help text have been replaced with Companion/Quest terminology, while legacy internal database/preferences keys are preserved. Quest folder-first tracking and disabled Quest floater, phone Shizuku and floater, staff authorization, Relay and GM4/GM1 remain unchanged. No Main Launcher or Relay deployments."
 }
