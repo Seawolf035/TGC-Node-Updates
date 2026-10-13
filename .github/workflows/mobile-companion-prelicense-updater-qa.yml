@@ -1,0 +1,78 @@
+name: Companion pre-license updater recovery QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - fix/mobile-v0.19.12-prelicense-update-recovery
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'mobile-node-lab/docs/v0.19.12-prelicense-updater-qa.md'
+      - '.github/workflows/mobile-companion-prelicense-updater-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static security and feature regression checks
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          read=lambda f:(root/f).read_text()
+          gate=read('QuestBackApplication.java')
+          screen=read('CompanionLicenseActivity.java')
+          update=read('MobileUpdaterActivity.java')
+          consent=read('CompanionLicense.java')
+          home=read('CompanionActivity.java')
+          tracking=read('MobileNodeService.java')
+          quest=read('QuestSafLogWatcher.java')
+          manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'if(activity instanceof CompanionLicenseActivity)return;' in gate
+          assert 'if(activity instanceof MobileUpdaterActivity)return;' in gate
+          assert gate.index('if(activity instanceof MobileUpdaterActivity)return;') < gate.index('if(!CompanionLicense.accepted(activity))')
+          assert gate.count('instanceof MobileUpdaterActivity') == 1, 'Updater must be a narrow exception'
+          assert 'startActivity(new Intent(this,MobileUpdaterActivity.class))' in screen
+          assert screen.count('recovery.setOnClickListener(v->openUpdates());') == 1
+          assert screen.count('update.setOnClickListener(v->openUpdates());') == 1
+          assert 'CompanionLicense.accept(this)' in screen
+          assert 'persisted && CompanionLicense.accepted(this)' in screen
+          assert 'finishAffinity()' in screen
+          assert '.commit();' in consent
+          assert '2026-10-13.1' in consent, 'No new terms version in recovery patch'
+          assert 'if(!CompanionLicense.accepted(this))' in update
+          assert 'Updating does not record acceptance' in update
+          assert 'SHA-256 mismatch' in update and 'verifySameSigner(candidate)' in update
+          assert 'getPackageName().equals(p.packageName)' in update
+          assert 'requestPermission' not in gate
+          assert re.search(r'<activity android:name="\.MobileUpdaterActivity" android:exported="false"', manifest)
+          assert 'TrackingSetupGuide.acknowledged(this)' in home
+          assert 'View setup guide' in home
+          assert 'QuestSafLogWatcher.isSelected(this)' in tracking
+          assert 'Shizuku' in tracking and 'Documents/Logs' in quest
+          assert "versionCode 64" in gradle and "versionName '0.19.12'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          print('PASS: updater-only recovery, consent preservation, non-exported updater, signer/hash verification, tracking, and v0.19.12 code 64.')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without release publication
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
