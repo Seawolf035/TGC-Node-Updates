@@ -2638,8 +2638,13 @@ public final class OverlayMiniVrcx {
                     "Default personal status: INCLUDED":"Default personal status: EXCLUDED");
             }catch(Exception e){message(e.getMessage());}
         });
-        settings.addView(text("Switch to next chatbox after:",13,
-            CompanionStyle.ACCENT,true));
+        settings.addView(text(
+            "Switch to next chatbox after (effective switch happens on the next Live Chatbox send):",
+            13,CompanionStyle.ACCENT,true));
+        settings.addView(text(
+            "Set Live Chatbox refresh equal to or faster than the rotation interval. "+
+            "For long refresh intervals, switching waits until the next send.",
+            12,CompanionStyle.MUTED,false));
         LinearLayout switchTimes=new LinearLayout(ctx);
         switchTimes.setOrientation(LinearLayout.VERTICAL);
         settings.addView(switchTimes);
