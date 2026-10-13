@@ -125,6 +125,12 @@ public class MobileDeployActivity extends Activity {
     feedback=title("",13);
     feedback.setTextColor(CompanionStyle.ACCENT);
     dashboard.addView(feedback);
+    spacer(dashboard,12);
+    TextView loggingReminder=title(
+        "REQUIRED: In VRChat, open Settings → Debug → Logging and set the logging level to FULL. Otherwise player joins and leaves may not be recorded. Start Companion tracking before entering an instance.",
+        13);
+    loggingReminder.setTextColor(CompanionStyle.GOLD);
+    dashboard.addView(loggingReminder);
     spacer(dashboard,14);
     startControl=action(dashboard,"Start tracking",this::startNode,true);
     stopControl=action(dashboard,"Stop tracking",this::stopNode,false);
@@ -139,7 +145,7 @@ public class MobileDeployActivity extends Activity {
       folder.addView(title("QUEST LOG ACCESS",18));
       spacer(folder,7);
       TextView detail=title(
-          "Recommended for Quest: grant read-only access to VRChat's Documents/Logs folder. No Shizuku installation is needed. Enable Full logging in VRChat first; start tracking before joining an instance.",13);
+          "Recommended for Quest: grant read-only access to VRChat's Documents/Logs folder. No Shizuku installation is needed. Set VRChat logging to FULL in Settings → Debug → Logging before starting tracking.",13);
       detail.setTextColor(CompanionStyle.MUTED);
       folder.addView(detail);
       spacer(folder,9);
@@ -368,7 +374,7 @@ public class MobileDeployActivity extends Activity {
       Intent intent=new Intent(this,MobileNodeService.class).setAction(MobileNodeService.START);
       if(Build.VERSION.SDK_INT>=26)startForegroundService(intent);
       else startService(intent);
-      showStatus("Starting tracking. Your status will update shortly.");
+      showStatus("Starting tracking. Set VRChat Settings → Debug → Logging to FULL; then join an instance.");
     }catch(Exception e){showStatus("Couldn't start tracking: "+e.getMessage());}
   }
   private void stopNode(){
