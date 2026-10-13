@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.18.3: Floating tools usability update: confirmations for invites, friend requests, avatar and status changes, saved OSC items, Live Chatbox starts, private notes and tracking stop now appear centered over tool buttons with accessible Confirm/Cancel, never at the bottom of scrolled pages. Feedback is immediately visible. Official rank-gated TGC chatbox tags now have a direct shortcut on the OSC home panel and compact one-tap toggles that preserve scroll position. All previous v0.18.2 world bookmarks, Mini-VRCX, Shizuku, OSC, private VRChat session, staff rank authorization and Relay functionality remain intact."
+            "notes": "v0.18.4: Experimental Android OSC microphone PTT latch via /input/Voice (integer press 1 / release 0). Floating OSC tab adds one-tap hold/release, permanent quick release while held, a PTT indicator on the collapsed bubble, emergency release, five-minute auto-release and best-effort release when the floating service exits. VRChat Android OSC voice-input support remains unverified: packets cannot prove the mic is active. All v0.18.3 Mini-VRCX usability, rank-gated chatbox tags, world bookmarks, Shizuku, Node tracking and account security remain intact. No Relay/Main Launcher update required."
           }
           JSON
           fi
