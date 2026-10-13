@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Visible user-started VRChat monitoring service.
- * Shizuku watcher and relay uploader have INDEPENDENT work loops: slow relay
+ * Log watcher and relay uploader have INDEPENDENT work loops: slow relay
  * calls never block saving join events. No account auth tokens in logs/status.
  */
 public final class MobileNodeService extends Service {
@@ -35,7 +35,8 @@ public final class MobileNodeService extends Service {
   private final Handler handler=new Handler(Looper.getMainLooper());
   private volatile boolean running=false, bound=false, shuttingDown=false, trackingStarted=false;
   private volatile IPrivilegedProbe watcher;
-  // App-UID SAF mode uses no Shizuku; opt-in on Quest only.
+  // Quest uses app-UID SAF by default; Shizuku is an advanced Quest fallback.
+  // Android phone tracking always uses Shizuku.
   private volatile boolean useFolderMode=false;
   private QuestSafLogWatcher folderWatcher;
   private MobileOutbox outbox;
@@ -111,6 +112,17 @@ public final class MobileNodeService extends Service {
     if(!running){
       useFolderMode=QuestSafLogWatcher.isSelected(this);
       folderWatcher=useFolderMode?new QuestSafLogWatcher(this):null;
+      // A device upgrading from the old default must grant the folder before
+      // tracking starts. Never silently start a broken watcher or switch to
+      // Shizuku in the background.
+      if(useFolderMode && !QuestSafLogWatcher.hasGrant(this)){
+        running=false;
+        watcherState="Grant Documents/Logs access in Tracking controls";
+        persist();
+        stopForeground(STOP_FOREGROUND_REMOVE);
+        stopSelf(startId);
+        return START_NOT_STICKY;
+      }
       running=true;shuttingDown=false;
       watcherState=useFolderMode?
         "Quest folder watcher starting (no Shizuku required)":
@@ -309,6 +321,7 @@ public final class MobileNodeService extends Service {
       getSharedPreferences("tgc_mobile_node_status",0).edit()
         .putBoolean("running",running)
         .putString("watcher",watcherState)
+        .putString("tracking_mode",useFolderMode?"folder":"shizuku")
         .putString("relay",relayState)
         .putInt("queue",outbox==null?0:outbox.count())
         .putLong("service_heartbeat_at",System.currentTimeMillis())
