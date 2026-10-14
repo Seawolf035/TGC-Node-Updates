@@ -249,6 +249,7 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
                     showLoginForm=false;
                     connectionState=UNKNOWN;
                     checkedUserId="";
+                    lastAttemptAt=0L;
                     render();
                     checkSession(false);
                 });
@@ -266,6 +267,7 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
                     showLoginForm=false;
                     connectionState=UNKNOWN;
                     checkedUserId="";
+                    lastAttemptAt=0L;
                     render();
                     checkSession(false);
                 });
@@ -282,6 +284,7 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
                 connectionState=UNKNOWN;
                 checkedUserId="";
                 checkedAt=0L;
+                lastAttemptAt=0L;
                 connectionMessage="";
                 showLoginForm=false;
                 render();
