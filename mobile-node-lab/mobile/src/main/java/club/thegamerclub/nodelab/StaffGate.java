@@ -26,6 +26,7 @@ public final class StaffGate {
         verifiedNode="";
         verifiedDiscord="";
         verifiedRank="";
+        ThemePreferences.resetRuntime();
     }
     public static boolean unlocked(Context context){
         long approved=approvedElapsed;
