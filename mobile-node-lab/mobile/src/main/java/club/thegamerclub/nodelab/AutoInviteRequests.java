@@ -143,10 +143,15 @@ public final class AutoInviteRequests {
         // saved user profile, friend presence, or tracking logs.
         JSONObject me=VRChatApi.currentUser(ctx);
         String location=me.optString("location","");
-        String instance=me.optString("instanceId","");
-        if(!location.startsWith("wrld_")||!location.contains(":")||
-           instance.isEmpty()||!location.endsWith(instance)||
-           instance.equals("offline")||instance.equals("private"))return 0;
+        // Do not invite if VRChat reports offline, traveling or hidden.
+        // A VRChat world location is worldId:instanceId; the invite API
+        // expects only the instanceId portion. Refuse mismatched fields.
+        try{VRChatApi.normalizeLocation(location);}
+        catch(IllegalArgumentException invalid){return 0;}
+        String instance=location.substring(location.indexOf(':')+1);
+        String separateId=me.optString("instanceId","");
+        if(instance.isEmpty()||
+           (!separateId.isEmpty()&&!instance.equals(separateId)))return 0;
 
         int sent=0;
         for(int i=0;i<updates.length();i++){
