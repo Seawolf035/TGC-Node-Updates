@@ -392,7 +392,11 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                         "Reconnecting • your access remains active");
                     verificationNotice.setTextColor(error==null?CompanionStyle.GOOD:CompanionStyle.GOLD);
                 }
-                if(StaffGate.unlocked(this))maybeRestoreFloatingTools();
+                if(StaffGate.unlocked(this)){
+                    maybeRestoreFloatingTools();
+                    if(foreground&&InboxAlertSettings.liveEnabled(this))
+                        VRChatPipelineService.start(this);
+                }
             });
         });
     }
@@ -1063,9 +1067,10 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             optedIn&&allowed?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
         space(inboxSettings,7);
         inboxSettings.addView(txt(
-            "Optional alerts for new VRChat invites and friend requests. "+
-            "Checks about every 15 minutes while connected; Android may delay updates "+
-            "to save battery. No Shizuku or mobile VRChat installation required.",
+            "Alerts for VRChat invitations, requests, friends, groups and events. "+
+            "Background catch-up uses Android's roughly 15-minute checks; "+
+            "enable Live mode for faster push-like delivery with an ongoing "+
+            "notification. Phone sound, vibration and pop-ups are configurable.",
             12,CompanionStyle.MUTED,false));
         space(inboxSettings,8);
         action(inboxSettings,"✉",optedIn?"Turn off inbox alerts":"Enable inbox alerts",
@@ -1076,6 +1081,31 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             action(inboxSettings,"↗","Allow Android notifications",
                 "Grant notification access for new invites and requests",
                 this::requestInboxNotificationPermission);
+        if(optedIn&&allowed){
+            boolean live=InboxAlertSettings.liveEnabled(this);
+            space(inboxSettings,5);
+            action(inboxSettings,"◉",
+                live?"Turn off live VRChat alerts":"Enable LIVE VRChat alerts",
+                live?"Stop the persistent WebSocket service; periodic checks remain":
+                    "Much faster group, invite and friend alerts with a visible ongoing notification",
+                this::toggleLiveInbox);
+            action(inboxSettings,"◎","Send a notification test",
+                "Check whether this phone shows and sounds a Group alert",
+                ()->{
+                    InboxAlertWorker.sendTest(this);
+                    Toast.makeText(this,"Test sent. Check Android notification settings if silent.",
+                        Toast.LENGTH_LONG).show();
+                });
+            action(inboxSettings,"⚙","Android notification sounds & pop-ups",
+                "Adjust each VRChat notification category's sound, vibration and visibility",
+                this::openAndroidNotificationSettings);
+            android.app.NotificationManager notificationManager=
+                (android.app.NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+            if(notificationManager!=null&&!notificationManager.areNotificationsEnabled())
+                inboxSettings.addView(txt(
+                    "Android has blocked app notifications. Open system settings above.",
+                    12,CompanionStyle.GOLD,true));
+        }
         page.addView(CompanionStyle.section(this,"AUTO-ACCEPT INVITE REQUESTS"));
         LinearLayout autoInvites=card();
         boolean autoInviteEnabled=AutoInviteRequests.enabled(this);
@@ -1306,6 +1336,45 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                     Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();
                 }
             }).show();
+    }
+    private void toggleLiveInbox(){
+        if(!StaffGate.unlocked(this)){revalidate();return;}
+        if(InboxAlertSettings.liveEnabled(this)){
+            InboxAlertSettings.setLiveEnabled(this,false);
+            Toast.makeText(this,"Live inbox stopped; scheduled checks remain on",
+                Toast.LENGTH_SHORT).show();
+            renderUnlocked();
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Enable low-latency VRChat inbox alerts?")
+            .setMessage("The Companion will maintain a visible Android foreground "+
+                "service and connect directly to the VRChat WebSocket pipeline "+
+                "using your personal login. It refreshes actual inbox data "+
+                "when new events arrive, including group announcements and "+
+                "events. This uses battery and requires a persistent ongoing "+
+                "notification. Android, network outages or VRChat may still "+
+                "interrupt real-time delivery; scheduled catch-up remains active.")
+            .setNegativeButton("Not now",null)
+            .setPositiveButton("Enable live alerts",(dialog,button)->{
+                try{
+                    InboxAlertSettings.setLiveEnabled(this,true);
+                    renderUnlocked();
+                }catch(Exception e){
+                    Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();
+                }
+            }).show();
+    }
+    private void openAndroidNotificationSettings(){
+        try{
+            Intent settings=new Intent(
+                android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName());
+            startActivity(settings);
+        }catch(Exception e){
+            Toast.makeText(this,"Open Settings → Apps → Companion → Notifications",
+                Toast.LENGTH_LONG).show();
+        }
     }
     private void toggleInboxAlerts(){
         if(!StaffGate.unlocked(this)){revalidate();return;}
