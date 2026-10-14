@@ -33,8 +33,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private final ArrayDeque<String> back=new ArrayDeque<>();
     private String page="home";
-    // Only Home, Social, OSC and Tools are navigation roots. Shortcuts is an
-    // editor, not a root: it also needs Back to the previous Quest Tools page.
+    // Home, Social, OSC, Tracking and Tools are navigation roots.
+    // Shortcuts is an editor, not a root: it needs Back.
     @Override public boolean showQuestBack(){return !isPrimaryTab();}
     private LinearLayout body,root;
     private ScrollView scroll;
@@ -281,7 +281,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     @Override public void onBackPressed(){goBack();}
     private boolean isPrimaryTab(){
         return "home".equals(page)||"social".equals(page)||
-            "osc".equals(page)||"tools".equals(page);
+            "osc".equals(page)||"tracking".equals(page)||
+            "tools".equals(page);
     }
     private boolean isHub(){
         // The shortcuts editor has its own native layout, not a MiniVRCX page.
@@ -356,10 +357,14 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         tabs.setBackgroundColor(CompanionStyle.SURFACE);
         root.addView(tabs);
         String[][] values={{"Home","home"},{"Social","social"},
-            {"OSC","osc"},{"Tools","tools"}};
+            {"OSC","osc"},{"Tracking","tracking"},{"Tools","tools"}};
         for(String[] v:values){
             Button tab=CompanionStyle.button(this,v[0],page.equals(v[1]));
-            tab.setTextSize(12);
+            tab.setTextSize(10);
+            tab.setSingleLine(true);
+            tab.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            tab.setPadding(dp(2),0,dp(2),0);
+            tab.setMinWidth(0);tab.setMinimumWidth(0);
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(42),1f);
             p.setMargins(dp(2),0,dp(2),dp(2));
             tabs.addView(tab,p);
@@ -407,6 +412,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             case "home":showHome();break;
             case "social":showSocial();break;
             case "osc":showOsc();break;
+            case "tracking":showTracking();break;
             case "shortcuts":showShortcuts();break;
             default:showTools();break;
         }
@@ -668,6 +674,63 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         });
         toast("OSC typing packet sent locally.");
     }
+    /** Tracking hub for both actual Quest and the creator's phone preview.
+     * Capture continues in the existing per-device service, NOT this Activity.
+     * On Quest, read-only Documents/Logs is the recommended source. */
+    private void showTracking(){
+        boolean quest=QuestDevice.isQuestDevice();
+        android.content.SharedPreferences state=
+            getSharedPreferences("tgc_mobile_node_status",0);
+        long heartbeat=state.getLong("service_heartbeat_at",0L);
+        boolean active=state.getBoolean("running",false)&&heartbeat>0L&&
+            System.currentTimeMillis()-heartbeat<90_000L;
+        int captured=state.getInt("captured_total",0);
+        int uploaded=state.getInt("uploaded_total",0);
+
+        LinearLayout status=card(quest?"QUEST PLAYER TRACKING":
+            "PHONE PLAYER TRACKING · PREVIEW");
+        status.addView(text(active?"● Tracking active":"○ Tracking paused",
+            17,active?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        status.addView(text("Players captured: "+captured+
+            "  ·  Records synced: "+uploaded,13,CompanionStyle.MUTED,false));
+        status.addView(text(active?
+            "The existing device capture service is recording player activity.":
+            "Start capture in Device & Capture Controls. Tracking works "+
+            "independently of whether Quest Tools is open.",
+            12,CompanionStyle.MUTED,false));
+        button(status,"Device & Capture Controls",true,()->
+            startActivity(new Intent(this,MobileDeployActivity.class)));
+        button(status,"Refresh tracking status",false,this::render);
+
+        LinearLayout logs=card("TRACKED PLAYERS & HISTORY");
+        pair(logs,"Observed players","mini_current",
+            "Join & leave log","mini_joins");
+        pair(logs,"Past encounters","mini_players",
+            "Friend changes","mini_log");
+
+        LinearLayout setup=card("TRACKING SETUP");
+        if(quest){
+            boolean grant=QuestSafLogWatcher.hasGrant(this);
+            boolean full=CompanionSetupState.fullLoggingAcknowledged(this);
+            setup.addView(text((grant?"✓ ":"○ ")+"Documents/Logs: "+
+                (grant?"read access saved":"folder access needed"),
+                13,grant?CompanionStyle.GOOD:CompanionStyle.GOLD,false));
+            setup.addView(text((full?"✓ ":"○ ")+"VRChat FULL logging: "+
+                (full?"user-confirmed":"not confirmed"),
+                13,full?CompanionStyle.GOOD:CompanionStyle.GOLD,false));
+            setup.addView(text("FULL logging is confirmed by the user; "+
+                "the Companion cannot read VRChat's Debug setting.",
+                12,CompanionStyle.MUTED,false));
+        }else{
+            setup.addView(text(
+                "This owner preview displays your PHONE's own history. "+
+                "Phone tracking is optional and uses Shizuku when enabled; "+
+                "your Quest has separate log-folder permissions.",
+                12,CompanionStyle.MUTED,false));
+        }
+        button(setup,"Guided device setup",false,()->
+            startActivity(new Intent(this,CompanionSetupActivity.class)));
+    }
     private void showTools(){
         LinearLayout account=card("ACCOUNT & SOCIAL");
         pair(account,"Favorite friend groups","mini_friend_favorites",
@@ -677,18 +740,6 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         pair(account,"Recent worlds","mini_recent","Current instance","mini_now");
         pair(account,"Groups","mini_groups","Search everything","mini_find");
         pair(account,"Friend notes","mini_friends","Inbox","mini_inbox");
-        LinearLayout logs=card("LOCAL ACTIVITY");
-        pair(logs,"Observed players","mini_current","Join & leave log","mini_joins");
-        pair(logs,"Player history","mini_players","Friend changes","mini_log");
-        logs.addView(text(
-            QuestDevice.isQuestDevice()?
-            "Quest tracking reads Documents/Logs with permission. "+
-            "Only new joins after the tracker starts appear here.":
-            "This preview uses your phone's own local history. "+
-            "Phone VRChat player tracking still requires Shizuku.",
-            12,CompanionStyle.MUTED,false));
-        Button tracking=button(logs,"Open tracking controls",false,()->
-            startActivity(new Intent(this,MobileDeployActivity.class)));
         LinearLayout app=card("MAIN APP");
         button(app,"Open full Companion",true,()->{
             startActivity(new Intent(this,CompanionActivity.class));finish();
