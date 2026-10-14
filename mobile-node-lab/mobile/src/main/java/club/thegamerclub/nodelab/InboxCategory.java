@@ -11,7 +11,8 @@ public final class InboxCategory {
         String type=n.optString("type","").toLowerCase(Locale.US);
         String category=n.optString("category","").toLowerCase(Locale.US);
         if(type.startsWith("group.")||type.startsWith("moderation.")||
-           type.equals("groupchange")||category.startsWith("social.group")||
+           type.equals("groupchange")||type.equals("event.announcement")||
+           category.startsWith("social.group")||
            category.equals("group")||category.startsWith("moderation."))
             return "groups";
         if(type.startsWith("event.")||category.equals("event")||
