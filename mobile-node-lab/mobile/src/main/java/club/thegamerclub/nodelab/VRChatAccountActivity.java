@@ -21,6 +21,12 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
     private LinearLayout page,form;
     private TextView message;
     private EditText user,pass,code;
+    // A Keystore-saved cookie is NOT evidence of current VRChat authorization.
+    private static final int UNKNOWN=0,CHECKING=1,VERIFIED=2,EXPIRED=3,UNAVAILABLE=4;
+    private int connectionState=UNKNOWN;
+    private boolean connectionRequestRunning=false,showLoginForm=false;
+    private String connectionMessage="",checkedUserId="";
+    private long checkedAt=0L;
 
     private int dp(int n){return CompanionStyle.dp(this,n);}
     private TextView label(String text,int size){
@@ -52,7 +58,11 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         render();
     }
     @Override protected void onResume(){
-        super.onResume();if(!StaffGate.unlocked(this))finish();
+        super.onResume();
+        if(!StaffGate.unlocked(this)){finish();return;}
+        if(!showLoginForm && !connectionRequestRunning &&
+            (connectionState!=VERIFIED || System.currentTimeMillis()-checkedAt>60_000L))
+            checkSession(false);
     }
     private void render(){
         getWindow().setStatusBarColor(CompanionStyle.BG);
@@ -81,22 +91,61 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         gap(form,9);
         try{
             JSONObject session=VRChatSession.load(this);
-            if(!session.optString("userId").isEmpty()&&!session.optBoolean("needs2fa")){
-                form.addView(CompanionStyle.chip(this,"● Signed in",CompanionStyle.GOOD,0xFF163B33));
+            if(!showLoginForm &&
+               !session.optString("userId","").isEmpty() &&
+               !session.optString("auth","").isEmpty() &&
+               !session.optBoolean("needs2fa",true)){
+                String id=session.optString("userId","");
+                boolean verified=connectionState==VERIFIED&&id.equals(checkedUserId);
+                boolean expired=connectionState==EXPIRED;
+                boolean unavailable=connectionState==UNAVAILABLE;
+                int color=verified?CompanionStyle.GOOD:
+                    expired?CompanionStyle.GOLD:CompanionStyle.MUTED;
+                form.addView(CompanionStyle.chip(this,
+                    verified?"● Signed in · verified with VRChat":
+                    expired?"● VRChat session expired":
+                    unavailable?"● VRChat connection unverified":
+                    "○ Checking saved VRChat session…",
+                    color,verified?0xFF163B33:expired?0xFF413025:0xFF24374A));
                 gap(form,15);
                 form.addView(label(session.optString("displayName","VRChat user"),23));
                 gap(form,8);
-                TextView hint=label("Your account is connected. You can explore the Companion without signing in again.",13);
-                hint.setTextColor(CompanionStyle.MUTED);form.addView(hint);gap(form,17);
-                action(form,"View my profile",()->{
-                    String id=session.optString("userId","");
-                    if(!id.matches("usr_[0-9a-fA-F-]{36}")){say("Please check your session.");return;}
-                    startActivity(new Intent(this,VRChatDetailActivity.class).putExtra("kind","user").putExtra("id",id));
-                },true);
-                action(form,"My private VRChat notes",()->startActivity(new Intent(this,VRChatNotesActivity.class)),false);
-                action(form,"Status & presets",()->startActivity(new Intent(this,PresenceActivity.class)),false);
-                action(form,"Extended avatar favorites (VRC+)",()->startActivity(new Intent(this,ExtendedAvatarActivity.class)),false);
-                action(form,"Check connection",this::checkSession,false);
+                TextView hint=label(verified?
+                    "VRChat verified your session online. Your account is connected.":
+                    expired?
+                    "VRChat rejected your saved login. Sign in again to restore "+
+                    "your Quest Tools preview, friends and other account features.":
+                    unavailable?
+                    "Your account is still saved on this device, but VRChat couldn't "+
+                    "confirm the connection. Check your network and retry.":
+                    "Your saved account is present. Checking with VRChat now...",
+                    13);
+                hint.setTextColor(CompanionStyle.MUTED);form.addView(hint);gap(form,11);
+                if(!connectionMessage.isEmpty()){
+                    TextView detail=label(connectionMessage,12);
+                    detail.setTextColor(expired?CompanionStyle.GOLD:CompanionStyle.MUTED);
+                    form.addView(detail);gap(form,9);
+                }
+                if(verified){
+                    action(form,"View my profile",()->{
+                        startActivity(new Intent(this,VRChatDetailActivity.class)
+                            .putExtra("kind","user").putExtra("id",id));
+                    },true);
+                    action(form,"My private VRChat notes",()->
+                        startActivity(new Intent(this,VRChatNotesActivity.class)),false);
+                    action(form,"Status & presets",()->
+                        startActivity(new Intent(this,PresenceActivity.class)),false);
+                    action(form,"Extended avatar favorites (VRC+)",()->
+                        startActivity(new Intent(this,ExtendedAvatarActivity.class)),false);
+                }
+                Button retry=action(form,connectionRequestRunning?
+                    "Checking VRChat…":"Check connection",
+                    ()->checkSession(true),false);
+                retry.setEnabled(!connectionRequestRunning);
+                action(form,expired?"Sign in again":"Use another VRChat login",()->{
+                    showLoginForm=true;
+                    render();
+                },false);
                 action(form,"Sign out",this::confirmLogout,false);
                 return;
             }
@@ -109,6 +158,10 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         pass=field("PASSWORD","Enter your password",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         gap(form,8);
         action(form,"Sign in",this::login,true);
+        if(showLoginForm)action(form,"Cancel · keep saved session",()->{
+            showLoginForm=false;
+            render();
+        },false);
         TextView note=label("A linked VRChat account is required for Steam or Meta users.",12);
         note.setTextColor(CompanionStyle.MUTED);form.addView(note);
     }
@@ -124,14 +177,56 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         action(form,"Recovery code",()->verify("otp"),false);
         action(form,"Cancel sign-in",()->{VRChatSession.clear(this);render();},false);
     }
-    private void checkSession(){
+    private void checkSession(){checkSession(true);}
+    private void checkSession(boolean manual){
         if(!StaffGate.unlocked(this)){finish();return;}
-        say("Checking your account...");
+        if(showLoginForm||connectionRequestRunning)return;
+        final String expected;
+        try{
+            JSONObject saved=VRChatSession.load(this);
+            expected=saved.optString("userId","");
+            if(!expected.matches("usr_[0-9a-fA-F-]{36}") ||
+               saved.optString("auth","").isEmpty() ||
+               saved.optBoolean("needs2fa",true))return;
+        }catch(Exception e){return;}
+        connectionRequestRunning=true;
+        connectionState=CHECKING;
+        connectionMessage="";
+        render();
         io.execute(()->{
+            Exception failure=null;
+            String actual="";
             try{
-                VRChatApi.currentUser(this);
-                runOnUiThread(this::render);
-            }catch(Exception e){say("Can't connect: "+safe(e));}
+                JSONObject current=VRChatApi.currentUser(this);
+                actual=current.optString("id","");
+                if(!expected.equals(actual))
+                    throw new SecurityException("VRChat returned another account; please sign in again.");
+            }catch(Exception e){failure=e;}
+            final Exception problem=failure;
+            final String userId=actual;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                connectionRequestRunning=false;
+                if(problem==null){
+                    checkedUserId=userId;
+                    connectionState=VERIFIED;
+                    checkedAt=System.currentTimeMillis();
+                    connectionMessage="";
+                }else{
+                    checkedUserId="";
+                    checkedAt=0L;
+                    String detail=safe(problem);
+                    String lower=detail.toLowerCase(java.util.Locale.US);
+                    boolean authFailed=problem instanceof SecurityException &&
+                        (lower.contains("expired")||lower.contains("sign in")||
+                         lower.contains("another account"));
+                    connectionState=authFailed?EXPIRED:UNAVAILABLE;
+                    connectionMessage=(authFailed?
+                        "Session rejected by VRChat: ":
+                        "Connection check unavailable: ")+detail;
+                }
+                render();
+            });
         });
     }
     private void login(){
@@ -143,7 +238,13 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         io.execute(()->{
             try{
                 VRChatApi.login(this,username,password);
-                runOnUiThread(this::render);
+                runOnUiThread(()->{
+                    showLoginForm=false;
+                    connectionState=UNKNOWN;
+                    checkedUserId="";
+                    render();
+                    checkSession(false);
+                });
             }catch(Exception e){say("Sign-in failed: "+safe(e));}
         });
     }
@@ -152,7 +253,16 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         String value=code.getText().toString().trim();
         code.setText("");say("Verifying...");
         io.execute(()->{
-            try{VRChatApi.verify2fa(this,value,mode);runOnUiThread(this::render);}
+            try{
+                VRChatApi.verify2fa(this,value,mode);
+                runOnUiThread(()->{
+                    showLoginForm=false;
+                    connectionState=UNKNOWN;
+                    checkedUserId="";
+                    render();
+                    checkSession(false);
+                });
+            }
             catch(Exception e){say("Verification failed: "+safe(e));}
         });
     }
@@ -160,7 +270,15 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         new AlertDialog.Builder(this).setTitle("Sign out of VRChat?")
             .setMessage("Your staff access and player tracking will stay connected.")
             .setNegativeButton("Cancel",null)
-            .setPositiveButton("Sign out",(d,w)->{VRChatApi.logout(this);render();}).show();
+            .setPositiveButton("Sign out",(d,w)->{
+                VRChatApi.logout(this);
+                connectionState=UNKNOWN;
+                checkedUserId="";
+                checkedAt=0L;
+                connectionMessage="";
+                showLoginForm=false;
+                render();
+            }).show();
     }
     private void say(String value){
         runOnUiThread(()->{if(message!=null)message.setText(value);});
