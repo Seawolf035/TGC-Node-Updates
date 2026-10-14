@@ -54,6 +54,7 @@ public final class OverlayMiniVrcx {
     private LinearLayout root;
     private String screen="",target="",kind="";
     private String groupSubjectUserId="",groupSubjectUserName="Player";
+    private String selectedFriendGroupName="",selectedFriendGroupTitle="Friends";
     private String selectedGroupId="";
     private JSONArray selectedGroupRoles=new JSONArray();
     private boolean onlyPopulatedGroupInstances=false;
@@ -281,6 +282,10 @@ public final class OverlayMiniVrcx {
             case "mini_verify":return "Verification code";
             case "mini_profile":return "Player profile";
             case "mini_user_groups":return "Visible player groups";
+            case "mini_friend_favorites":return "Favorite friend groups";
+            case "mini_friend_favorite_members":return "Favorite friends · "+selectedFriendGroupTitle;
+            case "mini_mutual_friends":return "Mutual friends";
+            case "mini_mutual_groups":return "Mutual groups";
             case "mini_worlds":return "Saved worlds";
             case "mini_avatars":return "Favorite avatars";
             case "mini_chat":return "In-game text chat";
@@ -311,6 +316,10 @@ public final class OverlayMiniVrcx {
             case "mini_current":return "Observed since monitoring started · may be incomplete";
             case "mini_joins":return "Locally recorded joins, leaves and instance changes";
             case "mini_friends":return "Your personal VRChat friends · only visible locations";
+            case "mini_friend_favorites":return "Your VRChat favorite friend categories · only your account";
+            case "mini_friend_favorite_members":return "Friends in this VRChat favorites category";
+            case "mini_mutual_friends":return "Connections VRChat says you share with this person";
+            case "mini_mutual_groups":return "Groups VRChat says you both belong to";
             case "mini_log":return "Observed friend changes since logging began";
             case "mini_activity":return "Locally recorded encounters and friend activity";
             case "mini_inbox":return "Use your personal VRChat account without switching apps";
@@ -442,6 +451,18 @@ public final class OverlayMiniVrcx {
                     FriendLogStore.observe(ctx,session,fresh);
                     return fresh;
                 },result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_friend_favorites":
+                execute(()->VRChatApi.favoriteFriendGroups(ctx),
+                    result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_friend_favorite_members":
+                execute(()->VRChatApi.favoriteFriendGroupContents(ctx,selectedFriendGroupName),
+                    result->{profile=(JSONObject)result;drawList();});break;
+            case "mini_mutual_friends":
+                execute(()->VRChatApi.mutuals(ctx,groupSubjectUserId,false),
+                    result->{loaded=(JSONArray)result;drawList();});break;
+            case "mini_mutual_groups":
+                execute(()->VRChatApi.mutuals(ctx,groupSubjectUserId,true),
+                    result->{loaded=(JSONArray)result;drawList();});break;
             case "mini_log":
                 execute(()->FriendLogStore.events(ctx,VRChatSession.load(ctx)),
                     result->{loaded=(JSONArray)result;drawList();});break;
@@ -606,6 +627,10 @@ public final class OverlayMiniVrcx {
             case "mini_joins":showJoinsAndLeaves();break;
             case "mini_players":showPlayers();break;
             case "mini_friends":showFriends();break;
+            case "mini_friend_favorites":showFavoriteFriendGroups();break;
+            case "mini_friend_favorite_members":showFavoriteGroupFriends();break;
+            case "mini_mutual_friends":showMutualFriends();break;
+            case "mini_mutual_groups":showMutualGroups();break;
             case "mini_log":showLog();break;
             case "mini_activity":showActivity();break;
             case "mini_inbox":showInbox();break;
@@ -706,6 +731,8 @@ public final class OverlayMiniVrcx {
         button(list,"Activity feed",false,()->host.navigate("mini_activity"));
     }
     private void showFriends(){
+        button(list,"★ Favorite friend groups (VRChat)",false,
+            ()->host.navigate("mini_friend_favorites"));
         int pinnedCount=0;
         try{pinnedCount=FriendPinStore.pins(ctx).length();}
         catch(Exception ignored){}
@@ -1112,6 +1139,18 @@ public final class OverlayMiniVrcx {
                     ()->copy("instance location",loc));
             }
         }
+        section(info,"MUTUAL CONNECTIONS");
+        info.addView(text("VRChat's own mutual-connection results are subject to "+
+            "each person's privacy settings. Hidden connections are not inferred.",
+            12,CompanionStyle.MUTED,false));
+        button(info,"Mutual friends",false,()->{
+            groupSubjectUserId=id;groupSubjectUserName=name;
+            host.navigate("mini_mutual_friends");
+        });
+        button(info,"Mutual groups",false,()->{
+            groupSubjectUserId=id;groupSubjectUserName=name;
+            host.navigate("mini_mutual_groups");
+        });
         section(info,"ACTIONS");
         button(info,"View visible groups",false,()->{
             groupSubjectUserId=id;
@@ -1149,6 +1188,98 @@ public final class OverlayMiniVrcx {
         button(info,"Copy VRChat profile link",false,
             ()->copy("profile link","https://vrchat.com/home/user/"+id));
         button(info,"Refresh profile",false,this::load);
+    }
+    private void showFavoriteFriendGroups(){
+        section(list,"VRCHAT · FAVORITE FRIEND CATEGORIES");
+        list.addView(text("These are the friend categories saved in your actual VRChat "+
+            "account, not the Companion's separate pinned friend list.",
+            12,CompanionStyle.MUTED,false));
+        int count=0;
+        for(int i=0;i<loaded.length();i++){
+            JSONObject group=loaded.optJSONObject(i);
+            if(group==null)continue;
+            String name=group.optString("name","");
+            if(!name.matches("[A-Za-z0-9_-]{1,64}"))continue;
+            String title=group.optString("displayName",name);
+            if(!matches(title+" "+name))continue;
+            final String key=name,heading=title;
+            int size=group.optInt("numFavorites",-1);
+            line(list,title,size>=0?size+" favorites":"View favorited friends",()->{
+                selectedFriendGroupName=key;
+                selectedFriendGroupTitle=heading;
+                host.navigate("mini_friend_favorite_members");
+            });
+            count++;
+        }
+        if(count==0)line(list,"No favorite friend groups",
+            "VRChat did not return a matching favorite group.",null);
+    }
+    private void showFavoriteGroupFriends(){
+        section(list,selectedFriendGroupTitle);
+        JSONArray entries=profile.optJSONArray("favorites");
+        if(entries==null)entries=new JSONArray();
+        int count=0;
+        for(int i=0;i<entries.length()&&count<limit;i++){
+            JSONObject row=entries.optJSONObject(i);
+            if(row==null)continue;
+            JSONObject person=row.optJSONObject("user");
+            if(person==null)person=row.optJSONObject("friend");
+            if(person==null)person=row;
+            String id=person.optString("id","");
+            if(!validUser(id))id=row.optString("userId","");
+            if(!validUser(id))continue;
+            String name=person.optString("displayName",row.optString("displayName",id));
+            if(!matches(name+" "+id))continue;
+            final String who=id;
+            line(list,name,person.optString("statusDescription",
+                "View this favorite friend's profile"),()->profile(who));
+            count++;
+        }
+        if(count==0)line(list,"No visible friends in this category",
+            "The category is empty, private, or VRChat did not include visible user data.",null);
+        if(count>=limit)button(list,"Show more",false,()->{limit+=65;drawList();});
+    }
+    private void showMutualFriends(){
+        section(list,shortValue(groupSubjectUserName,55)+" · MUTUAL FRIENDS");
+        list.addView(text("Shown directly from VRChat's mutual-friends endpoint. "+
+            "Privacy settings can hide results.",12,CompanionStyle.MUTED,false));
+        int count=0;
+        for(int i=0;i<loaded.length()&&count<limit;i++){
+            JSONObject friend=loaded.optJSONObject(i);
+            if(friend==null)continue;
+            String id=friend.optString("id","");
+            if(!validUser(id))continue;
+            String name=friend.optString("displayName",id);
+            if(!matches(name+" "+id))continue;
+            final String who=id;
+            line(list,name,VRChatPresenceIndicator.label(friend.optString("status","")),
+                ()->profile(who));
+            count++;
+        }
+        if(count==0)line(list,"No visible mutual friends",
+            "VRChat returned no connections that it permits you to see.",null);
+        if(count>=limit)button(list,"Show more",false,()->{limit+=65;drawList();});
+    }
+    private void showMutualGroups(){
+        section(list,shortValue(groupSubjectUserName,55)+" · MUTUAL GROUPS");
+        list.addView(text("VRChat supplies shared group memberships subject to "+
+            "both users' privacy preferences.",12,CompanionStyle.MUTED,false));
+        int count=0;
+        for(int i=0;i<loaded.length()&&count<limit;i++){
+            JSONObject group=loaded.optJSONObject(i);
+            if(group==null)continue;
+            String id=group.optString("groupId",group.optString("id",""));
+            if(!id.matches("grp_[0-9a-fA-F-]{36}"))continue;
+            String name=group.optString("name","Mutual group");
+            if(!matches(name+" "+id))continue;
+            final String key=id;
+            line(list,name,group.optString("shortCode",
+                "Open shared VRChat group"),()->openGroupDashboard(key));
+            count++;
+        }
+        if(count==0)line(list,"No visible mutual groups",
+            "VRChat returned no common group memberships you are permitted to see.",null);
+        if(count>=limit)button(list,"Show more",false,()->{limit+=65;drawList();});
     }
     private void showUserGroups(){
         section(list,shortValue(groupSubjectUserName,55)+" · GROUPS");
