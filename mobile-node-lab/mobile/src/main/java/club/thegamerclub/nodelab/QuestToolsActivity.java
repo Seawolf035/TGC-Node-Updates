@@ -41,6 +41,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     private boolean restoreNativePageAfterPause=false;
     private OverlayMiniVrcx mini;
     private boolean phonePreviewAuthorized=false,phoneVerificationRunning=false;
+    // Recheck the VERIFIED owner pair automatically after leaving VRChat Login.
+    private boolean accountScreenOpened=false;
     private final Runnable statusTick=new Runnable(){
         @Override public void run(){
             if(oscSummary!=null)oscSummary.setText(QuestOscService.summary());
@@ -94,8 +96,10 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         panel.addView(state);
         Button retry=button(panel,"Retry verification",false,this::verifyPhonePreview);
         retry.setEnabled(false);
-        button(panel,"Open VRChat account",false,()->
-            startActivity(new Intent(this,VRChatAccountActivity.class)));
+        button(panel,"Open VRChat account",false,()->{
+            accountScreenOpened=true;
+            startActivity(new Intent(this,VRChatAccountActivity.class));
+        });
         button(panel,"← Return to Companion",false,this::finish);
         io.execute(()->{
             String failure=null;
@@ -168,6 +172,10 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
                 (phonePreviewAuthorized &&
                  !OwnerQuestToolsPreview.hasOwnerPair(this))){
                 finish();return;
+            }
+            if(accountScreenOpened && !phonePreviewAuthorized){
+                accountScreenOpened=false;
+                verifyPhonePreview();
             }
         }
         if(restoreNativePageAfterPause && mini!=null &&
