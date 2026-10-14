@@ -15,6 +15,11 @@
   android:multiprocess="false"
   android:enabled="true"
   android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"/>
+ <service android:name=".VRChatPipelineService" android:enabled="true"
+   android:exported="false" android:foregroundServiceType="specialUse">
+   <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+     android:value="User-enabled VRChat personal notification WebSocket with visible ongoing indicator" />
+ </service>
  <service android:name=".MobileNodeService" android:enabled="true" android:exported="false"
    android:foregroundServiceType="specialUse">
    <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
