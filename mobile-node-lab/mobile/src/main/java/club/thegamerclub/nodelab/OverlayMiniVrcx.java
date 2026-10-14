@@ -1120,6 +1120,7 @@ public final class OverlayMiniVrcx {
     private void showInbox(){
         chips(list,"All","Invites","Friends",
             ()->inbox("all"),()->inbox("invite"),()->inbox("friend"));
+        button(list,"Invite requests",false,()->inbox("requests"));
         button(list,"unread".equals(inboxFilter)?"✓ Showing unread only":"Show unread only",
             false,()->inbox("unread".equals(inboxFilter)?"all":"unread"));
         JSONArray entries=inboxEntries();
