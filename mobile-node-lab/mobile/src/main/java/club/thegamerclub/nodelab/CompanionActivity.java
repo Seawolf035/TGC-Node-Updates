@@ -39,6 +39,8 @@ public final class CompanionActivity extends Activity {
     private final Handler main=new Handler(Looper.getMainLooper());
     private boolean verifying=false,showingUnlocked=false,advanced=false;
     private boolean trackingGuideExpanded=false;
+    private boolean trackingInfoExpanded=false;
+    private String exploreCategory="friends";
     private boolean foreground=false;
     private boolean whatsNewLaunched=false;
     private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
@@ -248,6 +250,9 @@ public final class CompanionActivity extends Activity {
             tab=saved.getString("tab","home");
             advanced=saved.getBoolean("advanced",false);
             trackingGuideExpanded=saved.getBoolean("tracking_guide_expanded",false);
+            trackingInfoExpanded=saved.getBoolean("tracking_info_expanded",false);
+            String savedCategory=saved.getString("explore_category","friends");
+            if(isExploreCategory(savedCategory))exploreCategory=savedCategory;
             java.util.ArrayList<String> history=saved.getStringArrayList("quest_tab_history");
             if(history!=null && QuestDevice.isQuestDevice())
                 for(int i=history.size()-1;i>=0;i--)
@@ -264,6 +269,8 @@ public final class CompanionActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle out){
         out.putString("tab",tab);out.putBoolean("advanced",advanced);
         out.putBoolean("tracking_guide_expanded",trackingGuideExpanded);
+        out.putBoolean("tracking_info_expanded",trackingInfoExpanded);
+        out.putString("explore_category",exploreCategory);
         if(QuestDevice.isQuestDevice())
             out.putStringArrayList("quest_tab_history",
                 new java.util.ArrayList<>(questTabs));
@@ -489,8 +496,9 @@ public final class CompanionActivity extends Activity {
         android.widget.Button controls=CompanionStyle.button(this,"Tracking",false);
         controls.setTextSize(12);
         trackingColumn.addView(controls,new LinearLayout.LayoutParams(-1,dp(43)));
-        controls.setOnClickListener(v->needsStaff(
-            ()->startActivity(new Intent(this,MobileDeployActivity.class))));
+        // Keep the beloved small Home Tracking control alongside Floating/Quest
+        // Tools. It now enters the ONE Tracking dashboard, not a second page.
+        controls.setOnClickListener(v->openTab("tracking"));
     }
     private void openQuestTools(){
         needsStaff(()->{
@@ -642,41 +650,172 @@ public final class CompanionActivity extends Activity {
             });
         });
     }
+    /** Four compact, curated Explore categories instead of a 20-row menu. */
+    private boolean isExploreCategory(String value){
+        return "friends".equals(value)||"discover".equals(value)||
+            "activity".equals(value)||"inbox".equals(value);
+    }
+    private void exploreSwitch(LinearLayout container,String title,String icon,
+                               String category){
+        boolean selected=category.equals(exploreCategory);
+        LinearLayout holder=stack();holder.setGravity(Gravity.CENTER_VERTICAL);
+        holder.setPadding(dp(11),dp(10),dp(11),dp(10));
+        holder.setBackground(CompanionStyle.shape(this,
+            selected?CompanionStyle.FIELD:CompanionStyle.SURFACE,13,
+            selected?CompanionStyle.ACCENT:CompanionStyle.BORDER));
+        LinearLayout.LayoutParams width=new LinearLayout.LayoutParams(0,dp(60),1f);
+        width.setMargins(dp(3),0,dp(3),0);
+        container.addView(holder,width);
+        LinearLayout label=new LinearLayout(this);
+        label.setGravity(Gravity.CENTER_VERTICAL);
+        holder.addView(label);
+        label.addView(txt(icon,18,selected?CompanionStyle.ICON:CompanionStyle.MUTED,false));
+        TextView text=txt(title,13,selected?CompanionStyle.TEXT:CompanionStyle.MUTED,true);
+        text.setPadding(dp(7),0,0,0);
+        text.setMaxLines(1);
+        text.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        label.addView(text);
+        holder.setContentDescription("Explore "+title+(selected?", selected":""));
+        holder.setOnClickListener(v->{
+            if(!StaffGate.unlocked(this))return;
+            if(!category.equals(exploreCategory)){
+                exploreCategory=category;
+                renderUnlocked();
+            }
+        });
+    }
+    private void exploreCategoryRow(LinearLayout parent,
+                                    String left,String leftIcon,String leftId,
+                                    String right,String rightIcon,String rightId){
+        LinearLayout row=new LinearLayout(this);
+        LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(-1,-2);
+        layout.bottomMargin=dp(7);parent.addView(row,layout);
+        exploreSwitch(row,left,leftIcon,leftId);
+        exploreSwitch(row,right,rightIcon,rightId);
+    }
+    /** Denser, theme-aware action rows for the Explore category submenus. */
+    private void exploreLink(LinearLayout parent,String glyph,String title,
+                             String detail,Runnable open){
+        LinearLayout row=new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(11),dp(11),dp(10),dp(11));
+        row.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,13,0));
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
+        params.bottomMargin=dp(7);parent.addView(row,params);
+        TextView symbol=txt(glyph,20,CompanionStyle.ICON,true);
+        symbol.setGravity(Gravity.CENTER);
+        symbol.setBackground(CompanionStyle.shape(this,CompanionStyle.FIELD,11,0));
+        row.addView(symbol,new LinearLayout.LayoutParams(dp(39),dp(39)));
+        LinearLayout labels=stack();
+        labels.setPadding(dp(12),0,dp(9),0);
+        row.addView(labels,new LinearLayout.LayoutParams(0,-2,1f));
+        labels.addView(txt(title,15,CompanionStyle.TEXT,true));
+        labels.addView(txt(detail,12,CompanionStyle.MUTED,false));
+        row.addView(txt("›",26,CompanionStyle.MUTED,false));
+        row.setContentDescription(title+". "+detail);
+        row.setOnClickListener(v->open.run());
+    }
     private void renderExplore(){
-        headline("EXPLORE","Your VRChat","Everything you want to discover, without leaving the app.");
-        // Quest Tools is launched from the Home status bar; no duplicate
-        // launcher on Explore.
-        page.addView(CompanionStyle.section(this,"MESSAGES & INVITES"));
-        LinearLayout messages=card();
-        action(messages,"✉","Notifications","All incoming VRChat notifications",()->openInbox("all"));
-        action(messages,"➜","World invites","Received instance invitations",()->openInbox("invite"));
-        action(messages,"◉","Friend requests","See and respond to friend requests",()->openInbox("friend"));
-        page.addView(CompanionStyle.section(this,"PEOPLE"));
-        LinearLayout people=card();
-        action(people,"♧","Online friends","See who's around now",()->openBrowse("friends_online"));
-        action(people,"◌","Offline friends","Find friends who aren't online",()->openBrowse("friends_offline"));
-        action(people,"⌕","Find people","Search VRChat users",()->openBrowse("search_users"));
-        action(people,"♛","TGC Staff Directory · StaffDex",
-            "Browse verified staff, Collect-a-Staff and earn friendship achievements",
-            ()->needsStaff(()->startActivity(new Intent(this,StaffDirectoryActivity.class))));
-        action(people,"◎","Observed player list","Players seen in your current session",
-            ()->openPlayerLog("current"));
-        action(people,"◷","Join & leave history","Locally saved VRChat Mobile log events",
-            ()->openPlayerLog("timeline"));
-        action(people,"◎","Recent players","People you've encountered",()->openBrowse("encounters"));
-        action(people,"♧","Friends Locations","Friends grouped by their visible instances",()->openFriendHub("locations"));
-        action(people,"◷","Friend Log","Search recorded changes over time",()->openFriendHub("log"));
-        action(people,"↗","Activity Feed","Observed activity while monitoring",()->openFriendHub("activity"));
-        action(people,"✎","Private VRChat notes","Notes saved to your VRChat account",this::openNotes);
-        page.addView(CompanionStyle.section(this,"PLACES & COMMUNITY"));
-        LinearLayout places=card();
-        action(places,"★","Bookmarked worlds","Your personal world shortcuts",()->openBrowse("bookmarks"));
-        action(places,"◇","Favorite worlds","Your saved places",()->openBrowse("worlds"));
-        action(places,"↺","Recently visited","Worlds you've explored",()->openBrowse("recent"));
-        action(places,"⌕","Find worlds","Search for something new",()->openBrowse("search_worlds"));
-        action(places,"◈","My groups","Your VRChat communities",()->openBrowse("groups"));
-        action(places,"◉","Favorite avatars","View saved avatars and switch your avatar",this::openAvatars);
-        action(places,"★","Extended avatar favorites","Private categorized avatar collections • VRC+",this::openExtendedAvatars);
+        page.setPadding(dp(14),dp(12),dp(14),dp(24));
+        page.addView(CompanionStyle.section(this,"EXPLORE VRCHAT"));
+        page.addView(txt("What are you looking for?",24,CompanionStyle.TEXT,true));
+        space(page,5);
+        page.addView(txt("Friends, places and community tools — without a wall of menus.",
+            13,CompanionStyle.MUTED,false));
+        space(page,14);
+
+        // Frequent entry points stay visible while longer lists are filtered.
+        page.addView(CompanionStyle.section(this,"QUICK ACCESS"));
+        LinearLayout quick=stack();page.addView(quick);
+        compactQuickPair(quick,"♧","Online friends","See who's online",
+            ()->openBrowse("friends_online"),
+            "✉","Inbox","Invites and requests",()->openInbox("all"));
+        compactQuickPair(quick,"⌕","Find people","Search VRChat users",
+            ()->openBrowse("search_users"),
+            "◇","Favorite worlds","Your saved worlds",()->openBrowse("worlds"));
+
+        // StaffDex is special and stays discoverable independent of the
+        // selected category. The roster remains the official source.
+        LinearLayout featured=card();
+        featured.setBackground(CompanionStyle.gradient(this,
+            CompanionStyle.SURFACE,CompanionStyle.RAISED,17));
+        featured.addView(txt("♛  THE GAMER CLUB",11,
+            ThemePreferences.royalGold(),true));
+        space(featured,5);
+        featured.addView(txt("Collect-a-Staff! · StaffDex",19,CompanionStyle.TEXT,true));
+        space(featured,5);
+        featured.addView(txt("Find staff, check your friends list and collect achievements.",
+            12,CompanionStyle.MUTED,false));
+        space(featured,9);
+        android.widget.Button staffDex=CompanionStyle.button(this,"Open StaffDex  ›",false);
+        featured.addView(staffDex,CompanionStyle.buttonParams(this));
+        staffDex.setOnClickListener(v->needsStaff(
+            ()->startActivity(new Intent(this,StaffDirectoryActivity.class))));
+
+        page.addView(CompanionStyle.section(this,"BROWSE BY CATEGORY"));
+        LinearLayout categories=stack();page.addView(categories);
+        exploreCategoryRow(categories,"Friends","♧","friends",
+            "Discover","◇","discover");
+        exploreCategoryRow(categories,"Activity","◷","activity",
+            "Inbox","✉","inbox");
+        space(page,6);
+
+        switch(exploreCategory){
+            case "discover":{
+                page.addView(CompanionStyle.section(this,"WORLDS, GROUPS & AVATARS"));
+                LinearLayout links=card();
+                exploreLink(links,"★","Bookmarked worlds","Your personal world shortcuts",
+                    ()->openBrowse("bookmarks"));
+                exploreLink(links,"↺","Recently visited","Revisit worlds you've explored",
+                    ()->openBrowse("recent"));
+                exploreLink(links,"⌕","Find worlds","Discover something new",
+                    ()->openBrowse("search_worlds"));
+                exploreLink(links,"◈","My groups","Your VRChat communities",
+                    ()->openBrowse("groups"));
+                exploreLink(links,"◉","Favorite avatars","Browse and equip saved avatars",
+                    this::openAvatars);
+                exploreLink(links,"★","Extended avatar favorites",
+                    "Private VRC+ avatar collections",this::openExtendedAvatars);
+                break;
+            }
+            case "activity":{
+                page.addView(CompanionStyle.section(this,"HISTORY & ACTIVITY"));
+                LinearLayout links=card();
+                exploreLink(links,"◎","Observed players","Players in your recent VRChat sessions",
+                    ()->openPlayerLog("current"));
+                exploreLink(links,"◷","Join & leave history","Local join, leave and instance events",
+                    ()->openPlayerLog("timeline"));
+                exploreLink(links,"◎","Recently encountered","People you've met",
+                    ()->openBrowse("encounters"));
+                exploreLink(links,"♧","Friend history","Search changes over time",
+                    ()->openFriendHub("log"));
+                exploreLink(links,"↗","Friend activity feed","See monitored friend activity",
+                    ()->openFriendHub("activity"));
+                break;
+            }
+            case "inbox":{
+                page.addView(CompanionStyle.section(this,"MESSAGES & REQUESTS"));
+                LinearLayout links=card();
+                exploreLink(links,"✉","All notifications","Review everything in your inbox",
+                    ()->openInbox("all"));
+                exploreLink(links,"➜","World invites","Accept or decline invitations",
+                    ()->openInbox("invite"));
+                exploreLink(links,"◉","Friend requests","Respond to incoming friend requests",
+                    ()->openInbox("friend"));
+                break;
+            }
+            default:{
+                page.addView(CompanionStyle.section(this,"FRIENDS & SOCIAL"));
+                LinearLayout links=card();
+                exploreLink(links,"◌","Offline friends","See friends who aren't online",
+                    ()->openBrowse("friends_offline"));
+                exploreLink(links,"♧","Friends' locations","See where visible friends are playing",
+                    ()->openFriendHub("locations"));
+                exploreLink(links,"✎","Private VRChat notes","Keep notes attached to VRChat users",
+                    this::openNotes);
+                break;
+            }
+        }
     }
     /** Inline first-run setup on Tracking; never buried inside controls.
      * Acknowledgement is instructional, not evidence that VRChat is set to Full.
