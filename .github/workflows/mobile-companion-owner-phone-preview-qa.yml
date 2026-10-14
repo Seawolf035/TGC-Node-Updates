@@ -40,7 +40,7 @@ jobs:
           assert '!session.optString("auth","").isEmpty()' in own
           assert '!session.optBoolean("needs2fa",true)' in own
           assert 'VRChatApi.currentUser(context)' in own
-          assert 'StaffGate.unlocked(context)' in gate
+          assert 'unlocked(context) && expectedId.equals(verifiedDiscord)' in gate
           assert 'expectedId.equals(verifiedDiscord)' in gate
           assert 'if(!StaffGate.unlocked(this)){finish();return;}' in ui
           assert 'OwnerQuestToolsPreview.verifyLive(this)' in ui
