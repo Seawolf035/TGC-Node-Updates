@@ -53,7 +53,7 @@ jobs:
           assert 'request("POST","/invite/"+userId' in api
           assert 'CompanionCache.saveArray(ctx,"inbox",snapshot.items)' in inbox
           assert 'inviteRequests' in alerts
-          assert 'versionCode 77' in gradle and "versionName '0.21.3'" in gradle
+          assert 'versionCode 78' in gradle and "versionName '0.21.4'" in gradle
           print('PASS: account-scoped display cache, real favorites, opt-in request gate, non-release version')
           PY
       - uses: actions/setup-java@v4
