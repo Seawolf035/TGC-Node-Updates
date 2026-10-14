@@ -11,6 +11,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -33,7 +34,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     private final ArrayList<Entry> entries=new ArrayList<>();
     private final InboxAdapter adapter=new InboxAdapter();
     private TextView status;
-    private Button allTab,unreadTab,inviteTab,requestTab,friendTab,more,refreshButton;
+    private Button allTab,unreadTab,inviteTab,requestTab,friendTab,groupTab,eventTab,otherTab,more,refreshButton;
     private String filter="all";
     private boolean busy=false,mutating=false,visible=false;
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -56,6 +57,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         JSONObject raw,details;
         String id,type,name,message,date,location,sender;
         boolean modern,seen;
+        String category,groupId;
         long sort;
     }
     @Override public void onCreate(Bundle b){
@@ -63,7 +65,9 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         if(!StaffGate.unlocked(this)){finish();return;}
         filter=getIntent().getStringExtra("filter");
         if(!"invite".equals(filter)&&!"friend".equals(filter)&&
-           !"requests".equals(filter)&&!"unread".equals(filter))filter="all";
+           !"requests".equals(filter)&&!"unread".equals(filter)&&
+           !"groups".equals(filter)&&!"events".equals(filter)&&
+           !"other".equals(filter))filter="all";
         render();
         // Read the previous encrypted account-specific snapshot first.
         worker.execute(()->{
@@ -111,15 +115,21 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         TextView title=txt("Notifications & invites",21,CompanionStyle.TEXT,true);
         title.setPadding(dp(12),0,0,0);
         header.addView(title,new LinearLayout.LayoutParams(0,-2,1f));
+        HorizontalScrollView scrollTabs=new HorizontalScrollView(this);
+        scrollTabs.setHorizontalScrollBarEnabled(false);
         LinearLayout tools=new LinearLayout(this);
         tools.setPadding(dp(14),dp(8),dp(14),dp(6));
         tools.setGravity(Gravity.CENTER_VERTICAL);
-        root.addView(tools);
+        scrollTabs.addView(tools);
+        root.addView(scrollTabs);
         allTab=filterButton(tools,"All","all");
         unreadTab=filterButton(tools,"Unread","unread");
         inviteTab=filterButton(tools,"Invites","invite");
         requestTab=filterButton(tools,"Requests","requests");
         friendTab=filterButton(tools,"Friends","friend");
+        groupTab=filterButton(tools,"Groups","groups");
+        eventTab=filterButton(tools,"Events","events");
+        otherTab=filterButton(tools,"Other","other");
         refreshButton=CompanionStyle.button(this,"↻",false);
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(dp(48),dp(46));
         rp.leftMargin=dp(7);tools.addView(refreshButton,rp);
@@ -142,7 +152,8 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     }
     private Button filterButton(LinearLayout tools,String label,String value){
         Button button=CompanionStyle.button(this,label,false);
-        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,dp(46),1f);
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-2,dp(46));
+        button.setMinWidth(dp(83));
         params.rightMargin=dp(4);
         tools.addView(button,params);
         button.setTextSize(11);
@@ -150,13 +161,17 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         return button;
     }
     private void updateFilter(){
-        for(Button button:new Button[]{allTab,unreadTab,inviteTab,requestTab,friendTab}){
+        for(Button button:new Button[]{allTab,unreadTab,inviteTab,requestTab,
+            friendTab,groupTab,eventTab,otherTab}){
             if(button==null)continue;
             boolean selected=(button==allTab&&filter.equals("all"))||
                 (button==unreadTab&&filter.equals("unread"))||
                 (button==inviteTab&&filter.equals("invite"))||
                 (button==requestTab&&filter.equals("requests"))||
-                (button==friendTab&&filter.equals("friend"));
+                (button==friendTab&&filter.equals("friend"))||
+                (button==groupTab&&filter.equals("groups"))||
+                (button==eventTab&&filter.equals("events"))||
+                (button==otherTab&&filter.equals("other"));
             button.setBackground(CompanionStyle.shape(this,
                 selected?CompanionStyle.ACCENT:CompanionStyle.RAISED,11,
                 selected?CompanionStyle.ACCENT:0));
@@ -178,11 +193,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         status.setText(label+(busy?" · loading…":""));
     }
     private boolean include(Entry e){
-        if(filter.equals("all"))return true;
-        if(filter.equals("unread"))return !e.seen;
-        String type=e.type.toLowerCase(Locale.US);
-        if(filter.equals("requests"))return type.equals("requestinvite");
-        return filter.equals("invite")?type.contains("invite"):type.contains("friend");
+        return InboxCategory.include(e.raw,filter);
     }
     private static JSONObject parseDetails(JSONObject src){
         JSONObject val=src.optJSONObject("details");
@@ -226,9 +237,10 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         e.details=parseDetails(n);
         e.id=n.optString("id","");
         e.type=n.optString("type","Notice");
-        e.name=n.optString("senderUsername",n.optString("senderDisplayName",
-            n.optString("title","VRChat")));
-        e.message=n.optString("message",n.optString("description",""));
+        e.category=InboxCategory.of(n);
+        e.groupId=InboxCategory.groupId(n);
+        e.name=InboxCategory.title(n);
+        e.message=InboxCategory.summary(n);
         e.date=n.optString("created_at",n.optString("createdAt",""));
         e.sort=timestamp(e.date);
         e.sender=n.optString("senderUserId",e.details.optString("senderUserId",""));
@@ -367,6 +379,11 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
             options.add("Request an invite to this location");
             actions.add(()->action(e,"Request self-invite",()->perform(e,"selfInvite")));
         }
+        if(e.groupId.matches("grp_[0-9a-fA-F-]{36}")){
+            options.add("Open group details");
+            actions.add(()->startActivity(new Intent(this,VRChatDetailActivity.class)
+                .putExtra("kind","group").putExtra("id",e.groupId)));
+        }
         if(e.sender.matches("usr_[0-9a-fA-F-]{36}")){
             options.add("View sender profile");
             actions.add(()->startActivity(new Intent(this,VRChatDetailActivity.class)
@@ -440,8 +457,10 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         }
         @Override public void onBindViewHolder(Holder h,int position){
             Entry e=shown.get(position);
-            h.icon.setText(e.type.toLowerCase(Locale.US).contains("invite")?"➜":
-                e.type.toLowerCase(Locale.US).contains("friend")?"☺":"✉");
+            h.icon.setText(e.category.equals("groups")?"◈":
+                e.category.equals("events")?"◷":
+                e.category.equals("invite")||e.category.equals("requests")?"➜":
+                e.category.equals("friend")?"♧":"✉");
             h.name.setText(e.name);
             h.message.setText(e.message.isEmpty()?e.type:e.message);
             h.when.setText((e.seen?"":"●  ")+e.date.replace('T',' ').replace('Z',' '));
