@@ -451,6 +451,15 @@ public final class VRChatApi {
     }
 
     /** VRCX-compatible account notifications with explicitly chosen pagination. */
+    /** Read-only ephemeral VRChat pipeline credential. Never saved or logged. */
+    public static String pipelineToken(Context context)throws Exception{
+        JSONObject session=validSession(context);
+        JSONObject result=request("GET","/auth",cookie(session),null,null).object();
+        String token=result.optString("token","");
+        if(!result.optBoolean("ok",false)||token.isEmpty()||token.length()>4096)
+            throw new SecurityException("VRChat live connection unavailable; check personal login.");
+        return token;
+    }
     public static JSONArray notifications(Context context,boolean modern,int offset)throws Exception{
         if(offset<0 || offset>1000)throw new IllegalArgumentException("Invalid offset");
         return request("GET",(modern?"/notifications":"/auth/user/notifications")+
