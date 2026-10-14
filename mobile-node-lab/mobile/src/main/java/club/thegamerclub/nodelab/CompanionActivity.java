@@ -40,6 +40,7 @@ public final class CompanionActivity extends Activity {
     private boolean verifying=false,showingUnlocked=false,advanced=false;
     private boolean trackingGuideExpanded=false;
     private boolean foreground=false;
+    private boolean whatsNewLaunched=false;
     private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
     private static final int PINNED_FRIEND_PERMISSION_REQUEST=3702;
     private TextView verificationNotice;
@@ -272,6 +273,10 @@ public final class CompanionActivity extends Activity {
         super.onResume();
         enforceQuestOverlaySetting();
         foreground=true;
+        if(showingUnlocked&&StaffGate.unlocked(this)){
+            ThemePreferences.apply(this);
+            renderUnlocked();
+        }
         main.removeCallbacks(refreshGate);
         revalidate();
         main.postDelayed(refreshGate,90_000L);
@@ -374,12 +379,17 @@ public final class CompanionActivity extends Activity {
     }
     private void renderUnlocked(){
         if(!StaffGate.unlocked(this)){locked("Checking your staff access...");return;}
+        ThemePreferences.apply(this);
         showingUnlocked=true;shell(true);
         switch(tab){
             case "explore":renderExplore();break;
             case "tracking":renderTracking();break;
             case "settings":renderSettings();break;
             default:renderHome();break;
+        }
+        if(!whatsNewLaunched && WhatsNewActivity.shouldShow(this)){
+            whatsNewLaunched=true;
+            startActivity(new Intent(this,WhatsNewActivity.class));
         }
     }
     private String displayName(){
@@ -646,6 +656,9 @@ public final class CompanionActivity extends Activity {
         action(people,"♧","Online friends","See who's around now",()->openBrowse("friends_online"));
         action(people,"◌","Offline friends","Find friends who aren't online",()->openBrowse("friends_offline"));
         action(people,"⌕","Find people","Search VRChat users",()->openBrowse("search_users"));
+        action(people,"♛","TGC Staff Directory · StaffDex",
+            "Browse verified staff, Collect-a-Staff and earn friendship achievements",
+            ()->needsStaff(()->startActivity(new Intent(this,StaffDirectoryActivity.class))));
         action(people,"◎","Observed player list","Players seen in your current session",
             ()->openPlayerLog("current"));
         action(people,"◷","Join & leave history","Locally saved VRChat Mobile log events",
@@ -891,6 +904,24 @@ public final class CompanionActivity extends Activity {
             "force-start after an Android force-stop or bypass battery restrictions.",
             12,CompanionStyle.MUTED,false));
         }
+        if(ThemePreferences.allowed(this)){
+            page.addView(CompanionStyle.section(this,"ADMIN+ APPEARANCE"));
+            LinearLayout themes=card();
+            action(themes,"✦","Theme Studio",
+                "Personal UI colors, presets and custom RGB mixer",
+                ()->needsStaff(()->startActivity(new Intent(this,ThemeEditorActivity.class))));
+            themes.addView(txt("Changes apply only to your Companion. "+
+                "Royalty gold identity remains visible to other staff regardless of theme.",
+                12,CompanionStyle.MUTED,false));
+        }
+        if(StaffGate.rankTier(this)>=7){
+            LinearLayout badge=card();
+            badge.addView(CompanionStyle.chip(this,"♛ THE ROYALTY",
+                ThemePreferences.royalGold(),0xFF46371C));
+            badge.addView(txt("Gold accents mark your Royalty status. "+
+                "Other staff see your verified Royalty identity on your VRChat profile.",
+                12,CompanionStyle.MUTED,false));
+        }
         page.addView(CompanionStyle.section(this,"BACKGROUND & BATTERY"));
         LinearLayout background=card();
         action(background,"◉","Background health",
@@ -909,6 +940,9 @@ public final class CompanionActivity extends Activity {
         LinearLayout app=card();
         action(app,"↓","Check for updates","Keep your Companion up to date",
             ()->startActivity(new Intent(this,MobileUpdaterActivity.class)));
+        action(app,"✦","What's New · release highlights",
+            "Major staff-facing changes, including older releases",
+            ()->startActivity(new Intent(this,WhatsNewActivity.class)));
         action(app,"ⓘ","About","Version "+BuildConfig.VERSION_NAME,()->{
             new android.app.AlertDialog.Builder(this)
                 .setTitle("TGC Staff Companion")
