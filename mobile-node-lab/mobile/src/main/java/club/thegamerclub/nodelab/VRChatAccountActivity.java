@@ -27,6 +27,9 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
     private boolean connectionRequestRunning=false,showLoginForm=false;
     private String connectionMessage="",checkedUserId="";
     private long checkedAt=0L;
+    private long lastAttemptAt=0L;
+    // Similar to VRCX's conservative five-minute current-user validation.
+    private static final long VERIFY_INTERVAL_MS=300_000L;
 
     private int dp(int n){return CompanionStyle.dp(this,n);}
     private TextView label(String text,int size){
@@ -60,8 +63,10 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
     @Override protected void onResume(){
         super.onResume();
         if(!StaffGate.unlocked(this)){finish();return;}
+        // A rejected or temporarily unavailable session must not trigger a
+        // rapid request loop every time this Activity resumes.
         if(!showLoginForm && !connectionRequestRunning &&
-            (connectionState!=VERIFIED || System.currentTimeMillis()-checkedAt>60_000L))
+            System.currentTimeMillis()-lastAttemptAt>=VERIFY_INTERVAL_MS)
             checkSession(false);
     }
     private void render(){
@@ -181,6 +186,7 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
     private void checkSession(boolean manual){
         if(!StaffGate.unlocked(this)){finish();return;}
         if(showLoginForm||connectionRequestRunning)return;
+        if(!manual && System.currentTimeMillis()-lastAttemptAt<VERIFY_INTERVAL_MS)return;
         final String expected;
         try{
             JSONObject saved=VRChatSession.load(this);
@@ -189,6 +195,7 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
                saved.optString("auth","").isEmpty() ||
                saved.optBoolean("needs2fa",true))return;
         }catch(Exception e){return;}
+        lastAttemptAt=System.currentTimeMillis();
         connectionRequestRunning=true;
         connectionState=CHECKING;
         connectionMessage="";
@@ -222,8 +229,8 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
                          lower.contains("another account"));
                     connectionState=authFailed?EXPIRED:UNAVAILABLE;
                     connectionMessage=(authFailed?
-                        "Session rejected by VRChat: ":
-                        "Connection check unavailable: ")+detail;
+                        "VRChat rejected this session (relogin may be required): ":
+                        "Could not verify right now; saved session was kept: ")+detail;
                 }
                 render();
             });
