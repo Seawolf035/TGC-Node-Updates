@@ -47,7 +47,15 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.1"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.2"));
+        highlight(body,"Quest Tools navigation, cleaned up",
+            "The four main Quest Tools tabs now offer a clear Main Menu action "+
+            "that opens Staff Companion Home. Nested pages have a readable "+
+            "single Back action, including the shortcut editor.");
+        highlight(body,"More room on Quest Tools Home",
+            "Removed the preview-only notice and duplicated Companion exit "+
+            "so your quick actions and VRChat controls are immediately visible.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.1"));
         highlight(body,"VRChat login status corrected",
             "Your account now distinguishes saved sessions from a login verified "+
             "against VRChat. Expired cookies and temporary connection errors "+
