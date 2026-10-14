@@ -52,7 +52,8 @@ public final class FriendHubActivity extends StaffProtectedActivity {
         String initial=getIntent().getStringExtra("tab");
         if("log".equals(initial)||"activity".equals(initial))view=initial;
         render();
-        refresh(true);
+        // Saved friend history renders immediately; avoid full API pagination on every visit.
+        refresh(false);
     }
     @Override protected void onResume(){
         super.onResume();
@@ -142,6 +143,8 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                     try{CompanionCache.saveArray(this,"friends",friends);}
                     catch(Exception ignored){}
                     changes=FriendLogStore.observe(this,session,friends);
+                    try{VRChatFavoriteIndex.refreshIfStale(this);}
+                    catch(Exception ignored){/* Keep prior category ordering offline. */}
                 }
                 stored=FriendLogStore.snapshot(this,session);
                 log=FriendLogStore.events(this,session);
@@ -211,42 +214,51 @@ public final class FriendHubActivity extends StaffProtectedActivity {
         LinearLayout c=card();
         c.addView(text(explanation,14,CompanionStyle.MUTED,false));
     }
+    /** VRCX layout: Favorites, shared instances, solo known places, hidden. */
     private void drawLocations(){
+        java.util.HashSet<String> favorites=VRChatFavoriteIndex.savedIds(this);
         Map<String,ArrayList<JSONObject>> places=new LinkedHashMap<>();
         java.util.Iterator<String> ids=snapshot.keys();
         while(ids.hasNext()){
-            String id=ids.next();JSONObject friend=snapshot.optJSONObject(id);
-            if(friend==null||!friend.optBoolean("online",false))continue;
-            String place=friend.optString("location","unknown");
-            if(place.equals("private")||place.equals("unknown")||place.isEmpty())
-                place="Private / hidden location";
+            String id=ids.next();
+            JSONObject friend=snapshot.optJSONObject(id);
+            if(friend==null||!FriendOrdering.online(friend))continue;
             try{
                 JSONObject entry=new JSONObject(friend.toString()).put("userId",id);
-                if(!places.containsKey(place))places.put(place,new ArrayList<>());
-                places.get(place).add(entry);
+                String section=FriendOrdering.section(entry,favorites);
+                if(!places.containsKey(section))places.put(section,new ArrayList<>());
+                places.get(section).add(entry);
             }catch(Exception ignored){}
         }
         if(places.isEmpty()){
-            empty("No online friends observed yet. Refresh while signed in to your personal VRChat account.");
+            empty("No saved online friends yet. Refresh while signed in to VRChat.");
             return;
         }
+        Map<String,Integer> sizes=new java.util.HashMap<>();
+        for(String key:places.keySet())sizes.put(key,places.get(key).size());
         ArrayList<String> locations=new ArrayList<>(places.keySet());
-        Collections.sort(locations,(a,b)->Integer.compare(places.get(b).size(),places.get(a).size()));
+        locations.sort((a,b)->FriendOrdering.compareGroups(a,b,sizes));
         int displayed=0;
         for(String location:locations){
             ArrayList<JSONObject> group=places.get(location);
+            if(group==null||group.isEmpty())continue;
             ArrayList<JSONObject> matching=new ArrayList<>();
-            for(JSONObject f:group){
-                if(match(location+" "+f.optString("name")+" "+f.optString("status")))matching.add(f);
+            for(JSONObject person:group){
+                if(match(location+" "+person.optString("name")+" "+
+                    person.optString("status")))matching.add(person);
             }
             if(matching.isEmpty())continue;
             if(displayed++>=shown)break;
+            matching.sort((a,b)->FriendOrdering.name(a)
+                .compareToIgnoreCase(FriendOrdering.name(b)));
             LinearLayout box=card();
-            String label=location.startsWith("wrld_")?"World instance":"Location";
-            box.addView(CompanionStyle.section(this,label+" · "+group.size()+" friends"));
-            TextView heading=text(location,13,CompanionStyle.ACCENT,true);
-            heading.setTextIsSelectable(true);box.addView(heading);
-            if(location.startsWith("wrld_")&&location.contains(":")){
+            box.addView(CompanionStyle.section(this,
+                FriendOrdering.label(location,group.size())+
+                " · "+group.size()+" friends"));
+            if(FriendOrdering.known(location)){
+                TextView heading=text(location,13,CompanionStyle.ACCENT,true);
+                heading.setTextIsSelectable(true);
+                box.addView(heading);
                 final String target=location;
                 button(box,"Instance details",false,()->{
                     if(!StaffGate.unlocked(this))return;
@@ -256,17 +268,18 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                         .putExtra("location",target));
                 });
             }
-            for(JSONObject f:matching){
-                String id=f.optString("userId","");
-                TextView name=text("› "+f.optString("name",id)+"  ·  "+f.optString("status",""),
-                    15,CompanionStyle.TEXT,false);
-                name.setPadding(0,dp(9),0,dp(9));
-                box.addView(name);
-                name.setOnClickListener(v->profile(id));
+            for(JSONObject friend:matching){
+                String id=friend.optString("userId","");
+                TextView label=text("› "+friend.optString("name",id)+"  ·  "+
+                    friend.optString("status",""),15,CompanionStyle.TEXT,false);
+                label.setPadding(0,dp(9),0,dp(9));
+                box.addView(label);
+                label.setOnClickListener(v->profile(id));
             }
         }
         if(displayed==0)empty("No friends or locations match the search.");
-        else if(locations.size()>shown)button(content,"Show more locations",false,()->{shown+=75;draw();});
+        else if(locations.size()>shown)
+            button(content,"Show more locations",false,()->{shown+=75;draw();});
     }
     private ArrayList<JSONObject> matchingEvents(boolean includeEncounters){
         ArrayList<JSONObject> result=new ArrayList<>();
