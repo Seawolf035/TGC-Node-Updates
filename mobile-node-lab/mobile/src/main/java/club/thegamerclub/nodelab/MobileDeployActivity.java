@@ -88,12 +88,12 @@ public class MobileDeployActivity extends Activity {
     CompanionStyle.safeArea(this,scroll);
     action(root,"← Back",this::finish,false);
     spacer(root,12);
-    root.addView(CompanionStyle.section(this,"DEVICE"));
-    root.addView(title("Player tracking",28));
+    root.addView(CompanionStyle.section(this,"DEVICE & CAPTURE"));
+    root.addView(title("Tracking controls",28));
     spacer(root,7);
     TextView intro=title(QuestDevice.isQuestDevice()?
-        "Track player joins and leaves in VRChat on your Quest. Grant access to the VRChat logs folder once.":
-        "Track who joins and leaves your VRChat Mobile instances and keep useful player history.",14);
+        "Start or stop capture, manage read-only Documents/Logs permission, and maintain this Quest connection.":
+        "Start or stop capture, manage Shizuku log access, and maintain this phone connection.",14);
     intro.setTextColor(CompanionStyle.MUTED);
     root.addView(intro);spacer(root,14);
     enrollment=CompanionStyle.card(this);
@@ -119,7 +119,8 @@ public class MobileDeployActivity extends Activity {
 
     LinearLayout dashboard=CompanionStyle.card(this);
     root.addView(dashboard,CompanionStyle.cardParams(this));
-    status=title("Checking tracking status...",14);
+    dashboard.addView(CompanionStyle.section(this,"CAPTURE CONTROLS"));
+    status=title("Checking capture status...",14);
     status.setTextColor(CompanionStyle.TEXT);
     dashboard.addView(status);
     spacer(dashboard,9);
@@ -131,7 +132,7 @@ public class MobileDeployActivity extends Activity {
     stopControl=action(dashboard,"Stop tracking",this::stopNode,false);
     action(dashboard,"Refresh status",this::refresh,false);
 
-    action(dashboard,"View player list and log",()->startActivity(
+    action(dashboard,"Open player list and history",()->startActivity(
         new Intent(this,PlayerActivityLogActivity.class)),false);
 
     if(QuestDevice.isQuestDevice()){
