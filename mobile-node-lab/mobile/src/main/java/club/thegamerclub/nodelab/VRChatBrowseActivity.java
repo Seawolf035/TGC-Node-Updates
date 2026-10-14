@@ -355,13 +355,12 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         private final ArrayList<JSONObject> shown=new ArrayList<>();
         int loadedCount(){return data.size();}
         void applyFilter(){
-            if(friendsMode())data.sort((a,b)->{
-                boolean one=favoriteIds.contains(a.optString("id",""));
-                boolean two=favoriteIds.contains(b.optString("id",""));
-                if(one!=two)return one?-1:1;
-                return a.optString("displayName","")
-                    .compareToIgnoreCase(b.optString("displayName",""));
-            });
+            if(friendsMode()){
+                java.util.Map<String,Integer> counts=
+                    FriendOrdering.counts(data,favoriteIds);
+                data.sort((a,b)->FriendOrdering.compareFriends(a,b,
+                    favoriteIds,counts));
+            }
             shown.clear();
             String phrase=(searchField==null||search())?"":searchField.getText().toString()
                 .trim().toLowerCase(java.util.Locale.US);
