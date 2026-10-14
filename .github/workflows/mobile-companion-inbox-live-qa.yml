@@ -1,0 +1,83 @@
+name: Companion inbox VRCX groups and live alerts QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.7-inbox-live-alerts
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-inbox-live-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check privacy, group events, live stream, Android channels and version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          d=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          read=lambda n:(d/n).read_text()
+          cats=read('InboxCategory.java')
+          repo=read('InboxRepository.java')
+          settings=read('InboxAlertSettings.java')
+          ui=read('VRChatInboxActivity.java')
+          mini=read('OverlayMiniVrcx.java')
+          worker=read('InboxAlertWorker.java')
+          stream=read('VRChatPipelineService.java')
+          api=read('VRChatApi.java')
+          main=read('CompanionActivity.java')
+          news=read('WhatsNewActivity.java')
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
+          assert 'type.startsWith("group.")' in cats
+          assert 'type.startsWith("moderation.")' in cats
+          assert 'event.announcement' in cats
+          assert 'InboxCategory.include(item,filter)' in repo
+          assert '"groups".equals(filter)' in ui
+          assert '"events".equals(filter)' in ui
+          assert 'InboxCategory.groupId(n)' in mini and 'openGroupDashboard(groupId)' in mini
+          assert 'InboxCategory.groupId(n)' in ui
+          assert 'groupId' in ui and '"kind","group"' in ui
+          assert 'NotificationManager.IMPORTANCE_HIGH' in worker
+          assert 'ch.enableVibration(true)' in worker
+          assert '_v3' in worker and 'GROUP_ALERT_CHILDREN' in worker
+          assert 'sendTest(Context ctx)' in worker
+          assert 'groups,events,other' in settings
+          assert 'live_enabled' in settings and 'setLiveEnabled' in settings
+          assert 'new PeriodicWorkRequest.Builder(' in settings
+          assert '15,TimeUnit.MINUTES' in settings
+          assert 'wss://pipeline.vrchat.cloud/?auth=' in stream
+          assert 'InboxAlertWorker.refreshAndNotify(this)' in stream
+          assert 'StaffGate.verifyOnline(this)' in stream
+          assert 'START_STICKY' in stream and 'startForeground' in stream
+          assert 'public static String pipelineToken' in api
+          assert 'setLiveEnabled(this,true)' in main
+          assert 'openAndroidNotificationSettings' in main
+          assert 'versionCode 81' in gradle and "versionName '0.21.7'" in gradle
+          assert 'com.squareup.okhttp3:okhttp:4.12.0' in gradle
+          assert 'android:name=".VRChatPipelineService"' in manifest
+          import re
+          versions=re.findall(r'(?:LATEST|PREVIOUS STAFF) RELEASE · (v0\.\d+\.\d+)',news)
+          assert versions==['v0.21.7','v0.21.6','v0.21.5','v0.21.4','v0.21.3'],versions
+          print('PASS: group/events categories, VRCX compatible live notifications, notification channels, opt-in safeguards, 5 patch history')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile complete Android APK, without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
