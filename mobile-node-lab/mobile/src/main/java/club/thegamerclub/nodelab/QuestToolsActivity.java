@@ -23,9 +23,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Quest-only, normal Android Activity reproducing the floating tools WITHOUT
- * an overlay. Reuses all 30+ OverlayMiniVrcx pages and existing data stores.
- * Phone Companion and FloatingCompanionService are left unchanged.
+ * Quest-native tools in an ordinary Android Activity (never a Quest overlay).
+ * The exact owner may also preview this same UI on a phone after live Relay
+ * AND VRChat identity verification. Everyone else's phone UI and floater stay
+ * unchanged. This is not a new network/staff authority or invite sender.
  */
 public final class QuestToolsActivity extends StaffProtectedActivity {
     private final Handler main=new Handler(Looper.getMainLooper());
@@ -38,6 +39,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
     private Button micButton,liveButton,pauseButton;
     private boolean restoreNativePageAfterPause=false;
     private OverlayMiniVrcx mini;
+    private boolean phonePreviewAuthorized=false,phoneVerificationRunning=false;
     private final Runnable statusTick=new Runnable(){
         @Override public void run(){
             if(oscSummary!=null)oscSummary.setText(QuestOscService.summary());
@@ -63,11 +65,63 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
     }
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
-        // This new Activity is not exported and not shown on ordinary phones.
-        if(!QuestDevice.isQuestDevice()){finish();return;}
+        // Headsets remain unchanged. Phone entry requires the exact approved
+        // Relay Discord identity, then a LIVE check of the VRChat identity
+        // before any Quest Tools data or actions are displayed.
         if(!StaffGate.unlocked(this)){finish();return;}
+        if(!QuestDevice.isQuestDevice() &&
+            !OwnerQuestToolsPreview.isOwnerStaff(this)){finish();return;}
         getWindow().setSoftInputMode(
             android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        if(!QuestDevice.isQuestDevice()){
+            verifyPhonePreview();
+            return;
+        }
+        initializeTools();
+    }
+    private void verifyPhonePreview(){
+        if(phoneVerificationRunning||isFinishing()||isDestroyed())return;
+        if(!OwnerQuestToolsPreview.isOwnerStaff(this)){finish();return;}
+        phoneVerificationRunning=true;
+        LinearLayout panel=vertical();
+        panel.setPadding(dp(18),dp(28),dp(18),dp(24));
+        panel.setBackgroundColor(CompanionStyle.BG);
+        setContentView(panel);
+        panel.addView(text("OWNER · QUEST TOOLS PHONE PREVIEW",17,CompanionStyle.ACCENT,true));
+        TextView state=text("Verifying your VRChat account online…",14,CompanionStyle.TEXT,false);
+        state.setPadding(0,dp(14),0,dp(14));
+        panel.addView(state);
+        Button retry=button(panel,"Retry verification",false,this::verifyPhonePreview);
+        retry.setEnabled(false);
+        button(panel,"Open VRChat account",false,()->
+            startActivity(new Intent(this,VRChatAccountActivity.class)));
+        button(panel,"← Return to Companion",false,this::finish);
+        io.execute(()->{
+            String failure=null;
+            try{OwnerQuestToolsPreview.verifyLive(this);}
+            catch(Exception e){failure=e.getMessage();}
+            final String message=failure;
+            runOnUiThread(()->{
+                phoneVerificationRunning=false;
+                if(isFinishing()||isDestroyed())return;
+                if(message!=null){
+                    state.setText("Preview locked: "+
+                        (message.length()>190?message.substring(0,190):message)+
+                        "\nSign in with the authorized VRChat account and retry.");
+                    retry.setEnabled(true);
+                    return;
+                }
+                if(!OwnerQuestToolsPreview.hasOwnerPair(this)){
+                    state.setText("Preview locked: owner identities no longer match.");
+                    retry.setEnabled(true);
+                    return;
+                }
+                phonePreviewAuthorized=true;
+                initializeTools();
+            });
+        });
+    }
+    private void initializeTools(){
         mini=new OverlayMiniVrcx(this,new OverlayMiniVrcx.Host(){
             @Override public void navigate(String target){go(target);}
             @Override public void back(){goBack();}
@@ -87,13 +141,13 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
                 if(scroll!=null)scroll.post(()->scroll.smoothScrollTo(0,0));
             }
             @Override public void confirm(String prompt,Runnable task){
-                if(isFinishing()||!StaffGate.unlocked(QuestToolsActivity.this))return;
+                if(isFinishing()||!canUseTools())return;
                 new AlertDialog.Builder(QuestToolsActivity.this)
                     .setTitle("Confirm VRChat action")
                     .setMessage(prompt)
                     .setNegativeButton("Cancel",null)
                     .setPositiveButton("Confirm",(d,w)->{
-                        if(StaffGate.unlocked(QuestToolsActivity.this))task.run();
+                        if(canUseTools())task.run();
                     }).show();
             }
             @Override public void feedback(String message){toast(message);}
@@ -108,6 +162,13 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
     }
     @Override protected void onResume(){
         super.onResume();
+        if(!QuestDevice.isQuestDevice()){
+            if(!OwnerQuestToolsPreview.isOwnerStaff(this) ||
+                (phonePreviewAuthorized &&
+                 !OwnerQuestToolsPreview.hasOwnerPair(this))){
+                finish();return;
+            }
+        }
         if(restoreNativePageAfterPause && mini!=null &&
            !isFinishing() && StaffGate.unlocked(this)){
             restoreNativePageAfterPause=false;
@@ -133,8 +194,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
             Toast.makeText(this,value,Toast.LENGTH_SHORT).show();
     }
     private void startOsc(String action,int seconds){
-        if(!QuestDevice.isQuestDevice()||!StaffGate.unlocked(this)){
-            toast("Quest staff access required.");return;
+        if(!QuestDevice.isQuestDevice()||!canUseTools()){
+            toast("Quest OSC service requires a real Quest headset.");return;
         }
         Intent cmd=new Intent(this,QuestOscService.class).setAction(action);
         if(QuestOscService.START_LIVE.equals(action))
@@ -152,7 +213,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         new AlertDialog.Builder(this).setTitle(title).setMessage(message)
             .setNegativeButton("Cancel",null)
             .setPositiveButton("Confirm",(d,w)->{
-                if(StaffGate.unlocked(this))task.run();
+                if(canUseTools())task.run();
             }).show();
     }
     private Button button(LinearLayout column,String label,boolean primary,
@@ -183,16 +244,23 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         body.addView(c,CompanionStyle.cardParams(this));
         return c;
     }
+    private boolean canUseTools(){
+        return StaffGate.unlocked(this) &&
+            (QuestDevice.isQuestDevice() ||
+             (phonePreviewAuthorized && OwnerQuestToolsPreview.hasOwnerPair(this)));
+    }
     private void go(String destination){
-        if(!StaffGate.unlocked(this)){finish();return;}
+        if(!canUseTools()){finish();return;}
         if(page.equals(destination))return;
         back.push(page);page=destination;render();
     }
     private void switchTab(String destination){
+        if(!canUseTools()){finish();return;}
         if(page.equals(destination))return;
         back.clear();page=destination;render();
     }
     private void goBack(){
+        if(!canUseTools()){finish();return;}
         if(back.isEmpty()){
             if("home".equals(page)){finish();return;}
             page="home";
@@ -206,7 +274,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
             "shortcuts".equals(page);
     }
     private void render(){
-        if(isFinishing()||!StaffGate.unlocked(this))return;
+        if(isFinishing()||!canUseTools())return;
         oscSummary=null;micButton=null;liveButton=null;pauseButton=null;
         if(mini!=null)mini.close();
         root=vertical();
@@ -291,12 +359,17 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         go(OverlayPreferences.destination(key));
     }
     private void showHome(){
-        LinearLayout info=card("QUEST · WITHOUT FLOATING WINDOWS");
+        LinearLayout info=card(QuestDevice.isQuestDevice()? 
+            "QUEST · WITHOUT FLOATING WINDOWS":"OWNER · PHONE UI PREVIEW");
         info.addView(text(
+            QuestDevice.isQuestDevice()?
             "Native tools work from the Quest system's Android app view. "+
             "No overlay permission or floating bubble is required. "+
             "VRChat OSC requires Quest VRChat to accept local OSC packets; "+
-            "system multitasking may suspend VRChat or other apps.",
+            "system multitasking may suspend VRChat or other apps.":
+            "This is the real Quest Tools UI on your phone for layout testing. "+
+            "Your normal phone floating tools and player tracking are unchanged. "+
+            "Quest-only OSC service actions require the actual headset.",
             12,CompanionStyle.MUTED,false));
         LinearLayout links=card("YOUR QUICK TOOLS");
         List<String> shortcuts=OverlayPreferences.shortcuts(this);
@@ -431,7 +504,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         pair(friends,"Groups","mini_groups","My status","mini_presence");
     }
     private void runOscSend(String value){
-        if(!StaffGate.unlocked(this))return;
+        if(!canUseTools())return;
         io.execute(()->{
             String result;
             try{VRChatOscChat.send(value,false);
@@ -538,8 +611,11 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         pair(logs,"Observed players","mini_current","Join & leave log","mini_joins");
         pair(logs,"Player history","mini_players","Friend changes","mini_log");
         logs.addView(text(
+            QuestDevice.isQuestDevice()?
             "Quest tracking reads Documents/Logs with permission. "+
-            "Only new joins after the tracker starts appear here.",
+            "Only new joins after the tracker starts appear here.":
+            "This preview uses your phone's own local history. "+
+            "Phone VRChat player tracking still requires Shizuku.",
             12,CompanionStyle.MUTED,false));
         Button tracking=button(logs,"Open tracking controls",false,()->
             startActivity(new Intent(this,MobileDeployActivity.class)));
@@ -551,8 +627,10 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
     }
     private void showShortcuts(){
         LinearLayout bar=card("QUICK BAR · UP TO THREE");
-        bar.addView(text("These are the same saved shortcuts used by the phone "+
-            "floater. Changes here only apply on this Quest device.",
+        bar.addView(text(QuestDevice.isQuestDevice()?
+            "These buttons are saved locally on this Quest and do not affect your phone.":
+            "In this phone preview, these buttons share your phone's floating-tools "+
+            "shortcut settings. The headset has separate local preferences.",
             11,CompanionStyle.MUTED,false));
         List<String> selected=OverlayPreferences.quickBar(this);
         for(String key:OverlayPreferences.SHORTCUTS){
