@@ -1029,6 +1029,7 @@ public final class FloatingCompanionService extends Service {
         tab(tabs,"Home","home");
         tab(tabs,"Social","social");
         tab(tabs,"OSC","osc");
+        tab(tabs,"Tracking","tracking");
         tab(tabs,"Tools","tools");
 
         // User-selected shortcuts never scroll away on long Mini-VRCX pages.
@@ -1099,8 +1100,12 @@ public final class FloatingCompanionService extends Service {
     }
     private void tab(LinearLayout container,String title,String key){
         Button b=CompanionStyle.button(this,title,key.equals(selectedTab));
-        b.setTextSize(11);
+        b.setTextSize(10);
         b.setAllCaps(false);
+        b.setSingleLine(true);
+        b.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        b.setPadding(dp(2),0,dp(2),0);
+        b.setMinWidth(0);b.setMinimumWidth(0);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(39),1);
         p.setMargins(dp(2),0,dp(2),0);
         container.addView(b,p);
@@ -1169,12 +1174,17 @@ public final class FloatingCompanionService extends Service {
         switch(selectedTab){
             case "social":showSocial();break;
             case "osc":showOscDashboard();break;
+            case "tracking":showTracking();break;
             case "tools":showTools();break;
             case "home":showHome();break;
             case "customize":showOverlaySettings();break;
             default:mini.show(panelContent,selectedTab);break;
         }
         updateOscVoiceUi();
+        if("tracking".equals(selectedTab)){
+            refreshStatus();
+            loadRecentEvents();
+        }
         // Each in-overlay page should start at its header, not inherit the
         // previous page's scroll offset (especially on a small phone).
         if(panelScroller!=null){
@@ -1219,8 +1229,8 @@ public final class FloatingCompanionService extends Service {
         }
     }
     private void showHome(){
-        // Shared four-hub structure with Quest Tools. Phone keeps real overlay
-        // tracking, while Quest uses its own native OSC service and tracker.
+        // Same five-tab navigation as Quest Tools, but independent phone
+        // Shizuku capture and native floating OSC services remain unchanged.
         section(panelContent,"QUICK ACTIONS");
         LinearLayout quick=panelCard(panelContent);
         pinnedShortcuts(quick);
@@ -1237,27 +1247,36 @@ public final class FloatingCompanionService extends Service {
         paired(social,"Favorite avatars","Find anything",
             ()->go("mini_avatars"),()->mini.findAnything());
 
-        section(panelContent,"TRACKING · PHONE");
+    }
+    /** Dedicated tracking hub: no tracking panels competing with Home or Tools. */
+    private void showTracking(){
+        section(panelContent,"PLAYER TRACKING · PHONE");
         LinearLayout node=panelCard(panelContent);
         nodeStatus=text("Checking tracking…",15,CompanionStyle.TEXT,true);
         node.addView(nodeStatus);
-        nodeStats=text("Reading local status…",12,CompanionStyle.MUTED,false);
-        nodeStats.setPadding(0,dp(7),0,dp(5));
+        nodeStats=text("Reading local capture status…",12,CompanionStyle.MUTED,false);
+        nodeStats.setPadding(0,dp(7),0,dp(7));
         node.addView(nodeStats);
-        trackingToggle=action(node,"Start tracking",true,this::toggleTracking);
-        paired(node,"Tracking setup","Refresh",
+        trackingToggle=action(node,nodeRunning()?"Stop tracking":"Start tracking",
+            true,this::toggleTracking);
+        paired(node,"Setup & permissions","Refresh",
             ()->open(MobileDeployActivity.class,null,null),
             ()->{refreshStatus();loadRecentEvents();});
+
+        section(panelContent,"TRACKED PLAYERS & HISTORY");
+        LinearLayout history=panelCard(panelContent);
+        paired(history,"Observed players","Join & leave log",
+            ()->go("mini_current"),()->go("mini_joins"));
+        paired(history,"Past encounters","Friend changes",
+            ()->go("mini_players"),()->go("mini_log"));
 
         section(panelContent,"RECENTLY ENCOUNTERED");
         LinearLayout recent=panelCard(panelContent);
         recentStatus=text("Loading captured player events…",
             12,CompanionStyle.MUTED,false);
         recent.addView(recentStatus);
-        recentRows=vertical();recent.addView(recentRows);
-        paired(recent,"Player list","Join / leave log",
-            ()->go("mini_current"),()->go("mini_joins"));
-        action(recent,"Past encounters",false,()->go("mini_players"));
+        recentRows=vertical();
+        recent.addView(recentRows);
     }
     private LinearLayout recentRows;
     /**
@@ -1514,13 +1533,6 @@ public final class FloatingCompanionService extends Service {
     }
 
     private void showOscDashboard(){
-        section(panelContent,"OSC · VRCHAT MOBILE");
-        LinearLayout top=panelCard(panelContent);
-        top.addView(text("Send directly to VRChat on this phone",
-            14,CompanionStyle.TEXT,true));
-        top.addView(text("Enable OSC in VRChat's Action Menu. OSC uses 127.0.0.1:9000 and does not need Shizuku, a PC or the TGC Relay.",
-            12,CompanionStyle.MUTED,false));
-
         section(panelContent,"FAST CHATBOX CONTROLS");
         LinearLayout fast=panelCard(panelContent);
         oscQuickStatus=text(oscLiveSummary(),12,
@@ -1770,27 +1782,8 @@ public final class FloatingCompanionService extends Service {
         action(codes,"Verification code",false,()->mini.verification());
         codes.addView(text("Automatically detects the latest TGC or Cult code from your VRChat invites.",
             12,CompanionStyle.MUTED,false));
-        section(panelContent,"STATUS COLORS");
-        LinearLayout presenceInfo=panelCard(panelContent);
-        presenceInfo.addView(text(
-            "● Green Online  ·  ● Blue Join Me  ·  ● Yellow Ask Me  ·  ● Red Busy  ·  ● Gray Offline/unknown",
-            12,CompanionStyle.MUTED,false));
-        section(panelContent,"PLAYER INFORMATION");
-        LinearLayout player=panelCard(panelContent);
-        paired(player,"Player list","Join / leave log",
-            ()->go("mini_current"),()->go("mini_joins"));
-        paired(player,"Past encounters","Friend log",
-            ()->go("mini_players"),()->go("mini_log"));
         action(panelContent,"Customize floating panel",false,
             ()->{selectedTab="customize";buildTab();});
-        section(panelContent,"NODE TRACKING");
-        LinearLayout node=panelCard(panelContent);
-        TextView info=text("Use Home to start or stop tracking. Captures and relay uploads continue independently when this panel closes.",
-            12,CompanionStyle.MUTED,false);
-        node.addView(info);
-        action(node,"Tracking dashboard",false,()->{
-            backStack.clear();selectedTab="home";buildTab();refreshStatus();
-        });
     }
     private void open(Class<?> destination,String parameter,String value){
         if(!StaffGate.unlocked(this)){stopSelf();return;}
@@ -1889,7 +1882,7 @@ public final class FloatingCompanionService extends Service {
         }
     }
     private void loadRecentEvents(){
-        if(!panelVisible||!"home".equals(selectedTab)||eventBusy)return;
+        if(!panelVisible||!"tracking".equals(selectedTab)||eventBusy)return;
         eventBusy=true;
         eventsWorker.execute(()->{
             JSONArray events=new JSONArray();
