@@ -476,6 +476,57 @@ public final class VRChatApi {
         requireId("user",userId);
         request("POST","/requestInvite/"+userId,cookie(validSession(context)),null,new JSONObject());
     }
+    /** Read-only VRChat favorite FRIEND groups; never use local pin list as a substitute. */
+    public static JSONArray favoriteFriendGroups(Context context)throws Exception{
+        String token=cookie(validSession(context));
+        try{
+            JSONObject value=request("GET","/favorites/groups/friend",token,null,null).object();
+            JSONArray groups=value.optJSONArray("favoriteGroups");
+            if(groups==null)throw new IllegalStateException("VRChat returned no friend group list");
+            return groups;
+        }catch(SecurityException e){throw e;}
+        catch(Exception e){
+            if(e.getMessage()!=null&&e.getMessage().toLowerCase(Locale.US)
+                .contains("rate limit"))throw e;
+            return request("GET","/favorite/groups?type=friend&n=60&offset=0",
+                token,null,null).array();
+        }
+    }
+    /** Returns favorites[] entries for a named VRChat favorite friend group. */
+    public static JSONObject favoriteFriendGroupContents(Context context,String name)throws Exception{
+        if(name==null||!name.matches("[A-Za-z0-9_-]{1,64}"))
+            throw new IllegalArgumentException("Invalid VRChat friend favorite group");
+        return request("GET","/favorites/groups/friend/"+name,
+            cookie(validSession(context)),null,null).object();
+    }
+    /** Genuine VRChat mutuals. These APIs honor the other user's visibility choices. */
+    public static JSONArray mutualFriends(Context context,String userId)throws Exception{
+        return mutualPage(context,userId,"friends",0);
+    }
+    public static JSONArray mutualGroups(Context context,String userId)throws Exception{
+        return mutualPage(context,userId,"groups",0);
+    }
+    private static JSONArray mutualPage(Context context,String userId,String kind,int offset)throws Exception{
+        requireId("user",userId);
+        if(!"friends".equals(kind)&&!"groups".equals(kind))
+            throw new IllegalArgumentException("Unsupported mutual connection type");
+        if(offset<0||offset>1200||offset%60!=0)
+            throw new IllegalArgumentException("Invalid mutual page offset");
+        return request("GET","/users/"+userId+"/mutuals/"+kind+
+            "?n=60&offset="+offset,cookie(validSession(context)),null,null).array();
+    }
+    /** Stop on the first short page; never invent hidden friends or groups. */
+    public static JSONArray mutuals(Context context,String userId,boolean groups)throws Exception{
+        requireId("user",userId);
+        JSONArray all=new JSONArray();
+        String kind=groups?"groups":"friends";
+        for(int offset=0;offset<1200;offset+=60){
+            JSONArray page=mutualPage(context,userId,kind,offset);
+            for(int i=0;i<page.length();i++)all.put(page.get(i));
+            if(page.length()<60)return all;
+        }
+        throw new IllegalStateException("Mutual list too large; results unavailable rather than incomplete");
+    }
     /** VRChat exposes multiple avatar-favorite groups; a flat first-page call misses them. */
     public static JSONArray avatarFavoriteGroups(Context context)throws Exception{
         String token=cookie(validSession(context));
