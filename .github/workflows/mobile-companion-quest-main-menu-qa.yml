@@ -1,0 +1,86 @@
+name: Quest Main Menu and Back UX QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.2-quest-main-menu-and-back-polish
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-quest-main-menu-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa-and-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify main menu, single nested Back and no preview banner
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          quest=(root/'QuestToolsActivity.java').read_text()
+          companion=(root/'CompanionActivity.java').read_text()
+          decor=(root/'QuestBackApplication.java').read_text()
+          mini=(root/'OverlayMiniVrcx.java').read_text()
+          owner=(root/'OwnerQuestToolsPreview.java').read_text()
+          update=(root/'MobileUpdaterActivity.java').read_text()
+          versions=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'private boolean isPrimaryTab()' in quest
+          for tab in ['home','social','osc','tools']:
+              assert '"'+tab+'".equals(page)' in quest
+          assert 'return !isPrimaryTab();' in quest
+          assert 'return isPrimaryTab()||"shortcuts".equals(page);' in quest
+          assert 'topLevel?"← Main Menu":"← Back"' in quest
+          assert 'dp(topLevel?120:96),dp(43)' in quest
+          assert '"Back to Staff Companion main menu"' in quest
+          assert '"Back to previous Quest Tools screen"' in quest
+          assert 'private void returnToMainMenu()' in quest
+          assert 'new Intent(this,CompanionActivity.class)' in quest
+          assert 'mainMenu.putExtra("open_main_menu",true)' in quest
+          assert 'Intent.FLAG_ACTIVITY_CLEAR_TOP' in quest
+          assert 'Intent.FLAG_ACTIVITY_SINGLE_TOP' in quest
+          assert 'startActivity(mainMenu);' in quest
+          assert '"open_main_menu"' in companion
+          assert 'protected void onNewIntent(Intent intent)' in companion
+          assert 'tab="home";' in companion
+          assert 'questTabs.clear();' in companion
+          assert 'showQuestBack()' in companion
+          assert 'if(isPrimaryTab() || !QuestDevice.isQuestDevice())' in quest
+          assert 'QuestBackApplication.refresh(this)' in quest
+          assert 'QuestBackApplication.refresh(this)' in companion
+          assert 'existing.setVisibility(View.GONE)' in decor
+          assert 'back.setOnClickListener' in decor
+          assert '},false);' in quest
+          assert 'if(inlineBack){' in mini
+          assert 'OWNER PHONE PREVIEW · QUEST UI' not in quest
+          assert 'QUEST TOOLS · AT A GLANCE' not in quest
+          assert 'button(osc,"Return to Companion"' not in quest
+          assert 'OwnerQuestToolsPreview.isOwnerStaff(this)' in quest
+          assert 'OwnerQuestToolsPreview.verifyLive(this)' in quest
+          assert 'OwnerQuestToolsPreview.hasOwnerPair(this)' in quest
+          assert 'isOwnerStaff' in owner
+          assert 'verifySameSigner(candidate)' in update
+          assert 'versionCode 76' in versions and "versionName '0.21.2'" in versions
+          assert "applicationId 'club.thegamerclub.nodelab'" in versions
+          print('PASS: visible Main Menu on all 4 Quest hubs, proper Companion Home reset, single readable detail Back, shortcut editor navigation, no preview banner and owner gate preserved')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
