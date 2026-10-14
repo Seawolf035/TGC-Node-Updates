@@ -1,0 +1,82 @@
+name: Owner phone Quest Tools preview QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.19.16-owner-phone-quest-tools-preview
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-owner-phone-preview-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact dual-identity owner restriction and preserved Quest/phone behavior
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          own=(root/"OwnerQuestToolsPreview.java").read_text()
+          gate=(root/"StaffGate.java").read_text()
+          ui=(root/"QuestToolsActivity.java").read_text()
+          home=(root/"CompanionActivity.java").read_text()
+          quest=(root/"QuestDevice.java").read_text()
+          updater=(root/"MobileUpdaterActivity.java").read_text()
+          license=(root/"CompanionLicense.java").read_text()
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          manifest=Path("mobile-node-lab/mobile/src/main/AndroidManifest.xml").read_text()
+          assert '"197820946608947201"' in own and '"usr_2a833076-03ac-4212-aeff-0708d8eab968"' in own
+          assert 'StaffGate.verifiedDiscordMatches(context,OWNER_DISCORD_ID)' in own
+          assert 'OWNER_VRCHAT_ID.equals(profile.optString("id",""))' in own
+          assert 'OWNER_VRCHAT_ID.equals(session.optString("userId",""))' in own
+          assert '!session.optString("auth","").isEmpty()' in own
+          assert '!session.optBoolean("needs2fa",true)' in own
+          assert 'VRChatApi.currentUser(context)' in own
+          assert 'StaffGate.unlocked(context)' in gate
+          assert 'expectedId.equals(verifiedDiscord)' in gate
+          assert 'if(!StaffGate.unlocked(this)){finish();return;}' in ui
+          assert 'OwnerQuestToolsPreview.verifyLive(this)' in ui
+          assert ui.index('OwnerQuestToolsPreview.verifyLive(this)')<ui.index('phonePreviewAuthorized=true;')
+          assert 'OwnerQuestToolsPreview.hasOwnerPair(this)' in ui
+          assert 'if(!canUseTools()){finish();return;}' in ui
+          assert 'if(isFinishing()||!canUseTools())return;' in ui
+          assert 'if(!QuestDevice.isQuestDevice()||!canUseTools())' in ui
+          assert 'Quest OSC service requires a real Quest headset.' in ui
+          assert '"OWNER · PHONE UI PREVIEW"' in ui
+          assert 'OverlayPreferences.quickBar(this)' in ui
+          assert 'List<String> bar=OverlayPreferences.quickBar(this);' in ui
+          assert 'if(OwnerQuestToolsPreview.isOwnerStaff(this))' in home
+          assert '"Quest Tools · owner phone preview"' in home
+          assert '"Floating tools"' in home and 'this::toggleOverlay' in home
+          assert '!isQuestDevice()' in quest
+          assert '<activity android:name=".QuestToolsActivity" android:exported="false"' in manifest
+          assert 'verifySameSigner(candidate)' in updater and 'SHA-256 mismatch' in updater
+          assert '2026-10-14.1' in license
+          assert 'TrackingSetupGuide.acknowledged(this)' in home
+          assert "versionCode 68" in gradle and "versionName '0.19.16'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          print("PASS: exact dual-identity owner gate, live VRChat check before UI, direct-launch protection, existing floater, Quest-only OSC, license, updater and tracking.")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK (no release publication)
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
