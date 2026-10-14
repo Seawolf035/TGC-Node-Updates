@@ -160,18 +160,35 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         io.execute(()->{
             favoriteIds=VRChatFavoriteIndex.savedIds(this);
             CompanionCache.Record local=CompanionCache.read(this,"browse_"+mode);
+            // The full friendship snapshot, collected by other Companion
+            // components, is preferable to re-fetching another paginated view.
+            boolean completeFriends=false;
+            if(friendsMode()){
+                CompanionCache.Record shared=CompanionCache.read(this,"friends");
+                if(shared!=null&&(local==null||shared.updatedAt>local.updatedAt)){
+                    local=shared;completeFriends=true;
+                }
+            }
+            final boolean fullFriendSnapshot=completeFriends;
             JSONArray items=local==null?null:local.body.optJSONArray("items");
             ArrayList<JSONObject> rows=new ArrayList<>();
             if(items!=null)for(int i=0;i<items.length();i++){
                 JSONObject item=items.optJSONObject(i);
-                if(item!=null)rows.add(item);
+                if(item==null)continue;
+                if(fullFriendSnapshot){
+                    boolean online=item.optBoolean("isOnline",false);
+                    if(mode.equals("friends_online")&&!online)continue;
+                    if(mode.equals("friends_offline")&&online)continue;
+                }
+                rows.add(item);
             }
-            boolean fresh=local!=null&&local.fresh(friendsMode()?120_000L:600_000L);
+            boolean fresh=local!=null&&local.fresh(friendsMode()?300_000L:600_000L);
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
                 if(!rows.isEmpty()){
                     adapter.replace(rows);
-                    hasMore=paged()&&rows.size()>=VRChatApi.LIST_PAGE_SIZE;
+                    hasMore=!fullFriendSnapshot&&paged()&&
+                        rows.size()>=VRChatApi.LIST_PAGE_SIZE;
                     offset=hasMore?VRChatApi.LIST_PAGE_SIZE:0;
                     showCount();updatePaging();
                 }
