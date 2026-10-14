@@ -146,6 +146,7 @@ public final class VRChatApi {
     }
     public static JSONObject currentUser(Context context)throws Exception{
         JSONObject session=validSession(context);
+        JSONObject before=new JSONObject(session.toString());
         Response response;
         try{
             response=request("GET","/auth/user",cookie(session),null,null);
@@ -160,7 +161,7 @@ public final class VRChatApi {
         updateProfile(session,result);
         // Do not write an old cookie over a newer login after a concurrent
         // validation finishes. Also avoid re-encrypting unchanged credentials.
-        VRChatSession.saveValidated(context,session);
+        VRChatSession.saveValidated(context,before,session);
         return result;
     }
     private static JSONObject validSession(Context context)throws Exception{
