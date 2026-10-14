@@ -89,8 +89,8 @@ public final class ThemeEditorActivity extends StaffProtectedActivity {
             "This applies only to your own theme; it does not create a shared preset.",
             12,CompanionStyle.MUTED));
         gap(vrc,8);
-        button(vrc,"Import 6-color VRChat palette",this::showImport);
-        button(vrc,"Copy my colors as VRChat UI codes",this::copyPalette);
+        button(vrc,"Paste VRChat UI Code",this::showImport);
+        button(vrc,"Copy as VRChat UI Code",this::copyPalette);
 
         page.addView(CompanionStyle.section(this,"QUICK THEMES"));
         for(int i=0;i<ThemePreferences.NAMES.length;i++){
@@ -162,23 +162,38 @@ public final class ThemeEditorActivity extends StaffProtectedActivity {
         input.setSingleLine(false);
         input.setMinLines(3);input.setMaxLines(6);
         input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        input.setText(ThemePreferences.exportVrchatPalette(this));
+        input.setText("");
         input.setSelectAllOnFocus(true);
         frame.addView(input,new LinearLayout.LayoutParams(-1,-2));
+        gap(frame,8);
+        button(frame,"Paste from clipboard",()->{
+            ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+            if(clipboard==null||!clipboard.hasPrimaryClip()){
+                Toast.makeText(this,"No UI code on clipboard",Toast.LENGTH_SHORT).show();
+                return;
+            }
+            ClipData contents=clipboard.getPrimaryClip();
+            if(contents==null||contents.getItemCount()==0)return;
+            CharSequence pasted=contents.getItemAt(0).coerceToText(this);
+            if(pasted==null)return;
+            input.setText(pasted.toString().trim());
+            input.setSelection(input.getText().length());
+            input.setError(null);
+        });
         gap(frame,7);
         frame.addView(t("All six values are validated before any change is saved. "+
             "The background generates matching card/border shades.",12,CompanionStyle.MUTED));
         AlertDialog dialog=new AlertDialog.Builder(this)
-            .setTitle("Import VRChat UI colors").setView(frame)
+            .setTitle("Paste VRChat UI Code").setView(frame)
             .setNegativeButton("Cancel",null)
-            .setPositiveButton("Import palette",null).create();
+            .setPositiveButton("Apply UI Code",null).create();
         dialog.setOnShowListener(v->dialog.getButton(DialogInterface.BUTTON_POSITIVE)
             .setOnClickListener(click->{
                 if(!access()){dialog.dismiss();finish();return;}
                 try{
                     ThemePreferences.importVrchatPalette(this,input.getText().toString());
                     dialog.dismiss();
-                    Toast.makeText(this,"Your VRChat palette is now applied",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this,"VRChat UI Code applied to your personal theme",Toast.LENGTH_SHORT).show();
                     render(true);
                 }catch(IllegalArgumentException ex){input.setError(ex.getMessage());}
                  catch(Exception ex){input.setError("Could not apply palette: "+ex.getMessage());}
