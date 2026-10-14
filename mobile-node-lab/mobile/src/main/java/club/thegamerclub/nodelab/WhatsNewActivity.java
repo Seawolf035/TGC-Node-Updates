@@ -47,7 +47,16 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.5"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.6"));
+        highlight(body,"Linking now opens the setup guide",
+            "After linking your phone or Quest, the Companion verifies staff "+
+            "access, requests your agreement acceptance when needed, and "+
+            "opens guided setup instead of leaving you in Tracking Controls. "+
+            "Finishing setup returns to Companion Home.");
+        highlight(body,"Shorter release history",
+            "What's New now shows the five latest patch versions. Older "+
+            "source and release history remain available through GitHub.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.5"));
         highlight(body,"Friends sorted like VRCX",
             "VRChat favorite friends first, then shared visible instances, "+
             "solo known instances, and private/unknown locations last. "+
@@ -88,65 +97,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"More room on Quest Tools Home",
             "Removed the preview-only notice and duplicated Companion exit "+
             "so your quick actions and VRChat controls are immediately visible.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.1"));
-        highlight(body,"VRChat login status corrected",
-            "Your account now distinguishes saved sessions from a login verified "+
-            "against VRChat. Expired cookies and temporary connection errors "+
-            "are clearly labeled without silently erasing your saved account.");
-        highlight(body,"Quest phone preview recovery",
-            "After reauthenticating your VRChat account, returning to the "+
-            "creator-only phone preview automatically retries identity verification.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.0"));
-        highlight(body,"Quest & Floating Tools — first overhaul",
-            "Cleaner Quick Actions and Social layouts on both devices, "+
-            "a single Back control on nested Quest pages, and no Back on Home.");
-        highlight(body,"Friend favorites and mutuals",
-            "Browse real VRChat favorite friend groups, and view mutual friends "+
-            "or groups directly from a person's profile when VRChat permits it.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.20.3"));
-        highlight(body,"StaffDex gets its own main tab",
-            "Open the Staff Directory, review your collections and send individual "+
-            "VRChat friend requests directly from the fifth bottom tab.");
-        highlight(body,"Quest setup with FULL logging",
-            "First-time guided setup now walks Quest staff through VRChat account login, "+
-            "Settings → Debug → Logging → Full, and read-only Documents/Logs permission.");
-        highlight(body,"Easy mobile onboarding",
-            "Sign in to VRChat to get started on a phone. Shizuku is recommended "+
-            "for optional player tracking, with links to the official setup guide.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.20.2"));
-        highlight(body,"Explore, simplified",
-            "A faster Explore screen with compact shortcuts, featured StaffDex, "+
-            "and four clear sections: Friends, Discover, Activity and Inbox.");
-        highlight(body,"One Tracking dashboard",
-            "The Home Tracking shortcut now leads to the Tracking tab, "+
-            "with setup, activity and Device & Capture Controls in the right places.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.20.1"));
-        highlight(body,"Admin+ VRChat palette import",
-            "Paste six VRChat UI hex colors at once, type individual #RRGGBB colors, "+
-            "or export your current Companion theme as VRChat codes. "+
-            "Pasted codes apply locally without automatically saving a preset. "+
-            "Name and save your own personal palettes under My Saved Presets, "+
-            "then reload or delete them whenever you want.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.20.0"));
-        highlight(body,"Collect-a-Staff! · StaffDex",
-            "Browse your TGC staff directory, open VRChat profiles, send friend requests one at a time, "+
-            "and unlock achievements based on verified friendships.");
-        highlight(body,"Admin+ Theme Studio",
-            "Administrators and above can choose a personal theme or mix their own colors. "+
-            "Royalty keeps its distinctive gold trim and identity badges.");
-        highlight(body,"Royalty identity on profiles",
-            "Staff profiles display staff rank and Royalty cosmetic status sourced from the official TGC roster.");
-        highlight(body,"Improved onboarding",
-            "See major updates here once per new version. Reopen this history from Settings at any time.");
-        body.addView(CompanionStyle.section(this,"RECENT STAFF RELEASES"));
-        highlight(body,"v0.19.16 · Development tools",
-            "Added an account-verified phone preview for the creator to refine Quest Tools screens.");
-        highlight(body,"v0.19.15–0.19.17 · Staff agreement",
-            "Expanded the proprietary staff license, added a Settings reader, "+
-            "and credited Seawolf as creator.");
-        highlight(body,"v0.19.14 · Quest usability",
-            "Moved the Quest Back control to the top-left and made the three quick-action buttons "+
-            "stay fixed while navigating.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
