@@ -1110,6 +1110,9 @@ public final class OverlayMiniVrcx {
     private void showInbox(){
         chips(list,"All","Invites","Friends",
             ()->inbox("all"),()->inbox("invite"),()->inbox("friend"));
+        button(list,"Groups · posts, announcements, moderation",false,
+            ()->inbox("groups"));
+        button(list,"Group events",false,()->inbox("events"));
         button(list,"Invite requests",false,()->inbox("requests"));
         button(list,"unread".equals(inboxFilter)?"✓ Showing unread only":"Show unread only",
             false,()->inbox("unread".equals(inboxFilter)?"all":"unread"));
@@ -1126,11 +1129,20 @@ public final class OverlayMiniVrcx {
             JSONObject n=entries.optJSONObject(i);if(n==null)continue;
             final boolean modern=n.optBoolean("_modern",false);
             final String id=n.optString("id",""),type=n.optString("type","");
-            String sender=n.optString("senderUsername",n.optString("senderDisplayName","VRChat"));
-            String message=n.optString("message",n.optString("description",""));
+            String sender=InboxCategory.title(n);
+            String message=InboxCategory.summary(n);
+            String category=InboxCategory.of(n);
             LinearLayout c=card(list);
             c.addView(text(shortValue(sender,55),15,CompanionStyle.TEXT,true));
-            c.addView(text(type+" · "+shortValue(message,140),12,CompanionStyle.MUTED,false));
+            c.addView(text(category.toUpperCase(Locale.US)+" · "+
+                shortValue(message,140),12,CompanionStyle.MUTED,false));
+            String groupId=InboxCategory.groupId(n);
+            if(groupId.matches("grp_[0-9a-fA-F-]{36}"))
+                button(c,"Group details",false,()->{
+                    Intent group=new Intent(ctx,VRChatDetailActivity.class)
+                        .putExtra("kind","group").putExtra("id",groupId);
+                    ctx.startActivity(group);
+                });
             String uid=n.optString("senderUserId",details(n).optString("senderUserId",""));
             if(validUser(uid))button(c,"Sender profile",false,()->profile(uid));
             String location=inviteLocation(n);
