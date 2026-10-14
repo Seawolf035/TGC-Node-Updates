@@ -47,8 +47,9 @@ public final class CompanionLicenseActivity extends Activity {
         heading.setPadding(dp(16),dp(9),dp(16),dp(7));
         root.addView(heading,new LinearLayout.LayoutParams(-1,-2));
         heading.addView(text("TGC STAFF COMPANION",11,CompanionStyle.ACCENT,true));
-        heading.addView(text("User agreement & license",19,CompanionStyle.TEXT,true));
-        heading.addView(text("Agreement "+CompanionLicense.VERSION,
+        heading.addView(text("Proprietary license & staff agreement",19,CompanionStyle.TEXT,true));
+        heading.addView(text("Agreement "+CompanionLicense.VERSION+
+            " · 43 sections · scroll to read",
             11,CompanionStyle.MUTED,false));
 
         ScrollView scroll=new ScrollView(this);
