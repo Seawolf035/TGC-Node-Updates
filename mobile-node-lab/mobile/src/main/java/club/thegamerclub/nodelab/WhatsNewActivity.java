@@ -51,7 +51,9 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Admin+ VRChat palette import",
             "Paste six VRChat UI hex colors at once, type individual #RRGGBB colors, "+
             "or export your current Companion theme as VRChat codes. "+
-            "Personal palettes remain private and do not create presets.");
+            "Pasted codes apply locally without automatically saving a preset. "+
+            "Name and save your own personal palettes under My Saved Presets, "+
+            "then reload or delete them whenever you want.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.20.0"));
         highlight(body,"Collect-a-Staff! · StaffDex",
             "Browse your TGC staff directory, open VRChat profiles, send friend requests one at a time, "+
