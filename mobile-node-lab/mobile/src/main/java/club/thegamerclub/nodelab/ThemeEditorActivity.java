@@ -92,6 +92,37 @@ public final class ThemeEditorActivity extends StaffProtectedActivity {
         button(vrc,"Paste VRChat UI Code",this::showImport);
         button(vrc,"Copy as VRChat UI Code",this::copyPalette);
 
+        // Saved themes are a separate per-verified-Discord-ID collection.
+        // Loading a built-in theme or pasting a VRChat code never removes them.
+        page.addView(CompanionStyle.section(this,"MY SAVED PRESETS"));
+        LinearLayout savedControls=CompanionStyle.card(this);
+        page.addView(savedControls,CompanionStyle.cardParams(this));
+        button(savedControls,"+ Save Current Colors as a Preset",this::showSavePreset);
+        java.util.List<UserThemePresets.Preset> saved;
+        try{saved=UserThemePresets.list(this);}
+        catch(Exception e){
+            savedControls.addView(t("Unable to read saved presets: "+e.getMessage(),
+                12,CompanionStyle.MUTED));
+            saved=java.util.Collections.emptyList();
+        }
+        savedControls.addView(t(saved.size()+" / "+UserThemePresets.MAX_SAVED+
+            " personal presets on this device, saved for your verified staff account.",
+            12,CompanionStyle.MUTED));
+        if(saved.isEmpty()){
+            savedControls.addView(t("No personal presets saved yet. Create a theme, "+
+                "then save it here with your own name.",12,CompanionStyle.MUTED));
+        }
+        for(UserThemePresets.Preset preset:saved){
+            LinearLayout entry=CompanionStyle.card(this);
+            page.addView(entry,CompanionStyle.cardParams(this));
+            entry.addView(t(preset.name,16,CompanionStyle.TEXT));
+            entry.addView(t("Highlight "+ThemePreferences.hex(preset.colors[ThemePreferences.ACCENT])+
+                "  ·  Background "+ThemePreferences.hex(preset.colors[ThemePreferences.BG]),
+                12,CompanionStyle.MUTED));
+            button(entry,"Apply "+preset.name,()->loadPreset(preset.name));
+            button(entry,"Delete preset",()->confirmDeletePreset(preset.name));
+        }
+
         page.addView(CompanionStyle.section(this,"QUICK THEMES"));
         for(int i=0;i<ThemePreferences.NAMES.length;i++){
             final int idx=i;
@@ -141,6 +172,84 @@ public final class ThemeEditorActivity extends StaffProtectedActivity {
         button(page,"Reset all colors to TGC Default",()->{
             ThemePreferences.reset(this);render(true);
         });
+    }
+    private void showSavePreset(){
+        if(!access()){finish();return;}
+        LinearLayout frame=new LinearLayout(this);
+        frame.setOrientation(LinearLayout.VERTICAL);
+        frame.setPadding(dp(18),dp(8),dp(18),dp(8));
+        frame.addView(t("Give this exact set of colors a name. Saved presets "+
+            "stay on this device and are separate from the built-in themes.",
+            13,CompanionStyle.MUTED));
+        gap(frame,9);
+        EditText name=CompanionStyle.input(this,"Preset name (up to 40 characters)");
+        name.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        name.setFilters(new InputFilter[]{new InputFilter.LengthFilter(40)});
+        frame.addView(name,new LinearLayout.LayoutParams(-1,-2));
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle("Save My Preset")
+            .setView(frame)
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Save Preset",null)
+            .create();
+        dialog.setOnShowListener(v->dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+            .setOnClickListener(click->{
+                if(!access()){dialog.dismiss();finish();return;}
+                String chosen=name.getText().toString().trim();
+                try{
+                    if(UserThemePresets.exists(this,chosen)){
+                        new AlertDialog.Builder(this)
+                            .setTitle("Replace saved preset?")
+                            .setMessage("You already have a preset named “"+chosen+
+                                "”. Replace its saved colors with your current theme?")
+                            .setNegativeButton("Keep Existing",null)
+                            .setPositiveButton("Replace",(d,w)->{
+                                try{
+                                    UserThemePresets.save(this,chosen,true);
+                                    dialog.dismiss();
+                                    Toast.makeText(this,"Preset updated",Toast.LENGTH_SHORT).show();
+                                    render(true);
+                                }catch(Exception e){name.setError(e.getMessage());}
+                            }).show();
+                        return;
+                    }
+                    UserThemePresets.save(this,chosen,false);
+                    dialog.dismiss();
+                    Toast.makeText(this,"Personal preset saved",Toast.LENGTH_SHORT).show();
+                    render(true);
+                }catch(Exception e){name.setError(e.getMessage());}
+            }));
+        dialog.show();
+    }
+    private void loadPreset(String name){
+        if(!access()){finish();return;}
+        try{
+            UserThemePresets.load(this,name);
+            Toast.makeText(this,"Applied "+name,Toast.LENGTH_SHORT).show();
+            render(true);
+        }catch(Exception e){
+            new AlertDialog.Builder(this).setTitle("Could not load preset")
+                .setMessage(e.getMessage()).setPositiveButton("OK",null).show();
+        }
+    }
+    private void confirmDeletePreset(String name){
+        if(!access()){finish();return;}
+        new AlertDialog.Builder(this)
+            .setTitle("Delete saved preset?")
+            .setMessage("Delete “"+name+"” from your saved presets? "+
+                "This will not change your currently active theme.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Delete",(d,w)->{
+                try{
+                    UserThemePresets.delete(this,name);
+                    Toast.makeText(this,"Saved preset deleted",Toast.LENGTH_SHORT).show();
+                    render(true);
+                }catch(Exception e){
+                    new AlertDialog.Builder(this).setTitle("Could not delete preset")
+                        .setMessage(e.getMessage()).setPositiveButton("OK",null).show();
+                }
+            }).show();
     }
     private void copyPalette(){
         if(!access()){finish();return;}
