@@ -24,7 +24,6 @@ import android.widget.FrameLayout;
 public final class QuestBackApplication extends Application
         implements Application.ActivityLifecycleCallbacks {
     private static final int BACK_BUTTON_ID=0x7f0fa119;
-    private static final int BACK_RESERVED_CONTENT_TAG=0x7f0fa11a;
     private boolean licensePromptInFlight=false;
 
     @Override public void onCreate(){
@@ -60,11 +59,41 @@ public final class QuestBackApplication extends Application
         }
         licensePromptInFlight=false;
         if(!QuestDevice.isQuestDevice())return;
-        install(activity);
+        refresh(activity);
     }
 
     private static int dp(Activity activity,float n){
         return (int)(n*activity.getResources().getDisplayMetrics().density+0.5f);
+    }
+    /** Synchronize after EVERY in-Activity page transition, not just onResume. */
+    public static void refresh(Activity activity){
+        if(activity==null||activity.isFinishing()||activity.isDestroyed()||
+           !QuestDevice.isQuestDevice())return;
+        if(!(activity.getApplication() instanceof QuestBackApplication))return;
+        ((QuestBackApplication)activity.getApplication()).update(activity);
+    }
+    private void update(Activity activity){
+        View content=activity.findViewById(android.R.id.content);
+        if(!(activity.getWindow().getDecorView() instanceof FrameLayout))return;
+        FrameLayout root=(FrameLayout)activity.getWindow().getDecorView();
+        boolean show=!(activity instanceof QuestBackHost) ||
+            ((QuestBackHost)activity).showQuestBack();
+        View existing=root.findViewById(BACK_BUTTON_ID);
+        // Restore the real content height at navigation roots, including
+        // Companion Home and every top-level Quest Tools tab.
+        if(content!=null){
+            int top=show?dp(activity,60):0;
+            if(content.getPaddingTop()!=top)
+                content.setPadding(content.getPaddingLeft(),top,
+                    content.getPaddingRight(),content.getPaddingBottom());
+            content.setBackgroundColor(CompanionStyle.BG);
+        }
+        if(!show){
+            if(existing!=null)existing.setVisibility(View.GONE);
+            return;
+        }
+        if(existing==null)install(activity);
+        else{existing.setVisibility(View.VISIBLE);existing.bringToFront();}
     }
     private void install(Activity activity){
         // DecorView extends FrameLayout. Use a regular Activity view rather
@@ -72,20 +101,6 @@ public final class QuestBackApplication extends Application
         View decor=activity.getWindow().getDecorView();
         if(!(decor instanceof FrameLayout))return;
         FrameLayout root=(FrameLayout)decor;
-        // Reserve an actual header lane in the Activity's content container.
-        // Without this, a TOP|START decor button covers page titles and
-        // existing top-left Back controls on Quest Tools and other screens.
-        // This is applied once per Activity, not again on every resume.
-        View content=activity.findViewById(android.R.id.content);
-        if(content!=null && content.getTag(BACK_RESERVED_CONTENT_TAG)==null){
-            content.setTag(BACK_RESERVED_CONTENT_TAG,Boolean.TRUE);
-            // Fill the reserved upper-left lane with the same dark backdrop
-            // rather than exposing the platform's default light window color.
-            content.setBackgroundColor(CompanionStyle.BG);
-            content.setPadding(content.getPaddingLeft(),
-                content.getPaddingTop()+dp(activity,60),
-                content.getPaddingRight(),content.getPaddingBottom());
-        }
         View previous=root.findViewById(BACK_BUTTON_ID);
         if(previous!=null)return;
 
