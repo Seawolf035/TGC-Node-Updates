@@ -205,6 +205,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         person.addView(names,new LinearLayout.LayoutParams(0,-2,1f));
         TextView header=text(title,23,CompanionStyle.TEXT,true);
         header.setMaxLines(3);names.addView(header);
+        if(kind.equals("user"))addStaffBadge(id,names,header,photo);
         String descriptor=kind.equals("user")?item.optString("pronouns",""):
             kind.equals("world")?"By "+item.optString("authorName","Unknown"):
             item.optString("shortCode","");
@@ -245,6 +246,36 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         Button refresh=CompanionStyle.button(this,"Refresh details",true);
         tools.addView(refresh,CompanionStyle.buttonParams(this));
         refresh.setOnClickListener(v->load(true));
+    }
+    /**
+     * Profile decoration is based on a verified VRChat staff / Royalty
+     * group membership lookup, never the viewed user's display name or bio.
+     * Therefore other staff see Royalty gold on Seawolf's profile too.
+     */
+    private void addStaffBadge(String userId,LinearLayout names,TextView heading,FrameLayout portrait){
+        final LinearLayout badge=new LinearLayout(this);
+        badge.setOrientation(LinearLayout.VERTICAL);
+        names.addView(badge);
+        io.execute(()->{
+            String role=StaffDirectoryRepository.rankLive(this,userId);
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
+                if(role==null||role.isEmpty())return;
+                final boolean royalty="The Royalty".equals(role);
+                final int color=StaffDirectoryRepository.rankColor(role);
+                badge.addView(CompanionStyle.chip(this,
+                    (royalty?"♛ ":"◆ ")+role+" · TGC STAFF",
+                    color,royalty?0xFF47391F:CompanionStyle.RAISED));
+                if(royalty){
+                    heading.setTextColor(ThemePreferences.royalGold());
+                    // A foreground outline survives the overlaid avatar art.
+                    View border=new View(this);
+                    border.setBackground(CompanionStyle.shape(this,0x00000000,16,
+                        ThemePreferences.royalGold()));
+                    portrait.addView(border,new FrameLayout.LayoutParams(-1,-1));
+                }
+            });
+        });
     }
     private void showUser(JSONObject user,JSONObject encountered){
         String state=user.optString("status","");
