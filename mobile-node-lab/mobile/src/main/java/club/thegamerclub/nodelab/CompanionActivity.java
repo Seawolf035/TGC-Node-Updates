@@ -850,6 +850,21 @@ public final class CompanionActivity extends Activity {
                 "disabled on Quest. Your tracking Node runs independently.",
                 12,CompanionStyle.MUTED,false));
         }else{
+        // Dev-only UI preview: visible exclusively to the exact Discord
+        // identity currently verified by the TGC Relay. QuestToolsActivity
+        // still requires a LIVE match of the separate VRChat account before
+        // rendering anything. Do not replace the phone floater with this.
+        if(OwnerQuestToolsPreview.isOwnerStaff(this)){
+            action(floating,"⌘","Quest Tools · owner phone preview",
+                "Test the real Quest Tools UI on this phone (VRChat identity check required)",
+                ()->needsStaff(()->startActivity(new Intent(this,QuestToolsActivity.class))));
+            floating.addView(txt(
+                "Private UI development preview. Requires your own signed-in "+
+                "VRChat account. Quest-specific OSC service actions remain "+
+                "headset-only; your normal phone floating tools stay available.",
+                12,CompanionStyle.MUTED,false));
+            space(floating,8);
+        }
         action(floating,"◉","Floating tools",
             "Keep your tools available while playing VRChat",this::toggleOverlay);
         floating.addView(txt("Turning this off won't stop player tracking.",
