@@ -78,8 +78,10 @@ public final class InboxAlertSettings {
         }catch(Exception e){throw new IllegalStateException(e);}
     }
     public static final class Changes {
-        public final int newUnread,invites,friends;
-        Changes(int n,int i,int f){newUnread=n;invites=i;friends=f;}
+        public final int newUnread,invites,inviteRequests,friends,other;
+        Changes(int n,int i,int r,int f,int o){
+            newUnread=n;invites=i;inviteRequests=r;friends=f;other=o;
+        }
     }
     /**
      * Stores only account-scoped hashes, never raw notifications or VRChat
@@ -107,7 +109,7 @@ public final class InboxAlertSettings {
                 if(!key.isEmpty())known.add(key);
             }
         }
-        int added=0,invites=0,friends=0;
+        int added=0,invites=0,inviteRequests=0,friends=0,other=0;
         for(int i=0;i<snapshot.items.length();i++){
             JSONObject item=snapshot.items.optJSONObject(i);
             if(item==null)continue;
@@ -120,8 +122,10 @@ public final class InboxAlertSettings {
                 if(sameAccount&&eligible&&!item.optBoolean("seen",false)){
                     added++;
                     String type=item.optString("type","").toLowerCase(Locale.US);
-                    if(type.contains("invite"))invites++;
+                    if(type.equals("requestinvite"))inviteRequests++;
+                    else if(type.contains("invite"))invites++;
                     else if(type.contains("friend"))friends++;
+                    else other++;
                 }
             }
         }
@@ -135,6 +139,6 @@ public final class InboxAlertSettings {
             .putBoolean("legacy_seeded",legacySeeded||snapshot.legacyAvailable)
             .putBoolean("modern_seeded",modernSeeded||snapshot.modernAvailable)
             .apply();
-        return new Changes(added,invites,friends);
+        return new Changes(added,invites,inviteRequests,friends,other);
     }
 }
