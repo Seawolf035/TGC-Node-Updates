@@ -65,6 +65,24 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         if(!"invite".equals(filter)&&!"friend".equals(filter)&&
            !"unread".equals(filter))filter="all";
         render();
+        // Read the previous encrypted account-specific snapshot first.
+        worker.execute(()->{
+            InboxRepository.Snapshot cached=InboxRepository.cached(this);
+            if(cached==null)return;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this)||
+                   lastCheckedAt>cached.checkedAt)return;
+                entries.clear();
+                for(int i=0;i<cached.items.length();i++){
+                    JSONObject item=cached.items.optJSONObject(i);
+                    if(item!=null)entries.add(decode(item,item.optBoolean("_modern",false)));
+                }
+                entries.sort((x,y)->Long.compare(y.sort,x.sort));
+                lastCheckedAt=cached.checkedAt;
+                inboxWarning="Saved locally · checking VRChat";
+                adapter.rebuild();updateStatus();
+            });
+        });
         load(false);
     }
     @Override protected void onResume(){
