@@ -47,7 +47,14 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.20.1"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.20.2"));
+        highlight(body,"Explore, simplified",
+            "A faster Explore screen with compact shortcuts, featured StaffDex, "+
+            "and four clear sections: Friends, Discover, Activity and Inbox.");
+        highlight(body,"One Tracking dashboard",
+            "The Home Tracking shortcut now leads to the Tracking tab, "+
+            "with setup, activity and Device & Capture Controls in the right places.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.20.1"));
         highlight(body,"Admin+ VRChat palette import",
             "Paste six VRChat UI hex colors at once, type individual #RRGGBB colors, "+
             "or export your current Companion theme as VRChat codes. "+
