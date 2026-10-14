@@ -60,7 +60,7 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
         root.addView(text("Staff Directory",28,CompanionStyle.TEXT,true));
         root.addView(text("COLLECT-A-STAFF! · StaffDex",15,ThemePreferences.royalGold(),true));
         space(root,8);
-        root.addView(text("Directory based on confirmed members of TGC's official VRChat staff group. "+
+        root.addView(text("Directory powered by the official TGC Staff Roster. "+
             "Friend requests are sent only after you confirm each one; sending is not an achievement.",
             12,CompanionStyle.MUTED,false));
         LinearLayout controls=card(root);
@@ -107,7 +107,7 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
                 if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
                 if(available!=null){roster=available;skipped.clear();draw();}
                 else{status.setText("Could not load Staff Directory: "+failure+
-                    "\nSign into VRChat and confirm your staff-group membership. "+
+                    "\nSign into VRChat and check the official roster endpoint. "
                     "Nothing will be counted or requested until live data loads.");}
             });
         });
@@ -124,7 +124,7 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
         int total=0,confirmed=0;
         for(StaffDirectoryRepository.Entry e:roster.members){
             // The player's own profile isn't collectible.
-            if(e.id.equals(roster.accountId))continue;
+            if(e.id.equals(roster.accountId)||!e.canFriend())continue;
             total++;if(e.friend)confirmed++;
         }
         final int c=confirmed,t=total;
@@ -150,7 +150,7 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
         for(StaffDirectoryRepository.Entry e:roster.members){
             if(!query.isEmpty()&&!e.name.toLowerCase(Locale.US).contains(query)&&
                !e.rank.toLowerCase(Locale.US).contains(query))continue;
-            if(showUncollected&&(e.friend||e.id.equals(roster.accountId)))continue;
+            if(showUncollected&&(e.friend||e.id.equals(roster.accountId)||!e.canFriend()))continue;
             shown++;
             LinearLayout tile=card(content);
             final boolean royal=e.royalty();
@@ -160,11 +160,12 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
                 royal?ThemePreferences.royalGold():CompanionStyle.TEXT,true));
             tile.addView(text(e.rank,12,StaffDirectoryRepository.rankColor(e.rank),true));
             tile.addView(text(e.id.equals(roster.accountId)?"Your profile":
+                !e.canFriend()?"No VRChat profile linked in roster":
                 e.friend?"✓ Confirmed VRChat friend":
                 "Not confirmed as a friend",12,
                 e.friend?CompanionStyle.GOOD:CompanionStyle.MUTED,false));
-            button(tile,"View VRChat profile",false,()->profile(e.id));
-            if(!e.friend&&!e.id.equals(roster.accountId))
+            if(e.canFriend())button(tile,"View VRChat profile",false,()->profile(e.id));
+            if(e.canFriend()&&!e.friend&&!e.id.equals(roster.accountId))
                 button(tile,"Send friend request",true,()->confirmRequest(e));
         }
         if(shown==0)card(content).addView(text("No staff match these filters.",
@@ -179,7 +180,7 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
         if(roster==null){status.setText("Load the staff directory first.");return;}
         ArrayList<StaffDirectoryRepository.Entry> candidates=new ArrayList<>();
         for(StaffDirectoryRepository.Entry e:roster.members)
-            if(!e.friend&&!e.id.equals(roster.accountId)&&!skipped.contains(e.id))
+            if(e.canFriend()&&!e.friend&&!e.id.equals(roster.accountId)&&!skipped.contains(e.id))
                 candidates.add(e);
         if(candidates.isEmpty()){
             new AlertDialog.Builder(this).setTitle("StaffDex")
