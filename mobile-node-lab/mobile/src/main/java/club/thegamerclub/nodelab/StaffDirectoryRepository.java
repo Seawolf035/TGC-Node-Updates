@@ -228,6 +228,38 @@ public final class StaffDirectoryRepository {
         if(StaffGate.unlocked(c))cache=snapshot;
         return snapshot;
     }
+    /** Profile-specific online verification so badges work without opening StaffDex first. */
+    public static String rankLive(Context c,String userId){
+        if(!StaffGate.unlocked(c)||!validUser(userId))return "";
+        String fromCache=rank(c,userId);
+        if(!fromCache.isEmpty())return fromCache;
+        try{
+            String staffGroup=findGroup(c,STAFF_CODE);
+            JSONObject member=VRChatApi.groupMember(c,staffGroup,userId);
+            if(!userId.equals(memberId(member)))return "";
+            String role="Staff";
+            try{role=rankFromRoles(member,roleNames(VRChatApi.groupRoles(c,staffGroup)));}
+            catch(Exception ignored){}
+            // Royalty has its own officially labeled VRChat group.
+            try{
+                String royalGroup=findGroup(c,ROYALTY_CODE);
+                JSONObject royalty=VRChatApi.groupMember(c,royalGroup,userId);
+                if(userId.equals(memberId(royalty)))role="The Royalty";
+            }catch(Exception ignored){}
+            return role;
+        }catch(Exception e){return "";}
+    }
+    public static int rankColor(String rank){
+        if("The Royalty".equals(rank))return ThemePreferences.royalGold();
+        if("Owner".equals(rank))return 0xFFF05D62;
+        if("Head Admin".equals(rank))return 0xFFF6A04B;
+        if("Admin".equals(rank))return 0xFFF2D15C;
+        if("Head Moderator".equals(rank))return 0xFF69CC80;
+        if("Moderator".equals(rank))return 0xFF76AFFF;
+        if("Trial Moderator".equals(rank))return 0xFFBA8BFF;
+        return CompanionStyle.MUTED;
+    }
+
     /** Verified membership only; no rank inferred from names or profile bios. */
     public static String rank(Context c,String userId){
         Snapshot s=cached(c);
