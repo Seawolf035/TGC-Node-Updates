@@ -39,7 +39,7 @@ public final class FriendHubActivity extends StaffProtectedActivity {
         @Override public void run(){
             if(!visible||isFinishing()||isDestroyed())return;
             refresh(false);
-            handler.postDelayed(this,120_000L);
+            handler.postDelayed(this,300_000L);
         }
     };
     private int dp(float x){return CompanionStyle.dp(this,x);}
@@ -60,7 +60,7 @@ public final class FriendHubActivity extends StaffProtectedActivity {
         if(!StaffGate.unlocked(this)){finish();return;}
         visible=true;
         handler.removeCallbacks(periodic);
-        handler.postDelayed(periodic,120_000L);
+        handler.postDelayed(periodic,300_000L);
     }
     @Override protected void onPause(){
         visible=false;handler.removeCallbacks(periodic);
@@ -138,7 +138,8 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                 JSONObject session=VRChatSession.load(this);
                 FriendLogStore.account(session);
                 // No partial pagination may be committed to the history.
-                if(force || System.currentTimeMillis()-FriendLogStore.lastPoll(this,session)>=110_000L){
+                CompanionCache.Record cache=CompanionCache.read(this,"friends");
+                if(force||cache==null||!cache.fresh(300_000L)){
                     JSONArray friends=VRChatApi.friendSnapshot(this);
                     try{CompanionCache.saveArray(this,"friends",friends);}
                     catch(Exception ignored){}
@@ -146,6 +147,9 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                     try{VRChatFavoriteIndex.refreshIfStale(this);}
                     catch(Exception ignored){/* Keep prior category ordering offline. */}
                 }
+                // The index stays independent from full friend pagination.
+                try{VRChatFavoriteIndex.refreshIfStale(this);}
+                catch(Exception ignored){}
                 stored=FriendLogStore.snapshot(this,session);
                 log=FriendLogStore.events(this,session);
             }catch(Exception e){
