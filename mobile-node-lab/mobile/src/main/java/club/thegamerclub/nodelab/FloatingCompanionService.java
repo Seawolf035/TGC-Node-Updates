@@ -1013,7 +1013,7 @@ public final class FloatingCompanionService extends Service {
         labels.setPadding(dp(10),0,0,0);
         bar.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
         labels.addView(text("TGC STAFF COMPANION",10,CompanionStyle.ACCENT,true));
-        labels.addView(text("Floating tools",19,CompanionStyle.TEXT,true));
+        labels.addView(text("Floating Tools",19,CompanionStyle.TEXT,true));
         presenceLabel=text(presenceDescription+"  ·  Edit ›",11,CompanionStyle.ACCENT,false);
         presenceLabel.setPadding(0,dp(4),0,dp(4));
         labels.addView(presenceLabel);
@@ -1219,31 +1219,45 @@ public final class FloatingCompanionService extends Service {
         }
     }
     private void showHome(){
-        section(panelContent,"TRACKING");
+        // Shared four-hub structure with Quest Tools. Phone keeps real overlay
+        // tracking, while Quest uses its own native OSC service and tracker.
+        section(panelContent,"QUICK ACTIONS");
+        LinearLayout quick=panelCard(panelContent);
+        pinnedShortcuts(quick);
+        action(quick,"Customize shortcuts",false,()->go("customize"));
+
+        section(panelContent,"VRCHAT · DISCOVER & CONNECT");
+        LinearLayout social=panelCard(panelContent);
+        paired(social,"Friends","Inbox",
+            ()->go("mini_friends"),()->mini.inbox("all"));
+        paired(social,"Favorite friend groups","Current instance",
+            ()->go("mini_friend_favorites"),()->go("mini_now"));
+        paired(social,"Worlds","Groups",
+            ()->go("mini_worlds"),()->go("mini_groups"));
+        paired(social,"Favorite avatars","Find anything",
+            ()->go("mini_avatars"),()->mini.findAnything());
+
+        section(panelContent,"TRACKING · PHONE");
         LinearLayout node=panelCard(panelContent);
         nodeStatus=text("Checking tracking…",15,CompanionStyle.TEXT,true);
         node.addView(nodeStatus);
         nodeStats=text("Reading local status…",12,CompanionStyle.MUTED,false);
-        nodeStats.setPadding(0,dp(8),0,dp(5));
+        nodeStats.setPadding(0,dp(7),0,dp(5));
         node.addView(nodeStats);
         trackingToggle=action(node,"Start tracking",true,this::toggleTracking);
-        paired(node,"Tracking setup","Refresh",()->
-            open(MobileDeployActivity.class,null,null),()->{refreshStatus();loadRecentEvents();});
+        paired(node,"Tracking setup","Refresh",
+            ()->open(MobileDeployActivity.class,null,null),
+            ()->{refreshStatus();loadRecentEvents();});
 
         section(panelContent,"RECENTLY ENCOUNTERED");
         LinearLayout recent=panelCard(panelContent);
-        recentStatus=text("Loading captured player events…",12,CompanionStyle.MUTED,false);
+        recentStatus=text("Loading captured player events…",
+            12,CompanionStyle.MUTED,false);
         recent.addView(recentStatus);
-        // A small, bounded dynamic region. No second log parser or tracker is created.
         recentRows=vertical();recent.addView(recentRows);
         paired(recent,"Player list","Join / leave log",
             ()->go("mini_current"),()->go("mini_joins"));
         action(recent,"Past encounters",false,()->go("mini_players"));
-
-        section(panelContent,"YOUR PINNED TOOLS");
-        LinearLayout quick=panelCard(panelContent);
-        pinnedShortcuts(quick);
-        action(quick,"Customize shortcuts",false,()->go("customize"));
     }
     private LinearLayout recentRows;
     /**
@@ -1418,6 +1432,14 @@ public final class FloatingCompanionService extends Service {
         });
         friendsShortcut.setOnClickListener(v->go("mini_friends"));
         invites.setOnClickListener(v->mini.inbox("invite"));
+        section(panelContent,"VRCHAT FRIEND FAVORITES");
+        LinearLayout groups=panelCard(panelContent);
+        action(groups,"Browse favorite friend groups",true,
+            ()->go("mini_friend_favorites"));
+        groups.addView(text("These are your VRChat favorite friend categories. "+
+            "Open a profile to see VRChat's mutual friends or groups, "+
+            "when that user permits those connections to be shown.",
+            11,CompanionStyle.MUTED,false));
         section(panelContent,"FRIENDS");
         LinearLayout friends=panelCard(panelContent);
         action(friends,"Friends & locations",true,()->go("mini_friends"));
@@ -1741,6 +1763,8 @@ public final class FloatingCompanionService extends Service {
             ()->go("mini_recent"),()->go("mini_now"));
         paired(personal,"Find anything","My groups",
             ()->mini.findAnything(),()->go("mini_groups"));
+        paired(personal,"Favorite friend groups","Friends & mutuals",
+            ()->go("mini_friend_favorites"),()->go("mini_friends"));
         section(panelContent,"VERIFICATION");
         LinearLayout codes=panelCard(panelContent);
         action(codes,"Verification code",false,()->mini.verification());
