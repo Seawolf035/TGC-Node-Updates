@@ -817,9 +817,7 @@ public final class OverlayMiniVrcx {
             boolean active=f.optBoolean("isOnline",false);
             if(active)online++;else offline++;
             String name=f.optString("displayName",f.optString("id",""));
-            String loc=active?f.optString("location","unknown"):"Offline";
-            if(loc.isEmpty()||loc.equals("private")||loc.equals("unknown"))
-                loc="Private / hidden";
+            String loc=FriendOrdering.section(f,vrchatFavorites);
             if(!matches(name+" "+loc))continue;
             if("online".equals(friendFilter)&&!active)continue;
             if("offline".equals(friendFilter)&&active)continue;
@@ -828,36 +826,28 @@ public final class OverlayMiniVrcx {
                 catch(Exception ex){continue;}
             }
             matchingTotal++;
-            if(vrchatFavorites.contains(f.optString("id","")))
-                loc=favoriteSection;
             if(!grouped.containsKey(loc))grouped.put(loc,new ArrayList<>());
             grouped.get(loc).add(f);
         }
         list.addView(text(online+" online · "+offline+" offline · "+
             matchingTotal+" matching",12,CompanionStyle.ACCENT,false));
         ArrayList<String> keys=new ArrayList<>(grouped.keySet());
-        Collections.sort(keys,(a,b)->{
-            if(a.equals(b))return 0;
-            if(a.equals(favoriteSection))return -1;
-            if(b.equals(favoriteSection))return 1;
-            if("Offline".equals(a))return 1;
-            if("Offline".equals(b))return -1;
-            return Integer.compare(grouped.get(b).size(),grouped.get(a).size());
-        });
+        java.util.Map<String,Integer> sizes=new java.util.HashMap<>();
+        for(String key:keys)sizes.put(key,grouped.get(key).size());
+        keys.sort((a,b)->FriendOrdering.compareGroups(a,b,sizes));
         int shown=0;
         for(String key:keys){
             if(shown>=limit)break;
             ArrayList<JSONObject> group=grouped.get(key);
             if(group==null||group.isEmpty())continue;
-            if(key.equals(favoriteSection))
-                group.sort((a,b)->a.optString("displayName","")
-                    .compareToIgnoreCase(b.optString("displayName","")));
+            group.sort((a,b)->FriendOrdering.name(a)
+                .compareToIgnoreCase(FriendOrdering.name(b)));
             LinearLayout card=card(list);
-            String heading=key.startsWith("wrld_")?
-                "Instance: "+shortValue(key,42):key;
+            String heading=FriendOrdering.label(key,group.size());
             card.addView(text(heading+" · "+group.size(),13,
                 CompanionStyle.ACCENT,true));
-            if(key.startsWith("wrld_")&&key.contains(":")){
+            if(FriendOrdering.known(key)){
+                card.addView(text(shortValue(key,62),11,CompanionStyle.MUTED,false));
                 button(card,"Instance details",false,()->location(key));
                 button(card,"Request invite to this instance",false,()->confirm(
                     "Send yourself an invite to this visible instance?",
@@ -906,7 +896,7 @@ public final class OverlayMiniVrcx {
         if(matchingTotal>shown)
             button(list,"Show more friends ("+(matchingTotal-shown)+" remaining)",
                 false,()->{limit+=65;drawList();});
-        button(list,"Refresh friends",false,this::load);
+        button(list,"Refresh friends",false,()->load(true));
     }
     private void showLog(){
         int seen=0;
