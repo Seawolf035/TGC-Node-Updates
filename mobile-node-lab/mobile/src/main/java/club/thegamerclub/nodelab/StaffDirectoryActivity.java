@@ -1,0 +1,227 @@
+package club.thegamerclub.nodelab;
+
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/** A genuine VRChat-staff-group StaffDex, with user-initiated friend requests. */
+public final class StaffDirectoryActivity extends StaffProtectedActivity {
+    private final ExecutorService io=Executors.newSingleThreadExecutor();
+    private LinearLayout root,content;
+    private TextView status;
+    private EditText filter;
+    private StaffDirectoryRepository.Snapshot roster;
+    private boolean loading=false,showUncollected=false;
+    private int nextIndex=0;
+    private final Set<String> skipped=new HashSet<>();
+    private int dp(float n){return CompanionStyle.dp(this,n);}
+    private TextView text(String s,int n,int c,boolean bold){
+        return CompanionStyle.text(this,s,n,c,bold);
+    }
+    private LinearLayout card(LinearLayout host){
+        LinearLayout c=CompanionStyle.card(this);
+        host.addView(c,CompanionStyle.cardParams(this));return c;
+    }
+    private Button button(LinearLayout parent,String title,boolean primary,Runnable callback){
+        Button b=CompanionStyle.button(this,title,primary);
+        parent.addView(b,CompanionStyle.buttonParams(this));
+        b.setOnClickListener(v->callback.run());return b;
+    }
+    private void space(LinearLayout host,int n){
+        host.addView(new View(this),new LinearLayout.LayoutParams(1,dp(n)));
+    }
+    @Override public void onCreate(Bundle state){
+        super.onCreate(state);
+        if(!StaffGate.unlocked(this)){finish();return;}
+        ThemePreferences.apply(this);
+        ScrollView scroll=new ScrollView(this);
+        scroll.setFillViewport(true);scroll.setBackgroundColor(CompanionStyle.BG);
+        root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(15),dp(9),dp(15),dp(25));
+        scroll.addView(root);setContentView(scroll);CompanionStyle.safeArea(this,scroll);
+        button(root,"← Back to Companion",false,this::finish);
+        root.addView(text("THE GAMER CLUB",11,CompanionStyle.ACCENT,true));
+        root.addView(text("Staff Directory",28,CompanionStyle.TEXT,true));
+        root.addView(text("COLLECT-A-STAFF! · StaffDex",15,ThemePreferences.royalGold(),true));
+        space(root,8);
+        root.addView(text("Directory based on confirmed members of TGC's official VRChat staff group. "+
+            "Friend requests are sent only after you confirm each one; sending is not an achievement.",
+            12,CompanionStyle.MUTED,false));
+        LinearLayout controls=card(root);
+        button(controls,"Refresh roster and friendships",false,()->refresh(true));
+        button(controls,"Collect a Staff! · Next to add",true,this::nextUncollected);
+        button(controls,"Show only staff not confirmed as friends",false,()->{
+            showUncollected=!showUncollected;draw();
+        });
+        filter=CompanionStyle.input(this,"Find staff by name or rank");
+        controls.addView(filter,CompanionStyle.buttonParams(this));
+        filter.addTextChangedListener(new TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int st,int count,int after){}
+            public void onTextChanged(CharSequence s,int st,int before,int count){draw();}
+            public void afterTextChanged(Editable s){}
+        });
+        status=text("Checking the VRChat staff group…",13,CompanionStyle.MUTED,false);
+        root.addView(status);
+        content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);
+        root.addView(content);
+        roster=StaffDirectoryRepository.cached(this);
+        if(roster!=null)draw();
+        else refresh(false);
+    }
+    @Override protected void onResume(){
+        super.onResume();
+        if(!StaffGate.unlocked(this))finish();
+    }
+    private void refresh(boolean force){
+        if(loading)return;
+        if(!force){
+            StaffDirectoryRepository.Snapshot cache=StaffDirectoryRepository.cached(this);
+            if(cache!=null){roster=cache;draw();return;}
+        }
+        loading=true;status.setText("Loading live staff membership and confirmed friendships…");
+        io.execute(()->{
+            StaffDirectoryRepository.Snapshot result=null;
+            String error=null;
+            try{result=StaffDirectoryRepository.load(this);}
+            catch(Exception ex){error=ex.getMessage();}
+            final StaffDirectoryRepository.Snapshot available=result;
+            final String failure=error;
+            runOnUiThread(()->{
+                loading=false;
+                if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
+                if(available!=null){roster=available;skipped.clear();draw();}
+                else{status.setText("Could not load Staff Directory: "+failure+
+                    "\nSign into VRChat and confirm your staff-group membership. "+
+                    "Nothing will be counted or requested until live data loads.");}
+            });
+        });
+    }
+    private void achievement(LinearLayout target,String title,String detail,boolean complete){
+        LinearLayout row=card(target);
+        row.addView(text((complete?"✓ ":"○ ")+title,15,
+            complete?CompanionStyle.GOOD:CompanionStyle.TEXT,true));
+        row.addView(text(detail,12,CompanionStyle.MUTED,false));
+    }
+    private void draw(){
+        if(content==null||roster==null)return;
+        content.removeAllViews();
+        int total=0,confirmed=0;
+        for(StaffDirectoryRepository.Entry e:roster.members){
+            // The player's own profile isn't collectible.
+            if(e.id.equals(roster.accountId))continue;
+            total++;if(e.friend)confirmed++;
+        }
+        final int c=confirmed,t=total;
+        status.setText("Confirmed friends: "+c+" / "+t+" staff"+
+            (roster.rosterComplete?"":" · partial staff list")+
+            (roster.friendsComplete?"":" · friend scan incomplete")+
+            "\nA sent or pending friend request does not count as collected.");
+        LinearLayout achievements=card(content);
+        achievements.addView(text("YOUR STAFFDEX · ACHIEVEMENTS",16,CompanionStyle.ACCENT,true));
+        space(achievements,6);
+        achievements.addView(text(total==0?"No staff results yet":
+            Math.round(100f*c/total)+"% confirmed ("+c+"/"+total+")",
+            21,CompanionStyle.TEXT,true));
+        achievement(achievements,"First Catch!","Add 1 staff member",c>=1);
+        achievement(achievements,"Full Party","Add 6 staff members",c>=6);
+        achievement(achievements,"Half the Roster","Add at least half the confirmed roster",
+            roster.rosterComplete&&roster.friendsComplete&&total>0&&c*2>=total);
+        achievement(achievements,"Gotta Add ’Em All!","Add all current staff (including new roster members)",
+            roster.rosterComplete&&roster.friendsComplete&&total>0&&c==total);
+        content.addView(CompanionStyle.section(this,"STAFF ROSTER"));
+        String query=filter==null?"":filter.getText().toString().trim().toLowerCase(Locale.US);
+        int shown=0;
+        for(StaffDirectoryRepository.Entry e:roster.members){
+            if(!query.isEmpty()&&!e.name.toLowerCase(Locale.US).contains(query)&&
+               !e.rank.toLowerCase(Locale.US).contains(query))continue;
+            if(showUncollected&&(e.friend||e.id.equals(roster.accountId)))continue;
+            shown++;
+            LinearLayout tile=card(content);
+            final boolean royal=e.royalty();
+            if(royal)tile.setBackground(CompanionStyle.shape(this,
+                CompanionStyle.SURFACE,18,ThemePreferences.royalGold()));
+            tile.addView(text((royal?"♛ ":"")+e.name,17,
+                royal?ThemePreferences.royalGold():CompanionStyle.TEXT,true));
+            tile.addView(text(e.rank,12,StaffDirectoryRepository.rankColor(e.rank),true));
+            tile.addView(text(e.id.equals(roster.accountId)?"Your profile":
+                e.friend?"✓ Confirmed VRChat friend":
+                "Not confirmed as a friend",12,
+                e.friend?CompanionStyle.GOOD:CompanionStyle.MUTED,false));
+            button(tile,"View VRChat profile",false,()->profile(e.id));
+            if(!e.friend&&!e.id.equals(roster.accountId))
+                button(tile,"Send friend request",true,()->confirmRequest(e));
+        }
+        if(shown==0)card(content).addView(text("No staff match these filters.",
+            13,CompanionStyle.MUTED,false));
+    }
+    private void profile(String id){
+        if(!StaffGate.unlocked(this))return;
+        startActivity(new Intent(this,VRChatDetailActivity.class)
+            .putExtra("kind","user").putExtra("id",id));
+    }
+    private void nextUncollected(){
+        if(roster==null){status.setText("Load the staff directory first.");return;}
+        ArrayList<StaffDirectoryRepository.Entry> candidates=new ArrayList<>();
+        for(StaffDirectoryRepository.Entry e:roster.members)
+            if(!e.friend&&!e.id.equals(roster.accountId)&&!skipped.contains(e.id))
+                candidates.add(e);
+        if(candidates.isEmpty()){
+            new AlertDialog.Builder(this).setTitle("StaffDex")
+                .setMessage("No more eligible staff in the current list. "+
+                    "Skipped people will return after Refresh.")
+                .setPositiveButton("OK",null).show();return;
+        }
+        StaffDirectoryRepository.Entry pick=candidates.get(nextIndex%candidates.size());
+        new AlertDialog.Builder(this).setTitle("Collect-a-Staff!")
+            .setMessage("Next: "+pick.name+" · "+pick.rank+
+                "\n\nSend one VRChat friend request? Requests are not counted "+
+                "until the friendship is confirmed.")
+            .setNeutralButton("Skip for now",(d,w)->{
+                skipped.add(pick.id);nextIndex=0;nextUncollected();
+            })
+            .setNegativeButton("View profile",(d,w)->profile(pick.id))
+            .setPositiveButton("Send request",(d,w)->sendRequest(pick)).show();
+    }
+    private void confirmRequest(StaffDirectoryRepository.Entry e){
+        new AlertDialog.Builder(this).setTitle("Send VRChat friend request?")
+            .setMessage("Send a request to "+e.name+"? This requires their acceptance "+
+                "and will not automatically award any achievement.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Send",(d,w)->sendRequest(e)).show();
+    }
+    private void sendRequest(StaffDirectoryRepository.Entry e){
+        if(!StaffGate.unlocked(this))return;
+        status.setText("Sending one VRChat friend request…");
+        io.execute(()->{
+            String result;
+            try{VRChatApi.sendFriendRequest(this,e.id);
+                result="Request sent to "+e.name+
+                    ". Achievement progress updates only after you become friends. ";
+            }catch(Exception ex){result="Request not sent: "+ex.getMessage();}
+            final String message=result;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                status.setText(message);
+                Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+                skipped.add(e.id);nextIndex=0;
+            });
+        });
+    }
+    @Override protected void onDestroy(){io.shutdownNow();super.onDestroy();}
+}
