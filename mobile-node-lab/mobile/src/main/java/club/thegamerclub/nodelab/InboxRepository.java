@@ -151,13 +151,7 @@ public final class InboxRepository {
         return snapshot;
     }
     public static boolean include(JSONObject item,String filter){
-        if(item==null)return false;
-        if("unread".equals(filter))return !item.optBoolean("seen",false);
-        String type=item.optString("type","").toLowerCase(Locale.US);
-        if("requests".equals(filter))return type.equals("requestinvite");
-        if("invite".equals(filter))return type.contains("invite");
-        if("friend".equals(filter))return type.contains("friend");
-        return true;
+        return InboxCategory.include(item,filter);
     }
     public static int unread(JSONArray items){
         int n=0;
