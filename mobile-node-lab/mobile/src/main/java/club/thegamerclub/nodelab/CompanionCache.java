@@ -28,6 +28,7 @@ import javax.crypto.spec.GCMParameterSpec;
 public final class CompanionCache {
     private static final String KEY_ALIAS="tgc_companion_cache_v1";
     private static final int MAX_BYTES=3_000_000;
+    private static final int MAX_SEALED_BYTES=MAX_BYTES*2+1024;
     private CompanionCache(){}
 
     public static final class Record {
@@ -78,14 +79,14 @@ public final class CompanionCache {
     public static synchronized Record read(Context ctx,String kind){
         try{
             File destination=file(ctx,kind);
-            if(!destination.isFile()||destination.length()>MAX_BYTES+1024)return null;
+            if(!destination.isFile()||destination.length()>MAX_SEALED_BYTES)return null;
             AtomicFile atom=new AtomicFile(destination);
             byte[] bytes;
             try(FileInputStream input=atom.openRead();
                 ByteArrayOutputStream output=new ByteArrayOutputStream()){
                 byte[] buffer=new byte[8192];int n;
                 while((n=input.read(buffer))!=-1){
-                    if(output.size()+n>MAX_BYTES+1024)return null;
+                    if(output.size()+n>MAX_SEALED_BYTES)return null;
                     output.write(buffer,0,n);
                 }
                 bytes=output.toByteArray();
