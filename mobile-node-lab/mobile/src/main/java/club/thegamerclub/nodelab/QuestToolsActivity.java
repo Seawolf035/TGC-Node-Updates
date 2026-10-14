@@ -289,7 +289,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     }
     /** Explicit exit to the COMPANION HOME, never to a stale Settings page. */
     private void returnToMainMenu(){
-        if(!canUseTools()){finish();return;}
+        // Leaving this page must never be blocked by an expired VRChat cookie.
+        // CompanionActivity independently verifies staff access on return.
         Intent mainMenu=new Intent(this,CompanionActivity.class);
         mainMenu.putExtra("open_main_menu",true);
         mainMenu.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|
