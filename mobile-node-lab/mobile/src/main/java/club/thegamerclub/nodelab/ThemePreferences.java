@@ -137,6 +137,22 @@ public final class ThemePreferences {
         return hex(x[ACCENT])+","+hex(x[ICON])+","+hex(x[BUTTON])+","+
             hex(x[BG])+","+hex(x[TEXT])+","+hex(x[SUBTEXT]);
     }
+    /**
+     * Atomically apply every channel of a user-named palette.
+     * Named presets live in a DIFFERENT preferences file, so clearing the
+     * currently active theme never erases any personal saved palettes.
+     */
+    public static synchronized void applySavedColors(Context c,int[] values){
+        if(!allowed(c))throw new SecurityException("Admin+ staff access required");
+        if(values==null||values.length!=BASE.length)
+            throw new IllegalArgumentException("Saved theme must have exactly "+BASE.length+" colors");
+        SharedPreferences.Editor tx=c.getSharedPreferences(PREF,0).edit()
+            .clear().putInt("preset",0);
+        for(int i=0;i<values.length;i++)tx.putInt("color_"+i,
+            0xFF000000|(values[i]&0x00FFFFFF));
+        if(!tx.commit())throw new IllegalStateException("Could not apply saved colors");
+        apply(c);
+    }
     public static void reset(Context c){
         if(!allowed(c))return;
         c.getSharedPreferences(PREF,0).edit().clear().apply();
