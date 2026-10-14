@@ -48,6 +48,25 @@ public final class VRChatSession {
             .putString("data",Base64.encodeToString(encrypted,Base64.NO_WRAP))
             .apply();
     }
+    /** Persist refreshed cookies only if the request used the still-current login. */
+    public static synchronized void saveValidated(Context context,
+        JSONObject requested,JSONObject refreshed)throws Exception{
+        JSONObject existing=load(context);
+        String expectedAuth=requested.optString("auth","");
+        String expected2fa=requested.optString("twoFactorAuth","");
+        if(expectedAuth.isEmpty()||
+           !expectedAuth.equals(existing.optString("auth",""))||
+           !expected2fa.equals(existing.optString("twoFactorAuth","")))
+            throw new SecurityException("VRChat login changed during request; recheck the account.");
+        String expectedId=requested.optString("userId","");
+        if(!expectedId.isEmpty()&&
+           !expectedId.equals(refreshed.optString("userId","")))
+            throw new SecurityException("VRChat account mismatch; recheck the account.");
+        if(!existing.optString("auth","").equals(refreshed.optString("auth",""))||
+           !existing.optString("twoFactorAuth","").equals(refreshed.optString("twoFactorAuth",""))||
+           !existing.optString("displayName","").equals(refreshed.optString("displayName","")))
+            save(context,refreshed);
+    }
     public static synchronized JSONObject load(Context context)throws Exception{
         SharedPreferences pref=context.getSharedPreferences(PREF,0);
         String data=pref.getString("data",""),iv=pref.getString("iv","");
