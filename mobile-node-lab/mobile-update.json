@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.5",
-  "version_code": 79,
+  "version": "0.21.6",
+  "version_code": 80,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "f4588b6747e7f4d0fc16e50b7820250b5722327e8380fd47b274d0bddb63a5fb",
-  "notes": "v0.21.5 (code 79): Sort friends with VRChat Favorites first, multi-friend shared instances second, single visible instances third, private or unknown locations last, with offline friends after those. Apply consistently to Friends & Activity, full Companion friend browser, and Floating/Quest social pages. Reduce redundant friend API polls using encrypted per-account cache. Space account checks, confirm an initial 401 before showing an expired session, distinguish other endpoint errors, and prevent an older validation from overwriting new login cookies. Preserve existing TGC Relay, invites, tracking, session encryption and permanent Android signing identity."
+  "sha256": "be216abbd5453e76e1e92085ed2ab2edb43babb4cf2a55d6abf434b511cc90c4",
+  "notes": "v0.21.6 (code 80): After successful mobile Companion Relay staff device linking, automatically return to Companion Home, verify live staff authorization and enter guided phone or Quest setup instead of remaining on the Tracking Controls page. If the proprietary staff agreement has not yet been explicitly accepted, require it before the guided setup; do not bypass consent or grant staff access from cached credentials. Finish Setup returns to Home; tracking controls remain accessible afterwards. Prune the in-app What's New screen to only the five most recent patch releases (v0.21.6 through v0.21.2); retain full Git/source history. Preserve existing phone/Quest tracking, OSC, staff auth, VRChat sessions, GM1/GM4 invite authority and Android app/signing identity."
 }
