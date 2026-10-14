@@ -41,6 +41,8 @@ public final class CompanionActivity extends Activity {
     private boolean trackingGuideExpanded=false;
     private boolean trackingInfoExpanded=false;
     private String exploreCategory="friends";
+    private StaffDexPanel staffDexPanel;
+    private boolean setupLaunched=false;
     private boolean foreground=false;
     private boolean whatsNewLaunched=false;
     private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
@@ -117,6 +119,7 @@ public final class CompanionActivity extends Activity {
         }
     }
     private void shell(boolean navigation){
+        if(staffDexPanel!=null){staffDexPanel.dispose();staffDexPanel=null;}
         root=stack();root.setBackgroundColor(CompanionStyle.BG);setContentView(root);
         getWindow().setStatusBarColor(CompanionStyle.BG);
         getWindow().setNavigationBarColor(CompanionStyle.BG);
@@ -137,12 +140,12 @@ public final class CompanionActivity extends Activity {
         CompanionStyle.safeArea(this,root);
     }
     /**
-     * Home ↔ Explore ↔ Tracking ↔ Settings, with bottom tabs always available.
+     * Home ↔ Explore ↔ StaffDex ↔ Tracking ↔ Settings, with bottom tabs always available.
      * Only an intentional horizontal gesture advances; vertical scrolling remains native.
      */
     private void swipePage(int direction){
         if(!StaffGate.unlocked(this))return;
-        String[] pages={"home","explore","tracking","settings"};
+        String[] pages={"home","explore","staffdex","tracking","settings"};
         int position=0;
         for(int i=0;i<pages.length;i++){
             if(pages[i].equals(tab)){position=i;break;}
@@ -165,6 +168,7 @@ public final class CompanionActivity extends Activity {
         root.addView(nav,new LinearLayout.LayoutParams(-1,dp(66)));
         addTab(nav,"⌂","Home","home");
         addTab(nav,"◇","Explore","explore");
+        addTab(nav,"♛","StaffDex","staffdex");
         addTab(nav,"◉","Tracking","tracking");
         addTab(nav,"⚙","Settings","settings");
     }
@@ -299,6 +303,7 @@ public final class CompanionActivity extends Activity {
     @Override protected void onDestroy(){
         main.removeCallbacks(refreshGate);
         main.removeCallbacks(refreshHome);
+        if(staffDexPanel!=null){staffDexPanel.dispose();staffDexPanel=null;}
         gateWorker.shutdownNow();homeWorker.shutdownNow();super.onDestroy();
     }
     private void locked(String reason){
@@ -390,9 +395,20 @@ public final class CompanionActivity extends Activity {
         showingUnlocked=true;shell(true);
         switch(tab){
             case "explore":renderExplore();break;
+            case "staffdex":renderStaffDex();break;
             case "tracking":renderTracking();break;
             case "settings":renderSettings();break;
             default:renderHome();break;
+        }
+        // Set up personal VRChat before showing release highlights. Quest
+        // additionally needs user-confirmed FULL logging and persisted SAF
+        // Documents/Logs access. On phones Shizuku remains OPTIONAL.
+        if(CompanionSetupState.shouldShow(this)){
+            if(!setupLaunched){
+                setupLaunched=true;
+                startActivity(new Intent(this,CompanionSetupActivity.class));
+            }
+            return;
         }
         if(!whatsNewLaunched && WhatsNewActivity.shouldShow(this)){
             whatsNewLaunched=true;
@@ -715,6 +731,12 @@ public final class CompanionActivity extends Activity {
         row.setContentDescription(title+". "+detail);
         row.setOnClickListener(v->open.run());
     }
+    private void renderStaffDex(){
+        page.setPadding(dp(15),dp(12),dp(15),dp(26));
+        staffDexPanel=new StaffDexPanel(this);
+        page.addView(staffDexPanel,
+            new LinearLayout.LayoutParams(-1,-2));
+    }
     private void renderExplore(){
         page.setPadding(dp(14),dp(12),dp(14),dp(24));
         page.addView(CompanionStyle.section(this,"EXPLORE VRCHAT"));
@@ -733,24 +755,6 @@ public final class CompanionActivity extends Activity {
         compactQuickPair(quick,"⌕","Find people","Search VRChat users",
             ()->openBrowse("search_users"),
             "◇","Favorite worlds","Your saved worlds",()->openBrowse("worlds"));
-
-        // StaffDex is special and stays discoverable independent of the
-        // selected category. The roster remains the official source.
-        LinearLayout featured=card();
-        featured.setBackground(CompanionStyle.gradient(this,
-            CompanionStyle.SURFACE,CompanionStyle.RAISED,17));
-        featured.addView(txt("♛  THE GAMER CLUB",11,
-            ThemePreferences.royalGold(),true));
-        space(featured,5);
-        featured.addView(txt("Collect-a-Staff! · StaffDex",19,CompanionStyle.TEXT,true));
-        space(featured,5);
-        featured.addView(txt("Find staff, check your friends list and collect achievements.",
-            12,CompanionStyle.MUTED,false));
-        space(featured,9);
-        android.widget.Button staffDex=CompanionStyle.button(this,"Open StaffDex  ›",false);
-        featured.addView(staffDex,CompanionStyle.buttonParams(this));
-        staffDex.setOnClickListener(v->needsStaff(
-            ()->startActivity(new Intent(this,StaffDirectoryActivity.class))));
 
         page.addView(CompanionStyle.section(this,"BROWSE BY CATEGORY"));
         LinearLayout categories=stack();page.addView(categories);
@@ -976,6 +980,15 @@ public final class CompanionActivity extends Activity {
     }
     private void renderSettings(){
         headline("PREFERENCES","Settings","Your account, device and Companion.");
+        page.addView(CompanionStyle.section(this,"GETTING STARTED"));
+        LinearLayout onboarding=card();
+        action(onboarding,"✓","Guided device setup",
+            "VRChat login, "+(QuestDevice.isQuestDevice()?
+                "Quest FULL logs and Documents/Logs access":"optional Shizuku tracking")+
+                " · review any time",
+            ()->needsStaff(()->startActivity(
+                new Intent(this,CompanionSetupActivity.class))));
+
         page.addView(CompanionStyle.section(this,"YOUR ACCOUNT"));
         LinearLayout account=card();
         action(account,"◉","My VRChat account","Profile, sign-in and sign-out",
