@@ -1,0 +1,77 @@
+name: Seawolf creator attribution license QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - fix/mobile-v0.19.17-seawolf-creator-license
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'PROPRIETARY_LICENSE.md'
+      - '.github/workflows/mobile-companion-seawolf-license-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate creator attribution, 43-section completeness and signed updater invariants
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          j=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          license=Path("mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt").read_text()
+          notice=Path("PROPRIETARY_LICENSE.md").read_text()
+          gate=(j/"CompanionLicense.java").read_text()
+          accept=(j/"CompanionLicenseActivity.java").read_text()
+          settings=(j/"CompanionActivity.java").read_text()
+          updater=(j/"MobileUpdaterActivity.java").read_text()
+          preview=(j/"OwnerQuestToolsPreview.java").read_text()
+          qt=(j/"QuestToolsActivity.java").read_text()
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          headings=[int(x) for x in re.findall(r"(?m)^(\d+)\. [A-Z][A-Z ,&-]+$",license)]
+          assert headings==list(range(1,44)),headings
+          assert "Agreement Version: 2026-10-14.2" in license
+          assert "Created and developed by Seawolf" in license
+          assert "Copyright © 2026 Seawolf" in license
+          assert "1.1. “Seawolf” is the creator and original developer" in license
+          assert "2.1. TGC Staff Companion was created and developed by Seawolf." in license
+          assert "43.1. Direct requests" in license and "to Seawolf, the software's creator" in license
+          assert "END OF AGREEMENT — VERSION 2026-10-14.2" in license
+          assert "THIRD-PARTY AND OTHER CONTRIBUTOR RIGHTS RESERVED" in license
+          assert "agreement checkbox" not in license.lower()
+          assert "2026-10-14.2" in notice and "originally developed by Seawolf" in notice
+          assert 'VERSION="2026-10-14.2"' in gate
+          assert '.commit();' in gate and 'persisted && CompanionLicense.accepted(this)' in accept
+          assert '"Agree & Continue"' in accept
+          assert "Check for Updates" in accept and 'scroll.addView(license' in accept
+          assert '"LEGAL & AGREEMENT"' in settings and '"Read full license & agreement"' in settings
+          assert 'verifySameSigner(candidate)' in updater and 'SHA-256 mismatch' in updater
+          assert "OWNER_VRCHAT_ID.equals(profile.optString" in preview
+          assert "StaffGate.verifiedDiscordMatches(context,OWNER_DISCORD_ID)" in preview
+          assert "OwnerQuestToolsPreview.verifyLive(this)" in qt
+          assert "TrackingSetupGuide.acknowledged(this)" in settings
+          assert "versionCode 69" in gradle and "versionName '0.19.17'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          print("PASS: Seawolf credited in 43-section versioned license, explicit reacceptance, full Settings reader, signature-safe updates and owner-only developer preview.")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
