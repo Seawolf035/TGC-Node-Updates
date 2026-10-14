@@ -281,12 +281,15 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         root=vertical();
         root.setBackgroundColor(CompanionStyle.BG);
         setContentView(root);
+        CompanionStyle.safeArea(this,root);
         QuestBackApplication.refresh(this);
         getWindow().setStatusBarColor(CompanionStyle.BG);
         getWindow().setNavigationBarColor(CompanionStyle.BG);
         LinearLayout heading=new LinearLayout(this);
         heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.setPadding(dp(12),dp(8),dp(12),dp(8));
+        heading.setPadding(dp(14),dp(9),dp(14),dp(9));
+        heading.setBackground(CompanionStyle.gradient(this,
+            CompanionStyle.SURFACE,CompanionStyle.BG,14));
         root.addView(heading);
         // Quest has one universal header Back on nested pages.
         // Owner-only phone preview instead shows this ONE header Back.
@@ -303,6 +306,9 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             "Quest Tools · "+page.replace("mini_","").replace('_',' '),
             19,CompanionStyle.TEXT,true));
         LinearLayout tabs=new LinearLayout(this);
+        tabs.setGravity(Gravity.CENTER_VERTICAL);
+        tabs.setPadding(dp(6),dp(3),dp(6),dp(5));
+        tabs.setBackgroundColor(CompanionStyle.SURFACE);
         root.addView(tabs);
         String[][] values={{"Home","home"},{"Social","social"},
             {"OSC","osc"},{"Tools","tools"}};
@@ -312,6 +318,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(42),1f);
             p.setMargins(dp(2),0,dp(2),dp(2));
             tabs.addView(tab,p);
+            tab.setContentDescription(v[0]+" Quest Tools tab"+
+                (page.equals(v[1])?", selected":""));
             tab.setOnClickListener(view->switchTab(v[1]));
         }
         // Keep the user-configured three-button bar as a fixed sibling of
@@ -365,38 +373,50 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         go(OverlayPreferences.destination(key));
     }
     private void showHome(){
-        LinearLayout info=card(QuestDevice.isQuestDevice()? 
-            "QUEST · WITHOUT FLOATING WINDOWS":"OWNER · PHONE UI PREVIEW");
-        info.addView(text(
-            QuestDevice.isQuestDevice()?
-            "Native tools work from the Quest system's Android app view. "+
-            "No overlay permission or floating bubble is required. "+
-            "VRChat OSC requires Quest VRChat to accept local OSC packets; "+
-            "system multitasking may suspend VRChat or other apps.":
-            "This is the real Quest Tools UI on your phone for layout testing. "+
-            "Your normal phone floating tools and player tracking are unchanged. "+
-            "Quest-only OSC service actions require the actual headset.",
-            12,CompanionStyle.MUTED,false));
-        LinearLayout links=card("YOUR QUICK TOOLS");
+        // The Home hub is a root: no Back. Keep high-value routes visible.
+        LinearLayout welcome=card("QUEST TOOLS · AT A GLANCE");
+        welcome.addView(text(QuestDevice.isQuestDevice()?
+            "Quest-native controls · No floating-window permission required":
+            "OWNER PHONE PREVIEW · QUEST UI",
+            14,CompanionStyle.TEXT,true));
+        welcome.addView(text(QuestDevice.isQuestDevice()?
+            "OSC requires VRChat's own OSC toggle. Quest multitasking can "+
+                "suspend the game; verify in VRChat that packets arrived.":
+            "This is the actual Quest layout for testing. Your phone's "+
+                "floating panel and player tracking remain separate.",
+            11,CompanionStyle.MUTED,false));
+
+        LinearLayout primary=card("QUICK ACTIONS");
         List<String> shortcuts=OverlayPreferences.shortcuts(this);
         for(int i=0;i<shortcuts.size();i+=2){
-            if(i+1<shortcuts.size())pair(links,
-                OverlayPreferences.name(shortcuts.get(i)),OverlayPreferences.destination(shortcuts.get(i)),
-                OverlayPreferences.name(shortcuts.get(i+1)),OverlayPreferences.destination(shortcuts.get(i+1)));
-            else{
+            if(i+1<shortcuts.size()){
+                final String first=shortcuts.get(i),second=shortcuts.get(i+1);
+                pair(primary,OverlayPreferences.name(first),
+                    OverlayPreferences.destination(first),
+                    OverlayPreferences.name(second),
+                    OverlayPreferences.destination(second));
+            }else{
                 String key=shortcuts.get(i);
-                button(links,OverlayPreferences.name(key),false,()->openShortcut(key));
+                button(primary,OverlayPreferences.name(key),false,
+                    ()->openShortcut(key));
             }
         }
-        button(links,"Customize shortcuts",false,()->go("shortcuts"));
-        LinearLayout social=card("VRCHAT");
+        button(primary,"Edit my shortcuts",false,()->go("shortcuts"));
+
+        LinearLayout social=card("VRCHAT · DISCOVER & CONNECT");
         pair(social,"Friends","mini_friends","Inbox","mini_inbox");
-        pair(social,"Current instance","mini_now","Worlds","mini_worlds");
-        pair(social,"Groups","mini_groups","Avatar favorites","mini_avatars");
-        pair(social,"Player history","mini_players","Verification","mini_verify");
-        LinearLayout osc=card("OSC");
-        osc.addView(text(QuestOscService.summary(),13,CompanionStyle.ACCENT,false));
-        button(osc,"Open native OSC controls",true,()->switchTab("osc"));
+        pair(social,"Favorite friend groups","mini_friend_favorites",
+            "Current instance","mini_now");
+        pair(social,"Worlds","mini_worlds","Groups","mini_groups");
+        pair(social,"Avatars","mini_avatars","Player history","mini_players");
+        pair(social,"Verification","mini_verify","Search","mini_find");
+
+        LinearLayout osc=card("OSC · FAST CONTROLS");
+        osc.addView(text(QuestOscService.summary(),13,CompanionStyle.ACCENT,true));
+        osc.addView(text("Live Chatbox, PTT, saved phrases, typing and avatar "+
+            "OSC share the same menu structure as Floating Tools.",
+            12,CompanionStyle.MUTED,false));
+        button(osc,"Open OSC controls",true,()->switchTab("osc"));
         button(osc,"Return to Companion",false,()->finish());
     }
     private void showPinned(LinearLayout parent){
@@ -503,6 +523,14 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
                 toast(next?"Alerts enabled; initial check seeds silently.":"Alerts disabled.");
             }catch(Exception e){toast(e.getMessage());}
         });
+        LinearLayout favorites=card("VRCHAT FRIEND FAVORITES");
+        favorites.addView(text("Your named VRChat friend categories, separate "+
+            "from Companion pinned shortcuts.",12,CompanionStyle.MUTED,false));
+        button(favorites,"Browse favorite friend groups",true,
+            ()->go("mini_friend_favorites"));
+        favorites.addView(text("Mutual friends and groups are available on "+
+            "each person's VRChat profile, subject to privacy preferences.",
+            11,CompanionStyle.MUTED,false));
         LinearLayout friends=card("FRIENDS & NOTIFICATIONS");
         pair(friends,"Friends & locations","mini_friends","Friend log","mini_log");
         pair(friends,"All notifications","mini_inbox","Activity feed","mini_activity");
@@ -521,7 +549,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         });
     }
     private void showOsc(){
-        LinearLayout live=card("LIVE CHATBOX · QUEST NATIVE");
+        LinearLayout live=card("LIVE CHATBOX · "+(QuestDevice.isQuestDevice()?
+            "QUEST NATIVE":"PHONE PREVIEW"));
         oscSummary=text(QuestOscService.summary(),12,CompanionStyle.ACCENT,true);
         live.addView(oscSummary);
         liveButton=button(live,QuestOscService.live()?
@@ -608,6 +637,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     }
     private void showTools(){
         LinearLayout account=card("ACCOUNT & SOCIAL");
+        pair(account,"Favorite friend groups","mini_friend_favorites",
+            "Find mutuals via a friend","mini_friends");
         pair(account,"Status & presets","mini_presence","Verification","mini_verify");
         pair(account,"Favorite avatars","mini_avatars","Worlds & bookmarks","mini_worlds");
         pair(account,"Recent worlds","mini_recent","Current instance","mini_now");
