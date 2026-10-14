@@ -1,0 +1,110 @@
+name: StaffDex tab and guided onboarding QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.20.3-staffdex-tab-guided-onboarding
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-staffdex-setup-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify fifth tab, step readiness, screenshot-based Quest FULL guidance and no regressions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          main=(root/'CompanionActivity.java').read_text()
+          panel=(root/'StaffDexPanel.java').read_text()
+          repo=(root/'StaffDirectoryRepository.java').read_text()
+          state=(root/'CompanionSetupState.java').read_text()
+          setup=(root/'CompanionSetupActivity.java').read_text()
+          saf=(root/'QuestSafLogWatcher.java').read_text()
+          acct=(root/'VRChatAccountActivity.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          news=(root/'WhatsNewActivity.java').read_text()
+          manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
+          updater=(root/'MobileUpdaterActivity.java').read_text()
+          assert 'String[] pages={"home","explore","staffdex","tracking","settings"};' in main
+          assert 'addTab(nav,"♛","StaffDex","staffdex");' in main
+          assert 'case "staffdex":renderStaffDex();break;' in main
+          assert 'staffDexPanel=new StaffDexPanel(this)' in main
+          assert 'staffDexPanel.dispose()' in main
+          assert 'Open StaffDex  ›' not in main
+          assert 'StaffDirectoryActivity.class' not in main
+          assert 'controls.setOnClickListener(v->openTab("tracking"));' in main
+          assert 'CompanionSetupState.shouldShow(this)' in main
+          assert 'startActivity(new Intent(this,CompanionSetupActivity.class));' in main
+          assert '"Guided device setup"' in main
+          assert 'CompanionSetupActivity.class' in main
+          assert 'WhatsNewActivity.shouldShow(this)' in main
+          assert 'CompanionSetupState.vrchatSessionReady' in setup
+          assert 'VRChatApi.currentUser(this)' in setup
+          assert 'VRChatAccountActivity.class' in setup
+          assert 'VRChat → Settings' not in setup or 'Debug' in setup
+          assert "Settings (gear icon) → Debug" in setup
+          assert 'use the left/right arrows' in setup
+          assert '◀   Full   ▶' in setup
+          assert 'Share All Log Files' in setup
+          assert 'The Companion cannot see or change this VRChat setting' in setup
+          assert 'CompanionSetupState.confirmFullLogging(this)' in setup
+          assert 'QuestSafLogWatcher.selectFolder(this,data.getData())' in setup
+          assert 'Intent.ACTION_OPEN_DOCUMENT_TREE' in setup
+          assert 'FLAG_GRANT_READ_URI_PERMISSION' in setup
+          assert 'QuestSafLogWatcher.hasGrant(this)' in setup
+          assert 'QuestSafLogWatcher.hasGrant(context)' in state
+          assert 'fullLoggingAcknowledged(context)' in state
+          assert '"tgc_companion_guided_setup_v1"' in state
+          assert 'StaffGate.unlocked(context)' in state
+          assert 'TrackingSetupGuide.acknowledge(context)' in state
+          assert 'Shizuku · optional' in setup
+          assert 'shizuku.rikka.app/guide/setup/' in setup
+          assert 'shizuku.rikka.app/download/' in setup
+          assert 'MobileDeployActivity.class' in setup
+          assert 'new Intent(activity,VRChatDetailActivity.class)' in panel
+          assert 'StaffDirectoryRepository.cached(activity)' in panel
+          assert 'UserThemePresets' not in panel
+          assert 'Collect-a-Staff!' in panel
+          assert 'Full Party' in panel
+          assert 'Gotta Add' in panel
+          assert 'StaffDirectoryRepository.load(activity)' in panel
+          assert 'StaffDirectoryRepository.rankColor(e.rank)' in panel
+          assert 'VRChatApi.sendFriendRequest(activity,e.id)' in panel
+          assert 'activity.runOnUiThread(' in panel
+          assert 'ThemePreferences' in main
+          assert 'AKfycbx0MRdKsYmz1B82M3KYZ28_fcyTrdavMTsTxNkLm2-ijyXAaR-1hbpa2fhDB_zXZAmrCg' in repo
+          assert 'VRChatApi.groupMembers' not in repo
+          assert 'takePersistableUriPermission' in saf
+          assert 'Select the Documents/Logs folder' in saf
+          assert 'Login' in acct or 'Sign in' in acct
+          assert '<activity android:name=".CompanionSetupActivity" android:exported="false"/>' in manifest
+          assert 'versionCode 73' in gradle and "versionName '0.20.3'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          assert 'v0.20.3' in news
+          assert 'verifySameSigner(candidate)' in updater
+          print('PASS: fifth tab, authoritative StaffDex, persisted Quest Logs, manual FULL acknowledgement, VRChat login, optional phone Shizuku, signed updater, and previous Home controls.')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
