@@ -23,9 +23,11 @@ public final class CompanionStyle {
     public static volatile int SURFACE=0xFF142338;
     public static volatile int RAISED=0xFF1C3048;
     public static volatile int FIELD=0xFF233A52;
-    public static final int TEXT=0xFFF1F8FF;
-    public static final int MUTED=0xFFB8CADE;
+    public static volatile int TEXT=0xFFF1F8FF;
+    public static volatile int MUTED=0xFFB8CADE;
     public static volatile int ACCENT=0xFF62D6F2;
+    public static volatile int ICON=0xFF62D6F2;
+    public static volatile int BUTTON_FILL=0xFF62D6F2;
     public static final int GOLD=0xFFFFD28A;
     public static volatile int BORDER=0xFF324D68;
     public static final int GOOD=0xFF68E4B0;
@@ -95,7 +97,7 @@ public final class CompanionStyle {
         e.setTextSize(16);
         e.setTextColor(TEXT);
         e.setHintTextColor(MUTED);
-        e.setHighlightColor(0x9962D6F2);
+        e.setHighlightColor(0x66000000|(ACCENT&0x00FFFFFF));
         e.setHint(hint);
         e.setBackground(shape(c,FIELD,13,0xFF50728F));
         e.setPadding(dp(c,16),dp(c,13),dp(c,16),dp(c,13));
@@ -105,14 +107,19 @@ public final class CompanionStyle {
         }
         return e;
     }
+    /** Legible black/white label on arbitrarily chosen six-digit button colors. */
+    public static int readableOn(int fill){
+        double light=.2126*Color.red(fill)+.7152*Color.green(fill)+.0722*Color.blue(fill);
+        return light>150?0xFF111525:0xFFFFFFFF;
+    }
     public static Button button(Context c,String title,boolean primary){
         Button b=new Button(c);
         b.setAllCaps(false);
         b.setText(title);
         b.setTextSize(14);
-        b.setTextColor(primary?BG:TEXT);
+        b.setTextColor(primary?readableOn(BUTTON_FILL):TEXT);
         b.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
-        b.setBackground(shape(c,primary?ACCENT:RAISED,13,
+        b.setBackground(shape(c,primary?BUTTON_FILL:RAISED,13,
             !primary&&StaffGate.rankTier(c)>=7?0xFF7D673B:primary?0:BORDER));
         b.setPadding(dp(c,14),dp(c,10),dp(c,14),dp(c,10));
         return b;
