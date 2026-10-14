@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.17",
-  "version_code": 69,
+  "version": "0.20.0",
+  "version_code": 70,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "3fd483d876e2365e77106ec0dd53785ea0df2dad2106be09c666bd7c8c61d9f0",
-  "notes": "v0.19.17 (code 69): Clarify the comprehensive 43-section Companion license to prominently credit Seawolf as its creator and original developer and the rights holder of original contributions lawfully owned by Seawolf. Maintain separate ownership of third-party libraries, external assets, and independent contributions. Agreement updated to 2026-10-14.2 with explicit renewed user acceptance; complete wording available in Settings > Legal & Agreement > Read full license & agreement. Repository proprietary code notice updated consistently. Preserve installed accounts and data, signed-update-before-consent recovery, Quest Tools on headset, Seawolf-only phone Quest Tools preview with both independently authenticated Discord and VRChat identities, fixed quick bar, phone floater, tracking, staff authorization, Relay, and GM1-only invite sending. No Staff Directory/Collect-a-Staff achievements implemented in this release."
+  "sha256": "9f74231c81b6fbfb3a13563dd9ab4ff1b37390b6e59d147562eb91a94944ccee",
+  "notes": "v0.20.0 (code 70): StaffDex & Collect-a-Staff: browse staff from the authoritative existing TGC Google Apps Script roster JSON already used by the Main Launcher; use its displayRole and isRoyalty fields for accurate ranks, open staff VRChat profiles, and send one friend request at a time with explicit confirmation. Achievements: First Catch, Full Party, Half the Roster and Gotta Add Em All, based only on verified friendships, never pending requests. Show incomplete-data warnings when group memberships or friend-list scans cannot be verified. Admin+ personal theme editor with five preset palettes, custom RGB color sliders for background/card/raised/field/accent/border, instant preview and reset; rank is Relay verified and preferences stay local. Verified Royalty members get gold trim across screens and on VRChat profile cards visible to other Companion users. Whats New now opens once after an authorized upgrade, and remains accessible in Settings with staff-facing release highlights. Retain signed updater and comprehensive Seawolf-attributed 43-section license v2026-10-14.2, explicit terms acceptance, Quest tool navigation, creator-only phone preview, phone floater, Quest SAF FULL log tracking, Shizuku fallback and Relay/GM1-only invitation boundaries. No device data reset, Main Launcher or Relay deployment."
 }
