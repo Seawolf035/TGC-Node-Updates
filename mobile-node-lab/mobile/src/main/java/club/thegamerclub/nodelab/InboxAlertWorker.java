@@ -60,13 +60,20 @@ public final class InboxAlertWorker extends Worker {
         if(changes.other>0){postCategory(ctx,manager,"Other notifications",
             changes.other,"all","tgc_inbox_other_v2",325);activeTypes++;}
         if(activeTypes>1){
+            if(Build.VERSION.SDK_INT>=26){
+                NotificationChannel summaryChannel=new NotificationChannel(
+                    "tgc_vrchat_inbox_summary_v2","VRChat · Inbox summary",
+                    NotificationManager.IMPORTANCE_LOW);
+                summaryChannel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+                manager.createNotificationChannel(summaryChannel);
+            }
             Intent launch=new Intent(ctx,VRChatInboxActivity.class)
                 .putExtra("filter","unread")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
             PendingIntent open=PendingIntent.getActivity(ctx,321,launch,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
             NotificationCompat.Builder summary=new NotificationCompat.Builder(ctx,
-                "tgc_inbox_invites_v2")
+                "tgc_vrchat_inbox_summary_v2")
                 .setSmallIcon(R.drawable.tgc_logo)
                 .setContentTitle(changes.newUnread+" new VRChat notifications")
                 .setContentText("Invites, requests and friend updates")
