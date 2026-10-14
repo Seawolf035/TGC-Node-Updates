@@ -28,11 +28,12 @@ import java.util.concurrent.Executors;
  * AND VRChat identity verification. Everyone else's phone UI and floater stay
  * unchanged. This is not a new network/staff authority or invite sender.
  */
-public final class QuestToolsActivity extends StaffProtectedActivity {
+public final class QuestToolsActivity extends StaffProtectedActivity implements QuestBackHost {
     private final Handler main=new Handler(Looper.getMainLooper());
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private final ArrayDeque<String> back=new ArrayDeque<>();
     private String page="home";
+    @Override public boolean showQuestBack(){return !isHub();}
     private LinearLayout body,root;
     private ScrollView scroll;
     private TextView oscSummary;
@@ -157,7 +158,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
                 startOsc(QuestOscService.START_LIVE,intervalSeconds);
             }
             @Override public void oscStopLive(){startOsc(QuestOscService.STOP_LIVE,0);}
-        });
+        },false); // Quest and owner phone preview use one Back control.
         render();
     }
     @Override protected void onResume(){
@@ -280,15 +281,20 @@ public final class QuestToolsActivity extends StaffProtectedActivity {
         root=vertical();
         root.setBackgroundColor(CompanionStyle.BG);
         setContentView(root);
+        QuestBackApplication.refresh(this);
         getWindow().setStatusBarColor(CompanionStyle.BG);
         getWindow().setNavigationBarColor(CompanionStyle.BG);
         LinearLayout heading=new LinearLayout(this);
         heading.setGravity(Gravity.CENTER_VERTICAL);
         heading.setPadding(dp(12),dp(8),dp(12),dp(8));
         root.addView(heading);
-        Button backButton=CompanionStyle.button(this,"‹",false);
-        heading.addView(backButton,new LinearLayout.LayoutParams(dp(44),dp(40)));
-        backButton.setOnClickListener(v->goBack());
+        // Quest has one universal header Back on nested pages.
+        // Owner-only phone preview instead shows this ONE header Back.
+        if(!QuestDevice.isQuestDevice() && !isHub()){
+            Button backButton=CompanionStyle.button(this,"‹ Back",false);
+            heading.addView(backButton,new LinearLayout.LayoutParams(dp(68),dp(40)));
+            backButton.setOnClickListener(v->goBack());
+        }
         LinearLayout titles=vertical();
         titles.setPadding(dp(9),0,0,0);
         heading.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
