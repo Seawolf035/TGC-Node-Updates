@@ -276,6 +276,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         locked("Checking your staff access...");
         InboxAlertSettings.restore(this);
         PinnedFriendAlerts.restore(this);
+        AutoInviteRequests.restore(this);
     }
     @Override protected void onNewIntent(Intent intent){
         super.onNewIntent(intent);
@@ -1046,6 +1047,24 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             action(inboxSettings,"↗","Allow Android notifications",
                 "Grant notification access for new invites and requests",
                 this::requestInboxNotificationPermission);
+        page.addView(CompanionStyle.section(this,"AUTO-ACCEPT INVITE REQUESTS"));
+        LinearLayout autoInvites=card();
+        boolean autoInviteEnabled=AutoInviteRequests.enabled(this);
+        autoInvites.addView(txt(autoInviteEnabled?
+            "● App Favorite Friend invite requests: ON":
+            "○ App Favorite Friend invite requests: OFF",
+            15,autoInviteEnabled?CompanionStyle.GOOD:CompanionStyle.MUTED,true));
+        autoInvites.addView(txt(
+            "Opt-in only: when one of your Companion-pinned favorite friends asks "+
+            "to join you, send them an ordinary VRChat invitation to your "+
+            "CURRENT instance. Requires active VRChat login, a live world and "+
+            "an active friendship. Never auto-accepts friend requests or "+
+            "changes TGC group invitations. Checks may be delayed by Android.",
+            12,CompanionStyle.MUTED,false));
+        action(autoInvites,"✦",autoInviteEnabled?
+            "Disable automatic invite responses":"Enable automatic invite responses",
+            "Only Companion App Favorite Friends (pinned friends)",
+            this::toggleAutoInviteRequests);
         page.addView(CompanionStyle.section(this,"PINNED FRIEND ONLINE ALERTS"));
         LinearLayout friendAlertSettings=card();
         boolean friendOpted=PinnedFriendAlerts.enabled(this);
@@ -1228,6 +1247,36 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             PinnedFriendAlerts.setEnabled(this,true);
             renderUnlocked();
         }
+    }
+    private void toggleAutoInviteRequests(){
+        if(!StaffGate.unlocked(this)){revalidate();return;}
+        if(AutoInviteRequests.enabled(this)){
+            AutoInviteRequests.setEnabled(this,false);
+            Toast.makeText(this,"Auto invite responses disabled",
+                Toast.LENGTH_SHORT).show();
+            renderUnlocked();return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Automatically invite App Favorite Friends?")
+            .setMessage("After you enable this, the Companion may automatically "+
+                "invite your pinned App Favorite Friends to your current VRChat "+
+                "instance when they send a NEW invite request. This performs "+
+                "real VRChat actions without asking each time. It does not "+
+                "accept friend requests, cannot invite while you are offline, "+
+                "and may be delayed by Android background restrictions. "+
+                "This setting is off by default and only applies to your "+
+                "currently signed-in personal VRChat account.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Enable",(d,which)->{
+                try{
+                    AutoInviteRequests.setEnabled(this,true);
+                    Toast.makeText(this,"Auto invite responses enabled",
+                        Toast.LENGTH_SHORT).show();
+                    renderUnlocked();
+                }catch(Exception e){
+                    Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();
+                }
+            }).show();
     }
     private void toggleInboxAlerts(){
         if(!StaffGate.unlocked(this)){revalidate();return;}
