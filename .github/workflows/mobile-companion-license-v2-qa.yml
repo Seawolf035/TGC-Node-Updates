@@ -1,0 +1,86 @@
+name: Companion comprehensive agreement QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.19.15-comprehensive-license-and-settings
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'PROPRIETARY_LICENSE.md'
+      - '.github/workflows/mobile-companion-license-v2-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify expanded legal terms, explicit consent, Settings reader and app safeguards
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          agreement=Path('mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt').read_text()
+          version=(root/'CompanionLicense.java').read_text()
+          license_ui=(root/'CompanionLicenseActivity.java').read_text()
+          home=(root/'CompanionActivity.java').read_text()
+          gate=(root/'QuestBackApplication.java').read_text()
+          update=(root/'MobileUpdaterActivity.java').read_text()
+          qt=(root/'QuestToolsActivity.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          notice=Path('PROPRIETARY_LICENSE.md').read_text()
+          assert len(agreement)>35000,'Expanded agreement truncated'
+          assert 'Agreement Version: 2026-10-14.1' in agreement
+          assert 'Effective Date: October 14, 2026' in agreement
+          assert 'END OF AGREEMENT — VERSION 2026-10-14.1' in agreement
+          headings=[int(n) for n in re.findall(r'(?m)^(\d+)\. [A-Z][A-Z ,&-]+$',agreement)]
+          assert headings==list(range(1,44)),headings
+          assert 'agreement checkbox' not in agreement.lower()
+          assert '“Agree & Continue”' in agreement and '“Decline & Exit”' in agreement
+          assert 'The signed in-app updater remains available as a recovery option before consent.' in agreement
+          assert 'Settings → Read full license & agreement' in agreement
+          assert 'GM1' not in agreement or 'Main Launcher' in agreement
+          assert 'Main Launcher' in agreement and 'Relay' in agreement
+          assert 'Shizuku' in agreement and 'Documents/Logs' in agreement
+          assert 'third-party' in agreement.lower()
+          assert 'VERSION="2026-10-14.1"' in version
+          assert '.commit();' in version
+          assert 'persisted && CompanionLicense.accepted(this)' in license_ui
+          assert 'accept.setEnabled(true);' in license_ui
+          assert 'Check for Updates' in license_ui
+          assert 'scroll.addView(license' in license_ui
+          assert '"LEGAL & AGREEMENT"' in home
+          assert '"Read full license & agreement"' in home
+          assert '"Version "+CompanionLicense.VERSION+" · 43 detailed sections"' in home
+          assert 'new Intent(this,CompanionLicenseActivity.class)' in home
+          assert 'if(!CompanionLicense.accepted(activity))' in gate
+          assert 'activity instanceof MobileUpdaterActivity &&' in gate
+          assert 'verifySameSigner(candidate)' in update and 'SHA-256 mismatch' in update
+          assert 'Gravity.TOP|Gravity.START' in gate
+          assert 'List<String> bar=OverlayPreferences.quickBar(this);' in qt
+          assert 'TrackingSetupGuide.acknowledged(this)' in home
+          assert '2026-10-14.1' in notice
+          assert "versionCode 67" in gradle and "versionName '0.19.15'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          print('PASS: 43 complete sections; updated consent; complete Settings legal reader; previous Quest, tracking and signed updater guarantees.')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
