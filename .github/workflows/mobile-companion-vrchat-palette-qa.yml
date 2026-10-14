@@ -54,6 +54,29 @@ jobs:
           assert 'setPositiveButton("Import palette",null)' in editor
           assert 'setPositiveButton("Apply hex color",null)' in editor
           assert 'ThemePreferences.NAMES.length' in editor
+          saved=(root/'UserThemePresets.java').read_text()
+          assert 'KEY_PREFIX="palette_discord_"' in saved
+          assert 'creds.discordId' in saved
+          assert 'ThemePreferences.allowed(context)' in saved
+          assert 'MAX_SAVED=25' in saved
+          assert 'private static final String STORE="tgc_companion_saved_themes_v1"' in saved
+          assert 'public static synchronized void save' in saved
+          assert 'public static synchronized void load' in saved
+          assert 'public static synchronized void delete' in saved
+          assert 'public static synchronized boolean exists' in saved
+          assert 'ThemePreferences.applySavedColors(context,saved.colors)' in saved
+          assert 'public static synchronized void applySavedColors' in pref
+          assert 'tx.commit()' in pref
+          assert 'button(savedControls,"+ Save Current Colors as a Preset"' in editor
+          assert 'MY SAVED PRESETS' in editor
+          assert 'UserThemePresets.save(this,chosen,true)' in editor
+          assert 'UserThemePresets.save(this,chosen,false)' in editor
+          assert 'UserThemePresets.load(this,name)' in editor
+          assert 'UserThemePresets.delete(this,name)' in editor
+          assert 'button(vrc,"Paste VRChat UI Code",this::showImport)' in editor
+          assert 'button(frame,"Paste from clipboard"' in editor
+          assert 'input.setText("")' in editor
+          assert 'setPositiveButton("Apply UI Code",null)' in editor
           assert 'private static final int[][] PRESETS={' in pref
           assert 'public static final String[] NAMES={"TGC Default","Deep Ocean","Rose Quartz","Emerald","Royal Gold"};' in pref
           # User's personal example is NOT embedded into any source or presets.
