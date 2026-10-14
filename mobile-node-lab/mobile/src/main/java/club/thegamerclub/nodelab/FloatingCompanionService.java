@@ -310,6 +310,8 @@ public final class FloatingCompanionService extends Service {
                         JSONObject session=VRChatSession.load(FloatingCompanionService.this);
                         FriendLogStore.account(session);
                         JSONArray full=VRChatApi.friendSnapshot(FloatingCompanionService.this);
+                        try{CompanionCache.saveArray(FloatingCompanionService.this,"friends",full);}
+                        catch(Exception ignored){}
                         FriendLogStore.observe(FloatingCompanionService.this,session,full);
                         if(PinnedFriendAlerts.active(FloatingCompanionService.this)){
                             PinnedFriendAlertWorker.notifyOnline(FloatingCompanionService.this,
