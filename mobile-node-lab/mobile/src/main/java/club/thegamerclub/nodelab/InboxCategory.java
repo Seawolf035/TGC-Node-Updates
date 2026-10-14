@@ -10,6 +10,7 @@ public final class InboxCategory {
         if(n==null)return "other";
         String type=n.optString("type","").toLowerCase(Locale.US);
         String category=n.optString("category","").toLowerCase(Locale.US);
+        if(type.startsWith("group.event."))return "events";
         if(type.startsWith("group.")||type.startsWith("moderation.")||
            type.equals("groupchange")||type.equals("event.announcement")||
            category.startsWith("social.group")||
@@ -32,10 +33,23 @@ public final class InboxCategory {
         String category=of(n);
         if("invite".equals(filter))return category.equals("invite")||
             category.equals("requests");
+        if("groups".equals(filter))
+            return category.equals("groups")||
+                (category.equals("events")&&
+                 (n.optString("type","").startsWith("group.")||
+                  !groupId(n).isEmpty()));
         return category.equals(filter);
     }
     public static String groupId(JSONObject n){
         if(n==null)return "";
+        // NotificationV2 frequently identifies a group through its VRChat
+        // deep link rather than through a details.groupId field.
+        String link=n.optString("link","");
+        if(link.startsWith("group:")||link.startsWith("event:")){
+            java.util.regex.Matcher m=java.util.regex.Pattern.compile(
+                "grp_[0-9a-fA-F-]{36}").matcher(link);
+            if(m.find())return m.group();
+        }
         JSONObject detail=n.optJSONObject("details");
         if(detail==null){
             String raw=n.optString("details","");
