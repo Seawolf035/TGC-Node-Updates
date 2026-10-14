@@ -105,11 +105,39 @@ public final class CompanionCache {
             return body==null?null:new Record(body,payload.optLong("updatedAt",0));
         }catch(Exception ignored){return null;}
     }
+    /** Defensively remove auth-bearing fields even if an API adds them later. */
+    private static Object safeValue(Object source)throws Exception{
+        if(source instanceof JSONObject){
+            JSONObject src=(JSONObject)source,dst=new JSONObject();
+            java.util.Iterator<String> keys=src.keys();
+            while(keys.hasNext()){
+                String name=keys.next(),normalized=name.toLowerCase(java.util.Locale.US);
+                if(normalized.equals("auth")||normalized.equals("authtoken")||
+                   normalized.equals("twofactorauth")||
+                   normalized.equals("password")||normalized.equals("cookie")||
+                   normalized.equals("friendkey")||normalized.equals("email")||
+                   normalized.equals("secrettoken")||
+                   normalized.equals("recoverycode")||
+                   normalized.endsWith("sessiontoken")||
+                   normalized.endsWith("accesstoken")||
+                   normalized.endsWith("refreshtoken"))continue;
+                Object value=src.opt(name);
+                dst.put(name,safeValue(value));
+            }
+            return dst;
+        }
+        if(source instanceof JSONArray){
+            JSONArray src=(JSONArray)source,dst=new JSONArray();
+            for(int i=0;i<src.length();i++)dst.put(safeValue(src.opt(i)));
+            return dst;
+        }
+        return source==null?JSONObject.NULL:source;
+    }
     public static synchronized void write(Context ctx,String kind,JSONObject body)throws Exception{
         if(body==null)throw new IllegalArgumentException("Missing cache data");
         // JSON source data never includes a VRChat auth cookie. Only caller-supplied
         // public-facing display data is persisted; fail closed on oversized payloads.
-        String serialized=body.toString();
+        String serialized=((JSONObject)safeValue(body)).toString();
         if(serialized.length()>MAX_BYTES)throw new IllegalArgumentException("Cache entry too large");
         JSONObject payload=new JSONObject()
             .put("account",account(ctx)).put("kind",kind)
