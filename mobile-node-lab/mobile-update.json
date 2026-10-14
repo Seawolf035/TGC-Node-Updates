@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.14",
-  "version_code": 66,
+  "version": "0.19.15",
+  "version_code": 67,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "b50b72accd9ea429c49399590ae5bdf0413da081d3ca3d6ff64a3ca42da58aa4",
-  "notes": "v0.19.14 (code 66): Move the Quest-only universal in-app Back button from the lower-right to the upper-left corner, with top/left safe-area inset handling and dedicated header space to avoid covering existing controls. Keep normal Activity onBackPressed navigation, including Companion tab history and Quest Tools subpage history; phone UI and floater unchanged. Make the three configurable Quest Tools quick-action buttons a fixed, non-scrolling bar beneath the main Quest Tools tabs on every page, including nested mini pages and shortcut editing; preserve the saved button choices and callbacks. Keep license-gated access and the pre-license signed updater recovery, main Tracking-tab Full logging setup instructions, Quest SAF folder permission, phone Shizuku, OSC, staff access, Relay authorization and GM1-only group invites. No data reset, legal rewrite, Main Launcher or Relay deployment."
+  "sha256": "05b92249da55c483d848ce7db5e88525d9c596de4c404ae0c3fbbe7009000f6e",
+  "notes": "v0.19.15 (code 67): Publish the comprehensive 43-section proprietary TGC Staff Companion software license and staff agreement, version 2026-10-14.1, adapted from the earlier unfinished legal draft. Require renewed explicit agreement acceptance for the revised version; no silent acceptance or app-data reset. Add a prominent Settings > Legal & Agreement > Read full license & agreement entry with the version and full scrollable 43-section text, and update the public proprietary repository notice. Repair stale checkbox and consent wording in the legal draft. The pre-consent signed updater recovery remains available. Preserve Quest Tools, fixed quick bar, upper-left Quest Back, main Tracking tab FULL logging guide, Quest read-only Documents/Logs grant, phone Shizuku, OSC, VRChat personal credentials, staff grants, Relay authorization, and GM1-only group invite sending. No Main Launcher or Relay deployment. Legal language requires qualified counsel review before reliance on enforceability; this update does not substitute for a required privacy notice."
 }
