@@ -1,0 +1,73 @@
+name: Companion Local-First, Friends and Inbox QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.4-local-first-inbox
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-local-first-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify cache, favorites, invite gating, and nonpublishing baseline
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          cache=(p/'CompanionCache.java').read_text()
+          mini=(p/'OverlayMiniVrcx.java').read_text()
+          fav=(p/'VRChatFavoriteIndex.java').read_text()
+          auto=(p/'AutoInviteRequests.java').read_text()
+          work=(p/'AutoInviteRequestWorker.java').read_text()
+          ui=(p/'CompanionActivity.java').read_text()
+          api=(p/'VRChatApi.java').read_text()
+          inbox=(p/'InboxRepository.java').read_text()
+          alerts=(p/'InboxAlertSettings.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'AES/GCM/NoPadding' in cache and 'getNoBackupFilesDir()' in cache
+          assert 'account(ctx)' in cache and 'safeValue(body)' in cache
+          assert 'case "mini_friends":return "friends";' in mini
+          assert 'CompanionCache.read(ctx,cacheKey)' in mini
+          assert 'CompanionCache.saveArray(ctx' in mini
+          assert 'VRChatFavoriteIndex.refreshIfStale(ctx)' in mini
+          assert 'VRChatFavoriteIndex.savedIds(ctx)' in mini
+          assert 'favoriteSection' in mini and 'loc=favoriteSection' in mini
+          assert 'VRChatApi.favoriteFriendGroups(ctx)' in fav
+          assert 'FriendPinStore.contains(ctx,sender)' in auto
+          assert '"requestInvite".equalsIgnoreCase' in auto
+          assert 'getFriendStatus(ctx,sender)' in auto
+          assert 'live.partial' in auto and 'VRChatApi.currentUser(ctx)' in auto
+          assert 'inviteUserToCurrentInstance(ctx,sender,instance)' in auto
+          assert 'ExistingPeriodicWorkPolicy.KEEP' in auto
+          assert 'StaffGate.verifyOnline(ctx)' in work
+          assert 'AutoInviteRequests.restore(this)' in ui
+          assert 'this::toggleAutoInviteRequests' in ui
+          assert 'request("POST","/invite/"+userId' in api
+          assert 'CompanionCache.saveArray(ctx,"inbox",snapshot.items)' in inbox
+          assert 'inviteRequests' in alerts
+          assert 'versionCode 77' in gradle and "versionName '0.21.3'" in gradle
+          print('PASS: account-scoped display cache, real favorites, opt-in request gate, non-release version')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Install Android API 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile debug APK without publishing or signing the release
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
