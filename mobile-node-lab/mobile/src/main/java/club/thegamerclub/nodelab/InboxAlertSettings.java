@@ -37,6 +37,28 @@ public final class InboxAlertSettings {
                 ==PackageManager.PERMISSION_GRANTED;
     }
     public static boolean active(Context ctx){return enabled(ctx)&&permissionGranted(ctx);}
+    public static boolean liveEnabled(Context ctx){
+        return enabled(ctx)&&ctx.getSharedPreferences(PREF,0)
+            .getBoolean("live_enabled",false);
+    }
+    /** Live updates use an explicitly enabled foreground service, never hidden work. */
+    public static void setLiveEnabled(Context ctx,boolean enabled){
+        if(enabled&&!active(ctx))throw new SecurityException(
+            "Enable inbox alerts and grant Android notification permission first.");
+        ctx.getSharedPreferences(PREF,0).edit().putBoolean("live_enabled",enabled).apply();
+                if(enabled)VRChatPipelineService.start(ctx);
+        else VRChatPipelineService.stop(ctx);
+    }
+    /** Request an immediate work check on user demand or pipeline reconnection. */
+    public static void checkNow(Context ctx){
+        if(!active(ctx))return;
+        Constraints network=new Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build();
+        WorkManager.getInstance(ctx.getApplicationContext()).enqueueUniqueWork(
+            "tgc_inbox_event_reconcile",ExistingWorkPolicy.KEEP,
+            new OneTimeWorkRequest.Builder(InboxAlertWorker.class)
+                .setConstraints(network).build());
+    }
     public static void setEnabled(Context ctx,boolean enabled){
         if(enabled&&!permissionGranted(ctx))
             throw new SecurityException("Allow Android notifications first.");
@@ -45,6 +67,8 @@ public final class InboxAlertSettings {
         if(!enabled){
             mgr.cancelUniqueWork(PERIODIC);
             mgr.cancelUniqueWork(FIRST);
+            mgr.cancelUniqueWork("tgc_inbox_event_reconcile");
+            VRChatPipelineService.stop(ctx);
             return;
         }
         Constraints network=new Constraints.Builder()
@@ -53,6 +77,8 @@ public final class InboxAlertSettings {
             InboxAlertWorker.class,15,TimeUnit.MINUTES)
             .setConstraints(network).build();
         mgr.enqueueUniquePeriodicWork(PERIODIC,ExistingPeriodicWorkPolicy.KEEP,recurring);
+        InboxAlertWorker.ensureChannels(ctx);
+        if(liveEnabled(ctx))VRChatPipelineService.start(ctx);
         mgr.enqueueUniqueWork(FIRST,ExistingWorkPolicy.KEEP,
             new OneTimeWorkRequest.Builder(InboxAlertWorker.class)
                 .setConstraints(network).build());
@@ -60,6 +86,9 @@ public final class InboxAlertSettings {
     /** Rehydrate the periodic schedule without silently opting anyone in. */
     public static void restore(Context ctx){
         if(enabled(ctx)&&permissionGranted(ctx)){
+            InboxAlertWorker.ensureChannels(ctx);
+            // A user-opted-in live stream is only restored while the app is
+            // in the foreground. Android blocks arbitrary background FGS starts.
             Constraints network=new Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED).build();
             WorkManager.getInstance(ctx.getApplicationContext()).enqueueUniquePeriodicWork(
@@ -78,9 +107,10 @@ public final class InboxAlertSettings {
         }catch(Exception e){throw new IllegalStateException(e);}
     }
     public static final class Changes {
-        public final int newUnread,invites,inviteRequests,friends,other;
-        Changes(int n,int i,int r,int f,int o){
-            newUnread=n;invites=i;inviteRequests=r;friends=f;other=o;
+        public final int newUnread,invites,inviteRequests,friends,groups,events,other;
+        Changes(int n,int i,int r,int f,int g,int e,int o){
+            newUnread=n;invites=i;inviteRequests=r;friends=f;
+            groups=g;events=e;other=o;
         }
     }
     /**
@@ -109,7 +139,7 @@ public final class InboxAlertSettings {
                 if(!key.isEmpty())known.add(key);
             }
         }
-        int added=0,invites=0,inviteRequests=0,friends=0,other=0;
+        int added=0,invites=0,inviteRequests=0,friends=0,groups=0,events=0,other=0;
         for(int i=0;i<snapshot.items.length();i++){
             JSONObject item=snapshot.items.optJSONObject(i);
             if(item==null)continue;
@@ -121,11 +151,14 @@ public final class InboxAlertSettings {
                     modernSeeded:legacySeeded;
                 if(sameAccount&&eligible&&!item.optBoolean("seen",false)){
                     added++;
-                    String type=item.optString("type","").toLowerCase(Locale.US);
-                    if(type.equals("requestinvite"))inviteRequests++;
-                    else if(type.contains("invite"))invites++;
-                    else if(type.contains("friend"))friends++;
-                    else other++;
+                    switch(InboxCategory.of(item)){
+                        case "requests":inviteRequests++;break;
+                        case "invite":invites++;break;
+                        case "friend":friends++;break;
+                        case "groups":groups++;break;
+                        case "events":events++;break;
+                        default:other++;break;
+                    }
                 }
             }
         }
@@ -139,6 +172,6 @@ public final class InboxAlertSettings {
             .putBoolean("legacy_seeded",legacySeeded||snapshot.legacyAvailable)
             .putBoolean("modern_seeded",modernSeeded||snapshot.modernAvailable)
             .apply();
-        return new Changes(added,invites,inviteRequests,friends,other);
+        return new Changes(added,invites,inviteRequests,friends,groups,events,other);
     }
 }
