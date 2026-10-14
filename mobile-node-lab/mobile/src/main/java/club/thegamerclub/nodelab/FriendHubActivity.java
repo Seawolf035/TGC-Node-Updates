@@ -144,8 +144,6 @@ public final class FriendHubActivity extends StaffProtectedActivity {
                     try{CompanionCache.saveArray(this,"friends",friends);}
                     catch(Exception ignored){}
                     changes=FriendLogStore.observe(this,session,friends);
-                    try{VRChatFavoriteIndex.refreshIfStale(this);}
-                    catch(Exception ignored){/* Keep prior category ordering offline. */}
                 }
                 // The index stays independent from full friend pagination.
                 try{VRChatFavoriteIndex.refreshIfStale(this);}
