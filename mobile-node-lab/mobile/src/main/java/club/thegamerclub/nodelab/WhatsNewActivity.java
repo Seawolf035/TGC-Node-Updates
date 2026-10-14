@@ -47,7 +47,23 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.3"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.4"));
+        highlight(body,"Faster, local-first Companion",
+            "Previously viewed friends, favorite categories, profiles and inbox data "+
+            "can load from an encrypted local cache, then refresh from VRChat. "+
+            "Saved content stays account-specific; live actions always check VRChat.");
+        highlight(body,"VRChat favorite friends first",
+            "Your actual VRChat favorite friends appear ahead of other friends "+
+            "in the Floating/Quest social view and full Companion lists. "+
+            "Companion pinned shortcuts remain a separate feature.");
+        highlight(body,"Invite-request assistant · optional",
+            "In Settings you can opt in to automatically invite Companion-pinned "+
+            "friends who send a new VRChat invite request while you are in a "+
+            "valid world instance. Off by default; never changes TGC group invites.");
+        highlight(body,"Improved notifications",
+            "Separate invitation, invite-request and friend-update alerts, "+
+            "including a dedicated Requests filter and saved inbox display.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.3"));
         highlight(body,"Tracking has its own Tools tab",
             "Quest Tools and Floating Tools now have a fifth Tracking tab "+
             "for device capture, setup and player history. Your existing "+
