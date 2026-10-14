@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.6",
-  "version_code": 80,
+  "version": "0.21.7",
+  "version_code": 81,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "be216abbd5453e76e1e92085ed2ab2edb43babb4cf2a55d6abf434b511cc90c4",
-  "notes": "v0.21.6 (code 80): After successful mobile Companion Relay staff device linking, automatically return to Companion Home, verify live staff authorization and enter guided phone or Quest setup instead of remaining on the Tracking Controls page. If the proprietary staff agreement has not yet been explicitly accepted, require it before the guided setup; do not bypass consent or grant staff access from cached credentials. Finish Setup returns to Home; tracking controls remain accessible afterwards. Prune the in-app What's New screen to only the five most recent patch releases (v0.21.6 through v0.21.2); retain full Git/source history. Preserve existing phone/Quest tracking, OSC, staff auth, VRChat sessions, GM1/GM4 invite authority and Android app/signing identity."
+  "sha256": "808287289625ef0bb8c53684419424895a4e6d79f30d421ee85da8ae3a932593",
+  "notes": "v0.21.7 (code 81): Major personal VRChat inbox overhaul with VRCX-compatible group, moderation and event classification, new Groups, Events and Other filters, group details, and matching Floating/Quest Mini VRCX group notifications. New Android high-priority invitation, request, friend, group and event channels support sound, vibration and heads-up alerts; pinned friend notifications also use a new high-priority channel. Settings includes a user-initiated test notification and Android channel shortcut. Optional explicitly enabled foreground WebSocket service connects directly to the VRChat pipeline for lower latency notifications while running, using ephemeral credentials without logging or persisting tokens; REST inbox refresh and 15-minute WorkManager catch-up remain, with exponential retry and live staff gating. Live stream is OFF by default and requires a visible ongoing notification; Android/device/network restrictions can still delay delivery. Keep existing invitation actions, local caches, GM1/GM4 group invite authority, phone/Quest tracking, OSC and permanent signing identity. Whats New shows five most recent patches v0.21.7 through v0.21.3."
 }
