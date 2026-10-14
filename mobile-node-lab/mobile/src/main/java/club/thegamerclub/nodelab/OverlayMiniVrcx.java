@@ -989,6 +989,20 @@ public final class OverlayMiniVrcx {
         final int token=revision;
         if(first)status("Checking your VRChat inbox…");
         io.execute(()->{
+            if(first){
+                InboxRepository.Snapshot local=InboxRepository.cached(ctx);
+                if(local!=null){
+                    handler.post(()->{
+                        if(token!=revision||root==null||!"mini_inbox".equals(screen)||
+                           !StaffGate.unlocked(ctx))return;
+                        try{profile.put("items",local.items);}catch(Exception ignored){}
+                        inboxLastChecked=local.checkedAt;
+                        inboxPartial=true;
+                        inboxError="Showing saved notifications while syncing.";
+                        drawList();
+                    });
+                }
+            }
             InboxRepository.Snapshot snapshot=null;String issue="";
             try{snapshot=InboxRepository.refresh(ctx);}
             catch(Exception e){issue=e instanceof SecurityException?
