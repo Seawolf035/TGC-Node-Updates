@@ -216,7 +216,7 @@ public final class OverlayMiniVrcx {
            !"mini_osc_parameters".equals(screen)){
             Button refresh=CompanionStyle.button(ctx,"↻",false);
             bar.addView(refresh,new LinearLayout.LayoutParams(dp(40),dp(40)));
-            refresh.setOnClickListener(v->{if(search!=null)search.clearFocus();host.keyboard(false);load();});
+            refresh.setOnClickListener(v->{if(search!=null)search.clearFocus();host.keyboard(false);load(true);});
         }
         TextView explanation=text(subtitle(),12,CompanionStyle.MUTED,false);
         explanation.setPadding(0,dp(6),0,dp(8));
@@ -398,22 +398,77 @@ public final class OverlayMiniVrcx {
         if(text==null)return "";
         return text.length()>max?text.substring(0,max-1)+"…":text;
     }
+    /** Cache keys exist only for safe, read-only personal-account displays. */
+    private String displayCacheKey(){
+        switch(screen){
+            case "mini_friends":return "friends";
+            case "mini_friend_favorites":return "friend_favorite_groups";
+            case "mini_friend_favorite_members":
+                return selectedFriendGroupName.matches("[A-Za-z0-9_-]{1,64}")?
+                    "friend_favorites_"+selectedFriendGroupName:"";
+            case "mini_profile":
+                return validUser(target)?"profile_"+target:"";
+            case "mini_groups":return "my_groups";
+            default:return "";
+        }
+    }
+    private long displayCacheTtl(){
+        if("mini_friends".equals(screen))return 120_000L;
+        if("mini_profile".equals(screen))return 15L*60_000L;
+        return 10L*60_000L;
+    }
+    private boolean manuallyRefreshing=false;
     private void execute(Work work,Done done){
         if(!StaffGate.unlocked(ctx)){host.back();return;}
         if(busy)return;
         busy=true;
         final int token=revision;
+        final String cacheKey=displayCacheKey();
+        final boolean force=manuallyRefreshing;
+        final long cacheTtl=displayCacheTtl();
         status("Loading "+title().toLowerCase(Locale.US)+"...");
         io.execute(()->{
+            CompanionCache.Record saved=cacheKey.isEmpty()?null:
+                CompanionCache.read(ctx,cacheKey);
+            Object cached=null;
+            if(saved!=null){
+                cached=saved.body.has("items")?saved.body.optJSONArray("items"):
+                    saved.body.optJSONObject("item");
+            }
+            final Object local=cached;
+            if(local!=null){
+                handler.post(()->{
+                    if(token!=revision||root==null||!StaffGate.unlocked(ctx))return;
+                    done.accept(local);
+                });
+            }
+            if(local!=null&&!force&&saved.fresh(cacheTtl)){
+                handler.post(()->{
+                    if(token==revision&&root!=null)busy=false;
+                });
+                return;
+            }
             Object result=null;String err=null;
-            try{result=work.run();}
-            catch(Exception exception){err=exception.getMessage();if(err==null)err="Unable to load data";}
+            try{
+                result=work.run();
+                if(!cacheKey.isEmpty()){
+                    if(result instanceof JSONArray)CompanionCache.saveArray(ctx,
+                        cacheKey,(JSONArray)result);
+                    else if(result instanceof JSONObject)CompanionCache.saveObject(ctx,
+                        cacheKey,(JSONObject)result);
+                }
+            }catch(Exception exception){
+                err=exception.getMessage();
+                if(err==null)err="Unable to load data";
+            }
             final Object data=result;final String error=err;
             handler.post(()->{
                 if(token!=revision||root==null||!StaffGate.unlocked(ctx))return;
                 busy=false;
                 if(error!=null){
-                    lastError=error;status("Couldn't load: "+shortValue(error,160));
+                    lastError=error;
+                    if(local==null)status("Couldn't load: "+shortValue(error,160));
+                    else message("Showing saved data · refresh unavailable");
                 }else{
                     lastError="";done.accept(data);
                 }
@@ -422,7 +477,9 @@ public final class OverlayMiniVrcx {
     }
     private interface Work{Object run()throws Exception;}
     private interface Done{void accept(Object result);}
-    private void load(){
+    private void load(){load(false);}
+    private void load(boolean force){
+        manuallyRefreshing=force;
         switch(screen){
             case "mini_current":
                 execute(()->{
@@ -449,6 +506,8 @@ public final class OverlayMiniVrcx {
                     JSONObject session=VRChatSession.load(ctx);
                     JSONArray fresh=VRChatApi.friendSnapshot(ctx);
                     FriendLogStore.observe(ctx,session,fresh);
+                    try{VRChatFavoriteIndex.refreshIfStale(ctx);}
+                    catch(Exception ignored){/* Keep previously saved favorite ordering. */}
                     return fresh;
                 },result->{loaded=(JSONArray)result;drawList();});break;
             case "mini_friend_favorites":
@@ -749,6 +808,8 @@ public final class OverlayMiniVrcx {
             ()->{friendFilter="online";limit=65;drawList();},
             ()->{friendFilter="offline";limit=65;drawList();});
         LinkedHashMap<String,ArrayList<JSONObject>> grouped=new LinkedHashMap<>();
+        java.util.HashSet<String> vrchatFavorites=VRChatFavoriteIndex.savedIds(ctx);
+        final String favoriteSection="★ VRChat Favorites";
         int online=0,offline=0,matchingTotal=0;
         for(int i=0;i<loaded.length();i++){
             JSONObject f=loaded.optJSONObject(i);
@@ -767,6 +828,8 @@ public final class OverlayMiniVrcx {
                 catch(Exception ex){continue;}
             }
             matchingTotal++;
+            if(vrchatFavorites.contains(f.optString("id","")))
+                loc=favoriteSection;
             if(!grouped.containsKey(loc))grouped.put(loc,new ArrayList<>());
             grouped.get(loc).add(f);
         }
@@ -775,6 +838,8 @@ public final class OverlayMiniVrcx {
         ArrayList<String> keys=new ArrayList<>(grouped.keySet());
         Collections.sort(keys,(a,b)->{
             if(a.equals(b))return 0;
+            if(a.equals(favoriteSection))return -1;
+            if(b.equals(favoriteSection))return 1;
             if("Offline".equals(a))return 1;
             if("Offline".equals(b))return -1;
             return Integer.compare(grouped.get(b).size(),grouped.get(a).size());
@@ -784,6 +849,9 @@ public final class OverlayMiniVrcx {
             if(shown>=limit)break;
             ArrayList<JSONObject> group=grouped.get(key);
             if(group==null||group.isEmpty())continue;
+            if(key.equals(favoriteSection))
+                group.sort((a,b)->a.optString("displayName","")
+                    .compareToIgnoreCase(b.optString("displayName","")));
             LinearLayout card=card(list);
             String heading=key.startsWith("wrld_")?
                 "Instance: "+shortValue(key,42):key;
@@ -3331,7 +3399,7 @@ public final class OverlayMiniVrcx {
                     if(onSuccess!=null)onSuccess.run();
                     if(reload){
                         message(success);
-                        load();
+                        load(true);
                     }else{
                         // Avoid refetching every favorite group after selecting
                         // an avatar; update the preview/current selection now.
