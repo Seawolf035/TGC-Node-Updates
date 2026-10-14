@@ -172,7 +172,7 @@ public final class CompanionActivity extends Activity {
         item.setBackground(CompanionStyle.shape(this,selected?CompanionStyle.RAISED:CompanionStyle.SURFACE,13,
           selected?CompanionStyle.BORDER:0));
         nav.addView(item,new LinearLayout.LayoutParams(0,-1,1f));
-        TextView symbol=txt(glyph,20,selected?CompanionStyle.ACCENT:CompanionStyle.MUTED,false);
+        TextView symbol=txt(glyph,20,selected?CompanionStyle.ICON:CompanionStyle.MUTED,false);
         symbol.setGravity(Gravity.CENTER);item.addView(symbol);
         TextView title=txt(name,11,selected?CompanionStyle.TEXT:CompanionStyle.MUTED,selected);
         title.setGravity(Gravity.CENTER);item.addView(title);
@@ -195,7 +195,7 @@ public final class CompanionActivity extends Activity {
         row.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,14,0));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
         lp.bottomMargin=dp(9);parent.addView(row,lp);
-        TextView icon=txt(glyph,22,CompanionStyle.ACCENT,true);
+        TextView icon=txt(glyph,22,CompanionStyle.ICON,true);
         icon.setGravity(Gravity.CENTER);
         icon.setBackground(CompanionStyle.shape(this,0xFF193D54,11,0));
         row.addView(icon,new LinearLayout.LayoutParams(dp(43),dp(43)));
@@ -222,7 +222,7 @@ public final class CompanionActivity extends Activity {
         tile.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,14,0));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(132),1f);
         lp.setMargins(dp(3),0,dp(3),0);line.addView(tile,lp);
-        tile.addView(txt(glyph,24,CompanionStyle.ACCENT,false));
+        tile.addView(txt(glyph,24,CompanionStyle.ICON,false));
         space(tile,12);
         tile.addView(txt(name,15,CompanionStyle.TEXT,true));
         space(tile,4);
@@ -425,7 +425,7 @@ public final class CompanionActivity extends Activity {
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(90),1f);
         lp.setMargins(dp(3),0,dp(3),0);
         line.addView(tile,lp);
-        tile.addView(txt(icon,19,CompanionStyle.ACCENT,false));
+        tile.addView(txt(icon,19,CompanionStyle.ICON,false));
         space(tile,5);
         TextView label=txt(name,14,CompanionStyle.TEXT,true);
         label.setSingleLine(true);
