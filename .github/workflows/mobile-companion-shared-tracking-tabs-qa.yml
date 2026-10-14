@@ -1,0 +1,100 @@
+name: Shared Floating/Quest Tracking Tabs QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.3-shared-tracking-tabs
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-shared-tracking-tabs-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify five-tab navigation, tracking services and removed filler
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          floating=(root/'FloatingCompanionService.java').read_text()
+          quest=(root/'QuestToolsActivity.java').read_text()
+          shell=(root/'CompanionActivity.java').read_text()
+          mini=(root/'OverlayMiniVrcx.java').read_text()
+          updater=(root/'MobileUpdaterActivity.java').read_text()
+          news=(root/'WhatsNewActivity.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          for title,key in [('Home','home'),('Social','social'),('OSC','osc'),
+                            ('Tracking','tracking'),('Tools','tools')]:
+              assert 'tab(tabs,"'+title+'","'+key+'");' in floating,(title,'floater')
+              assert '{"'+title+'","'+key+'"}' in quest,(title,'quest')
+          assert 'case "tracking":showTracking();break;' in floating
+          assert 'case "tracking":showTracking();break;' in quest
+          assert 'private void showTracking(){' in floating
+          assert 'private void showTracking(){' in quest
+          home=floating[floating.index('    private void showHome(){'):
+                        floating.index('    private void showTracking(){')]
+          tools=floating[floating.index('    private void showTools(){'):
+                         floating.index('    private void open(Class<?> destination',floating.index('    private void showTools(){'))]
+          assert 'trackingToggle=' not in home
+          assert 'RECENTLY ENCOUNTERED' not in home
+          assert 'NODE TRACKING' not in tools
+          assert 'STATUS COLORS' not in tools
+          assert 'PLAYER INFORMATION' not in tools
+          assert 'Send directly to VRChat on this phone' not in floating
+          assert 'Enable OSC in VRChat' not in floating
+          assert '"tracking".equals(selectedTab)' in floating
+          assert 'recentStatus=text("Loading captured player events…"' in floating
+          assert 'MobileOutbox db=new MobileOutbox(this)' in floating
+          assert 'trackingToggle=action(node,nodeRunning()?' in floating
+          assert 'this::toggleTracking' in floating
+          assert 'Shizuku.pingBinder()' in floating
+          assert 'ContextCompat.startForegroundService(this' in floating
+          assert 'MobileNodeService.STOP' in floating
+          assert 'Status Colors' not in floating
+          assert 'OSC · VRCHAT MOBILE' not in floating
+          assert 'QuestSafLogWatcher.hasGrant(this)' in quest
+          assert 'CompanionSetupState.fullLoggingAcknowledged(this)' in quest
+          assert 'getSharedPreferences("tgc_mobile_node_status",0)' in quest
+          assert 'System.currentTimeMillis()-heartbeat<90_000L' in quest
+          assert 'MobileDeployActivity.class' in quest
+          assert 'CompanionSetupActivity.class' in quest
+          assert 'Observed players' in quest and 'Join & leave log' in quest
+          questtools=quest[quest.index('    private void showTools(){'):
+                           quest.index('    private void showShortcuts(){')]
+          assert 'LOCAL ACTIVITY' not in questtools
+          assert 'return !isPrimaryTab();' in quest
+          assert '"tracking".equals(page)' in quest
+          assert 'private void returnToMainMenu()' in quest
+          assert 'controls.setOnClickListener(v->openTab("tracking"));' in shell
+          assert '"home","explore","staffdex","tracking","settings"' in shell
+          assert 'case "mini_mutual_friends":' in mini
+          assert 'case "mini_friend_favorites":' in mini
+          assert 'verifySameSigner(candidate)' in updater
+          assert 'versionCode 77' in gradle
+          assert "versionName '0.21.3'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          assert 'v0.21.3' in news
+          print('PASS: five Floating/Quest Tools tabs, relocated tracking and recent history, real Quest permission state, removed OSC/status/help clutter, staff and updater invariants')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
