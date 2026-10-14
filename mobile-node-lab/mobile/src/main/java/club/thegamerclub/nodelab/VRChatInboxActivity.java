@@ -33,7 +33,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
     private final ArrayList<Entry> entries=new ArrayList<>();
     private final InboxAdapter adapter=new InboxAdapter();
     private TextView status;
-    private Button allTab,unreadTab,inviteTab,friendTab,more,refreshButton;
+    private Button allTab,unreadTab,inviteTab,requestTab,friendTab,more,refreshButton;
     private String filter="all";
     private boolean busy=false,mutating=false,visible=false;
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -63,7 +63,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         if(!StaffGate.unlocked(this)){finish();return;}
         filter=getIntent().getStringExtra("filter");
         if(!"invite".equals(filter)&&!"friend".equals(filter)&&
-           !"unread".equals(filter))filter="all";
+           !"requests".equals(filter)&&!"unread".equals(filter))filter="all";
         render();
         // Read the previous encrypted account-specific snapshot first.
         worker.execute(()->{
@@ -118,6 +118,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         allTab=filterButton(tools,"All","all");
         unreadTab=filterButton(tools,"Unread","unread");
         inviteTab=filterButton(tools,"Invites","invite");
+        requestTab=filterButton(tools,"Requests","requests");
         friendTab=filterButton(tools,"Friends","friend");
         refreshButton=CompanionStyle.button(this,"↻",false);
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(dp(48),dp(46));
@@ -149,11 +150,12 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         return button;
     }
     private void updateFilter(){
-        for(Button button:new Button[]{allTab,unreadTab,inviteTab,friendTab}){
+        for(Button button:new Button[]{allTab,unreadTab,inviteTab,requestTab,friendTab}){
             if(button==null)continue;
             boolean selected=(button==allTab&&filter.equals("all"))||
                 (button==unreadTab&&filter.equals("unread"))||
                 (button==inviteTab&&filter.equals("invite"))||
+                (button==requestTab&&filter.equals("requests"))||
                 (button==friendTab&&filter.equals("friend"));
             button.setBackground(CompanionStyle.shape(this,
                 selected?CompanionStyle.ACCENT:CompanionStyle.RAISED,11,
@@ -179,6 +181,7 @@ public final class VRChatInboxActivity extends StaffProtectedActivity {
         if(filter.equals("all"))return true;
         if(filter.equals("unread"))return !e.seen;
         String type=e.type.toLowerCase(Locale.US);
+        if(filter.equals("requests"))return type.equals("requestinvite");
         return filter.equals("invite")?type.contains("invite"):type.contains("friend");
     }
     private static JSONObject parseDetails(JSONObject src){
