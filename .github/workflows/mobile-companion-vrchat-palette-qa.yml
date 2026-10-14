@@ -51,7 +51,7 @@ jobs:
           assert 'ThemePreferences.exportVrchatPalette(this)' in editor
           assert 'ThemePreferences.parseHex(hex.getText().toString())' in editor
           assert 'channels[0].setProgress(Color.red(parsed))' in editor
-          assert 'setPositiveButton("Import palette",null)' in editor
+          assert 'setPositiveButton("Apply UI Code",null)' in editor
           assert 'setPositiveButton("Apply hex color",null)' in editor
           assert 'ThemePreferences.NAMES.length' in editor
           saved=(root/'UserThemePresets.java').read_text()
@@ -94,7 +94,7 @@ jobs:
           assert 'verifySameSigner(candidate)' in update
           assert 'versionCode 71' in gradle and "versionName '0.20.1'" in gradle
           assert "applicationId 'club.thegamerclub.nodelab'" in gradle
-          print('PASS: six VRChat colors preserve order; no private preset; strict hex; atomic save; Admin+ gate; 0.20.0 migration; signed-updater invariant.')
+          print('PASS: six VRChat colors preserve order; named account-scoped presets; strict hex; atomic save; Admin+ gate; 0.20.0 migration; signed-updater invariant.')
           PY
       - uses: actions/setup-java@v4
         with:
