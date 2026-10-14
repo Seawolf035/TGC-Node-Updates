@@ -1,0 +1,64 @@
+name: Companion v0.21.5 session and friend ordering QA
+
+on:
+  push:
+    branches: [feature/mobile-session-friends-fix]
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-session-friends-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check account persistence, sorting and release invariants
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          read=lambda name:(base/name).read_text()
+          order=read('FriendOrdering.java')
+          hub=read('FriendHubActivity.java')
+          mini=read('OverlayMiniVrcx.java')
+          browse=read('VRChatBrowseActivity.java')
+          session=read('VRChatSession.java')
+          account=read('VRChatAccountActivity.java')
+          api=read('VRChatApi.java')
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'return 0;' in order and 'return 4;' in order
+          assert 'counts.getOrDefault(section,0)>=2?1:2' in order
+          assert 'FriendOrdering.compareGroups' in hub
+          assert 'FriendOrdering.compareGroups' in mini
+          assert 'FriendOrdering.compareFriends' in browse
+          assert 'VRChatFavoriteIndex.savedIds' in hub and 'VRChatFavoriteIndex.savedIds' in mini
+          assert 'refresh(false);' in hub and 'cache.fresh(300_000L)' in hub
+          assert 'saveValidated(context,before,session)' in api
+          assert 'VRChatSession.saveValidated' in api
+          assert 'getString("auth"' not in hub
+          assert 'VERIFY_INTERVAL_MS=300_000L' in account
+          assert 'lastAttemptAt=System.currentTimeMillis()' in account
+          assert 'if(status==401)' in api and 'path.split' in api
+          assert 'versionCode 79' in gradle and "versionName '0.21.5'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          print('PASS: shared ordering, reduced fetches, account rejection safeguards, version')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile debug app without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
