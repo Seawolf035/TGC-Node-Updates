@@ -779,9 +779,6 @@ public final class CompanionActivity extends Activity {
             ()->needsStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
         action(account,"♜","Staff access","View your linked device",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
-        action(account,"§","License & user agreement",
-            "Review the proprietary TGC Staff Companion terms",
-            ()->startActivity(new Intent(this,CompanionLicenseActivity.class)));
         action(account,"♢","Verification code",
             "Find and copy your TGC or Cult invite code",this::openInviteCode);
         // Inbox is already on Home and Explore. Avoid a third identical link.
@@ -904,6 +901,17 @@ public final class CompanionActivity extends Activity {
                     BuildConfig.VERSION_NAME+"\n\nYour personal account and staff access stay separate.")
                 .setPositiveButton("Close",null).show();
         });
+        // Full expanded legal text remains readable at any time after
+        // acceptance; before acceptance the first-launch screen shows it.
+        page.addView(CompanionStyle.section(this,"LEGAL & AGREEMENT"));
+        LinearLayout legal=card();
+        action(legal,"§","Read full license & agreement",
+            "Version "+CompanionLicense.VERSION+" · 43 detailed sections",
+            ()->startActivity(new Intent(this,CompanionLicenseActivity.class)));
+        legal.addView(txt(
+            "Review the complete proprietary software license and staff agreement. "+
+            "Viewing it again will not alter your recorded acceptance.",
+            12,CompanionStyle.MUTED,false));
         page.addView(CompanionStyle.section(this,"MORE"));
         LinearLayout extra=card();
         action(extra,"⚙",advanced?"Hide advanced tools":"Advanced tools",
