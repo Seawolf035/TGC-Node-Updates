@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.4",
-  "version_code": 78,
+  "version": "0.21.5",
+  "version_code": 79,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "93be5c8adc22a4d44e8218fe3a339dd7717e7bf89d09aa2db8ab1d00515704b3",
-  "notes": "v0.21.4 (code 78): Introduce encrypted account-scoped local-first display caching for friends, profiles, groups and inbox. Reuse observed friend snapshots across Companion views, order real VRChat favorite friends ahead of others, and preserve Companion pinned shortcuts separately. Optional per-account auto-response to NEW incoming requestInvite notifications only for currently pinned friends, requiring authenticated current account, live VRChat request, valid live current instance and active friendship. Remains OFF by default; no effect on TGC group invitation authority. Expand inbox with request filter, saved offline display, and categorized private Android notification channels. Keep existing Quest/Floating OSC, player tracking, all staff authorization, signing identity, agreement, and user data. v78 is an in-place upgrade."
+  "sha256": "f4588b6747e7f4d0fc16e50b7820250b5722327e8380fd47b274d0bddb63a5fb",
+  "notes": "v0.21.5 (code 79): Sort friends with VRChat Favorites first, multi-friend shared instances second, single visible instances third, private or unknown locations last, with offline friends after those. Apply consistently to Friends & Activity, full Companion friend browser, and Floating/Quest social pages. Reduce redundant friend API polls using encrypted per-account cache. Space account checks, confirm an initial 401 before showing an expired session, distinguish other endpoint errors, and prevent an older validation from overwriting new login cookies. Preserve existing TGC Relay, invites, tracking, session encryption and permanent Android signing identity."
 }
