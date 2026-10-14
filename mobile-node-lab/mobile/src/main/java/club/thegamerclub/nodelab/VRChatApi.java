@@ -71,8 +71,11 @@ public final class VRChatApi {
             }
             String text=new String(bytes.toByteArray(),StandardCharsets.UTF_8);
             if(status==429)throw new IllegalStateException("VRChat rate limit reached. Wait before retrying.");
-            if(status==401 && (authorization==null||authorization.isEmpty()))
+            if(status==401 && "/auth/user".equals(path.split("\\?",2)[0]) &&
+               (authorization==null||authorization.isEmpty()))
                 throw new SecurityException("VRChat session expired. Sign in again.");
+            if(status==401)
+                throw new IllegalStateException("VRChat rejected this API request (HTTP 401). Check account connection.");
             if(status<200||status>=300)
                 throw new IllegalStateException("VRChat returned HTTP "+status+" (no changes made).");
             return new Response(status,text,cookies);
@@ -143,11 +146,21 @@ public final class VRChatApi {
     }
     public static JSONObject currentUser(Context context)throws Exception{
         JSONObject session=validSession(context);
-        Response response=request("GET","/auth/user",cookie(session),null,null);
+        Response response;
+        try{
+            response=request("GET","/auth/user",cookie(session),null,null);
+        }catch(SecurityException rejected){
+            // A single transient 401 should not immediately force another
+            // credential-based login. Retry the same stored cookie once.
+            if(!rejected.getMessage().contains("session expired"))throw rejected;
+            response=request("GET","/auth/user",cookie(session),null,null);
+        }
         mergeCookies(session,response.cookies);
         JSONObject result=response.object();
         updateProfile(session,result);
-        VRChatSession.save(context,session);
+        // Do not write an old cookie over a newer login after a concurrent
+        // validation finishes. Also avoid re-encrypting unchanged credentials.
+        VRChatSession.saveValidated(context,session);
         return result;
     }
     private static JSONObject validSession(Context context)throws Exception{
