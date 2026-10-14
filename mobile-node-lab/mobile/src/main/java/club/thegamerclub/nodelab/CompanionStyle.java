@@ -19,15 +19,15 @@ import android.widget.TextView;
 
 /** Shared dark aqua visual language. Native Android views; no WebView or extra dependencies. */
 public final class CompanionStyle {
-    public static final int BG=0xFF090F1D;
-    public static final int SURFACE=0xFF142338;
-    public static final int RAISED=0xFF1C3048;
-    public static final int FIELD=0xFF233A52;
+    public static volatile int BG=0xFF090F1D;
+    public static volatile int SURFACE=0xFF142338;
+    public static volatile int RAISED=0xFF1C3048;
+    public static volatile int FIELD=0xFF233A52;
     public static final int TEXT=0xFFF1F8FF;
     public static final int MUTED=0xFFB8CADE;
-    public static final int ACCENT=0xFF62D6F2;
+    public static volatile int ACCENT=0xFF62D6F2;
     public static final int GOLD=0xFFFFD28A;
-    public static final int BORDER=0xFF324D68;
+    public static volatile int BORDER=0xFF324D68;
     public static final int GOOD=0xFF68E4B0;
     private CompanionStyle(){}
     /**
@@ -71,7 +71,8 @@ public final class CompanionStyle {
         return t;
     }
     public static TextView section(Context c,String name){
-        TextView label=text(c,name.toUpperCase(java.util.Locale.US),11,ACCENT,true);
+        TextView label=text(c,name.toUpperCase(java.util.Locale.US),11,
+            StaffGate.rankTier(c)>=7?ThemePreferences.royalGold():ACCENT,true);
         label.setLetterSpacing(.12f);
         label.setPadding(0,dp(c,10),0,dp(c,12));
         return label;
@@ -80,7 +81,8 @@ public final class CompanionStyle {
         LinearLayout root=new LinearLayout(c);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(c,17),dp(c,17),dp(c,17),dp(c,17));
-        root.setBackground(shape(c,SURFACE,18,BORDER));
+        root.setBackground(shape(c,SURFACE,18,
+            StaffGate.rankTier(c)>=7?0xFF8C7138:BORDER));
         return root;
     }
     public static LinearLayout.LayoutParams cardParams(Context c){
@@ -110,7 +112,8 @@ public final class CompanionStyle {
         b.setTextSize(14);
         b.setTextColor(primary?BG:TEXT);
         b.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
-        b.setBackground(shape(c,primary?ACCENT:RAISED,13,primary?0:BORDER));
+        b.setBackground(shape(c,primary?ACCENT:RAISED,13,
+            !primary&&StaffGate.rankTier(c)>=7?0xFF7D673B:primary?0:BORDER));
         b.setPadding(dp(c,14),dp(c,10),dp(c,14),dp(c,10));
         return b;
     }
