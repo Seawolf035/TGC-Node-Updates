@@ -43,6 +43,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     private String exploreCategory="friends";
     private StaffDexPanel staffDexPanel;
     private boolean setupLaunched=false;
+    private boolean setupAfterLink=false;
+    private boolean licenseLaunched=false;
     private boolean foreground=false;
     private boolean whatsNewLaunched=false;
     private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
@@ -266,6 +268,9 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 for(int i=history.size()-1;i>=0;i--)
                     questTabs.push(history.get(i));
         }
+        setupAfterLink=(saved!=null&&saved.getBoolean("setup_after_link",false))||
+            getIntent().getBooleanExtra("open_setup_after_link",false);
+        if(setupAfterLink)tab="home";
         if(getIntent().getBooleanExtra("open_main_menu",false)){
             tab="home";
             questTabs.clear();
@@ -281,6 +286,14 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     @Override protected void onNewIntent(Intent intent){
         super.onNewIntent(intent);
         setIntent(intent);
+        if(intent!=null && intent.getBooleanExtra("open_setup_after_link",false)){
+            // A completed deployment must enter onboarding, never the
+            // controls screen. Wait for live staff verification onResume.
+            setupAfterLink=true;
+            setupLaunched=false;
+            tab="home";
+            questTabs.clear();
+        }
         if(intent!=null && intent.getBooleanExtra("open_main_menu",false)){
             // Quest Tools' explicit Main Menu always returns to Home, even
             // when Companion was previously paused on Settings or StaffDex.
@@ -294,6 +307,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     }
     @Override protected void onSaveInstanceState(Bundle out){
         out.putString("tab",tab);out.putBoolean("advanced",advanced);
+        out.putBoolean("setup_after_link",setupAfterLink);
         out.putBoolean("tracking_guide_expanded",trackingGuideExpanded);
         out.putBoolean("tracking_info_expanded",trackingInfoExpanded);
         out.putString("explore_category",exploreCategory);
@@ -413,6 +427,20 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     }
     private void renderUnlocked(){
         if(!StaffGate.unlocked(this)){locked("Checking your staff access...");return;}
+        if(!CompanionLicense.accepted(this)){
+            // An account can be enrolled before its local license was accepted.
+            // Never reveal an unlocked Companion behind a declined agreement.
+            locked("Read and accept the Companion staff agreement to continue setup.");
+            LinearLayout legal=card();
+            action(legal,"✓","Review staff agreement",
+                "Required before opening the guided setup",
+                ()->startActivity(new Intent(this,CompanionLicenseActivity.class)));
+            if(!licenseLaunched){
+                licenseLaunched=true;
+                startActivity(new Intent(this,CompanionLicenseActivity.class));
+            }
+            return;
+        }
         ThemePreferences.apply(this);
         showingUnlocked=true;shell(true);
         QuestBackApplication.refresh(this);
@@ -426,9 +454,10 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         // Set up personal VRChat before showing release highlights. Quest
         // additionally needs user-confirmed FULL logging and persisted SAF
         // Documents/Logs access. On phones Shizuku remains OPTIONAL.
-        if(CompanionSetupState.shouldShow(this)){
+        if(setupAfterLink||CompanionSetupState.shouldShow(this)){
             if(!setupLaunched){
                 setupLaunched=true;
+                setupAfterLink=false;
                 startActivity(new Intent(this,CompanionSetupActivity.class));
             }
             return;
