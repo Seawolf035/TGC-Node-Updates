@@ -1,0 +1,106 @@
+name: Companion Explore and Tracking UX QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.20.2-explore-navigation-tracking-unification
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-explore-tracking-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-ui-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate no tracking duplication and all Explore entry points
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          main=(root/'CompanionActivity.java').read_text()
+          ctrl=(root/'MobileDeployActivity.java').read_text()
+          gate=(root/'StaffGate.java').read_text()
+          owner=(root/'OwnerQuestToolsPreview.java').read_text()
+          directory=(root/'StaffDirectoryRepository.java').read_text()
+          prefs=(root/'ThemePreferences.java').read_text()
+          personal=(root/'UserThemePresets.java').read_text()
+          updater=(root/'MobileUpdaterActivity.java').read_text()
+          news=(root/'WhatsNewActivity.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'private String exploreCategory="friends"' in main
+          assert 'out.putString("explore_category",exploreCategory);' in main
+          assert 'if(isExploreCategory(savedCategory))exploreCategory=savedCategory;' in main
+          assert 'case "discover":' in main and 'case "activity":' in main and 'case "inbox":' in main
+          assert 'exploreCategoryRow(categories,"Friends","♧","friends",' in main
+          assert 'exploreCategoryRow(categories,"Activity","◷","activity",' in main
+          assert 'Collect-a-Staff! · StaffDex' in main
+          assert 'compactQuickPair(quick,"♧","Online friends"' in main
+          assert 'compactQuickPair(quick,"⌕","Find people"' in main
+          for mode in ['friends_online','friends_offline','search_users','worlds',
+                       'bookmarks','recent','search_worlds','groups','encounters']:
+              assert 'openBrowse("'+mode+'")' in main,mode
+          for mode in ['all','invite','friend']:
+              assert 'openInbox("'+mode+'")' in main,mode
+          for mode in ['locations','log','activity']:
+              assert 'openFriendHub("'+mode+'")' in main,mode
+          for needed in ['this::openNotes','this::openAvatars',
+                         'this::openExtendedAvatars','openPlayerLog("timeline")',
+                         'openPlayerLog("current")','StaffDirectoryActivity.class']:
+              assert needed in main,needed
+          home=main[main.index('    private void homeButtons('):
+                     main.index('    private void renderHome(')]
+          assert 'homeOverlayStatus' in home and 'homeNodeLabel' in home
+          assert '"Tracking",false' in home
+          assert 'controls.setOnClickListener(v->openTab("tracking"));' in home
+          assert 'new Intent(this,MobileDeployActivity.class)' not in home
+          tracking=main[main.index('    private void renderTracking(){'):
+                        main.index('    private void renderSettings(){')]
+          assert 'renderTrackingSetup();' in tracking
+          assert 'Open Device & Capture Controls' in tracking
+          assert 'TrackingSetupGuide.acknowledged(this)' in main
+          assert '"captured_total"' in tracking and '"uploaded_total"' in tracking
+          assert 'Advanced tracking diagnostics' in tracking
+          assert 'MainActivity.class' in tracking
+          assert 'openPlayerLog("timeline")' in tracking
+          settings=main[main.index('    private void renderSettings(){'):
+                        main.index('    private void togglePinnedFriendAlerts(){')]
+          assert '"Device connection"' in settings
+          assert '"Tracking diagnostics"' not in settings
+          assert 'MainActivity.class' not in settings
+          assert '"Theme Studio"' in settings and 'WhatsNewActivity.class' in settings
+          assert 'CompanionLicenseActivity.class' in settings
+          assert 'Tracking controls' in ctrl and 'CAPTURE CONTROLS' in ctrl
+          assert 'Start tracking' in ctrl and 'Stop tracking' in ctrl
+          assert 'Shizuku' in ctrl and 'Documents/Logs' in ctrl
+          assert 'StaffGate.unlocked' in main
+          assert 'OwnerQuestToolsPreview.isOwnerStaff(this)' in main
+          assert 'ThemePreferences.importVrchatPalette' in prefs.__class__.__name__ or 'importVrchatPalette' in prefs
+          assert 'MAX_SAVED=25' in personal
+          assert 'AKfycbx0MRdKsYmz1B82M3KYZ28_fcyTrdavMTsTxNkLm2-ijyXAaR-1hbpa2fhDB_zXZAmrCg' in directory
+          assert 'verifySameSigner(candidate)' in updater
+          assert 'v0.20.2' in news and 'Explore, simplified' in news
+          assert 'versionCode 72' in gradle and "versionName '0.20.2'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          print('PASS: All Explore routes accessible, Home Tracking shortcut preserved, one Tracking dashboard with dedicated controls and no duplicate Settings diagnostics.')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publication
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
