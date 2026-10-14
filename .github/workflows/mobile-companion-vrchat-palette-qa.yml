@@ -1,0 +1,90 @@
+name: Companion Hex and VRChat Palette QA (non-publishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.20.1-hex-vrchat-palette-import
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-vrchat-palette-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify hex, VRChat ordering, rank gates and upgrade preservation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          pref=(root/'ThemePreferences.java').read_text()
+          editor=(root/'ThemeEditorActivity.java').read_text()
+          style=(root/'CompanionStyle.java').read_text()
+          app=(root/'CompanionActivity.java').read_text()
+          roster=(root/'StaffDirectoryRepository.java').read_text()
+          news=(root/'WhatsNewActivity.java').read_text()
+          gate=(root/'StaffGate.java').read_text()
+          update=(root/'MobileUpdaterActivity.java').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'StaffGate.rankTier(c)>=4' in pref
+          assert 'if(!allowed(c))throw new SecurityException' in pref
+          assert 'public static int parseHex(String value)' in pref
+          assert 'raw.matches("(?i)[0-9a-f]{6}")' in pref
+          assert 'parts.length!=6' in pref
+          assert 'vrchat[i]=parseHex(parts[i])' in pref
+          assert 'theme[ACCENT]=vrchat[0]' in pref
+          assert 'theme[ICON]=vrchat[1]' in pref
+          assert 'theme[BUTTON]=vrchat[2]' in pref
+          assert 'theme[BG]=vrchat[3]' in pref
+          assert 'theme[TEXT]=vrchat[4]' in pref
+          assert 'theme[SUBTEXT]=vrchat[5]' in pref
+          assert 'tx.commit()' in pref
+          assert 'result[ICON]=result[ACCENT]' in pref
+          assert 'result[BUTTON]=result[ACCENT]' in pref
+          assert 'ThemePreferences.importVrchatPalette(this,input.getText().toString())' in editor
+          assert 'ThemePreferences.exportVrchatPalette(this)' in editor
+          assert 'ThemePreferences.parseHex(hex.getText().toString())' in editor
+          assert 'channels[0].setProgress(Color.red(parsed))' in editor
+          assert 'setPositiveButton("Import palette",null)' in editor
+          assert 'setPositiveButton("Apply hex color",null)' in editor
+          assert 'ThemePreferences.NAMES.length' in editor
+          assert 'private static final int[][] PRESETS={' in pref
+          assert 'public static final String[] NAMES={"TGC Default","Deep Ocean","Rose Quartz","Emerald","Royal Gold"};' in pref
+          # User's personal example is NOT embedded into any source or presets.
+          assert '#0907AA' not in pref and '#4B86FF' not in pref
+          assert 'CompanionStyle.BUTTON_FILL' in pref
+          assert 'CompanionStyle.ICON' in pref
+          assert 'CompanionStyle.TEXT' in pref
+          assert 'CompanionStyle.MUTED' in pref
+          assert 'readableOn(BUTTON_FILL)' in style
+          assert 'CompanionStyle.ICON' in app
+          assert 'AKfycbx0MRdKsYmz1B82M3KYZ28_fcyTrdavMTsTxNkLm2-ijyXAaR-1hbpa2fhDB_zXZAmrCg' in roster
+          assert 'VRChatApi.groupMembers' not in roster
+          assert 'official TGC roster' in news
+          assert 'ThemePreferences.resetRuntime()' in gate
+          assert 'verifySameSigner(candidate)' in update
+          assert 'versionCode 71' in gradle and "versionName '0.20.1'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          print('PASS: six VRChat colors preserve order; no private preset; strict hex; atomic save; Admin+ gate; 0.20.0 migration; signed-updater invariant.')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - name: Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publication
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
