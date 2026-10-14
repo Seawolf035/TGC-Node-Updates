@@ -47,7 +47,17 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.20.2"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.20.3"));
+        highlight(body,"StaffDex gets its own main tab",
+            "Open the Staff Directory, review your collections and send individual "+
+            "VRChat friend requests directly from the fifth bottom tab.");
+        highlight(body,"Quest setup with FULL logging",
+            "First-time guided setup now walks Quest staff through VRChat account login, "+
+            "Settings → Debug → Logging → Full, and read-only Documents/Logs permission.");
+        highlight(body,"Easy mobile onboarding",
+            "Sign in to VRChat to get started on a phone. Shizuku is recommended "+
+            "for optional player tracking, with links to the official setup guide.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.20.2"));
         highlight(body,"Explore, simplified",
             "A faster Explore screen with compact shortcuts, featured StaffDex, "+
             "and four clear sections: Friends, Discover, Activity and Inbox.");
