@@ -21,7 +21,7 @@ import java.util.ArrayList;
  * more frequent notifications through this same account-scoped observer.
  */
 public final class PinnedFriendAlertWorker extends Worker {
-    private static final String CHANNEL="tgc_vrchat_pinned_friends";
+    private static final String CHANNEL="tgc_vrchat_pinned_friends_v2";
     public PinnedFriendAlertWorker(@NonNull Context ctx,
         @NonNull WorkerParameters params){super(ctx,params);}
     @NonNull @Override public Result doWork(){
@@ -57,9 +57,11 @@ public final class PinnedFriendAlertWorker extends Worker {
         if(mgr==null)return;
         if(Build.VERSION.SDK_INT>=26){
             NotificationChannel ch=new NotificationChannel(CHANNEL,
-                "Pinned VRChat friends online",NotificationManager.IMPORTANCE_DEFAULT);
+                "Pinned VRChat friends online",NotificationManager.IMPORTANCE_HIGH);
             ch.setDescription("Notifications when your selected pinned friends come online");
             ch.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+            ch.enableVibration(true);
+            ch.enableLights(true);
             mgr.createNotificationChannel(ch);
         }
         for(PinnedFriendAlerts.OnlineFriend friend:entries){
@@ -75,7 +77,8 @@ public final class PinnedFriendAlertWorker extends Worker {
                 .setContentTitle(friend.name+" is online")
                 .setContentText("Pinned VRChat friend is now online")
                 .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(Notification.DEFAULT_ALL)
                 .setContentIntent(open).setAutoCancel(true)
                 .setGroup("tgc_vrchat_pinned_online");
             try{
