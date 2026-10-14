@@ -36,6 +36,10 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
     private boolean busy=false,hasMore=false;
     private String activeQuery="";
     private Button moreButton,refreshButton;
+    private java.util.HashSet<String> favoriteIds=new java.util.HashSet<>();
+    private boolean friendsMode(){
+        return mode.equals("friends_online")||mode.equals("friends_offline");
+    }
     private int dp(float n){return CompanionStyle.dp(this,n);}
     private TextView text(String value,int size,int color,boolean bold){
         return CompanionStyle.text(this,value,size,color,bold);
@@ -147,7 +151,33 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         root.addView(moreButton,moreP);
         moreButton.setOnClickListener(v->load(false));
         updatePaging();
-        if(!search())load(true);
+        if(!search())restoreInitial();
+    }
+    /** Start with encrypted account-scoped first page, then fetch only if stale. */
+    private void restoreInitial(){
+        if(!friendsMode()&&!mode.equals("groups")&&!mode.equals("worlds")&&
+           !mode.equals("recent")){load(true);return;}
+        io.execute(()->{
+            favoriteIds=VRChatFavoriteIndex.savedIds(this);
+            CompanionCache.Record local=CompanionCache.read(this,"browse_"+mode);
+            JSONArray items=local==null?null:local.body.optJSONArray("items");
+            ArrayList<JSONObject> rows=new ArrayList<>();
+            if(items!=null)for(int i=0;i<items.length();i++){
+                JSONObject item=items.optJSONObject(i);
+                if(item!=null)rows.add(item);
+            }
+            boolean fresh=local!=null&&local.fresh(friendsMode()?120_000L:600_000L);
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
+                if(!rows.isEmpty()){
+                    adapter.replace(rows);
+                    hasMore=paged()&&rows.size()>=VRChatApi.LIST_PAGE_SIZE;
+                    offset=hasMore?VRChatApi.LIST_PAGE_SIZE:0;
+                    showCount();updatePaging();
+                }
+                if(!fresh)load(true);
+            });
+        });
     }
     private void showCount(){
         if(count==null||adapter==null||busy)return;
@@ -202,6 +232,15 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                         data=outbox.recentEncounters(100);
                     }
                 }else data=VRChatApi.browsePage(this,mode,requestedTerm,requested);
+                if(friendsMode()&&requested==0){
+                    try{VRChatFavoriteIndex.refreshIfStale(this);}
+                    catch(Exception ignored){/* Sort from cached favorite index. */}
+                    favoriteIds=VRChatFavoriteIndex.savedIds(this);
+                }
+                if(!append&&!search()&&(friendsMode()||mode.equals("groups")||
+                    mode.equals("worlds")||mode.equals("recent")))
+                    try{CompanionCache.saveArray(this,"browse_"+mode,data);}
+                    catch(Exception ignored){}
                 ArrayList<JSONObject> rows=new ArrayList<>();
                 for(int i=0;i<data.length();i++){
                     JSONObject item=data.optJSONObject(i);if(item==null)continue;
@@ -258,6 +297,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             String description=item.optString("statusDescription","").trim();
             if(description.isEmpty())description=item.optString("bio","").trim();
             e.description=(status.isEmpty()?"":status+"  ·  ")+description;
+            if(friendsMode()&&favoriteIds.contains(e.id))e.title="★ "+e.title;
         }else if(mode.equals("groups")){
             e.kind="group";e.glyph="◈";e.id=item.optString("groupId",item.optString("id",""));
             try{
@@ -298,6 +338,13 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         private final ArrayList<JSONObject> shown=new ArrayList<>();
         int loadedCount(){return data.size();}
         void applyFilter(){
+            if(friendsMode())data.sort((a,b)->{
+                boolean one=favoriteIds.contains(a.optString("id",""));
+                boolean two=favoriteIds.contains(b.optString("id",""));
+                if(one!=two)return one?-1:1;
+                return a.optString("displayName","")
+                    .compareToIgnoreCase(b.optString("displayName",""));
+            });
             shown.clear();
             String phrase=(searchField==null||search())?"":searchField.getText().toString()
                 .trim().toLowerCase(java.util.Locale.US);
