@@ -1138,11 +1138,7 @@ public final class OverlayMiniVrcx {
                 shortValue(message,140),12,CompanionStyle.MUTED,false));
             String groupId=InboxCategory.groupId(n);
             if(groupId.matches("grp_[0-9a-fA-F-]{36}"))
-                button(c,"Group details",false,()->{
-                    Intent group=new Intent(ctx,VRChatDetailActivity.class)
-                        .putExtra("kind","group").putExtra("id",groupId);
-                    ctx.startActivity(group);
-                });
+                button(c,"Group details",false,()->openGroupDashboard(groupId));
             String uid=n.optString("senderUserId",details(n).optString("senderUserId",""));
             if(validUser(uid))button(c,"Sender profile",false,()->profile(uid));
             String location=inviteLocation(n);
