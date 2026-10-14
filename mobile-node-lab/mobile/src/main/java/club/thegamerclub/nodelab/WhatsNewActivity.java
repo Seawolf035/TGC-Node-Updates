@@ -47,7 +47,16 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.2"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.3"));
+        highlight(body,"Tracking has its own Tools tab",
+            "Quest Tools and Floating Tools now have a fifth Tracking tab "+
+            "for device capture, setup and player history. Your existing "+
+            "tracking service and main Companion dashboard still work as before.");
+        highlight(body,"Cleaner Floating Tools",
+            "Removed redundant OSC introduction, status-color explanation and "+
+            "Tracking help cards. Tracking controls and recent encounters "+
+            "now live in the dedicated Tracking tab.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.2"));
         highlight(body,"Quest Tools navigation, cleaned up",
             "The four main Quest Tools tabs now offer a clear Main Menu action "+
             "that opens Staff Companion Home. Nested pages have a readable "+
