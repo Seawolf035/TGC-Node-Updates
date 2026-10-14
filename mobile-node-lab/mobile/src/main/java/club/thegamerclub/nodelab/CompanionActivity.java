@@ -266,13 +266,30 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 for(int i=history.size()-1;i>=0;i--)
                     questTabs.push(history.get(i));
         }
-        if(getIntent().getBooleanExtra("open_tracking_setup",false)){
+        if(getIntent().getBooleanExtra("open_main_menu",false)){
+            tab="home";
+            questTabs.clear();
+        }else if(getIntent().getBooleanExtra("open_tracking_setup",false)){
             tab="tracking";
             trackingGuideExpanded=true;
         }
         locked("Checking your staff access...");
         InboxAlertSettings.restore(this);
         PinnedFriendAlerts.restore(this);
+    }
+    @Override protected void onNewIntent(Intent intent){
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if(intent!=null && intent.getBooleanExtra("open_main_menu",false)){
+            // Quest Tools' explicit Main Menu always returns to Home, even
+            // when Companion was previously paused on Settings or StaffDex.
+            tab="home";
+            questTabs.clear();
+            if(showingUnlocked && StaffGate.unlocked(this)){
+                renderUnlocked();
+                QuestBackApplication.refresh(this);
+            }
+        }
     }
     @Override protected void onSaveInstanceState(Bundle out){
         out.putString("tab",tab);out.putBoolean("advanced",advanced);
