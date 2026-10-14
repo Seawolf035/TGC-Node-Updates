@@ -154,6 +154,7 @@ public final class InboxRepository {
         if(item==null)return false;
         if("unread".equals(filter))return !item.optBoolean("seen",false);
         String type=item.optString("type","").toLowerCase(Locale.US);
+        if("requests".equals(filter))return type.equals("requestinvite");
         if("invite".equals(filter))return type.contains("invite");
         if("friend".equals(filter))return type.contains("friend");
         return true;
