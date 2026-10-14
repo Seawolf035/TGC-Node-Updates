@@ -42,9 +42,16 @@ public final class ThemePreferences {
         if(idx<0||idx>=PRESETS.length)idx=0;
         int[] result=BASE.clone();
         System.arraycopy(PRESETS[idx],0,result,0,6);
+        // Upgrade-safe: custom 0.20.0 accents still control icon/button colors
+        // unless those new channels are explicitly customized in 0.20.1.
+        for(int i=0;i<6;i++){
+            String key="color_"+i;
+            if(prefs.contains(key))
+                result[i]=0xFF000000|(prefs.getInt(key,result[i])&0xFFFFFF);
+        }
         result[ICON]=result[ACCENT];
         result[BUTTON]=result[ACCENT];
-        for(int i=0;i<result.length;i++){
+        for(int i=6;i<result.length;i++){
             String key="color_"+i;
             if(prefs.contains(key))
                 result[i]=0xFF000000|(prefs.getInt(key,result[i])&0xFFFFFF);
