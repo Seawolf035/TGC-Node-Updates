@@ -1,6 +1,8 @@
 # TGC Staff Companion — Proprietary Code License
 
-Copyright © 2026 the respective copyright holders of the original TGC Staff Companion software. **All rights reserved.**
+**Created and originally developed by Seawolf.**
+
+Copyright © 2026 **Seawolf** for original protectable TGC Staff Companion contributions lawfully owned by Seawolf. Other contributors and third parties retain their respective rights. **All rights reserved.**
 
 Unless a separate written license or a third-party component license expressly says otherwise, no permission is granted to copy, reuse, modify, publicly redistribute, sublicense, or commercially exploit protected original TGC Staff Companion source code, binary application code, or original artwork in this repository.
 
@@ -12,4 +14,4 @@ This repository is currently public and contains Android source code. **This not
 
 ### In-app staff end-user agreement
 
-The versioned 43-section click-through agreement bundled in `mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt` (agreement version **2026-10-14.1**) covers licensed binary use, authorized staff access, network boundaries, data handling, third-party rights, and restrictions on unauthorized redistribution or modification. The complete text can be read on first launch and later under **Settings → Legal & Agreement → Read full license & agreement**. This repository notice is not a substitute for the in-app agreement, and mere repository access does not constitute click-through acceptance. The rights holder should obtain qualified legal review of ownership, enforceability, third-party obligations, and any required privacy disclosures.
+The versioned 43-section click-through agreement bundled in `mobile-node-lab/mobile/src/main/assets/tgc_companion_eula.txt` (agreement version **2026-10-14.2**) covers licensed binary use, authorized staff access, network boundaries, data handling, third-party rights, and restrictions on unauthorized redistribution or modification. The complete text can be read on first launch and later under **Settings → Legal & Agreement → Read full license & agreement**. This repository notice is not a substitute for the in-app agreement, and mere repository access does not constitute click-through acceptance. Seawolf and any other applicable rights holders should obtain qualified legal review of ownership, enforceability, third-party obligations, and any required privacy disclosures.
