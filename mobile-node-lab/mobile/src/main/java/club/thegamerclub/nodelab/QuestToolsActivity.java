@@ -33,7 +33,9 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private final ArrayDeque<String> back=new ArrayDeque<>();
     private String page="home";
-    @Override public boolean showQuestBack(){return !isHub();}
+    // Only Home, Social, OSC and Tools are navigation roots. Shortcuts is an
+    // editor, not a root: it also needs Back to the previous Quest Tools page.
+    @Override public boolean showQuestBack(){return !isPrimaryTab();}
     private LinearLayout body,root;
     private ScrollView scroll;
     private TextView oscSummary;
@@ -100,7 +102,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             accountScreenOpened=true;
             startActivity(new Intent(this,VRChatAccountActivity.class));
         });
-        button(panel,"← Return to Companion",false,this::finish);
+        button(panel,"← Main Menu",false,this::returnToMainMenu);
         io.execute(()->{
             String failure=null;
             try{OwnerQuestToolsPreview.verifyLive(this);}
@@ -271,16 +273,29 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     private void goBack(){
         if(!canUseTools()){finish();return;}
         if(back.isEmpty()){
-            if("home".equals(page)){finish();return;}
+            if(isPrimaryTab()){returnToMainMenu();return;}
             page="home";
         }else page=back.pop();
         render();
     }
     @Override public void onBackPressed(){goBack();}
-    private boolean isHub(){
+    private boolean isPrimaryTab(){
         return "home".equals(page)||"social".equals(page)||
-            "osc".equals(page)||"tools".equals(page)||
-            "shortcuts".equals(page);
+            "osc".equals(page)||"tools".equals(page);
+    }
+    private boolean isHub(){
+        // The shortcuts editor has its own native layout, not a MiniVRCX page.
+        return isPrimaryTab()||"shortcuts".equals(page);
+    }
+    /** Explicit exit to the COMPANION HOME, never to a stale Settings page. */
+    private void returnToMainMenu(){
+        if(!canUseTools()){finish();return;}
+        Intent mainMenu=new Intent(this,CompanionActivity.class);
+        mainMenu.putExtra("open_main_menu",true);
+        mainMenu.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|
+            Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(mainMenu);
+        finish();
     }
     private void render(){
         if(isFinishing()||!canUseTools())return;
@@ -299,20 +314,41 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         heading.setBackground(CompanionStyle.gradient(this,
             CompanionStyle.SURFACE,CompanionStyle.BG,14));
         root.addView(heading);
-        // Quest has one universal header Back on nested pages.
-        // Owner-only phone preview instead shows this ONE header Back.
-        if(!QuestDevice.isQuestDevice() && !isHub()){
-            Button backButton=CompanionStyle.button(this,"‹ Back",false);
-            heading.addView(backButton,new LinearLayout.LayoutParams(dp(68),dp(40)));
-            backButton.setOnClickListener(v->goBack());
+        // Root pages have a clear "Main Menu" exit on BOTH Quest and phone.
+        // Nested pages: Quest uses its universal Back; the private phone
+        // preview uses ONE wide, readable Back here instead.
+        if(isPrimaryTab() || !QuestDevice.isQuestDevice()){
+            final boolean topLevel=isPrimaryTab();
+            Button navigation=CompanionStyle.button(this,
+                topLevel?"← Main Menu":"← Back",false);
+            navigation.setTextSize(12);
+            navigation.setSingleLine(true);
+            navigation.setAllCaps(false);
+            navigation.setMinWidth(0);
+            navigation.setMinimumWidth(0);
+            navigation.setPadding(dp(9),0,dp(9),0);
+            navigation.setContentDescription(topLevel?
+                "Back to Staff Companion main menu":
+                "Back to previous Quest Tools screen");
+            LinearLayout.LayoutParams navSize=new LinearLayout.LayoutParams(
+                dp(topLevel?120:96),dp(43));
+            navSize.rightMargin=dp(4);
+            heading.addView(navigation,navSize);
+            navigation.setOnClickListener(v->{
+                if(topLevel)returnToMainMenu();
+                else goBack();
+            });
         }
         LinearLayout titles=vertical();
-        titles.setPadding(dp(9),0,0,0);
+        titles.setPadding(dp(6),0,0,0);
         heading.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
-        titles.addView(text("TGC STAFF COMPANION",11,CompanionStyle.ACCENT,true));
-        titles.addView(text(isHub()?"Quest Tools":
-            "Quest Tools · "+page.replace("mini_","").replace('_',' '),
-            19,CompanionStyle.TEXT,true));
+        titles.addView(text("TGC STAFF COMPANION",10,CompanionStyle.ACCENT,true));
+        // The active MiniVRCX screen has its own readable title below.
+        // Repeating a long page name here steals width from the Back button.
+        TextView screenTitle=text("Quest Tools",19,CompanionStyle.TEXT,true);
+        screenTitle.setSingleLine(true);
+        screenTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        titles.addView(screenTitle);
         LinearLayout tabs=new LinearLayout(this);
         tabs.setGravity(Gravity.CENTER_VERTICAL);
         tabs.setPadding(dp(6),dp(3),dp(6),dp(5));
@@ -382,18 +418,6 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     }
     private void showHome(){
         // The Home hub is a root: no Back. Keep high-value routes visible.
-        LinearLayout welcome=card("QUEST TOOLS · AT A GLANCE");
-        welcome.addView(text(QuestDevice.isQuestDevice()?
-            "Quest-native controls · No floating-window permission required":
-            "OWNER PHONE PREVIEW · QUEST UI",
-            14,CompanionStyle.TEXT,true));
-        welcome.addView(text(QuestDevice.isQuestDevice()?
-            "OSC requires VRChat's own OSC toggle. Quest multitasking can "+
-                "suspend the game; verify in VRChat that packets arrived.":
-            "This is the actual Quest layout for testing. Your phone's "+
-                "floating panel and player tracking remain separate.",
-            11,CompanionStyle.MUTED,false));
-
         LinearLayout primary=card("QUICK ACTIONS");
         List<String> shortcuts=OverlayPreferences.shortcuts(this);
         for(int i=0;i<shortcuts.size();i+=2){
@@ -425,7 +449,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             "OSC share the same menu structure as Floating Tools.",
             12,CompanionStyle.MUTED,false));
         button(osc,"Open OSC controls",true,()->switchTab("osc"));
-        button(osc,"Return to Companion",false,()->finish());
+        // Main Menu is always available in the fixed top header. No duplicate exit.
     }
     private void showPinned(LinearLayout parent){
         final LinearLayout rows=vertical();
