@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.19.16",
-  "version_code": 68,
+  "version": "0.19.17",
+  "version_code": 69,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "d37f8b7342480163eac6df694a2c92160183309b853f2bd8bb301956b6f17990",
-  "notes": "v0.19.16 (code 68): Add the Quest Tools UI as an OWNER-ONLY development preview on normal Android phones, restricted to Relay-verified Discord identity 197820946608947201 AND an authenticated, live VRChat /auth/user response matching usr_2a833076-03ac-4212-aeff-0708d8eab968. Neither ID by itself authenticates access; no generic Owner/Royalty rank unlock. The preview entry appears under phone Settings > Floating Tools only for the exact authenticated staff ID; opening the activity directly rechecks identity and never renders Quest tools before live verification. Navigation rechecks linked VRChat identity and active Relay grant; mismatch or revocation closes the preview. Reuse the actual Quest Tools pages, configurable pinned three-action bar, and phone-local preferences for layout refinement while keeping ordinary phone floater and Quest device behavior unchanged. Quest-only OSC background service actions stay headset-only. Preserve comprehensive 43-section agreement v2026-10-14.1, pre-acceptance signed updater recovery, Tracking tab FULL logging guide, Quest Documents/Logs SAF, phone Shizuku, personal VRChat sessions, and GM1-only group invites. No data reset or Main Launcher/Relay production changes."
+  "sha256": "3fd483d876e2365e77106ec0dd53785ea0df2dad2106be09c666bd7c8c61d9f0",
+  "notes": "v0.19.17 (code 69): Clarify the comprehensive 43-section Companion license to prominently credit Seawolf as its creator and original developer and the rights holder of original contributions lawfully owned by Seawolf. Maintain separate ownership of third-party libraries, external assets, and independent contributions. Agreement updated to 2026-10-14.2 with explicit renewed user acceptance; complete wording available in Settings > Legal & Agreement > Read full license & agreement. Repository proprietary code notice updated consistently. Preserve installed accounts and data, signed-update-before-consent recovery, Quest Tools on headset, Seawolf-only phone Quest Tools preview with both independently authenticated Discord and VRChat identities, fixed quick bar, phone floater, tracking, staff authorization, Relay, and GM1-only invite sending. No Staff Directory/Collect-a-Staff achievements implemented in this release."
 }
