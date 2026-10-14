@@ -36,6 +36,11 @@ public final class StaffGate {
             return c!=null && c.nodeId.equals(verifiedNode) && c.discordId.equals(verifiedDiscord);
         }catch(Exception ignored){return false;}
     }
+    /** Exact Discord identity asserted by a currently valid Relay staff grant. */
+    public static boolean verifiedDiscordMatches(Context context,String expectedId){
+        return expectedId!=null && !expectedId.isEmpty() &&
+            unlocked(context) && expectedId.equals(verifiedDiscord);
+    }
     /** Only a currently authorized, process-local Relay response can unlock ranks. */
     public static int rankTier(Context context){
         if(!unlocked(context))return 0;
