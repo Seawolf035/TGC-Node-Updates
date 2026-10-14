@@ -47,7 +47,15 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.4"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.5"));
+        highlight(body,"Friends sorted like VRCX",
+            "VRChat favorite friends first, then shared visible instances, "+
+            "solo known instances, and private/unknown locations last. "+
+            "Updated across Friends & Activity, full Companion, and Floating/Quest Tools.");
+        highlight(body,"Improved account checks",
+            "Less frequent VRChat validation requests, more careful expired "+
+            "session confirmation, and safer preservation of stored login data.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.4"));
         highlight(body,"Faster, local-first Companion",
             "Previously viewed friends, favorite categories, profiles and inbox data "+
             "can load from an encrypted local cache, then refresh from VRChat. "+
