@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 
 /** Local acceptance of a versioned, proprietary staff end-user agreement. */
 public final class CompanionLicense {
-    public static final String VERSION="2026-10-13.1";
+    public static final String VERSION="2026-10-14.1";
     private static final String PREFS="tgc_companion_license_acceptance";
     private CompanionLicense(){}
 
