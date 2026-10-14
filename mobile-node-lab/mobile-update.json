@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.3",
-  "version_code": 77,
+  "version": "0.21.4",
+  "version_code": 78,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "d862fd1e4f5271abe6910aa1a770fac8e0eda69cd823f39c03596a29bfd355bc",
-  "notes": "v0.21.3 (code 77): Add a dedicated FIFTH Tracking tab shared across the Floating Tools phone panel and native Quest Tools (including creator-only phone preview). Both now show Home, Social, OSC, Tracking, Tools navigation and preserve the fixed three-button customizable quick bar. Move live capture status, optional phone Shizuku Start/Stop, tracking setup/permissions, tracked player/history links and recent encounters out of Floating Tools Home and Tools into Tracking. On real Quest, show Mobile Node heartbeat/counts, official read-only Documents/Logs grant, explicitly user-confirmed VRChat Debug FULL logging state, player join/leave histories, guided device setup and direct access to existing device/capture controls; phone preview displays its own phone capture state and optional Shizuku guidance. Move Quest Tools local activity/history controls from Tools to Tracking. Remove Floating Tools unnecessary introductory OSC text box, inaccurate status-color legend, and redundant Node Tracking explanatory box; preserve live OSC functionality and all voice safety releases. No change to underlying MobileNodeService, QuestSafLogWatcher, Shizuku grant logic, QuestOscService, phone floating OSC engine, Relay invite rules, StaffDex, personal login, themes, legal agreement, authentication, or production services. v77 upgrade preserves user data and stable signed APK identity."
+  "sha256": "93be5c8adc22a4d44e8218fe3a339dd7717e7bf89d09aa2db8ab1d00515704b3",
+  "notes": "v0.21.4 (code 78): Introduce encrypted account-scoped local-first display caching for friends, profiles, groups and inbox. Reuse observed friend snapshots across Companion views, order real VRChat favorite friends ahead of others, and preserve Companion pinned shortcuts separately. Optional per-account auto-response to NEW incoming requestInvite notifications only for currently pinned friends, requiring authenticated current account, live VRChat request, valid live current instance and active friendship. Remains OFF by default; no effect on TGC group invitation authority. Expand inbox with request filter, saved offline display, and categorized private Android notification channels. Keep existing Quest/Floating OSC, player tracking, all staff authorization, signing identity, agreement, and user data. v78 is an in-place upgrade."
 }
