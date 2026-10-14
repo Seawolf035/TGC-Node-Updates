@@ -282,8 +282,18 @@ public class MobileDeployActivity extends Activity {
           !"mobile_companion".equals(response.optString("client_type")))
           throw new SecurityException("Your staff access couldn't be verified");
         MobileCredentials.save(this,relay,response);
-        showStatus("Connected! You're ready to start player tracking.");
-        runOnUiThread(()->{setup.setText("");enrollment.setVisibility(View.GONE);});
+        // Enrollment is complete, but device capture setup is not. Return
+        // through the main Companion gate so live staff validation, explicit
+        // agreement acceptance, and the guided setup happen in that order.
+        runOnUiThread(()->{
+          if(isFinishing()||isDestroyed())return;
+          setup.setText("");
+          Intent home=new Intent(this,CompanionActivity.class)
+              .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP)
+              .putExtra("open_setup_after_link",true);
+          startActivity(home);
+          finish();
+        });
       }catch(Exception e){
         showStatus("Couldn't link your device: "+
           (e.getMessage()==null?"Please try again":e.getMessage()));
