@@ -107,7 +107,7 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
                 if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
                 if(available!=null){roster=available;skipped.clear();draw();}
                 else{status.setText("Could not load Staff Directory: "+failure+
-                    "\nSign into VRChat and check the official roster endpoint. "
+                    "\nSign into VRChat and check the official roster endpoint. "+
                     "Nothing will be counted or requested until live data loads.");}
             });
         });
