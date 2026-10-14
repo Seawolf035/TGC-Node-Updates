@@ -36,8 +36,7 @@ public final class CompanionSetupState {
         if(!vrchatSessionReady(context))return false;
         if(QuestDevice.isQuestDevice()){
             return fullLoggingAcknowledged(context) &&
-                (QuestSafLogWatcher.hasGrant(context) ||
-                !QuestSafLogWatcher.isSelected(context));
+                QuestSafLogWatcher.hasGrant(context);
         }
         return true;
     }
@@ -50,8 +49,7 @@ public final class CompanionSetupState {
             return false;
         if(QuestDevice.isQuestDevice() &&
             (!fullLoggingAcknowledged(context)||
-             (!QuestSafLogWatcher.hasGrant(context)&&
-              QuestSafLogWatcher.isSelected(context))))
+             !QuestSafLogWatcher.hasGrant(context)))
             return false;
         return context.getSharedPreferences(PREF,0).edit()
             .putBoolean(COMPLETE,true).commit();
