@@ -47,7 +47,12 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.20.1"));
+        highlight(body,"Admin+ VRChat palette import",
+            "Paste six VRChat UI hex colors at once, type individual #RRGGBB colors, "+
+            "or export your current Companion theme as VRChat codes. "+
+            "Personal palettes remain private and do not create presets.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.20.0"));
         highlight(body,"Collect-a-Staff! · StaffDex",
             "Browse your TGC staff directory, open VRChat profiles, send friend requests one at a time, "+
             "and unlock achievements based on verified friendships.");
@@ -55,8 +60,7 @@ public final class WhatsNewActivity extends Activity {
             "Administrators and above can choose a personal theme or mix their own colors. "+
             "Royalty keeps its distinctive gold trim and identity badges.");
         highlight(body,"Royalty identity on profiles",
-            "Staff profiles display verified group ranks, with gold details for confirmed members "+
-            "of TGC's Royalty group.");
+            "Staff profiles display staff rank and Royalty cosmetic status sourced from the official TGC roster.");
         highlight(body,"Improved onboarding",
             "See major updates here once per new version. Reopen this history from Settings at any time.");
         body.addView(CompanionStyle.section(this,"RECENT STAFF RELEASES"));
