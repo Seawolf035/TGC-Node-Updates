@@ -15,8 +15,9 @@ import java.util.Locale;
  * A single inbox reader for the full Companion, floating tools and optional
  * notification checks. Network calls must run on a background executor.
  *
- * Never reads Shizuku logs, changes VRChat notifications, or stores inbox
- * messages outside of the current process.
+ * Never reads Shizuku logs or changes VRChat notifications. Cached inbox
+ * data is encrypted, scoped to the current personal account, and only used
+ * for display; remote mutations must always use the live VRChat API.
  */
 public final class InboxRepository {
     private InboxRepository(){}
@@ -117,6 +118,15 @@ public final class InboxRepository {
             legacy==null?0:legacy.length(),modern==null?0:modern.length(),
             legacy==null,modern==null);
     }
+    /** Display-only cached inbox; not proof that a remote notification is still active. */
+    public static Snapshot cached(Context ctx){
+        CompanionCache.Record record=CompanionCache.read(ctx,"inbox");
+        if(record==null)return null;
+        JSONArray items=record.body.optJSONArray("items");
+        if(items==null)return null;
+        return new Snapshot(items,true,"Showing locally saved notifications",
+            record.updatedAt,0,0,true,true);
+    }
     /** Return a fresh dual-inbox snapshot. A one-endpoint failure is marked partial. */
     public static Snapshot refresh(Context ctx)throws Exception{
         // Do not fetch personal data using another or incomplete login.
@@ -130,7 +140,15 @@ public final class InboxRepository {
         catch(Exception error){warning.append("Older inbox temporarily unavailable. ");}
         try{modern=VRChatApi.notifications(ctx,true,0);}
         catch(Exception error){warning.append("Some notifications temporarily unavailable. ");}
-        return combine(old,modern,warning.toString().trim());
+        Snapshot snapshot=combine(old,modern,warning.toString().trim());
+        // A partial response cannot replace a complete cached inbox: that
+        // would falsely erase messages from the unavailable endpoint.
+        if(!snapshot.partial)try{
+            CompanionCache.saveArray(ctx,"inbox",snapshot.items);
+        }catch(Exception ignored){
+            // Cache write failures cannot interrupt live inbox access.
+        }
+        return snapshot;
     }
     public static boolean include(JSONObject item,String filter){
         if(item==null)return false;
