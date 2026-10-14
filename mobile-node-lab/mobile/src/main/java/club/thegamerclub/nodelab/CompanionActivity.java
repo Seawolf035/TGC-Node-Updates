@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
  * Deployment access is still checked by StaffGate; user-facing labels omit
  * private recruitment implementation and developer-oriented terminology.
  */
-public final class CompanionActivity extends Activity {
+public final class CompanionActivity extends Activity implements QuestBackHost {
     private final ExecutorService gateWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService homeWorker=Executors.newSingleThreadExecutor();
     private boolean homeLoading=false;
@@ -50,6 +50,9 @@ public final class CompanionActivity extends Activity {
     private TextView verificationNotice;
     private LinearLayout page,root;
     private String tab="home";
+    @Override public boolean showQuestBack(){
+        return showingUnlocked && !"home".equals(tab) && StaffGate.unlocked(this);
+    }
     // Quest Back remembers changes between bottom tabs and swipe navigation.
     // Phones keep their preexisting Android Back behavior.
     private final java.util.ArrayDeque<String> questTabs=new java.util.ArrayDeque<>();
@@ -61,6 +64,7 @@ public final class CompanionActivity extends Activity {
         }
         tab=next;
         renderUnlocked();
+        QuestBackApplication.refresh(this);
     }
     @Override public void onBackPressed(){
         if(!QuestDevice.isQuestDevice()){
@@ -393,6 +397,7 @@ public final class CompanionActivity extends Activity {
         if(!StaffGate.unlocked(this)){locked("Checking your staff access...");return;}
         ThemePreferences.apply(this);
         showingUnlocked=true;shell(true);
+        QuestBackApplication.refresh(this);
         switch(tab){
             case "explore":renderExplore();break;
             case "staffdex":renderStaffDex();break;
