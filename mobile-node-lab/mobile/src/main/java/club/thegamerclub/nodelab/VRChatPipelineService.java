@@ -48,6 +48,13 @@ public final class VRChatPipelineService extends Service {
             stopSelf();return START_NOT_STICKY;
         }
         InboxAlertWorker.ensureChannels(this);
+        // A user may switch personal VRChat accounts without stopping the
+        // Companion. Never leave a socket authorized to the previous user.
+        if(socket!=null&&!identity.equals(account())){
+            socket.close(1000,"");
+            socket=null;identity="";
+            connecting=false;
+        }
         startForeground(FOREGROUND_ID,new NotificationCompat.Builder(this,
             InboxAlertWorker.liveChannel())
             .setSmallIcon(R.drawable.tgc_logo)
@@ -93,7 +100,11 @@ public final class VRChatPipelineService extends Service {
                         });
                     }
                     @Override public void onMessage(WebSocket ws,String message){
-                        if(stopping||!user.equals(account()))return;
+                        if(stopping)return;
+                        if(!user.equals(account())){
+                            ws.close(1000,"");
+                            return;
+                        }
                         try{
                             String t=new JSONObject(message).optString("type","");
                             if(t.equals("notification")||t.equals("notification-v2")||
