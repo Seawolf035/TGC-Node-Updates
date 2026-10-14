@@ -365,25 +365,7 @@ public final class VRChatApi {
         requireId("group",id);
         return request("GET","/groups/"+id,cookie(validSession(context)),null,null).object();
     }
-    /** Read-only group search and role lookup for the TGC Staff Directory. */
-    public static JSONArray searchGroups(Context context,String term)throws Exception{
-        if(term==null||term.trim().length()<3||term.trim().length()>80)
-            throw new IllegalArgumentException("Enter a valid group search query");
-        return request("GET","/groups?query="+
-            java.net.URLEncoder.encode(term.trim(),"UTF-8")+"&n=60&offset=0",
-            cookie(validSession(context)),null,null).array();
-    }
-    public static JSONArray groupRoles(Context context,String groupId)throws Exception{
-        requireId("group",groupId);
-        return request("GET","/groups/"+groupId+"/roles",
-            cookie(validSession(context)),null,null).array();
-    }
-    public static JSONObject groupMember(Context context,String groupId,String userId)throws Exception{
-        requireId("group",groupId);requireId("user",userId);
-        return request("GET","/groups/"+groupId+"/members/"+userId,
-            cookie(validSession(context)),null,null).object();
-    }
-        /** Read-only pages of visible group members; user's own membership is under myMember. */
+    /** Read-only pages of visible group members; user's own membership is under myMember. */
     public static JSONArray groupMembers(Context context,String groupId,int offset)throws Exception{
         requireId("group",groupId);
         if(offset<0||offset>100000||offset%60!=0)
