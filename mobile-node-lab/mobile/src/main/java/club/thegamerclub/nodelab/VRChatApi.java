@@ -476,6 +476,20 @@ public final class VRChatApi {
         requireId("user",userId);
         request("POST","/requestInvite/"+userId,cookie(validSession(context)),null,new JSONObject());
     }
+    /**
+     * Send a personal VRChat instance invitation; never a TGC group invite.
+     * Caller must verify live current account instance, friend status and consent.
+     */
+    public static void inviteUserToCurrentInstance(Context context,
+        String userId,String instanceId)throws Exception{
+        requireId("user",userId);
+        if(instanceId==null||instanceId.isEmpty()||instanceId.length()>450||
+           !instanceId.matches("[A-Za-z0-9_~()\\-]+"))
+            throw new IllegalArgumentException("Invalid current VRChat instance");
+        JSONObject body=new JSONObject().put("instanceId",instanceId);
+        request("POST","/invite/"+userId,cookie(validSession(context)),null,body);
+    }
+
     /** Read-only VRChat favorite FRIEND groups; never use local pin list as a substitute. */
     public static JSONArray favoriteFriendGroups(Context context)throws Exception{
         String token=cookie(validSession(context));
