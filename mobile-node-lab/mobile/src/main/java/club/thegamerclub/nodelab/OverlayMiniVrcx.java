@@ -413,7 +413,7 @@ public final class OverlayMiniVrcx {
         }
     }
     private long displayCacheTtl(){
-        if("mini_friends".equals(screen))return 120_000L;
+        if("mini_friends".equals(screen))return 300_000L;
         if("mini_profile".equals(screen))return 15L*60_000L;
         return 10L*60_000L;
     }
