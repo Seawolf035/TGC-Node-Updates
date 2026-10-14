@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** A genuine VRChat-staff-group StaffDex, with user-initiated friend requests. */
+/** Legacy standalone StaffDex route; live staff identity comes from the official TGC roster, not VRChat groups. */
 public final class StaffDirectoryActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private LinearLayout root,content;
