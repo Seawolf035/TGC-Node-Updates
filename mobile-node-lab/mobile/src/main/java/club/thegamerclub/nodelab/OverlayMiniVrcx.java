@@ -49,6 +49,7 @@ public final class OverlayMiniVrcx {
     }
     private final Context ctx;
     private final Host host;
+    private final boolean inlineBack;
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private LinearLayout root;
     private String screen="",target="",kind="";
@@ -121,7 +122,10 @@ public final class OverlayMiniVrcx {
     private String pending="";
 
     private final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
-    public OverlayMiniVrcx(Context context,Host host){ctx=context;this.host=host;}
+    public OverlayMiniVrcx(Context context,Host host){this(context,host,true);}
+    public OverlayMiniVrcx(Context context,Host host,boolean inlineBack){
+        ctx=context;this.host=host;this.inlineBack=inlineBack;
+    }
     private int dp(float n){return CompanionStyle.dp(ctx,n);}
     private TextView text(String s,int n,int color,boolean bold){
         return CompanionStyle.text(ctx,s,n,color,bold);
@@ -193,9 +197,13 @@ public final class OverlayMiniVrcx {
         LinearLayout bar=new LinearLayout(ctx);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         root.addView(bar);
-        Button back=CompanionStyle.button(ctx,"‹ Back",false);
-        bar.addView(back,new LinearLayout.LayoutParams(dp(88),dp(40)));
-        back.setOnClickListener(v->host.back());
+        // The floating panel needs its own Back; Quest Tools has a single
+        // Activity-level Back instead and does not render a duplicate here.
+        if(inlineBack){
+            Button back=CompanionStyle.button(ctx,"‹ Back",false);
+            bar.addView(back,new LinearLayout.LayoutParams(dp(88),dp(40)));
+            back.setOnClickListener(v->host.back());
+        }
         TextView heading=text(title(),18,CompanionStyle.TEXT,true);
         heading.setPadding(dp(9),0,0,0);
         bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
