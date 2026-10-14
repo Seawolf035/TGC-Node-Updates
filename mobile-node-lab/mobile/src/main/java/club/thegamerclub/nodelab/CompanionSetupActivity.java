@@ -146,9 +146,48 @@ public final class CompanionSetupActivity extends StaffProtectedActivity {
             boolean confirmed=CompanionSetupState.fullLoggingAcknowledged(this);
             LinearLayout logging=card(confirmed?"✓ FULL logging instruction acknowledged":
                 "Enable FULL logging in VRChat",
-                "On the Quest, open VRChat → Settings → Debug → Logging and "+
-                "change the logging level to FULL. Do this in VRChat itself "+
-                "before starting the Companion tracker or joining an instance.");
+                "Open VRChat's menu → Settings (gear icon) → Debug (near the bottom "+
+                "of the left settings sidebar). Scroll to the 'Logging' row "+
+                "and use the left/right arrows until the displayed value is 'Full'. "+
+                "Do this BEFORE joining an instance so new joins are recorded.");
+            // Faithful visual aid based on the real Quest VRChat Debug screenshot:
+            // in the left sidebar Debug is selected, and the Logging row has
+            // ◀ Full ▶. Avoid drawing unrelated UI or pretending to read VRChat's setting.
+            LinearLayout screenshotGuide=new LinearLayout(this);
+            screenshotGuide.setOrientation(LinearLayout.VERTICAL);
+            screenshotGuide.setPadding(dp(11),dp(12),dp(11),dp(12));
+            screenshotGuide.setBackground(CompanionStyle.shape(this,
+                0xFF111A35,12,ThemePreferences.royalGold()));
+            LinearLayout.LayoutParams visualSpace=new LinearLayout.LayoutParams(-1,-2);
+            visualSpace.topMargin=dp(12);
+            logging.addView(screenshotGuide,visualSpace);
+            screenshotGuide.addView(text("REFERENCE · VRCHAT SETTINGS → DEBUG",11,
+                0xFFC2D9FF,true));
+            LinearLayout debugLine=new LinearLayout(this);
+            debugLine.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            debugLine.setPadding(dp(10),dp(12),dp(10),dp(12));
+            debugLine.setBackground(CompanionStyle.shape(this,
+                0xFF182B58,8,0xFF638DF5));
+            LinearLayout.LayoutParams debugMargins=new LinearLayout.LayoutParams(-1,-2);
+            debugMargins.topMargin=dp(8);
+            screenshotGuide.addView(debugLine,debugMargins);
+            TextView debug=text("⚙  Debug",14,0xFFFFFFFF,true);
+            debugLine.addView(debug);
+            screenshotGuide.addView(text("Scroll within Debug until you see:",12,
+                0xFFC2D9FF,false));
+            LinearLayout loggingRow=new LinearLayout(this);
+            loggingRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            loggingRow.setPadding(dp(10),dp(11),dp(10),dp(11));
+            loggingRow.setBackground(CompanionStyle.shape(this,
+                0xFF10162F,8,ThemePreferences.royalGold()));
+            screenshotGuide.addView(loggingRow,debugMargins);
+            loggingRow.addView(text("Logging",14,0xFFFFFFFF,true),
+                new LinearLayout.LayoutParams(0,-2,1));
+            loggingRow.addView(text("◀   Full   ▶",15,0xFFE5EFFF,true));
+            screenshotGuide.addView(text(
+                "The value should read Full, as shown in the reference screenshot. "+
+                "Don't select Share Log File or Share All Log Files.",
+                12,0xFFC2D9FF,false));
             logging.addView(text("The Companion cannot see or change this VRChat setting. "+
                 "This confirmation means YOU set it to FULL; it is not an automatic verification.",
                 12,CompanionStyle.GOLD,false));
@@ -172,8 +211,9 @@ public final class CompanionSetupActivity extends StaffProtectedActivity {
             button(folder,granted?"Review log-folder permission":
                 "Choose Documents/Logs folder",true,this::pickFolder);
             if(!QuestSafLogWatcher.isSelected(this)){
-                folder.addView(text("Advanced Quest tracking is currently set to Shizuku. "+
-                    "You may keep that method; Documents/Logs is still recommended.",
+                folder.addView(text("Your tracker currently uses the advanced Shizuku "+
+                    "mode. This guided Quest setup still asks you to grant "+
+                    "Documents/Logs permission for the normal log-folder path.",
                     12,CompanionStyle.MUTED,false));
             }
         }else{
@@ -203,7 +243,7 @@ public final class CompanionSetupActivity extends StaffProtectedActivity {
         feedback=text("",12,CompanionStyle.GOLD,false);finishCard.addView(feedback);
         boolean ready=liveVerified && signed &&
             (!quest||(CompanionSetupState.fullLoggingAcknowledged(this)&&
-                 (QuestSafLogWatcher.hasGrant(this)||!QuestSafLogWatcher.isSelected(this))));
+                QuestSafLogWatcher.hasGrant(this)));
         Button finishButton=CompanionStyle.button(this,"Finish Setup & Open Companion",true);
         finishCard.addView(finishButton,CompanionStyle.buttonParams(this));
         finishButton.setEnabled(ready);
