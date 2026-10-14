@@ -37,6 +37,8 @@ public final class PinnedFriendAlertWorker extends Worker {
                 return Result.success();
             JSONObject session=VRChatSession.load(ctx);
             JSONArray full=VRChatApi.friendSnapshot(ctx);
+            try{CompanionCache.saveArray(ctx,"friends",full);}
+            catch(Exception ignored){}
             ArrayList<PinnedFriendAlerts.OnlineFriend> newlyOnline=
                 PinnedFriendAlerts.observe(ctx,session,full);
             notifyOnline(ctx,newlyOnline);
