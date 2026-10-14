@@ -871,56 +871,107 @@ public final class CompanionActivity extends Activity {
             });
         }
     }
+    /**
+     * One user-facing tracking dashboard. Home's adjacent Tools/Tracking
+     * shortcut navigates here; the dedicated Device & Capture Controls
+     * activity owns only capture start/stop, pairing and OS log permissions.
+     */
     private void renderTracking(){
-        headline("ACTIVITY","Player tracking",QuestDevice.isQuestDevice()?
-            "See who joins and leaves while playing VRChat on your Quest.":
-            "See who joins and leaves while playing VRChat Mobile.");
+        page.setPadding(dp(15),dp(12),dp(15),dp(24));
+        page.addView(CompanionStyle.section(this,"TRACKING"));
+        page.addView(txt("Player tracking",25,CompanionStyle.TEXT,true));
+        space(page,5);
+        page.addView(txt("Capture player joins, review your history and manage the connection.",
+            13,CompanionStyle.MUTED,false));
+        space(page,13);
         renderTrackingSetup();
+
         android.content.SharedPreferences s=getSharedPreferences("tgc_mobile_node_status",0);
-        long heartbeat=s.getLong("service_heartbeat_at",0);
-        boolean active=s.getBoolean("running",false) && heartbeat>0 &&
-            System.currentTimeMillis()-heartbeat<90000;
-        LinearLayout status=card();
-        status.addView(CompanionStyle.chip(this,active?"● Tracking active":"○ Tracking paused",
-            active?CompanionStyle.GOOD:CompanionStyle.GOLD,active?0xFF183D37:0xFF3E3325));
-        space(status,15);
-        status.addView(txt(active?"You're connected.":"Tracking isn't active.",20,CompanionStyle.TEXT,true));
-        space(status,8);
-        status.addView(txt(active?"Your recent encounters are being captured in the background.":
-            "Open tracking controls to start or check the connection.",13,CompanionStyle.MUTED,false));
+        long heartbeat=s.getLong("service_heartbeat_at",0L);
+        boolean active=s.getBoolean("running",false) && heartbeat>0L &&
+            System.currentTimeMillis()-heartbeat<90_000L;
+
+        LinearLayout dashboard=card();
+        dashboard.addView(CompanionStyle.chip(this,
+            active?"● Capturing players":"○ Tracking paused",
+            active?CompanionStyle.GOOD:CompanionStyle.GOLD,
+            active?0xFF183D37:0xFF3E3325));
+        space(dashboard,11);
+        dashboard.addView(txt(active?"Tracking is active":
+            "Tracking is not running",19,CompanionStyle.TEXT,true));
+        space(dashboard,5);
+        dashboard.addView(txt(active?
+            "New VRChat player sightings are being recorded. Review the event history below.":
+            "Use Device & Capture Controls to start tracking or troubleshoot log access.",
+            13,CompanionStyle.MUTED,false));
+        space(dashboard,11);
+        android.widget.Button capture=CompanionStyle.button(this,
+            "Open Device & Capture Controls  ›",true);
+        dashboard.addView(capture,CompanionStyle.buttonParams(this));
+        capture.setOnClickListener(v->needsStaff(()->
+            startActivity(new Intent(this,MobileDeployActivity.class))));
+
         page.addView(CompanionStyle.section(this,"YOUR ACTIVITY"));
         LinearLayout stats=card();
-        twinActions(stats,Integer.toString(s.getInt("captured_total",0)),"Players recorded","◎",
-            ()->openBrowse("encounters"),
-            Integer.toString(s.getInt("uploaded_total",0)),"Records synced","↗",
-            ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
-        action(stats,"◷","Join & leave history","Times, players and instance changes",
-            ()->openPlayerLog("timeline"));
-        action(stats,"◎","Observed player list","People detected in this session",
-            ()->openPlayerLog("current"));
-        action(stats,"⚙","Tracking controls","Start, stop or check your tracking",
-            ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
-        page.addView(CompanionStyle.section(this,"HOW TRACKING WORKS"));
-        LinearLayout explanation=card();
-        boolean questTracking=QuestDevice.isQuestDevice();
-        explanation.addView(txt(questTracking?
-            "Quest: folder permission, no Shizuku required.":
-            "Phone: Shizuku required for player tracking.",
-            16,CompanionStyle.TEXT,true));
-        space(explanation,7);
-        explanation.addView(txt(questTracking?
-            "In Tracking controls, grant read-only access to Documents/Logs and start tracking before joining an instance. No Shizuku installation is needed for the default Quest method.":
-            "On Android phones, player tracking reads protected VRChat Mobile logs through Shizuku. Other Companion features work without Shizuku.",
+        twinActions(stats,Integer.toString(s.getInt("captured_total",0)),
+            "Players recorded","◎",()->openPlayerLog("current"),
+            Integer.toString(s.getInt("uploaded_total",0)),
+            "Records synced","↗",()->openPlayerLog("timeline"));
+        exploreLink(stats,"◷","Join & leave history",
+            "Review events and instance changes",()->openPlayerLog("timeline"));
+        exploreLink(stats,"◎","Observed player list",
+            "Browse players captured on this device",()->openPlayerLog("current"));
+
+        page.addView(CompanionStyle.section(this,"SETUP & HELP"));
+        LinearLayout help=card();
+        boolean quest=QuestDevice.isQuestDevice();
+        help.addView(txt(quest?
+            "Quest: Documents/Logs folder access":
+            "Phone: Shizuku for VRChat log access",16,CompanionStyle.TEXT,true));
+        space(help,6);
+        help.addView(txt(quest?
+            "Quest tracking uses read-only VRChat log-folder access by default.":
+            "Phone tracking needs Shizuku access to the protected VRChat Mobile logs.",
             13,CompanionStyle.MUTED,false));
-        space(explanation,8);
-        explanation.addView(txt(
-            "Join sightings can help the TGC network; complete raw VRChat logs are never uploaded.",
-            13,CompanionStyle.MUTED,false));
-        if(questTracking){
-            space(explanation,8);
-            explanation.addView(txt(
-                "If folder access fails, open Tracking controls → Advanced tools → Alternative Quest method to enable the Shizuku fallback.",
-                12,CompanionStyle.ACCENT,false));
+        space(help,8);
+        exploreLink(help,trackingInfoExpanded?"⌃":"ⓘ",
+            trackingInfoExpanded?"Hide details":"How tracking works",
+            "Instructions, privacy and alternative methods",
+            ()->{trackingInfoExpanded=!trackingInfoExpanded;renderUnlocked();});
+        if(trackingInfoExpanded){
+            help.addView(txt(
+                "Set VRChat → Settings → Debug → Logging to FULL before joining an instance. "+
+                "The Companion cannot change this VRChat setting, and joins from "+
+                "before the tracker started are not replayed.",
+                13,CompanionStyle.MUTED,false));
+            space(help,8);
+            help.addView(txt(quest?
+                "Quest: select Documents/Logs in Device & Capture Controls. "+
+                "If read-only folder tracking fails, open the controls' Advanced "+
+                "tools to select the Shizuku fallback.":
+                "Android phone: grant Shizuku permission through Device & Capture "+
+                "Controls. Other Companion features work without Shizuku.",
+                13,CompanionStyle.MUTED,false));
+            space(help,8);
+            help.addView(txt(
+                "Selected player sightings may assist the TGC invite network. "+
+                "Complete raw VRChat logs are not uploaded.",
+                12,CompanionStyle.MUTED,false));
+        }
+
+        page.addView(CompanionStyle.section(this,"TROUBLESHOOTING"));
+        LinearLayout diagnostic=card();
+        exploreLink(diagnostic,"⚙",advanced?"Hide technical tools":
+            "Show technical tools","For connection and capture troubleshooting",
+            ()->{advanced=!advanced;renderUnlocked();});
+        if(advanced){
+            exploreLink(diagnostic,"◉","Device & connection details",
+                "Tracking status, permissions and Relay information",
+                ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class)
+                    .putExtra("advanced",true))));
+            exploreLink(diagnostic,"⌘","Advanced tracking diagnostics",
+                "Low-level logs and tracking troubleshooting",
+                ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
         }
     }
     private void renderSettings(){
@@ -929,7 +980,7 @@ public final class CompanionActivity extends Activity {
         LinearLayout account=card();
         action(account,"◉","My VRChat account","Profile, sign-in and sign-out",
             ()->needsStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
-        action(account,"♜","Staff access","View your linked device",
+        action(account,"♜","Device connection","Staff deployment and linked-device details",
             ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
         action(account,"♢","Verification code",
             "Find and copy your TGC or Cult invite code",this::openInviteCode);
@@ -1100,17 +1151,6 @@ public final class CompanionActivity extends Activity {
             "Review the complete proprietary software license and staff agreement. "+
             "Viewing it again will not alter your recorded acceptance.",
             12,CompanionStyle.MUTED,false));
-        page.addView(CompanionStyle.section(this,"MORE"));
-        LinearLayout extra=card();
-        action(extra,"⚙",advanced?"Hide advanced tools":"Advanced tools",
-            "Optional diagnostics for troubleshooting",()->{advanced=!advanced;renderUnlocked();});
-        if(advanced){
-            action(extra,"◉","Connection details","Detailed tracking and sync information",
-                ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class)
-                    .putExtra("advanced",true))));
-            action(extra,"⌘","Tracking diagnostics","Troubleshooting tools",
-                ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
-        }
     }
     private void togglePinnedFriendAlerts(){
         if(!StaffGate.unlocked(this)){revalidate();return;}
