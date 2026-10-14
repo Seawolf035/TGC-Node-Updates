@@ -47,7 +47,21 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.6"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.7"));
+        highlight(body,"Group and event inbox",
+            "Groups, group announcements and group events are now distinct "+
+            "inbox categories. Open group details directly from a notice, "+
+            "including inside Floating and Quest Tools.");
+        highlight(body,"More noticeable Android alerts",
+            "Invitations, groups, events, friends and pinned-friend alerts "+
+            "use new sound-and-vibration-capable notification channels. "+
+            "Use Settings to check your phone's channel permissions "+
+            "and send yourself a test alert.");
+        highlight(body,"Optional LIVE VRChat notifications",
+            "Opt in from Settings to maintain a visible foreground WebSocket "+
+            "connection for much faster updates when VRChat sends an event. "+
+            "Scheduled background checks remain as a fallback.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.6"));
         highlight(body,"Linking now opens the setup guide",
             "After linking your phone or Quest, the Companion verifies staff "+
             "access, requests your agreement acceptance when needed, and "+
@@ -89,14 +103,6 @@ public final class WhatsNewActivity extends Activity {
             "Removed redundant OSC introduction, status-color explanation and "+
             "Tracking help cards. Tracking controls and recent encounters "+
             "now live in the dedicated Tracking tab.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.2"));
-        highlight(body,"Quest Tools navigation, cleaned up",
-            "The four main Quest Tools tabs now offer a clear Main Menu action "+
-            "that opens Staff Companion Home. Nested pages have a readable "+
-            "single Back action, including the shortcut editor.");
-        highlight(body,"More room on Quest Tools Home",
-            "Removed the preview-only notice and duplicated Companion exit "+
-            "so your quick actions and VRChat controls are immediately visible.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
