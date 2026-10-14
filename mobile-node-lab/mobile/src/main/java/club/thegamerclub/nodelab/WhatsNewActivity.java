@@ -47,7 +47,15 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.0"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.1"));
+        highlight(body,"VRChat login status corrected",
+            "Your account now distinguishes saved sessions from a login verified "+
+            "against VRChat. Expired cookies and temporary connection errors "+
+            "are clearly labeled without silently erasing your saved account.");
+        highlight(body,"Quest phone preview recovery",
+            "After reauthenticating your VRChat account, returning to the "+
+            "creator-only phone preview automatically retries identity verification.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.0"));
         highlight(body,"Quest & Floating Tools — first overhaul",
             "Cleaner Quick Actions and Social layouts on both devices, "+
             "a single Back control on nested Quest pages, and no Back on Home.");
