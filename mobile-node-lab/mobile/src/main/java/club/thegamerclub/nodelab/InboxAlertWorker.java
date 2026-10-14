@@ -1,6 +1,5 @@
 package club.thegamerclub.nodelab;
 
-import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -12,102 +11,147 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-import org.json.JSONArray;
-import java.util.concurrent.TimeUnit;
+import java.util.Locale;
 
 /**
- * User-opted-in, battery-conscious VRChat inbox checks.
- * Never starts a foreground Node, reads Shizuku, or silently changes invites.
+ * Unified REST catch-up delivery for both periodic WorkManager checks and
+ * the optional low-latency VRChat WebSocket service. It never changes invites.
+ * Android notification categories remain user-adjustable in system settings.
  */
 public final class InboxAlertWorker extends Worker {
-    private static final String CHANNEL="tgc_personal_vrc_inbox";
-    private static final int NOTICE=321;
-    public InboxAlertWorker(@NonNull Context context,@NonNull WorkerParameters params){
-        super(context,params);
+    private static final String GROUP="tgc_vrchat_personal_inbox_v3";
+    private static final String[] CHANNELS={
+        "tgc_inbox_invites_v3","tgc_inbox_requests_v3",
+        "tgc_inbox_friends_v3","tgc_inbox_groups_v3",
+        "tgc_inbox_events_v3","tgc_inbox_other_v3"
+    };
+    private static final String[] NAMES={
+        "VRChat · Invitations","VRChat · Invite requests",
+        "VRChat · Friend updates","VRChat · Group notifications",
+        "VRChat · Group events","VRChat · Other notifications"
+    };
+    private static final String SUMMARY="tgc_inbox_summary_v3";
+    private static final String LIVE="tgc_vrchat_live_connection_v1";
+    private static final int SUMMARY_ID=413;
+    public InboxAlertWorker(@NonNull Context ctx,@NonNull WorkerParameters params){
+        super(ctx,params);
     }
+    public static void ensureChannels(Context ctx){
+        if(Build.VERSION.SDK_INT<26)return;
+        NotificationManager manager=(NotificationManager)
+            ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if(manager==null)return;
+        // Fresh v3 IDs: existing v2 IMPORTANCE_DEFAULT channels are immutable
+        // and cannot be turned into heads-up alerts by recreating them.
+        for(int i=0;i<CHANNELS.length;i++){
+            NotificationChannel ch=new NotificationChannel(
+                CHANNELS[i],NAMES[i],NotificationManager.IMPORTANCE_HIGH);
+            ch.enableVibration(true);
+            ch.enableLights(true);
+            ch.setShowBadge(true);
+            ch.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+            ch.setDescription("High-visibility personal VRChat "+
+                NAMES[i].substring(9).toLowerCase(Locale.US)+
+                ". Sound, vibration and pop-ups can be adjusted in Android Settings.");
+            manager.createNotificationChannel(ch);
+        }
+        NotificationChannel summary=new NotificationChannel(SUMMARY,
+            "VRChat · Inbox summary",NotificationManager.IMPORTANCE_LOW);
+        summary.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+        manager.createNotificationChannel(summary);
+        NotificationChannel service=new NotificationChannel(LIVE,
+            "VRChat · Live connection",NotificationManager.IMPORTANCE_LOW);
+        service.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+        manager.createNotificationChannel(service);
+    }
+    public static String liveChannel(){return LIVE;}
     @NonNull @Override public Result doWork(){
         Context ctx=getApplicationContext();
         if(!InboxAlertSettings.active(ctx))return Result.success();
         try{
-            // A WorkManager process can start cold. It MUST validate staff access
-            // online rather than relying on stored deployment credentials.
             if(!StaffGate.unlocked(ctx))StaffGate.verifyOnline(ctx);
             if(!StaffGate.unlocked(ctx))return Result.retry();
-            InboxRepository.Snapshot snapshot=InboxRepository.refresh(ctx);
-            // Each available endpoint has its own first-use baseline, so a
-            // persistent VRChat API endpoint error doesn't disable alerts.
-            InboxAlertSettings.Changes changes=InboxAlertSettings.remember(ctx,snapshot);
-            if(changes.newUnread>0 && InboxAlertSettings.active(ctx))notify(ctx,changes);
+            refreshAndNotify(ctx);
             return Result.success();
         }catch(SecurityException e){
-            // A missing personal session is not a retryable staff credential.
             return Result.success();
-        }catch(Exception e){
-            return Result.retry();
-        }
+        }catch(Exception e){return Result.retry();}
     }
-    private static void notify(Context ctx,InboxAlertSettings.Changes changes){
+    /** Called on a background thread only; shared first-use baselines dedupe. */
+    public static synchronized void refreshAndNotify(Context ctx)throws Exception{
+        if(!InboxAlertSettings.active(ctx)||!StaffGate.unlocked(ctx))return;
+        InboxRepository.Snapshot snapshot=InboxRepository.refresh(ctx);
+        InboxAlertSettings.Changes changes=InboxAlertSettings.remember(ctx,snapshot);
+        if(changes.newUnread>0&&InboxAlertSettings.active(ctx))
+            notifyChanges(ctx,changes);
+    }
+    private static PendingIntent open(Context ctx,String filter,int id){
+        Intent intent=new Intent(ctx,VRChatInboxActivity.class)
+            .putExtra("filter",filter)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        return PendingIntent.getActivity(ctx,id,intent,
+            PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
+    private static void post(Context ctx,NotificationManager manager,
+        int category,int count,String filter){
+        if(count<=0)return;
+        String noun=NAMES[category].substring(9).toLowerCase(Locale.US);
+        NotificationCompat.Builder builder=new NotificationCompat.Builder(ctx,CHANNELS[category])
+            .setSmallIcon(R.drawable.tgc_logo)
+            .setContentTitle(count+" new VRChat "+noun)
+            .setContentText("Open your Companion inbox to review")
+            .setContentIntent(open(ctx,filter,430+category))
+            .setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(Notification.DEFAULT_ALL)
+            .setGroup(GROUP)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setOnlyAlertOnce(false);
+        manager.notify(430+category,builder.build());
+    }
+    private static void notifyChanges(Context ctx,InboxAlertSettings.Changes change){
         NotificationManager manager=(NotificationManager)
             ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if(manager==null||!InboxAlertSettings.active(ctx))return;
-        int activeTypes=0;
-        if(changes.invites>0){postCategory(ctx,manager,"Invitations",changes.invites,
-            "invite","tgc_inbox_invites_v2",322);activeTypes++;}
-        if(changes.inviteRequests>0){postCategory(ctx,manager,"Invite requests",
-            changes.inviteRequests,"requests","tgc_inbox_requests_v2",323);activeTypes++;}
-        if(changes.friends>0){postCategory(ctx,manager,"Friend updates",
-            changes.friends,"friend","tgc_inbox_friends_v2",324);activeTypes++;}
-        if(changes.other>0){postCategory(ctx,manager,"Other notifications",
-            changes.other,"all","tgc_inbox_other_v2",325);activeTypes++;}
-        if(activeTypes>1){
-            if(Build.VERSION.SDK_INT>=26){
-                NotificationChannel summaryChannel=new NotificationChannel(
-                    "tgc_vrchat_inbox_summary_v2","VRChat · Inbox summary",
-                    NotificationManager.IMPORTANCE_LOW);
-                summaryChannel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-                manager.createNotificationChannel(summaryChannel);
-            }
-            Intent launch=new Intent(ctx,VRChatInboxActivity.class)
-                .putExtra("filter","unread")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            PendingIntent open=PendingIntent.getActivity(ctx,321,launch,
-                PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-            NotificationCompat.Builder summary=new NotificationCompat.Builder(ctx,
-                "tgc_vrchat_inbox_summary_v2")
+        ensureChannels(ctx);
+        int[] counts={change.invites,change.inviteRequests,change.friends,
+            change.groups,change.events,change.other};
+        String[] filters={"invite","requests","friend","groups","events","other"};
+        int categories=0;
+        for(int i=0;i<counts.length;i++){
+            if(counts[i]>0){post(ctx,manager,i,counts[i],filters[i]);categories++;}
+        }
+        if(categories>1){
+            NotificationCompat.Builder summary=new NotificationCompat.Builder(ctx,SUMMARY)
                 .setSmallIcon(R.drawable.tgc_logo)
-                .setContentTitle(changes.newUnread+" new VRChat notifications")
-                .setContentText("Invites, requests and friend updates")
-                .setContentIntent(open)
+                .setContentTitle(change.newUnread+" new VRChat notifications")
+                .setContentText("Invites, groups, friends and more")
+                .setContentIntent(open(ctx,"unread",SUMMARY_ID))
                 .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-                .setGroup("tgc_vrchat_inbox").setGroupSummary(true)
-                .setAutoCancel(true).setOnlyAlertOnce(true);
-            manager.notify(321,summary.build());
+                .setGroup(GROUP).setGroupSummary(true)
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+                .setOnlyAlertOnce(true);
+            manager.notify(SUMMARY_ID,summary.build());
         }
     }
-    private static void postCategory(Context ctx,NotificationManager manager,
-        String heading,int count,String filter,String channel,int notificationId){
-        if(Build.VERSION.SDK_INT>=26){
-            NotificationChannel ch=new NotificationChannel(channel,
-                "VRChat · "+heading,NotificationManager.IMPORTANCE_DEFAULT);
-            ch.setDescription("Opt-in VRChat "+heading.toLowerCase(java.util.Locale.US)+
-                " from The Gamer Club Companion");
-            ch.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-            manager.createNotificationChannel(ch);
-        }
-        Intent launch=new Intent(ctx,VRChatInboxActivity.class)
-            .putExtra("filter",filter)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent open=PendingIntent.getActivity(ctx,notificationId,launch,
-            PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        NotificationCompat.Builder notice=new NotificationCompat.Builder(ctx,channel)
+    /** Explicitly user-initiated diagnostic, not a fabricated VRChat event. */
+    public static void sendTest(Context ctx){
+        if(!InboxAlertSettings.active(ctx))return;
+        ensureChannels(ctx);
+        NotificationManager manager=(NotificationManager)
+            ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if(manager==null)return;
+        NotificationCompat.Builder n=new NotificationCompat.Builder(ctx,CHANNELS[3])
             .setSmallIcon(R.drawable.tgc_logo)
-            .setContentTitle(count+" new "+heading.toLowerCase(java.util.Locale.US))
-            .setContentText("Open your personal VRChat inbox")
-            .setContentIntent(open).setAutoCancel(true)
-            .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setGroup("tgc_vrchat_inbox");
-        if(InboxAlertSettings.active(ctx))manager.notify(notificationId,notice.build());
+            .setContentTitle("Companion notification test")
+            .setContentText("If you heard or saw this, group alert delivery is enabled.")
+            .setContentIntent(open(ctx,"groups",460))
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(Notification.DEFAULT_ALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE);
+        manager.notify(460,n.build());
     }
 }
