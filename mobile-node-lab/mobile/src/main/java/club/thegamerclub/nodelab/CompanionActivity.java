@@ -992,9 +992,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             linked?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
         space(dashboard,7);
         dashboard.addView(txt("Recorded: "+s.getInt("captured_total",0)+
-            "  ·  Synced: "+s.getInt("uploaded_total",0)+
-            "  ·  Pending: "+Math.max(0,s.getInt("captured_total",0)-
-                s.getInt("uploaded_total",0)),13,CompanionStyle.MUTED,false));
+            "  ·  Synced: "+s.getInt("uploaded_total",0),
+            13,CompanionStyle.MUTED,false));
         space(dashboard,9);
         android.widget.Button start=CompanionStyle.button(this,"Start tracking",true);
         dashboard.addView(start,CompanionStyle.buttonParams(this));
