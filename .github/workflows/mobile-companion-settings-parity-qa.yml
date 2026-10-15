@@ -90,7 +90,7 @@ jobs:
           assert 'MobileDeployActivity.startFromDashboard(this)' in main
           assert 'public static boolean startFromDashboard(Activity activity)' in deploy
           assert 'Start tracking' in main and 'Stop tracking' in main and 'Refresh status' in main
-          assert main.count('Check for updates')==1
+          assert main.count('action(app,"↓","Check for updates"')==1
           assert main.count('COMPANION APP UPDATES')==0
           assert 'APP UPDATES' in main
           assert 'int addedPercent=t>0?(int)Math.round(100.0*c/t):0;' in dex
