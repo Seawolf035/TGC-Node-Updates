@@ -985,7 +985,9 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             "Start capture here. Advanced permissions and troubleshooting remain available below.",
             13,CompanionStyle.MUTED,false));
         space(dashboard,11);
-        boolean linked=MobileCredentials.load(this)!=null;
+        boolean linked=false;
+        try{linked=MobileCredentials.load(this)!=null;}
+        catch(Exception e){linked=false;}
         dashboard.addView(txt(linked?"● Device linked":"○ Device not linked",13,
             linked?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
         space(dashboard,7);
