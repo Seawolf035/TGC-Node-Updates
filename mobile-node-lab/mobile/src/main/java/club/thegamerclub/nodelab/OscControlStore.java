@@ -202,11 +202,16 @@ public final class OscControlStore {
     }
     /** When enabled, excludes BOTH default status and custom personal chatboxes. */
     public static boolean officialOnly(Context ctx){
+        // A delegate must never inherit an obsolete local official-only
+        // preference; their personal OSC must remain functional.
+        if(StaffGate.delegated(ctx))return false;
         return prefs(ctx).getBoolean(key(ctx,"official_only_chatboxes"),false);
     }
     public static void setOfficialOnly(Context ctx,boolean on){
         if(!StaffGate.unlocked(ctx))
             throw new SecurityException("Verified staff access required.");
+        if(on&&!StaffGate.officialOscTagsAllowed(ctx))
+            throw new SecurityException("Official TGC staff/rank OSC is not available to delegated users.");
         if(on&&TgcOfficialChatboxes.selectedEligible(ctx).isEmpty())
             throw new IllegalArgumentException(
                 "Select an unlocked official TGC chatbox tag first.");
