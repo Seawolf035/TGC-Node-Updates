@@ -41,6 +41,16 @@ public final class CompanionUpdateAlerts {
             ContextCompat.checkSelfPermission(ctx,Manifest.permission.POST_NOTIFICATIONS)
                 == PackageManager.PERMISSION_GRANTED;
     }
+    public static boolean notificationsAllowed(Context ctx){
+        if(!permission(ctx))return false;
+        NotificationManager nm=(NotificationManager)ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if(nm==null||!nm.areNotificationsEnabled())return false;
+        if(Build.VERSION.SDK_INT>=26){
+            NotificationChannel channel=nm.getNotificationChannel(CHANNEL);
+            if(channel!=null&&channel.getImportance()==NotificationManager.IMPORTANCE_NONE)return false;
+        }
+        return true;
+    }
     public static void setEnabled(Context ctx,boolean on){
         ctx.getSharedPreferences(PREF,0).edit().putBoolean("enabled",on).apply();
         if(!on){
@@ -77,6 +87,13 @@ public final class CompanionUpdateAlerts {
             new PeriodicWorkRequest.Builder(CompanionUpdateWorker.class,6,TimeUnit.HOURS)
                 .setConstraints(online()).build());
     }
+    public static void checkNow(Context ctx){
+        if(!enabled(ctx))return;
+        WorkManager.getInstance(ctx.getApplicationContext()).enqueueUniqueWork(
+            IMMEDIATE,ExistingWorkPolicy.REPLACE,
+            new OneTimeWorkRequest.Builder(CompanionUpdateWorker.class)
+                .setConstraints(online()).build());
+    }
     public static void checkOnOpen(Context ctx){
         if(!enabled(ctx))return;
         long now=System.currentTimeMillis();
@@ -105,8 +122,11 @@ public final class CompanionUpdateAlerts {
             if(nm!=null)nm.cancel(NOTIFICATION_ID);
             return;
         }
-        if(!permission(ctx)||nm==null)return;
-        if(available<=pref.getInt("last_notified_code",0))return;
+        if(!notificationsAllowed(ctx)||nm==null)return;
+        // A previously dismissed notification can be reissued on a later app open.
+        long previousAt=pref.getLong("last_notified_at",0L);
+        if(available<=pref.getInt("last_notified_code",0) &&
+            System.currentTimeMillis()-previousAt<24*60*60_000L)return;
         ensureChannel(ctx);
         Intent target=new Intent(ctx,MobileUpdaterActivity.class)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -124,6 +144,7 @@ public final class CompanionUpdateAlerts {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .build();
         nm.notify(NOTIFICATION_ID,notice);
-        pref.edit().putInt("last_notified_code",available).apply();
+        pref.edit().putInt("last_notified_code",available)
+            .putLong("last_notified_at",System.currentTimeMillis()).apply();
     }
 }

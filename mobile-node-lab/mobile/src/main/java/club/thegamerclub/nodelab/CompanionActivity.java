@@ -344,6 +344,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         main.removeCallbacks(refreshHome);
         main.postDelayed(refreshHome,2_000L);
         TrackingAutoStart.maybeStart(this);
+        CompanionUpdateAlerts.checkOnOpen(this);
     }
     @Override protected void onPause(){
         foreground=false;
@@ -1335,7 +1336,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         settingsBody.addView(CompanionStyle.section(this,"APP UPDATES"));
         LinearLayout updateAlerts=settingsChild(settingsBody);
         boolean updateEnabled=CompanionUpdateAlerts.enabled(this);
-        boolean updateAllowed=CompanionUpdateAlerts.permission(this);
+        boolean updateAllowed=CompanionUpdateAlerts.notificationsAllowed(this);
         updateAlerts.addView(txt(
             updateEnabled?(updateAllowed?
                 "● Automatic update alerts enabled":"○ Allow Android notifications for update alerts"):
@@ -1350,9 +1351,13 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             "Independent of VRChat inbox alert settings",
             this::toggleCompanionUpdateAlerts);
         if(updateEnabled&&!updateAllowed)
-            action(updateAlerts,"↗","Allow Android update notifications",
-                "Grant system permission to alert you about new releases",
-                this::requestCompanionUpdatePermission);
+            action(updateAlerts,"↗","Fix Android update notifications",
+                "Check app permission and the Companion updates notification channel",
+                this::openCompanionUpdateNotificationSettings);
+        action(updateAlerts,"↻","Check for update alerts now",
+            "Run a fresh background update check",
+            ()->{CompanionUpdateAlerts.checkNow(this);
+                Toast.makeText(this,"Checking for official updates…",Toast.LENGTH_SHORT).show();});
         settingsBody.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=settingsChild(settingsBody);
         action(app,"↓","Check for updates","Keep your Companion up to date",
@@ -1502,6 +1507,18 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             else CompanionUpdateAlerts.checkOnOpen(this);
         }
         renderUnlocked();
+    }
+    private void openCompanionUpdateNotificationSettings(){
+        if(android.os.Build.VERSION.SDK_INT>=33 &&
+            !CompanionUpdateAlerts.permission(this)){
+            requestCompanionUpdatePermission();return;
+        }
+        try{
+            Intent settings=new Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS);
+            settings.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName());
+            settings.putExtra(android.provider.Settings.EXTRA_CHANNEL_ID,"tgc_companion_updates_v1");
+            startActivity(settings);
+        }catch(Exception e){openAndroidNotificationSettings();}
     }
     private void requestCompanionUpdatePermission(){
         if(android.os.Build.VERSION.SDK_INT>=33 &&
