@@ -48,67 +48,35 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
         body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.8"));
-        highlight(body,"Full Companion access for one trusted non-staff user",
-            "An owner-approved individual can now use regular Companion "+
-            "features without a staff rank. Their personal VRChat ID is "+
-            "bound to their Relay delegation; group kick permissions do not "+
-            "grant Companion access to anyone else.");
-        highlight(body,"Exclusive staff and rank OSC remain protected",
-            "No official TGC staff, Royalty or All Staff OSC tags for delegated "+
-            "accounts. Owner-only previews remain exclusive, while personal "+
-            "OSC tools and Theme Studio still work.");
-        highlight(body,"New Companion update notifications",
-            "Get a separate Android alert when a newer signed Companion "+
-            "version becomes available. Scheduled checks, one alert per "+
-            "version and a tap-to-update flow work for both staff and "+
-            "approved non-staff users.");
+        highlight(body,"Automatic Companion update alerts",
+            "Get an Android notification when a newer Companion version is "+
+            "available. Tap to open the built-in verified updater. Alerts "+
+            "can be controlled separately from VRChat notifications.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.7"));
-        highlight(body,"Group and event inbox",
-            "Groups, group announcements and group events are now distinct "+
-            "inbox categories. Open group details directly from a notice, "+
-            "including inside Floating and Quest Tools.");
-        highlight(body,"More noticeable Android alerts",
-            "Invitations, groups, events, friends and pinned-friend alerts "+
-            "use new sound-and-vibration-capable notification channels. "+
-            "Use Settings to check your phone's channel permissions "+
-            "and send yourself a test alert.");
-        highlight(body,"Optional LIVE VRChat notifications",
-            "Opt in from Settings to maintain a visible foreground WebSocket "+
-            "connection for much faster updates when VRChat sends an event. "+
-            "Scheduled background checks remain as a fallback.");
+        highlight(body,"Group notifications and event inbox",
+            "New Groups and Events inbox filters, including group "+
+            "announcements and group-detail shortcuts in Floating and Quest Tools.");
+        highlight(body,"Faster, more noticeable VRChat alerts",
+            "Optional live VRChat notifications for quicker updates, "+
+            "plus improved Android sound, vibration and notification settings.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.6"));
-        highlight(body,"Linking now opens the setup guide",
-            "After linking your phone or Quest, the Companion verifies staff "+
-            "access, requests your agreement acceptance when needed, and "+
-            "opens guided setup instead of leaving you in Tracking Controls. "+
-            "Finishing setup returns to Companion Home.");
-        highlight(body,"Shorter release history",
-            "What's New now shows the five latest patch versions. Older "+
-            "source and release history remain available through GitHub.");
+        highlight(body,"Fixed device linking and guided setup",
+            "After linking a phone or Quest, the Companion now opens "+
+            "the guided setup instead of leaving you in Tracking Controls.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.5"));
-        highlight(body,"Friends sorted like VRCX",
-            "VRChat favorite friends first, then shared visible instances, "+
-            "solo known instances, and private/unknown locations last. "+
-            "Updated across Friends & Activity, full Companion, and Floating/Quest Tools.");
-        highlight(body,"Improved account checks",
-            "Less frequent VRChat validation requests, more careful expired "+
-            "session confirmation, and safer preservation of stored login data.");
+        highlight(body,"Smarter friend sorting",
+            "Favorite friends first, then shared instances and visible "+
+            "locations, with private or hidden locations last.");
+        highlight(body,"More reliable VRChat login sessions",
+            "Reduced unnecessary session checks and fixed cases where "+
+            "temporary API errors appeared as expired logins.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.4"));
-        highlight(body,"Faster, local-first Companion",
-            "Previously viewed friends, favorite categories, profiles and inbox data "+
-            "can load from an encrypted local cache, then refresh from VRChat. "+
-            "Saved content stays account-specific; live actions always check VRChat.");
-        highlight(body,"VRChat favorite friends first",
-            "Your actual VRChat favorite friends appear ahead of other friends "+
-            "in the Floating/Quest social view and full Companion lists. "+
-            "Companion pinned shortcuts remain a separate feature.");
-        highlight(body,"Invite-request assistant · optional",
-            "In Settings you can opt in to automatically invite Companion-pinned "+
-            "friends who send a new VRChat invite request while you are in a "+
-            "valid world instance. Off by default; never changes TGC group invites.");
-        highlight(body,"Improved notifications",
-            "Separate invitation, invite-request and friend-update alerts, "+
-            "including a dedicated Requests filter and saved inbox display.");
+        highlight(body,"Faster VRChat browsing",
+            "Previously loaded friends, avatars and inbox data can appear "+
+            "from encrypted local cache while fresh results are retrieved.");
+        highlight(body,"Optional invite-request assistant",
+            "Choose to automatically send an invitation when a "+
+            "Companion-pinned friend requests to join your current instance.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
