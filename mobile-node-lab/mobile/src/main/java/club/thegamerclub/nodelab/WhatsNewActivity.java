@@ -47,7 +47,15 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.8"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.9"));
+        highlight(body,"Create VRChat instances from the Companion",
+            "Create Public, Friends, Invite or Group instances with region "+
+            "and group access settings. After creation, VRChat sends an "+
+            "invitation to your own account automatically.");
+        highlight(body,"Retry invitations without creating again",
+            "If VRChat creates your instance but the self-invite fails, "+
+            "retry the invitation without opening a duplicate instance.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.8"));
         highlight(body,"Automatic Companion update alerts",
             "Get an Android notification when a newer Companion version is "+
             "available. Tap to open the built-in verified updater. Alerts "+
@@ -70,13 +78,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"More reliable VRChat login sessions",
             "Reduced unnecessary session checks and fixed cases where "+
             "temporary API errors appeared as expired logins.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.4"));
-        highlight(body,"Faster VRChat browsing",
-            "Previously loaded friends, avatars and inbox data can appear "+
-            "from encrypted local cache while fresh results are retrieved.");
-        highlight(body,"Optional invite-request assistant",
-            "Choose to automatically send an invitation when a "+
-            "Companion-pinned friend requests to join your current instance.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
