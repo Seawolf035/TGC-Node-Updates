@@ -52,6 +52,7 @@
  <activity android:name=".PresenceActivity" android:exported="false"/>
  <activity android:name=".VRChatNotesActivity" android:exported="false"/>
  <activity android:name=".VRChatInboxActivity" android:exported="false"/>
+ <activity android:name=".VRChatInstanceCreateActivity" android:exported="false"/>
  <activity android:name=".VRChatInstanceActivity" android:exported="false"/>
  <activity android:name=".VRChatGroupToolsActivity" android:exported="false"/>
  <activity android:name=".VRChatUserGroupsActivity" android:exported="false"/>
