@@ -1,0 +1,59 @@
+name: Companion Settings and Friends parity QA (nonpublishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.10-settings-parity-profiles
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-settings-parity-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert shared Friends data and no removed settings controls
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          browse=(p/"VRChatBrowseActivity.java").read_text()
+          settings=(p/"CompanionActivity.java").read_text()
+          assert 'VRChatApi.friendSnapshot(this)' in browse
+          assert 'CompanionCache.saveArray(this,"friends",all)' in browse
+          assert 'pinnedOnly' in browse
+          assert 'FriendPinStore.setPinned' in browse
+          assert 'item.optString("location","")' in browse
+          assert 'settingsPanel("account"' in settings
+          assert 'settingsPanel("notifications"' in settings
+          assert 'settingsPanel("friends"' in settings
+          assert 'settingsPanel("tools"' in settings
+          assert 'settingsPanel("app"' in settings
+          for method in ('toggleCompanionUpdateAlerts','toggleInboxAlerts',
+               'toggleLiveInbox','toggleAutoInviteRequests',
+               'togglePinnedFriendAlerts','toggleOverlay',
+               'chooseOverlaySize','toggleOverlayRecovery',
+               'showBackgroundHealth','openAndroidNotificationSettings'):
+            assert 'this::'+method in settings or 'this::'+method+';' in settings or method+'(' in settings,method
+          assert "versionCode 83" in Path('mobile-node-lab/mobile/build.gradle').read_text()
+          print('Settings actions preserved; base Friends parity and current signed baseline retained.')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile entire Android app without publishing or signing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
