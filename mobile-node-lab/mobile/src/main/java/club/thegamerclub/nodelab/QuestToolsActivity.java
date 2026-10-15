@@ -610,17 +610,22 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             "Resume Live":"Pause Live",false,()->
                 startOsc(QuestOscService.PAUSE_LIVE,0));
         pauseButton.setVisibility(QuestOscService.live()?View.VISIBLE:View.GONE);
-        Button exclusive=button(live,"Official TGC tags only: "+(safeOfficial()?"ON":"OFF"),
-            false,()->{});
-        exclusive.setOnClickListener(v->{
-            try{
-                boolean next=!OscControlStore.officialOnly(this);
-                OscControlStore.setOfficialOnly(this,next);
-                exclusive.setText("Official TGC tags only: "+(next?"ON":"OFF"));
-            }catch(Exception e){toast(e.getMessage());}
-        });
-        pair(live,"Configure status","mini_osc_status",
-            "Official rank tags","mini_osc_tags");
+        if(!StaffGate.delegated(this)){
+            Button exclusive=button(live,"Official TGC tags only: "+(safeOfficial()?"ON":"OFF"),
+                false,()->{});
+            exclusive.setOnClickListener(v->{
+                try{
+                    boolean next=!OscControlStore.officialOnly(this);
+                    OscControlStore.setOfficialOnly(this,next);
+                    exclusive.setText("Official TGC tags only: "+(next?"ON":"OFF"));
+                }catch(Exception e){toast(e.getMessage());}
+            });
+            pair(live,"Configure status","mini_osc_status",
+                "Official rank tags","mini_osc_tags");
+        }else{
+            button(live,"Configure personal status",false,()->
+                switchMini("mini_osc_status"));
+        }
         pair(live,"Rotation","mini_osc_rotation","Saved phrases","mini_osc_presets");
 
         LinearLayout mic=card("PUSH-TO-TALK VIA OSC");
