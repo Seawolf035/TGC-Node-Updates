@@ -343,6 +343,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         main.postDelayed(refreshGate,90_000L);
         main.removeCallbacks(refreshHome);
         main.postDelayed(refreshHome,2_000L);
+        TrackingAutoStart.maybeStart(this);
     }
     @Override protected void onPause(){
         foreground=false;
@@ -999,6 +1000,16 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             "  ·  Synced: "+s.getInt("uploaded_total",0),
             13,CompanionStyle.MUTED,false));
         space(dashboard,9);
+        android.widget.CheckBox auto=new android.widget.CheckBox(this);
+        auto.setText("Start tracking automatically when Companion opens");
+        auto.setTextColor(CompanionStyle.TEXT);
+        auto.setTextSize(12);
+        auto.setChecked(TrackingAutoStart.enabled(this));
+        auto.setOnCheckedChangeListener((v,checked)->{
+            TrackingAutoStart.setEnabled(this,checked);
+            if(checked)TrackingAutoStart.maybeStart(this);
+        });
+        dashboard.addView(auto);
         android.widget.Button start=CompanionStyle.button(this,"Start tracking",true);
         LinearLayout controls=new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);

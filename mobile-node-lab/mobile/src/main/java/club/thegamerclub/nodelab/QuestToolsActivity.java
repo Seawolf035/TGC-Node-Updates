@@ -713,6 +713,11 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             }else MobileDeployActivity.startFromDashboard(this);
             render();
         });
+        button(status,TrackingAutoStart.enabled(this)?"Auto-start: ON · tap to disable":"Auto-start: OFF · tap to enable",false,()->{
+            TrackingAutoStart.setEnabled(this,!TrackingAutoStart.enabled(this));
+            if(TrackingAutoStart.enabled(this))TrackingAutoStart.maybeStart(this);
+            render();
+        });
         button(status,"Device & Capture Controls",false,()->
             startActivity(new Intent(this,MobileDeployActivity.class)));
         button(status,"Refresh tracking status",false,this::render);
