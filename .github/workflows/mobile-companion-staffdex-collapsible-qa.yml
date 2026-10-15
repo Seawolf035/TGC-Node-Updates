@@ -38,6 +38,7 @@ jobs:
           assert 'leadershipEarned,10' in panel
           for name in ('AJ · The Chairman','Asriel · The Spawn of Lily and Seawolf',
                        'Seawolf · The Founder','Lily · The Lil shit',
+                       'Imposter · Sus','Gamewitch · The Mysterious One',
                        'Seawolf & Lily · Two Hearts','GM2 · Initiated into the Cult',
                        'Gamer Music: Complete Discography','Royal Flush',
                        'Owners\' Meeting','The Entire Upper Deck'):
