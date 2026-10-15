@@ -285,7 +285,7 @@ public final class StaffDexPanel extends LinearLayout {
 
         leadership.addView(text("♛ TGC LEGENDS & LEADERSHIP",15,
             ThemePreferences.royalGold(),true));
-        specialItem(leadership,"Gamewitch · The Phantom Royalty",
+        specialItem(leadership,"Gamewitch · The Mysterious One",
             "A legendary friend request: rarely seen in VRChat",
             SpecialStaffDexAchievements.GAMEWITCH,
             SpecialStaffDexAchievements.collected(roster,
@@ -297,7 +297,7 @@ public final class StaffDexPanel extends LinearLayout {
             SpecialStaffDexAchievements.collected(roster,
                 SpecialStaffDexAchievements.SEAWOLF),
             ThemePreferences.royalGold());
-        specialItem(leadership,"Lily · Lilium",
+        specialItem(leadership,"Lily · The Lil shit",
             "Befriend Lily",
             SpecialStaffDexAchievements.LILY,
             SpecialStaffDexAchievements.collected(roster,
@@ -306,7 +306,7 @@ public final class StaffDexPanel extends LinearLayout {
         specialItem(leadership,"Seawolf & Lily · Two Hearts",
             "Befriend both Seawolf and Lily",
             null,couple,ThemePreferences.royalGold());
-        specialItem(leadership,"Imposter · The Doppelgänger",
+        specialItem(leadership,"Imposter · Sus",
             "Befriend Imposter",SpecialStaffDexAchievements.IMPOSTER,
             SpecialStaffDexAchievements.collected(roster,
                 SpecialStaffDexAchievements.IMPOSTER),CompanionStyle.ACCENT);

@@ -47,7 +47,11 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.11"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.12"));
+        highlight(body,"Refined StaffDex collectible titles",
+            "Updated the individual achievements for Lily, Imposter and Gamewitch, "+
+            "while preserving all existing unlock requirements and collections.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.11"));
         highlight(body,"Compact, expandable StaffDex achievements",
             "Achievements now open in individual categories with unlock counts, "+
             "instead of filling the screen with every collectible at once.");
@@ -77,13 +81,6 @@ public final class WhatsNewActivity extends Activity {
             "Get an Android notification when a newer Companion version is "+
             "available. Tap to open the built-in verified updater. Alerts "+
             "can be controlled separately from VRChat notifications.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.7"));
-        highlight(body,"Group notifications and event inbox",
-            "New Groups and Events inbox filters, including group "+
-            "announcements and group-detail shortcuts in Floating and Quest Tools.");
-        highlight(body,"Faster, more noticeable VRChat alerts",
-            "Optional live VRChat notifications for quicker updates, "+
-            "plus improved Android sound, vibration and notification settings.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
