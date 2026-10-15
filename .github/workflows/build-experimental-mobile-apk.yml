@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.21.8 (code 82): One owner-authorized non-staff Companion user can access ordinary Companion features through a server-authoritative Relay delegated grant bound to Discord 1228529346788982794 and personal VRChat usr_0f534ae6-c5c4-4025-9478-d5423da1f296. No roster rank or kick-permission lookup, no new GM1/GM4 authority, no official staff/All Staff/rank OSC tags, no Royalty or owner-only Quest preview; personal OSC and Theme Studio retained. Requires separately deployed matching Relay v1.1.12 and Main Launcher delegation selector; old Relay will reject new user. Adds opt-out Companion version-update notifications: separate high-priority Android app update channel, signed official update feed checks on app open and roughly every 6h via WorkManager, per-version dedup and tap-to-open existing SHA-256/signer-verified in-app updater. Updates are accessible to authorized delegated accounts, and Android still requires installation approval. Notifications are best effort, not server push or a background delivery guarantee. Existing VRChat live inbox, tracking and 5-patch What’s New remain unchanged."
+            "notes": "v0.21.8: Automatic Companion update-available notifications. An optional Android alert opens the built-in signed-APK updater; controls are separate from VRChat inbox notifications. Also includes reliability improvements and compatibility fixes."
           }
           JSON
           fi
