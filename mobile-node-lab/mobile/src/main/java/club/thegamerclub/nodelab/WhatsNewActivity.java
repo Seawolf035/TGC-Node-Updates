@@ -47,7 +47,22 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.7"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.8"));
+        highlight(body,"Full Companion access for one trusted non-staff user",
+            "An owner-approved individual can now use regular Companion "+
+            "features without a staff rank. Their personal VRChat ID is "+
+            "bound to their Relay delegation; group kick permissions do not "+
+            "grant Companion access to anyone else.");
+        highlight(body,"Exclusive staff and rank OSC remain protected",
+            "No official TGC staff, Royalty or All Staff OSC tags for delegated "+
+            "accounts. Owner-only previews remain exclusive, while personal "+
+            "OSC tools and Theme Studio still work.");
+        highlight(body,"New Companion update notifications",
+            "Get a separate Android alert when a newer signed Companion "+
+            "version becomes available. Scheduled checks, one alert per "+
+            "version and a tap-to-update flow work for both staff and "+
+            "approved non-staff users.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.7"));
         highlight(body,"Group and event inbox",
             "Groups, group announcements and group events are now distinct "+
             "inbox categories. Open group details directly from a notice, "+
@@ -94,15 +109,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Improved notifications",
             "Separate invitation, invite-request and friend-update alerts, "+
             "including a dedicated Requests filter and saved inbox display.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.3"));
-        highlight(body,"Tracking has its own Tools tab",
-            "Quest Tools and Floating Tools now have a fifth Tracking tab "+
-            "for device capture, setup and player history. Your existing "+
-            "tracking service and main Companion dashboard still work as before.");
-        highlight(body,"Cleaner Floating Tools",
-            "Removed redundant OSC introduction, status-color explanation and "+
-            "Tracking help cards. Tracking controls and recent encounters "+
-            "now live in the dedicated Tracking tab.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
