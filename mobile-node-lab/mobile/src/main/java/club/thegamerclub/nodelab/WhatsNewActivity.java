@@ -47,7 +47,11 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.13"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.14"));
+        highlight(body,"Faster tracking and cleaner update settings",
+            "Start or stop player tracking from the main Tracking tab, see device and sync "+
+            "status immediately, and manage app update alerts in one Settings location.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.13"));
         highlight(body,"StaffDex progress and organized achievements",
             "See the percentage of staff you've added and open all achievement "+
             "categories from one compact section.");
@@ -72,14 +76,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"New StaffDex collectible achievements",
             "Collect special Gamer Music, Cult, leadership and rare-friend "+
             "achievements; numbered Gamer Music profiles have custom accents.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.9"));
-        highlight(body,"Create VRChat instances from the Companion",
-            "Create Public, Friends, Invite or Group instances with region "+
-            "and group access settings. After creation, VRChat sends an "+
-            "invitation to your own account automatically.");
-        highlight(body,"Retry invitations without creating again",
-            "If VRChat creates your instance but the self-invite fails, "+
-            "retry the invitation without opening a duplicate instance.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});

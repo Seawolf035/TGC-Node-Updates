@@ -982,14 +982,39 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         space(dashboard,5);
         dashboard.addView(txt(active?
             "New VRChat player sightings are being recorded. Review the event history below.":
-            "Use Device & Capture Controls to start tracking or troubleshoot log access.",
+            "Start capture here. Advanced permissions and troubleshooting remain available below.",
             13,CompanionStyle.MUTED,false));
         space(dashboard,11);
-        android.widget.Button capture=CompanionStyle.button(this,
-            "Open Device & Capture Controls  ›",true);
-        dashboard.addView(capture,CompanionStyle.buttonParams(this));
-        capture.setOnClickListener(v->needsStaff(()->
-            startActivity(new Intent(this,MobileDeployActivity.class))));
+        boolean linked=MobileCredentials.load(this)!=null;
+        dashboard.addView(txt(linked?"● Device linked":"○ Device not linked",13,
+            linked?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        space(dashboard,7);
+        dashboard.addView(txt("Recorded: "+s.getInt("captured_total",0)+
+            "  ·  Synced: "+s.getInt("uploaded_total",0)+
+            "  ·  Pending: "+Math.max(0,s.getInt("captured_total",0)-
+                s.getInt("uploaded_total",0)),13,CompanionStyle.MUTED,false));
+        space(dashboard,9);
+        android.widget.Button start=CompanionStyle.button(this,"Start tracking",true);
+        dashboard.addView(start,CompanionStyle.buttonParams(this));
+        start.setEnabled(!active);
+        start.setOnClickListener(v->needsStaff(()->{
+            if(MobileDeployActivity.startFromDashboard(this))renderUnlocked();
+        }));
+        android.widget.Button stop=CompanionStyle.button(this,"Stop tracking",false);
+        dashboard.addView(stop,CompanionStyle.buttonParams(this));
+        stop.setEnabled(active);
+        stop.setOnClickListener(v->needsStaff(()->{
+            startService(new Intent(this,MobileNodeService.class)
+                .setAction(MobileNodeService.STOP));
+            Toast.makeText(this,"Stopping tracking…",Toast.LENGTH_SHORT).show();
+            main.postDelayed(this::renderUnlocked,1200L);
+        }));
+        android.widget.Button refresh=CompanionStyle.button(this,"Refresh status",false);
+        dashboard.addView(refresh,CompanionStyle.buttonParams(this));
+        refresh.setOnClickListener(v->renderUnlocked());
+        exploreLink(dashboard,"⚙","Device permissions & advanced controls",
+            "Log access, Shizuku, connection and troubleshooting",
+            ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
 
         page.addView(CompanionStyle.section(this,"YOUR ACTIVITY"));
         LinearLayout stats=card();
@@ -1121,32 +1146,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         settingsBody=settingsPanel("notifications","NOTIFICATIONS",
             "Inbox "+(InboxAlertSettings.enabled(this)?"on":"off")+
             " · Live "+(InboxAlertSettings.liveEnabled(this)?"on":"off")+
-            " · Updates "+(CompanionUpdateAlerts.enabled(this)?"on":"off"));
+ );
         if(settingsBody!=null){
-        settingsBody.addView(CompanionStyle.section(this,"COMPANION APP UPDATES"));
-        LinearLayout updateAlerts=settingsChild(settingsBody);
-        boolean updateEnabled=CompanionUpdateAlerts.enabled(this);
-        boolean updateAllowed=CompanionUpdateAlerts.permission(this);
-        updateAlerts.addView(txt(
-            updateEnabled?(updateAllowed?
-                "● Automatic update alerts enabled":"○ Allow Android notifications for update alerts"):
-                "○ Automatic update alerts disabled",
-            15,updateEnabled&&updateAllowed?
-                CompanionStyle.GOOD:CompanionStyle.GOLD,true));
-        updateAlerts.addView(txt(
-            "Checks for signed updates and alerts once per new version.",
-            12,CompanionStyle.MUTED,false));
-        action(updateAlerts,"↻","Check for app updates",
-            "Review and install the newest signed version",
-            ()->startActivity(new Intent(this,MobileUpdaterActivity.class)));
-        action(updateAlerts,"◉",
-            updateEnabled?"Disable app update alerts":"Enable app update alerts",
-            "Independent of VRChat inbox alert settings",
-            this::toggleCompanionUpdateAlerts);
-        if(updateEnabled&&!updateAllowed)
-            action(updateAlerts,"↗","Allow Android update notifications",
-                "Grant system permission to alert you about new releases",
-                this::requestCompanionUpdatePermission);
         settingsBody.addView(CompanionStyle.section(this,"VRCHAT NOTIFICATIONS"));
         LinearLayout inboxSettings=settingsChild(settingsBody);
         boolean optedIn=InboxAlertSettings.enabled(this);
@@ -1318,6 +1319,27 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 "Tracking, floating tools and inbox alerts at a glance",
             this::showBackgroundHealth);
 
+        settingsBody.addView(CompanionStyle.section(this,"APP UPDATES"));
+        LinearLayout updateAlerts=settingsChild(settingsBody);
+        boolean updateEnabled=CompanionUpdateAlerts.enabled(this);
+        boolean updateAllowed=CompanionUpdateAlerts.permission(this);
+        updateAlerts.addView(txt(
+            updateEnabled?(updateAllowed?
+                "● Automatic update alerts enabled":"○ Allow Android notifications for update alerts"):
+                "○ Automatic update alerts disabled",
+            15,updateEnabled&&updateAllowed?
+                CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        updateAlerts.addView(txt(
+            "Checks for signed updates and alerts once per new version.",
+            12,CompanionStyle.MUTED,false));
+        action(updateAlerts,"◉",
+            updateEnabled?"Disable app update alerts":"Enable app update alerts",
+            "Independent of VRChat inbox alert settings",
+            this::toggleCompanionUpdateAlerts);
+        if(updateEnabled&&!updateAllowed)
+            action(updateAlerts,"↗","Allow Android update notifications",
+                "Grant system permission to alert you about new releases",
+                this::requestCompanionUpdatePermission);
         settingsBody.addView(CompanionStyle.section(this,"APP"));
         LinearLayout app=settingsChild(settingsBody);
         action(app,"↓","Check for updates","Keep your Companion up to date",

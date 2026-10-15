@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.21.13 (code 87): StaffDex now shows the percentage of the current staff roster you have added, and places every achievement category inside one expandable collection with individual expandable sections. Existing 20 achievements, unlock requirements, Friends, Settings and other Companion functions remain unchanged."
+            "notes": "v0.21.14 (code 88): Start, stop and refresh player tracking directly on the Tracking tab with device and sync status visible. Consolidated app-update alerts into App, Battery & Legal and removed duplicate update controls from Notifications. All existing tracking, Shizuku, Settings, Friends and StaffDex functions are preserved."
           }
           JSON
           fi

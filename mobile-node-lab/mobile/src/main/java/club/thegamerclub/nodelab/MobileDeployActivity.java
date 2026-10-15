@@ -355,6 +355,37 @@ public class MobileDeployActivity extends Activity {
     showStatus("Shizuku fallback selected for Quest. Start tracking after Shizuku is running.");
     refresh();
   }
+  /** Quick-start for the main Tracking tab. Preserve the full permission flow
+   * in this Activity whenever additional setup or authorization is required. */
+  public static boolean startFromDashboard(Activity activity){
+    if(MobileCredentials.load(activity)==null ||
+        !TrackingSetupGuide.acknowledged(activity) ||
+        (QuestSafLogWatcher.isSelected(activity) &&
+            !QuestSafLogWatcher.hasGrant(activity)) ||
+        (!QuestSafLogWatcher.isSelected(activity) &&
+            (!Shizuku.pingBinder() ||
+             Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED))){
+      activity.startActivity(new Intent(activity,MobileDeployActivity.class));
+      return false;
+    }
+    try{
+      if(Build.VERSION.SDK_INT>=33 &&
+          activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=
+              PackageManager.PERMISSION_GRANTED)
+        activity.requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},451);
+      Intent intent=new Intent(activity,MobileNodeService.class)
+          .setAction(MobileNodeService.START);
+      if(Build.VERSION.SDK_INT>=26)activity.startForegroundService(intent);
+      else activity.startService(intent);
+      android.widget.Toast.makeText(activity,"Starting tracking…",
+          android.widget.Toast.LENGTH_SHORT).show();
+      return true;
+    }catch(Exception e){
+      android.widget.Toast.makeText(activity,"Couldn't start tracking: "+e.getMessage(),
+          android.widget.Toast.LENGTH_LONG).show();
+      return false;
+    }
+  }
   private void startNode(){
     try{
       if(MobileCredentials.load(this)==null){
