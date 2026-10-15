@@ -116,6 +116,9 @@ public final class VRChatGroupToolsActivity extends StaffProtectedActivity {
             });
         }else if("instances".equals(mode)){
             LinearLayout options=card();
+            button(options,"Create group instance and invite myself",true,()->
+                startActivity(new Intent(this,VRChatInstanceCreateActivity.class)
+                    .putExtra("groupId",groupId)));
             button(options,populatedOnly?"Show all visible instances":"Only populated instances",
                 false,()->{populatedOnly=!populatedOnly;render();});
             button(options,sortByPopulation?"Sort: Most populated":"Sort: VRChat order",
