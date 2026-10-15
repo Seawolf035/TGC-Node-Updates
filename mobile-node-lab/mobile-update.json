@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.10",
-  "version_code": 84,
+  "version": "0.21.11",
+  "version_code": 85,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "5567d6697cbeabc7d7f7d20ec28dc563340c5a6384e89b6bcf659b154dd5d5ec",
-  "notes": "v0.21.10 (code 84): Settings redesigned into compact expandable groups while retaining all account, notification, floating/Quest, appearance, battery and legal controls. Main Companion Friends search now covers the complete online/offline friend snapshot, including location and status filtering, friend pinning, and VRChat favorite friend categories, bringing core browsing closer to Floating/Quest Tools. StaffDex adds collect-by-confirmed-friend achievements for the four Gamer Music accounts (including GM2's Cult), a full Gamer Music collection, Royalty and Owner leadership, Lily and Seawolf, Gamewitch and rare encounters. Gamer Music profiles receive distinct cosmetic accents. No permissions or official group invite behavior changes; pending friend requests do not unlock achievements."
+  "sha256": "cb932c09eb1e9aae63cbae03b3966ef7ffac4de0021bb75284838568cd3ee128",
+  "notes": "v0.21.11 (code 85): StaffDex achievements are now compact and individually expandable by category, with clear progress counts instead of a long list. Added separate Seawolf and Lily individual collectibles while retaining their shared achievement, and updated AJ's Chairman and Asriel's Spawn of Lily and Seawolf achievement titles. Collections continue to require confirmed VRChat friendships, and the full Settings and Friends improvements from v0.21.10 remain intact."
 }
