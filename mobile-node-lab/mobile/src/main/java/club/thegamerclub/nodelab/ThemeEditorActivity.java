@@ -65,7 +65,9 @@ public final class ThemeEditorActivity extends StaffProtectedActivity {
         if(preserveScroll)scroll.post(()->scroll.scrollTo(0,previous));
 
         button(page,"← Back",this::finish);
-        page.addView(t("ADMIN+ · PERSONAL COLORS",12,CompanionStyle.ACCENT));
+        page.addView(t(StaffGate.delegated(this)?
+            "AUTHORIZED USER · PERSONAL COLORS":
+            "ADMIN+ · PERSONAL COLORS",12,CompanionStyle.ACCENT));
         page.addView(t("Theme Studio",26,CompanionStyle.TEXT));
         page.addView(t("Your choices are private to this device. "+
             "Royalty identity badges and gold trim stay recognizable to other staff.",
