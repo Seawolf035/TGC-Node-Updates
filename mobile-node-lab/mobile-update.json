@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.11",
-  "version_code": 85,
+  "version": "0.21.12",
+  "version_code": 86,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "cb932c09eb1e9aae63cbae03b3966ef7ffac4de0021bb75284838568cd3ee128",
-  "notes": "v0.21.11 (code 85): StaffDex achievements are now compact and individually expandable by category, with clear progress counts instead of a long list. Added separate Seawolf and Lily individual collectibles while retaining their shared achievement, and updated AJ's Chairman and Asriel's Spawn of Lily and Seawolf achievement titles. Collections continue to require confirmed VRChat friendships, and the full Settings and Friends improvements from v0.21.10 remain intact."
+  "sha256": "8ea69b6079b6030e3d5e0f16dafaa92a50e85ab28e8aa1ab2f80c48d8bdee1ba",
+  "notes": "v0.21.12 (code 86): Refined Lily, Imposter and Gamewitch individual StaffDex achievement titles. All 20 achievements, existing unlock requirements, compact expandable categories, Settings, Friends, and the rest of the Companion remain intact."
 }
