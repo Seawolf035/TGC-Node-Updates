@@ -49,6 +49,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     private boolean whatsNewLaunched=false;
     private static final int NOTIFICATION_PERMISSION_REQUEST=3701;
     private static final int PINNED_FRIEND_PERMISSION_REQUEST=3702;
+    private static final int UPDATE_ALERT_PERMISSION_REQUEST=3703;
     private TextView verificationNotice;
     private LinearLayout page,root;
     private String tab="home";
@@ -281,6 +282,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         }
         locked("Checking your staff access...");
         InboxAlertSettings.restore(this);
+        CompanionUpdateAlerts.restore(this);
+        CompanionUpdateAlerts.checkOnOpen(this);
         PinnedFriendAlerts.restore(this);
         AutoInviteRequests.restore(this);
     }
@@ -1058,6 +1061,34 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         // Avatar collections and private notes are already in Explore. Keep
         // Settings focused on account configuration instead of duplicate links.
         action(account,"☼","Status & presets","Edit your status and saved presets",this::openStatus);
+        page.addView(CompanionStyle.section(this,"COMPANION APP UPDATES"));
+        LinearLayout updateAlerts=card();
+        boolean updateEnabled=CompanionUpdateAlerts.enabled(this);
+        boolean updateAllowed=CompanionUpdateAlerts.permission(this);
+        updateAlerts.addView(txt(
+            updateEnabled?(updateAllowed?
+                "● Automatic update alerts enabled":"○ Allow Android notifications for update alerts"):
+                "○ Automatic update alerts disabled",
+            15,updateEnabled&&updateAllowed?
+                CompanionStyle.GOOD:CompanionStyle.GOLD,true));
+        updateAlerts.addView(txt(
+            "Checks the official signed Companion update feed when the app opens "+
+            "and about every six hours in the background. Notifies you once "+
+            "per new version; tap to open the verified in-app updater. "+
+            "Works for staff and authorized non-staff users, without changing "+
+            "login or deployment credentials. Android can delay checks.",
+            12,CompanionStyle.MUTED,false));
+        action(updateAlerts,"↻","Check for app updates",
+            "Review and install the newest signed version",
+            ()->startActivity(new Intent(this,MobileUpdaterActivity.class)));
+        action(updateAlerts,"◉",
+            updateEnabled?"Disable app update alerts":"Enable app update alerts",
+            "Independent of VRChat inbox alert settings",
+            this::toggleCompanionUpdateAlerts);
+        if(updateEnabled&&!updateAllowed)
+            action(updateAlerts,"↗","Allow Android update notifications",
+                "Grant system permission to alert you about new releases",
+                this::requestCompanionUpdatePermission);
         page.addView(CompanionStyle.section(this,"VRCHAT NOTIFICATIONS"));
         LinearLayout inboxSettings=card();
         boolean optedIn=InboxAlertSettings.enabled(this);
@@ -1378,6 +1409,31 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 Toast.LENGTH_LONG).show();
         }
     }
+    private void toggleCompanionUpdateAlerts(){
+        if(!StaffGate.unlocked(this)){revalidate();return;}
+        if(CompanionUpdateAlerts.enabled(this)){
+            CompanionUpdateAlerts.setEnabled(this,false);
+            Toast.makeText(this,"Companion update alerts disabled",
+                Toast.LENGTH_SHORT).show();
+        }else{
+            CompanionUpdateAlerts.setEnabled(this,true);
+            if(!CompanionUpdateAlerts.permission(this))
+                requestCompanionUpdatePermission();
+            else CompanionUpdateAlerts.checkOnOpen(this);
+        }
+        renderUnlocked();
+    }
+    private void requestCompanionUpdatePermission(){
+        if(android.os.Build.VERSION.SDK_INT>=33 &&
+            !CompanionUpdateAlerts.permission(this)){
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                UPDATE_ALERT_PERMISSION_REQUEST);
+        }else{
+            CompanionUpdateAlerts.restore(this);
+            CompanionUpdateAlerts.checkOnOpen(this);
+            renderUnlocked();
+        }
+    }
     private void toggleInboxAlerts(){
         if(!StaffGate.unlocked(this)){revalidate();return;}
         if(InboxAlertSettings.enabled(this)){
@@ -1416,6 +1472,15 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     @Override public void onRequestPermissionsResult(
         int requestCode,String[] permissions,int[] grantResults){
         super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        if(requestCode==UPDATE_ALERT_PERMISSION_REQUEST){
+            if(CompanionUpdateAlerts.permission(this)){
+                CompanionUpdateAlerts.restore(this);
+                CompanionUpdateAlerts.checkOnOpen(this);
+            }else Toast.makeText(this,
+                "Notification permission was not granted",Toast.LENGTH_LONG).show();
+            if(StaffGate.unlocked(this))renderUnlocked();
+            return;
+        }
         if(requestCode==PINNED_FRIEND_PERMISSION_REQUEST){
             if(PinnedFriendAlerts.permission(this)){
                 try{
