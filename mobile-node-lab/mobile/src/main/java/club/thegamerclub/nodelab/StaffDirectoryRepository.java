@@ -53,12 +53,20 @@ public final class StaffDirectoryRepository {
         public final String accountId;
         public final ArrayList<Entry> members;
         public final boolean rosterComplete,friendsComplete;
+        public final Set<String> friendIds;
         public final long capturedAt;
         Snapshot(String accountId,ArrayList<Entry> members,
-                 boolean rosterComplete,boolean friendsComplete){
+                 boolean rosterComplete,boolean friendsComplete,Set<String> friendIds){
             this.accountId=accountId;this.members=members;
             this.rosterComplete=rosterComplete;this.friendsComplete=friendsComplete;
+            this.friendIds=Collections.unmodifiableSet(new HashSet<>(friendIds));
             this.capturedAt=System.currentTimeMillis();
+        }
+        /** A user's own VRChat account satisfies an account collection item
+         * without requiring an impossible self-friend request. */
+        public boolean collectedId(String vrchatId){
+            return vrchatId!=null&&
+                (vrchatId.equals(accountId)||friendIds.contains(vrchatId));
         }
         public int collected(){
             int count=0;
@@ -210,7 +218,7 @@ public final class StaffDirectoryRepository {
         Set<String> friends=new HashSet<>();
         boolean friendCoverage=loadFriends(c,friends);
         for(Entry e:results)e.friend=validUser(e.id)&&friends.contains(e.id);
-        Snapshot snapshot=new Snapshot(self,results,true,friendCoverage);
+        Snapshot snapshot=new Snapshot(self,results,true,friendCoverage,friends);
         if(StaffGate.unlocked(c))cache=snapshot;
         return snapshot;
     }
