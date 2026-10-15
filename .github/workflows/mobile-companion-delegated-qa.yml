@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect trust boundaries and unchanged published version
+      - name: Inspect delegated trust boundaries and proposed release version
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -72,8 +72,8 @@ jobs:
           assert 'static JSONObject fetchManifest()' in updater
           assert 'verifySameSigner(candidate)' in updater
           assert 'version_code' in updater
-          import re
-          versions=re.findall(r'(?:LATEST|PREVIOUS STAFF) RELEASE · (v0\\.\\d+\\.\\d+)',news)
+          versions=[line.split('RELEASE · ')[1].split('"')[0]
+            for line in news.splitlines() if 'RELEASE · v0.' in line]
           assert versions==['v0.21.8','v0.21.7','v0.21.6','v0.21.5','v0.21.4'],versions
           print('PASS: owner-trusted delegated access, OSC exclusions, signed update alerts, current version')
           PY
