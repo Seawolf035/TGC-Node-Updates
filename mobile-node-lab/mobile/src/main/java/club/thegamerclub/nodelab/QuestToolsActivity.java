@@ -447,6 +447,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         pair(social,"Favorite friend groups","mini_friend_favorites",
             "Current instance","mini_now");
         pair(social,"Worlds","mini_worlds","Groups","mini_groups");
+        button(social,"Create VRChat instance and invite myself",false,()->
+            startActivity(new android.content.Intent(this,VRChatInstanceCreateActivity.class)));
         pair(social,"Avatars","mini_avatars","Player history","mini_players");
         pair(social,"Verification","mini_verify","Search","mini_find");
 
