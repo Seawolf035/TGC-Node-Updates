@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.14",
-  "version_code": 88,
+  "version": "0.21.15",
+  "version_code": 89,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "59544825a45483d791d22cd20d2deabc251f224fb49c6e954e8acdc75e8d8f06",
+  "sha256": "769e2e1a35a7ed4c1195ea65f2bbf634a8d3719f3371903dc8603488b741040c",
   "notes": "v0.21.14 (code 88): Start, stop and refresh player tracking directly on the Tracking tab with device and sync status visible. Consolidated app-update alerts into App, Battery & Legal and removed duplicate update controls from Notifications. All existing tracking, Shizuku, Settings, Friends and StaffDex functions are preserved."
 }
