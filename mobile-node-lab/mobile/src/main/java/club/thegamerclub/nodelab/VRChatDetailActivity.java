@@ -526,6 +526,18 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         }
         String worldId=world.optString("id",id);
         if(valid("world",worldId)){
+            kicker("CREATE NEW INSTANCE");
+            LinearLayout instanceActions=box();
+            Button createInstance=CompanionStyle.button(this,
+                "Create instance and invite myself",true);
+            instanceActions.addView(createInstance,CompanionStyle.buttonParams(this));
+            createInstance.setOnClickListener(v->startActivity(
+                new Intent(this,VRChatInstanceCreateActivity.class)
+                    .putExtra("worldId",worldId)));
+            instanceActions.addView(text(
+                "Choose access, region and optional group settings. VRChat "+
+                "will send a self-invite after creating the instance.",
+                12,CompanionStyle.MUTED,false));
             kicker("LOCAL WORLD BOOKMARKS");
             LinearLayout shortcuts=box();
             boolean bookmarked=false;
@@ -569,6 +581,18 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         detail(detail,"Visibility",group.optString("privacy",""));
         String groupId=group.optString("id","");
         if(groupId.matches("grp_[0-9a-fA-F-]{36}")){
+            kicker("CREATE GROUP INSTANCE");
+            LinearLayout createCard=box();
+            Button createInstance=CompanionStyle.button(this,
+                "Create group instance and invite myself",true);
+            createCard.addView(createInstance,CompanionStyle.buttonParams(this));
+            createInstance.setOnClickListener(v->startActivity(
+                new Intent(this,VRChatInstanceCreateActivity.class)
+                    .putExtra("groupId",groupId)));
+            createCard.addView(text(
+                "Select a world. Your VRChat group's instance-creation "+
+                "permissions control available access modes.",
+                12,CompanionStyle.MUTED,false));
             kicker("YOUR GROUP SHORTCUTS");
             LinearLayout shortcuts=box();
             boolean pinned=false;
