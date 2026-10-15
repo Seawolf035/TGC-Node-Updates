@@ -41,6 +41,10 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     private boolean trackingGuideExpanded=false;
     private boolean trackingInfoExpanded=false;
     private String exploreCategory="friends";
+    // Long settings groups stay collapsed, while the primary account group
+    // opens by default. The current set survives tab redraws.
+    private final java.util.Set<String> settingsExpanded=
+        new java.util.HashSet<>(java.util.Arrays.asList("account"));
     private StaffDexPanel staffDexPanel;
     private boolean setupLaunched=false;
     private boolean setupAfterLink=false;
@@ -205,21 +209,27 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     }
     private void action(LinearLayout parent,String glyph,String name,String description,Runnable callback){
         LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(14),dp(15),dp(12),dp(15));
+        boolean compactSettings="settings".equals(tab);
+        row.setPadding(dp(compactSettings?10:14),dp(compactSettings?8:15),
+            dp(compactSettings?10:12),dp(compactSettings?8:15));
         row.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,14,0));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
-        lp.bottomMargin=dp(9);parent.addView(row,lp);
-        TextView icon=txt(glyph,22,CompanionStyle.ICON,true);
+        lp.bottomMargin=dp(compactSettings?5:9);parent.addView(row,lp);
+        TextView icon=txt(glyph,compactSettings?17:22,CompanionStyle.ICON,true);
         icon.setGravity(Gravity.CENTER);
         icon.setBackground(CompanionStyle.shape(this,0xFF193D54,11,0));
-        row.addView(icon,new LinearLayout.LayoutParams(dp(43),dp(43)));
+        row.addView(icon,new LinearLayout.LayoutParams(dp(compactSettings?34:43),
+            dp(compactSettings?34:43)));
         LinearLayout middle=stack();middle.setPadding(dp(13),0,dp(9),0);
         row.addView(middle,new LinearLayout.LayoutParams(0,-2,1f));
-        middle.addView(txt(name,15,CompanionStyle.TEXT,true));
+        middle.addView(txt(name,compactSettings?14:15,CompanionStyle.TEXT,true));
         if(description!=null&&!description.isEmpty()){
-            space(middle,4);middle.addView(txt(description,12,CompanionStyle.MUTED,false));
+            space(middle,compactSettings?2:4);
+            TextView detail=txt(description,compactSettings?11:12,CompanionStyle.MUTED,false);
+            if(compactSettings){detail.setMaxLines(2);detail.setEllipsize(android.text.TextUtils.TruncateAt.END);}
+            middle.addView(detail);
         }
-        row.addView(txt("›",29,CompanionStyle.MUTED,false));
+        row.addView(txt("›",compactSettings?22:29,CompanionStyle.MUTED,false));
         row.setOnClickListener(v->callback.run());
     }
     private void twinActions(LinearLayout parent,String a,String descA,String glyphA,Runnable clickA,
@@ -1041,10 +1051,49 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
         }
     }
+    private LinearLayout settingsChild(LinearLayout root){
+        LinearLayout section=new LinearLayout(this);
+        section.setOrientation(LinearLayout.VERTICAL);
+        section.setPadding(0,dp(3),0,dp(3));
+        root.addView(section,new LinearLayout.LayoutParams(-1,-2));
+        return section;
+    }
+    /** Compact expandable settings group; content exists only when opened. */
+    private LinearLayout settingsPanel(String id,String title,String summary){
+        LinearLayout panel=card();
+        boolean open=settingsExpanded.contains(id);
+        LinearLayout header=new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(0,dp(2),0,dp(3));
+        panel.addView(header,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout copy=stack();
+        header.addView(copy,new LinearLayout.LayoutParams(0,-2,1f));
+        copy.addView(txt(title,16,CompanionStyle.TEXT,true));
+        TextView detail=txt(summary,12,CompanionStyle.MUTED,false);
+        detail.setMaxLines(2);copy.addView(detail);
+        header.addView(txt(open?"⌃":"⌄",26,CompanionStyle.ACCENT,true));
+        header.setContentDescription(title+", "+(open?"expanded":"collapsed")+". "+summary);
+        header.setOnClickListener(v->{
+            if(!StaffGate.unlocked(this)){revalidate();return;}
+            if(!settingsExpanded.add(id))settingsExpanded.remove(id);
+            renderUnlocked();
+        });
+        if(!open)return null;
+        View rule=new View(this);
+        rule.setBackgroundColor(CompanionStyle.BORDER);
+        LinearLayout.LayoutParams divider=new LinearLayout.LayoutParams(-1,dp(1));
+        divider.setMargins(0,dp(11),0,dp(8));panel.addView(rule,divider);
+        return settingsChild(panel);
+    }
     private void renderSettings(){
-        headline("PREFERENCES","Settings","Your account, device and Companion.");
-        page.addView(CompanionStyle.section(this,"GETTING STARTED"));
-        LinearLayout onboarding=card();
+        headline("PREFERENCES","Settings","Accounts, alerts, tools and app.");
+        boolean questSystem=QuestDevice.isQuestDevice();
+        LinearLayout settingsBody;
+        settingsBody=settingsPanel("account","ACCOUNT & SETUP",
+            "VRChat sign-in, device link, setup and status");
+        if(settingsBody!=null){
+        settingsBody.addView(CompanionStyle.section(this,"GETTING STARTED"));
+        LinearLayout onboarding=settingsChild(settingsBody);
         action(onboarding,"✓","Guided device setup",
             "VRChat login, "+(QuestDevice.isQuestDevice()?
                 "Quest FULL logs and Documents/Logs access":"optional Shizuku tracking")+
@@ -1052,8 +1101,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             ()->needsStaff(()->startActivity(
                 new Intent(this,CompanionSetupActivity.class))));
 
-        page.addView(CompanionStyle.section(this,"YOUR ACCOUNT"));
-        LinearLayout account=card();
+        settingsBody.addView(CompanionStyle.section(this,"YOUR ACCOUNT"));
+        LinearLayout account=settingsChild(settingsBody);
         action(account,"◉","My VRChat account","Profile, sign-in and sign-out",
             ()->needsStaff(()->startActivity(new Intent(this,VRChatAccountActivity.class))));
         action(account,"♜","Device connection","Staff deployment and linked-device details",
@@ -1064,8 +1113,15 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         // Avatar collections and private notes are already in Explore. Keep
         // Settings focused on account configuration instead of duplicate links.
         action(account,"☼","Status & presets","Edit your status and saved presets",this::openStatus);
-        page.addView(CompanionStyle.section(this,"COMPANION APP UPDATES"));
-        LinearLayout updateAlerts=card();
+
+        }
+        settingsBody=settingsPanel("notifications","NOTIFICATIONS",
+            "Inbox "+(InboxAlertSettings.enabled(this)?"on":"off")+
+            " · Live "+(InboxAlertSettings.liveEnabled(this)?"on":"off")+
+            " · Updates "+(CompanionUpdateAlerts.enabled(this)?"on":"off"));
+        if(settingsBody!=null){
+        settingsBody.addView(CompanionStyle.section(this,"COMPANION APP UPDATES"));
+        LinearLayout updateAlerts=settingsChild(settingsBody);
         boolean updateEnabled=CompanionUpdateAlerts.enabled(this);
         boolean updateAllowed=CompanionUpdateAlerts.permission(this);
         updateAlerts.addView(txt(
@@ -1075,11 +1131,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             15,updateEnabled&&updateAllowed?
                 CompanionStyle.GOOD:CompanionStyle.GOLD,true));
         updateAlerts.addView(txt(
-            "Checks the official signed Companion update feed when the app opens "+
-            "and about every six hours in the background. Notifies you once "+
-            "per new version; tap to open the verified in-app updater. "+
-            "Works for staff and authorized non-staff users, without changing "+
-            "login or deployment credentials. Android can delay checks.",
+            "Checks for signed updates and alerts once per new version.",
             12,CompanionStyle.MUTED,false));
         action(updateAlerts,"↻","Check for app updates",
             "Review and install the newest signed version",
@@ -1092,8 +1144,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             action(updateAlerts,"↗","Allow Android update notifications",
                 "Grant system permission to alert you about new releases",
                 this::requestCompanionUpdatePermission);
-        page.addView(CompanionStyle.section(this,"VRCHAT NOTIFICATIONS"));
-        LinearLayout inboxSettings=card();
+        settingsBody.addView(CompanionStyle.section(this,"VRCHAT NOTIFICATIONS"));
+        LinearLayout inboxSettings=settingsChild(settingsBody);
         boolean optedIn=InboxAlertSettings.enabled(this);
         boolean allowed=InboxAlertSettings.permissionGranted(this);
         inboxSettings.addView(txt(optedIn?
@@ -1102,10 +1154,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             optedIn&&allowed?CompanionStyle.GOOD:CompanionStyle.GOLD,true));
         space(inboxSettings,7);
         inboxSettings.addView(txt(
-            "Alerts for VRChat invitations, requests, friends, groups and events. "+
-            "Background catch-up uses Android's roughly 15-minute checks; "+
-            "enable Live mode for faster push-like delivery with an ongoing "+
-            "notification. Phone sound, vibration and pop-ups are configurable.",
+            "Invitations, friend requests, group notices and events. Live mode "+
+            "is faster; Android controls sound and visibility.",
             12,CompanionStyle.MUTED,false));
         space(inboxSettings,8);
         action(inboxSettings,"✉",optedIn?"Turn off inbox alerts":"Enable inbox alerts",
@@ -1141,26 +1191,28 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                     "Android has blocked app notifications. Open system settings above.",
                     12,CompanionStyle.GOLD,true));
         }
-        page.addView(CompanionStyle.section(this,"AUTO-ACCEPT INVITE REQUESTS"));
-        LinearLayout autoInvites=card();
+
+        }
+        settingsBody=settingsPanel("friends","FRIEND AUTOMATION",
+            "Invite requests and pinned friend alerts");
+        if(settingsBody!=null){
+        settingsBody.addView(CompanionStyle.section(this,"AUTO-ACCEPT INVITE REQUESTS"));
+        LinearLayout autoInvites=settingsChild(settingsBody);
         boolean autoInviteEnabled=AutoInviteRequests.enabled(this);
         autoInvites.addView(txt(autoInviteEnabled?
             "● App Favorite Friend invite requests: ON":
             "○ App Favorite Friend invite requests: OFF",
             15,autoInviteEnabled?CompanionStyle.GOOD:CompanionStyle.MUTED,true));
         autoInvites.addView(txt(
-            "Opt-in only: when one of your Companion-pinned favorite friends asks "+
-            "to join you, send them an ordinary VRChat invitation to your "+
-            "CURRENT instance. Requires active VRChat login, a live world and "+
-            "an active friendship. Never auto-accepts friend requests or "+
-            "changes TGC group invitations. Checks may be delayed by Android.",
+            "Optionally invite pinned friends to your current VRChat instance "+
+            "when they request it. Never affects TGC group invites.",
             12,CompanionStyle.MUTED,false));
         action(autoInvites,"✦",autoInviteEnabled?
             "Disable automatic invite responses":"Enable automatic invite responses",
             "Only Companion App Favorite Friends (pinned friends)",
             this::toggleAutoInviteRequests);
-        page.addView(CompanionStyle.section(this,"PINNED FRIEND ONLINE ALERTS"));
-        LinearLayout friendAlertSettings=card();
+        settingsBody.addView(CompanionStyle.section(this,"PINNED FRIEND ONLINE ALERTS"));
+        LinearLayout friendAlertSettings=settingsChild(settingsBody);
         boolean friendOpted=PinnedFriendAlerts.enabled(this);
         boolean friendAllowed=PinnedFriendAlerts.permission(this);
         friendAlertSettings.addView(txt(friendOpted?
@@ -1171,11 +1223,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 CompanionStyle.GOOD:CompanionStyle.GOLD,true));
         space(friendAlertSettings,7);
         friendAlertSettings.addView(txt(
-            "Get an Android notification when a pinned VRChat friend "+
-            "changes from offline to online. Only selected pins trigger alerts. "+
-            "The first complete friend check is a silent baseline. "+
-            "Checks happen every 2.5–5 minutes while the floating tools run, "+
-            "or approximately every 15 minutes in the background; Android may delay them.",
+            "Get notified when a pinned friend comes online. Background "+
+            "checks may be delayed by Android.",
             12,CompanionStyle.MUTED,false));
         space(friendAlertSettings,8);
         action(friendAlertSettings,"♧",
@@ -1186,10 +1235,15 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             action(friendAlertSettings,"↗","Allow Android notifications",
                 "Grant permission for pinned friend online alerts",
                 this::requestPinnedFriendNotificationPermission);
-        boolean questSystem=QuestDevice.isQuestDevice();
-        page.addView(CompanionStyle.section(this,
+
+        }
+        settingsBody=settingsPanel("tools","FLOATING / QUEST & APPEARANCE",
+            "Overlay controls, personal themes and profile status");
+        if(settingsBody!=null){
+
+        settingsBody.addView(CompanionStyle.section(this,
             questSystem?"QUEST TOOLS":"FLOATING TOOLS"));
-        LinearLayout floating=card();
+        LinearLayout floating=settingsChild(settingsBody);
         if(questSystem){
             floating.addView(txt("Quest Tools replaces floating tools",16,
                 CompanionStyle.ACCENT,true));
@@ -1209,17 +1263,11 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             action(floating,"⌘","Quest Tools · owner phone preview",
                 "Test the real Quest Tools UI on this phone (VRChat identity check required)",
                 ()->needsStaff(()->startActivity(new Intent(this,QuestToolsActivity.class))));
-            floating.addView(txt(
-                "Private UI development preview. Requires your own signed-in "+
-                "VRChat account. Quest-specific OSC service actions remain "+
-                "headset-only; your normal phone floating tools stay available.",
-                12,CompanionStyle.MUTED,false));
-            space(floating,8);
+            space(floating,4);
         }
         action(floating,"◉","Floating tools",
             "Keep your tools available while playing VRChat",this::toggleOverlay);
-        floating.addView(txt("Turning this off won't stop player tracking.",
-            12,CompanionStyle.MUTED,false));
+
         space(floating,10);
         action(floating,"◫","Floating panel size",
             "Current: "+("compact".equals(OverlayPreferences.size(this))?"Compact":
@@ -1236,47 +1284,39 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 "On: best-effort recovery after Android interrupts the floater":
                 "Off: the floater stays closed if Android stops it",
             this::toggleOverlayRecovery);
-        floating.addView(txt(
-            "Recovery is optional. It can restart the floating tools only when "+
-            "Android permits it and staff access can be reverified. It doesn't "+
-            "force-start after an Android force-stop or bypass battery restrictions.",
-            12,CompanionStyle.MUTED,false));
+
         }
         if(ThemePreferences.allowed(this)){
-            page.addView(CompanionStyle.section(this,
+            settingsBody.addView(CompanionStyle.section(this,
                 StaffGate.delegated(this)?"PERSONAL APPEARANCE":"ADMIN+ APPEARANCE"));
-            LinearLayout themes=card();
+            LinearLayout themes=settingsChild(settingsBody);
             action(themes,"✦","Theme Studio",
                 "Personal UI colors, presets and custom RGB mixer",
                 ()->needsStaff(()->startActivity(new Intent(this,ThemeEditorActivity.class))));
-            themes.addView(txt("Changes apply only to your Companion. "+
-                "Royalty gold identity remains visible to other staff regardless of theme.",
-                12,CompanionStyle.MUTED,false));
+
         }
         if(StaffGate.rankTier(this)>=7){
-            LinearLayout badge=card();
+            LinearLayout badge=settingsChild(settingsBody);
             badge.addView(CompanionStyle.chip(this,"♛ THE ROYALTY",
                 ThemePreferences.royalGold(),0xFF46371C));
             badge.addView(txt("Gold accents mark your Royalty status. "+
                 "Other staff see your verified Royalty identity on your VRChat profile.",
                 12,CompanionStyle.MUTED,false));
         }
-        page.addView(CompanionStyle.section(this,"BACKGROUND & BATTERY"));
-        LinearLayout background=card();
+
+        }
+        settingsBody=settingsPanel("app","APP, BATTERY & LEGAL",
+            "Updates, background health, release notes and agreement");
+        if(settingsBody!=null){
+        settingsBody.addView(CompanionStyle.section(this,"BACKGROUND & BATTERY"));
+        LinearLayout background=settingsChild(settingsBody);
         action(background,"◉","Background health",
             questSystem?"Tracking and inbox alerts at a glance":
                 "Tracking, floating tools and inbox alerts at a glance",
             this::showBackgroundHealth);
-        background.addView(txt(questSystem?
-            "Android power settings can interrupt tracking or delay alerts. "+
-            "Quest Tools is a normal app screen, not an overlay, and doesn't "+
-            "run an extra floating service.":
-            "Android power settings can delay alerts or interrupt background "+
-            "services. Tracking and floating tools run independently; you can "+
-            "review the app's battery settings without disabling Android protections.",
-            12,CompanionStyle.MUTED,false));
-        page.addView(CompanionStyle.section(this,"APP"));
-        LinearLayout app=card();
+
+        settingsBody.addView(CompanionStyle.section(this,"APP"));
+        LinearLayout app=settingsChild(settingsBody);
         action(app,"↓","Check for updates","Keep your Companion up to date",
             ()->startActivity(new Intent(this,MobileUpdaterActivity.class)));
         action(app,"✦","What's New · release highlights",
@@ -1291,15 +1331,14 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         });
         // Full expanded legal text remains readable at any time after
         // acceptance; before acceptance the first-launch screen shows it.
-        page.addView(CompanionStyle.section(this,"LEGAL & AGREEMENT"));
-        LinearLayout legal=card();
+        settingsBody.addView(CompanionStyle.section(this,"LEGAL & AGREEMENT"));
+        LinearLayout legal=settingsChild(settingsBody);
         action(legal,"§","Read full license & agreement",
             "Version "+CompanionLicense.VERSION+" · 43 detailed sections",
             ()->startActivity(new Intent(this,CompanionLicenseActivity.class)));
-        legal.addView(txt(
-            "Review the complete proprietary software license and staff agreement. "+
-            "Viewing it again will not alter your recorded acceptance.",
-            12,CompanionStyle.MUTED,false));
+
+
+        }
     }
     private void togglePinnedFriendAlerts(){
         if(!StaffGate.unlocked(this)){revalidate();return;}
