@@ -17,7 +17,10 @@ public final class CompanionSetupState {
     public static boolean vrchatSessionReady(Context context){
         try{
             JSONObject session=VRChatSession.load(context);
-            return session.optString("userId","").matches("usr_[0-9a-fA-F-]{36}") &&
+            String id=session.optString("userId","");
+            String assigned=StaffGate.authorizedVrchatUser(context);
+            return id.matches("usr_[0-9a-fA-F-]{36}") &&
+                (assigned.isEmpty()||assigned.equals(id)) &&
                 !session.optString("auth","").isEmpty() &&
                 !session.optBoolean("needs2fa",true);
         }catch(Exception e){return false;}
