@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.7",
-  "version_code": 81,
+  "version": "0.21.8",
+  "version_code": 82,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "808287289625ef0bb8c53684419424895a4e6d79f30d421ee85da8ae3a932593",
-  "notes": "v0.21.7 (code 81): Major personal VRChat inbox overhaul with VRCX-compatible group, moderation and event classification, new Groups, Events and Other filters, group details, and matching Floating/Quest Mini VRCX group notifications. New Android high-priority invitation, request, friend, group and event channels support sound, vibration and heads-up alerts; pinned friend notifications also use a new high-priority channel. Settings includes a user-initiated test notification and Android channel shortcut. Optional explicitly enabled foreground WebSocket service connects directly to the VRChat pipeline for lower latency notifications while running, using ephemeral credentials without logging or persisting tokens; REST inbox refresh and 15-minute WorkManager catch-up remain, with exponential retry and live staff gating. Live stream is OFF by default and requires a visible ongoing notification; Android/device/network restrictions can still delay delivery. Keep existing invitation actions, local caches, GM1/GM4 group invite authority, phone/Quest tracking, OSC and permanent signing identity. Whats New shows five most recent patches v0.21.7 through v0.21.3."
+  "sha256": "93c6de0be06566b1e56eedd98baab544d7ce8d7cb58ffd677d223e4bf9fe44f2",
+  "notes": "v0.21.8 (code 82): One owner-authorized non-staff Companion user can access ordinary Companion features through a server-authoritative Relay delegated grant bound to Discord 1228529346788982794 and personal VRChat usr_0f534ae6-c5c4-4025-9478-d5423da1f296. No roster rank or kick-permission lookup, no new GM1/GM4 authority, no official staff/All Staff/rank OSC tags, no Royalty or owner-only Quest preview; personal OSC and Theme Studio retained. Requires separately deployed matching Relay v1.1.12 and Main Launcher delegation selector; old Relay will reject new user. Adds opt-out Companion version-update notifications: separate high-priority Android app update channel, signed official update feed checks on app open and roughly every 6h via WorkManager, per-version dedup and tap-to-open existing SHA-256/signer-verified in-app updater. Updates are accessible to authorized delegated accounts, and Android still requires installation approval. Notifications are best effort, not server push or a background delivery guarantee. Existing VRChat live inbox, tracking and 5-patch What’s New remain unchanged."
 }
