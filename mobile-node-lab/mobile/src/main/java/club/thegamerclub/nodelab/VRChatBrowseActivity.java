@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 public final class VRChatBrowseActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private String mode="friends_online";
+    private String favoriteGroupName="";
     private TextView count;
     private EditText searchField;
     private ResultsAdapter adapter;
@@ -51,6 +52,8 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         switch(mode){
             case "friends_online":return "Online friends";
             case "friends_offline":return "Offline friends";
+            case "friend_favorite_groups":return "VRChat favorite friend groups";
+            case "friend_favorite_members":return "Favorite friends";
             case "worlds":return "Favorite worlds";
             case "bookmarks":return "Bookmarked worlds";
             case "recent":return "Recently visited";
@@ -66,6 +69,8 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         if(!StaffGate.unlocked(this)){finish();return;}
         mode=getIntent().getStringExtra("mode");
         if(mode==null)mode="friends_online";
+        favoriteGroupName=getIntent().getStringExtra("favoriteGroupName");
+        if(favoriteGroupName==null)favoriteGroupName="";
         render();
     }
     @Override protected void onResume(){
@@ -220,7 +225,8 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
     }
     private boolean paged(){
         return !friendsMode()&&!"groups".equals(mode)&&
-            !"encounters".equals(mode)&&!"bookmarks".equals(mode);
+            !"encounters".equals(mode)&&!"bookmarks".equals(mode)&&
+            !mode.startsWith("friend_favorite_");
     }
     private void updatePaging(){
         if(moreButton==null)return;
@@ -270,6 +276,30 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                         boolean online=FriendOrdering.online(item);
                         if(("friends_online".equals(mode)&&online)||
                            ("friends_offline".equals(mode)&&!online))data.put(item);
+                    }
+                }else if(mode.equals("friend_favorite_groups"))
+                    data=VRChatApi.favoriteFriendGroups(this);
+                else if(mode.equals("friend_favorite_members")){
+                    if(!favoriteGroupName.matches("[A-Za-z0-9_-]{1,64}"))
+                        throw new IllegalArgumentException("Choose a VRChat favorites group");
+                    JSONObject result=VRChatApi.favoriteFriendGroupContents(this,
+                        favoriteGroupName);
+                    JSONArray contents=result.optJSONArray("favorites");
+                    if(contents==null)throw new IllegalStateException("Friend category unavailable");
+                    data=new JSONArray();
+                    for(int i=0;i<contents.length();i++){
+                        JSONObject fav=contents.optJSONObject(i);
+                        if(fav==null)continue;
+                        JSONObject friend=fav.optJSONObject("user");
+                        if(friend==null)friend=fav.optJSONObject("friend");
+                        if(friend==null)friend=fav;
+                        String id=friend.optString("id",fav.optString("userId",""));
+                        if(!id.matches("usr_[0-9a-fA-F-]{36}"))continue;
+                        JSONObject row=new JSONObject(friend.toString());
+                        row.put("id",id);
+                        if(row.optString("displayName","").isEmpty())
+                            row.put("displayName",fav.optString("displayName",id));
+                        data.put(row);
                     }
                 }else if(mode.equals("groups"))data=VRChatApi.groups(this);
                 else if(mode.equals("bookmarks"))data=WorldBookmarkStore.bookmarks(this);
@@ -338,12 +368,18 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         e.title=item.optString("displayName",item.optString("name","Unknown"));
         e.description="";
         e.kind="user";e.id=item.optString("id","");e.glyph="☺";
-        if(mode.equals("friends_online")||mode.equals("friends_offline")||mode.equals("search_users")){
+        if(mode.equals("friends_online")||mode.equals("friends_offline")||
+           mode.equals("search_users")||mode.equals("friend_favorite_members")){
             String status=item.optString("status","").trim();
             String description=item.optString("statusDescription","").trim();
             if(description.isEmpty())description=item.optString("bio","").trim();
             e.description=(status.isEmpty()?"":status+"  ·  ")+description;
             if(friendsMode()&&favoriteIds.contains(e.id))e.title="★ "+e.title;
+        }else if(mode.equals("friend_favorite_groups")){
+            e.kind="favorite_group";e.glyph="★";
+            e.id=item.optString("name","");
+            e.title=item.optString("displayName",e.id);
+            e.description=item.optInt("numFavorites",0)+" favorite friends";
         }else if(mode.equals("groups")){
             e.kind="group";e.glyph="◈";e.id=item.optString("groupId",item.optString("id",""));
             try{
@@ -423,6 +459,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         }
         private String key(JSONObject item){
             if(mode.equals("groups"))return item.optString("groupId",item.optString("id",""));
+            if(mode.equals("friend_favorite_groups"))return item.optString("name","");
             if(mode.equals("encounters"))return item.optString("user_id","");
             String id=item.optString("id","");
             return id.isEmpty()?item.toString():id;
@@ -490,6 +527,15 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                     }
                 });
             }else h.pin.setOnClickListener(null);
+            if("favorite_group".equals(e.kind)){
+                h.card.setOnClickListener(e.id.matches("[A-Za-z0-9_-]{1,64}")?v->{
+                    if(!StaffGate.unlocked(VRChatBrowseActivity.this)){finish();return;}
+                    startActivity(new Intent(VRChatBrowseActivity.this,VRChatBrowseActivity.class)
+                        .putExtra("mode","friend_favorite_members")
+                        .putExtra("favoriteGroupName",e.id));
+                }:null);
+                return;
+            }
             String prefix=e.kind.equals("user")?"usr_":e.kind.equals("world")?"wrld_":"grp_";
             boolean valid=e.id!=null&&e.id.matches(prefix+"[0-9a-fA-F-]{36}");
             h.card.setOnClickListener(valid?v->{
