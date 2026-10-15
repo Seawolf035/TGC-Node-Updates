@@ -205,7 +205,12 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         person.addView(names,new LinearLayout.LayoutParams(0,-2,1f));
         TextView header=text(title,23,CompanionStyle.TEXT,true);
         header.setMaxLines(3);names.addView(header);
-        if(kind.equals("user"))addStaffBadge(id,names,header,photo);
+        if(kind.equals("user")){
+            // Official Gamer Music account cosmetics use owner-specified VRChat
+            // IDs, not a username or an inherited Royalty rank.
+            GamerMusicProfiles.decorate(this,id,names,header,photo);
+            addStaffBadge(id,names,header,photo);
+        }
         String descriptor=kind.equals("user")?item.optString("pronouns",""):
             kind.equals("world")?"By "+item.optString("authorName","Unknown"):
             item.optString("shortCode","");
