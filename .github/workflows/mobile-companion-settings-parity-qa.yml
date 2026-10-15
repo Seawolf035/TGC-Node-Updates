@@ -40,8 +40,46 @@ jobs:
                'chooseOverlaySize','toggleOverlayRecovery',
                'showBackgroundHealth','openAndroidNotificationSettings'):
             assert 'this::'+method in settings or 'this::'+method+';' in settings or method+'(' in settings,method
-          assert "versionCode 83" in Path('mobile-node-lab/mobile/build.gradle').read_text()
-          print('Settings actions preserved; base Friends parity and current signed baseline retained.')
+          pGM=(p/"GamerMusicProfiles.java").read_text()
+          dex=(p/"StaffDexPanel.java").read_text()
+          catalog=(p/"SpecialStaffDexAchievements.java").read_text()
+          directory=(p/"StaffDirectoryRepository.java").read_text()
+          prof=(p/"VRChatDetailActivity.java").read_text()
+          mini=(p/"OverlayMiniVrcx.java").read_text()
+          assert 'usr_7e47ea74-6034-48a1-8e8d-32e6bf8b0060' in pGM # GM1
+          assert 'usr_5a0bd6d8-25c6-4a7b-a1a6-9ea85125398f' in pGM # GM2
+          assert 'usr_677c17a0-a615-4dfd-907a-86706f06cc98' in pGM # GM3
+          assert 'usr_bc1178b2-e5ad-40d5-a632-31acd5165416' in pGM # GM4
+          assert 'Gamer Music Jr' in pGM and 'excluded' in pGM
+          assert 'Gamer Music 2' not in dex or 'Cult' in dex
+          assert 'Initiated into the Cult' in dex
+          assert 'Gamer Music: Complete Discography' in dex
+          assert 'Royal Flush' in dex and 'Owners' in dex
+          assert 'The Entire Upper Deck' in dex
+          for id in (
+            'usr_ff419c82-c92b-4494-b821-035d33253ef0',
+            'usr_b85631a8-5e23-4b88-a14b-4c8a2ae863c1',
+            'usr_2a833076-03ac-4212-aeff-0708d8eab968',
+            'usr_3f229b32-5059-4889-af22-a98203d7a2b3',
+            'usr_f430e93d-d7f4-4e23-a0e9-e332f2228dff',
+            'usr_740ff8b0-6d49-4b38-b28b-a45f33ea8ef9',
+            'usr_cd566dbc-b21d-4a84-9548-4767128f0bec'
+          ):
+            assert id in catalog,id
+          assert 'snapshot.friendsComplete' in catalog
+          assert 'friendIds.contains(vrchatId)' in directory
+          assert 'GamerMusicProfiles.decorate(this,id' in prof
+          assert 'GamerMusicProfiles.name(id)' in mini
+          assert 'friend_favorite_groups' in browse
+          assert 'favoriteFriendGroupContents' in browse
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          assert 'versionCode 84' in gradle and "versionName '0.21.10'" in gradle
+          news=(p/"WhatsNewActivity.java").read_text()
+          versions=[line.split('RELEASE · ')[1].split('"')[0]
+            for line in news.splitlines() if 'RELEASE · v0.' in line]
+          assert versions==['v0.21.10','v0.21.9','v0.21.8','v0.21.7','v0.21.6'],versions
+          assert 'non-staff' not in news.lower() and 'delegated' not in news.lower()
+          print('PASS: Settings controls, complete Friend parity, ID-bound GM/Cult and leadership achievements, release v0.21.10')
           PY
       - uses: actions/setup-java@v4
         with:
