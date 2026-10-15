@@ -3,7 +3,7 @@ name: Companion Settings and Friends parity QA v0.21.14 (nonpublishing)
 on:
   push:
     branches:
-      - feature/mobile-v0.21.14-tracking-settings-cleanup
+      - feature/mobile-v0.21.15-onboarding-tracking-security
     paths:
       - 'mobile-node-lab/mobile/**'
       - '.github/workflows/mobile-companion-settings-parity-qa.yml'
@@ -73,7 +73,7 @@ jobs:
           assert 'friend_favorite_groups' in browse
           assert 'favoriteFriendGroupContents' in browse
           gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
-          assert 'versionCode 88' in gradle and "versionName '0.21.14'" in gradle
+          assert 'versionCode 89' in gradle and "versionName '0.21.15'" in gradle
           news=(p/"WhatsNewActivity.java").read_text()
           versions=[line.split('RELEASE · ')[1].split('"')[0]
             for line in news.splitlines() if 'RELEASE · v0.' in line]
