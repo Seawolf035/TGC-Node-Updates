@@ -1145,8 +1145,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         }
         settingsBody=settingsPanel("notifications","NOTIFICATIONS",
             "Inbox "+(InboxAlertSettings.enabled(this)?"on":"off")+
-            " · Live "+(InboxAlertSettings.liveEnabled(this)?"on":"off")+
- );
+            " · Live "+(InboxAlertSettings.liveEnabled(this)?"on":"off"));
         if(settingsBody!=null){
         settingsBody.addView(CompanionStyle.section(this,"VRCHAT NOTIFICATIONS"));
         LinearLayout inboxSettings=settingsChild(settingsBody);
