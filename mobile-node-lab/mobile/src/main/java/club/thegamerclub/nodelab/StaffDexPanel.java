@@ -297,7 +297,7 @@ public final class StaffDexPanel extends LinearLayout {
             SpecialStaffDexAchievements.collected(roster,
                 SpecialStaffDexAchievements.SEAWOLF),
             ThemePreferences.royalGold());
-        specialItem(leadership,"Lily · Lilium",
+        specialItem(leadership,"Lily · The Lil shit",
             "Befriend Lily",
             SpecialStaffDexAchievements.LILY,
             SpecialStaffDexAchievements.collected(roster,
