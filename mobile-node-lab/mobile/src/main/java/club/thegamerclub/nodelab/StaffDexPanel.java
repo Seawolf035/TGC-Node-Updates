@@ -29,7 +29,7 @@ public final class StaffDexPanel extends LinearLayout {
     private TextView status;
     private EditText filter;
     private StaffDirectoryRepository.Snapshot roster;
-    private boolean loading=false,showUncollected=false;
+    private boolean loading=false,showUncollected=false,showSpecialAchievements=false;
     private int nextIndex=0;
     private final Set<String> skipped=new HashSet<>();
     private int dp(float n){return CompanionStyle.dp(activity,n);}
@@ -130,6 +130,137 @@ public final class StaffDexPanel extends LinearLayout {
             complete?CompanionStyle.GOOD:CompanionStyle.TEXT,true));
         row.addView(text(detail,12,CompanionStyle.MUTED,false));
     }
+    private void specialItem(LinearLayout holder,String title,String description,
+            String userId,boolean owned,int color){
+        LinearLayout row=card(holder);
+        row.setPadding(dp(11),dp(10),dp(11),dp(10));
+        LinearLayout line=new LinearLayout(activity);
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(line);
+        LinearLayout words=new LinearLayout(activity);
+        words.setOrientation(LinearLayout.VERTICAL);
+        line.addView(words,new LinearLayout.LayoutParams(0,-2,1));
+        words.addView(text((owned?"✓ ":"○ ")+title,14,
+            owned?CompanionStyle.GOOD:color,true));
+        words.addView(text(description,11,CompanionStyle.MUTED,false));
+        if(userId!=null && userId.matches("usr_[0-9a-fA-F-]{36}")){
+            Button visit=CompanionStyle.button(activity,"Profile ›",false);
+            visit.setTextSize(12);
+            line.addView(visit,new LinearLayout.LayoutParams(dp(89),dp(45)));
+            visit.setOnClickListener(v->profile(userId));
+        }
+    }
+    private void specialProgress(LinearLayout host,
+        StaffDirectoryRepository.Snapshot snapshot,String title,String hint,
+        java.util.Set<String> ids,int color){
+        int obtained=SpecialStaffDexAchievements.count(snapshot,ids);
+        boolean done=SpecialStaffDexAchievements.complete(snapshot,ids);
+        specialItem(host,title,
+            hint+" · "+obtained+"/"+ids.size()+
+            (snapshot.friendsComplete?"":" · scan incomplete"),
+            null,done,color);
+    }
+    private void specialAchievements(){
+        java.util.Set<String> gm=SpecialStaffDexAchievements.gamerMusic();
+        java.util.Set<String> royalty=SpecialStaffDexAchievements.royalIds(roster);
+        java.util.Set<String> owners=SpecialStaffDexAchievements.ownerIds(roster);
+        java.util.Set<String> combined=
+            SpecialStaffDexAchievements.union(royalty,owners);
+        int totalSpecial=14;
+        int earned=0;
+        for(String id:GamerMusicProfiles.SET)
+            if(SpecialStaffDexAchievements.collected(roster,id))earned++;
+        if(SpecialStaffDexAchievements.complete(roster,gm))earned++;
+        for(String id:new String[]{
+            SpecialStaffDexAchievements.GAMEWITCH,
+            SpecialStaffDexAchievements.IMPOSTER,SpecialStaffDexAchievements.AJ,
+            SpecialStaffDexAchievements.ASRIEL,SpecialStaffDexAchievements.DARKFLAMES
+        })if(SpecialStaffDexAchievements.collected(roster,id))earned++;
+        boolean couple=SpecialStaffDexAchievements.collected(roster,
+            SpecialStaffDexAchievements.LILY) &&
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.SEAWOLF);
+        if(couple)earned++;
+        if(SpecialStaffDexAchievements.complete(roster,royalty))earned++;
+        if(SpecialStaffDexAchievements.complete(roster,owners))earned++;
+        if(SpecialStaffDexAchievements.complete(roster,combined))earned++;
+        LinearLayout panel=card(content);
+        panel.addView(text("SPECIAL COLLECTIONS · "+earned+"/"+totalSpecial,
+            16,CompanionStyle.ACCENT,true));
+        panel.addView(text("Confirmed VRChat friendships only; personal accounts "+
+            "count themselves. Group collections use the current official roster.",
+            12,CompanionStyle.MUTED,false));
+        button(panel,showSpecialAchievements?
+            "Hide special achievements ▴":"View special achievements ▾",false,()->{
+            showSpecialAchievements=!showSpecialAchievements;
+            draw();
+        });
+        if(!showSpecialAchievements)return;
+        LinearLayout gmPanel=card(content);
+        gmPanel.addView(text("♫ GAMER MUSIC COLLECTION",15,
+            GamerMusicProfiles.CYAN,true));
+        final String[] titles={
+            "GM1 · Original Broadcast",
+            "GM2 · Initiated into the Cult",
+            "GM3 · Third Channel",
+            "GM4 · Fourth Frequency"
+        };
+        final String[] descriptions={
+            "Befriend the original Gamer Music account",
+            "Befriend the account that runs the Cult of Gamer Music",
+            "Befriend Gamer Music 3",
+            "Befriend Gamer Music 4"
+        };
+        for(int i=0;i<GamerMusicProfiles.SET.length;i++){
+            String id=GamerMusicProfiles.SET[i];
+            specialItem(gmPanel,titles[i],descriptions[i],id,
+                SpecialStaffDexAchievements.collected(roster,id),
+                GamerMusicProfiles.CYAN);
+        }
+        specialProgress(gmPanel,roster,"Gamer Music: Complete Discography",
+            "Collect all four official Gamer Music accounts",gm,
+            GamerMusicProfiles.VIOLET);
+        LinearLayout leadership=card(content);
+        leadership.addView(text("♛ TGC LEGENDS & LEADERSHIP",15,
+            ThemePreferences.royalGold(),true));
+        specialItem(leadership,"Gamewitch · The Phantom Royalty",
+            "A legendary friend request: rarely seen in VRChat",
+            SpecialStaffDexAchievements.GAMEWITCH,
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.GAMEWITCH),
+            ThemePreferences.royalGold());
+        specialItem(leadership,"Kairos & Lilium · Two Hearts",
+            "Befriend both Seawolf and Lily",
+            null,couple,ThemePreferences.royalGold());
+        specialItem(leadership,"Imposter · The Doppelgänger",
+            "Befriend Imposter",SpecialStaffDexAchievements.IMPOSTER,
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.IMPOSTER),CompanionStyle.ACCENT);
+        specialItem(leadership,"AJ · Owners' Circle",
+            "Befriend AJ",SpecialStaffDexAchievements.AJ,
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.AJ),CompanionStyle.ACCENT);
+        specialItem(leadership,"Asriel · Owners' Circle",
+            "Befriend Asriel",SpecialStaffDexAchievements.ASRIEL,
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.ASRIEL),CompanionStyle.ACCENT);
+        specialProgress(leadership,roster,"Royal Flush",
+            "Befriend every Royalty account (including Gamewitch)",
+            royalty,ThemePreferences.royalGold());
+        specialProgress(leadership,roster,"Owners' Meeting",
+            "Befriend every current Owner and named owner",
+            owners,CompanionStyle.ACCENT);
+        specialProgress(leadership,roster,"The Entire Upper Deck",
+            "Complete both Owner and Royalty collections",
+            combined,ThemePreferences.royalGold());
+        LinearLayout rare=card(content);
+        rare.addView(text("RARE ENCOUNTERS",15,CompanionStyle.ACCENT,true));
+        specialItem(rare,"Darkflames · ICE Breaker",
+            "Even Border Patrol couldn't keep this one off your friends list.",
+            SpecialStaffDexAchievements.DARKFLAMES,
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.DARKFLAMES),CompanionStyle.ACCENT);
+    }
     private void draw(){
         if(content==null||roster==null)return;
         content.removeAllViews();
@@ -156,6 +287,7 @@ public final class StaffDexPanel extends LinearLayout {
             roster.rosterComplete&&roster.friendsComplete&&total>0&&c*2>=total);
         achievement(achievements,"Gotta Add ’Em All!","Add all current staff (including new roster members)",
             roster.rosterComplete&&roster.friendsComplete&&total>0&&c==total);
+        specialAchievements();
         content.addView(CompanionStyle.section(activity,"STAFF ROSTER"));
         String query=filter==null?"":filter.getText().toString().trim().toLowerCase(Locale.US);
         int shown=0;
