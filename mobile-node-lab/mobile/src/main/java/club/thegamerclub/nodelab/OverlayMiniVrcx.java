@@ -1189,14 +1189,14 @@ public final class OverlayMiniVrcx {
         details.setOrientation(LinearLayout.VERTICAL);
         header.addView(details,new LinearLayout.LayoutParams(0,-2,1f));
         TextView heading=text(shortValue(name,60),17,
-            GamerMusicProfiles.official(id)?GamerMusicProfiles.VIOLET:
+            GamerMusicProfiles.official(id)?GamerMusicProfiles.secondary(id):
                 CompanionStyle.TEXT,true);
         details.addView(heading);
         if(GamerMusicProfiles.official(id)){
             details.addView(text("♫ "+GamerMusicProfiles.name(id)+
-                " · OFFICIAL ACCOUNT",12,GamerMusicProfiles.CYAN,true));
+                " · OFFICIAL ACCOUNT",12,GamerMusicProfiles.accent(id),true));
             portrait.setBackground(CompanionStyle.shape(ctx,CompanionStyle.RAISED,
-                11,GamerMusicProfiles.CYAN));
+                11,GamerMusicProfiles.accent(id)));
         }
         String presence=profile.optString("status","");
         details.addView(text(VRChatPresenceIndicator.label(presence),12,
