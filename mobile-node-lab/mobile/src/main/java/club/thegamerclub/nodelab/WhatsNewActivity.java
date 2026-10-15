@@ -47,7 +47,14 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.10"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.11"));
+        highlight(body,"Compact, expandable StaffDex achievements",
+            "Achievements now open in individual categories with unlock counts, "+
+            "instead of filling the screen with every collectible at once.");
+        highlight(body,"More special StaffDex collectibles",
+            "Seawolf and Lily now each have an individual achievement in "+
+            "addition to their shared collection, with updated AJ and Asriel titles.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.10"));
         highlight(body,"Cleaner, easier-to-navigate Settings",
             "Account, alerts, automation, tools and app settings now live in "+
             "five compact expandable groups, without removing existing controls.");
@@ -77,10 +84,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Faster, more noticeable VRChat alerts",
             "Optional live VRChat notifications for quicker updates, "+
             "plus improved Android sound, vibration and notification settings.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.6"));
-        highlight(body,"Fixed device linking and guided setup",
-            "After linking a phone or Quest, the Companion now opens "+
-            "the guided setup instead of leaving you in Tracking Controls.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
