@@ -123,6 +123,7 @@ public final class VRChatApi {
             return next;
         }
         updateProfile(session,result);
+        StaffGate.assertPersonalVrchatAccount(context,session.optString("userId",""));
         if(session.optString("auth","").isEmpty())throw new SecurityException("VRChat returned no auth cookie");
         VRChatSession.save(context,session);
         return new JSONObject().put("requires2fa",false).put("displayName",session.getString("displayName"));
@@ -141,6 +142,7 @@ public final class VRChatApi {
         Response me=request("GET","/auth/user",cookie(session),null,null);
         mergeCookies(session,me.cookies);
         updateProfile(session,me.object());
+        StaffGate.assertPersonalVrchatAccount(context,session.optString("userId",""));
         VRChatSession.save(context,session);
         return new JSONObject().put("displayName",session.getString("displayName"));
     }
@@ -159,6 +161,7 @@ public final class VRChatApi {
         mergeCookies(session,response.cookies);
         JSONObject result=response.object();
         updateProfile(session,result);
+        StaffGate.assertPersonalVrchatAccount(context,session.optString("userId",""));
         // Do not write an old cookie over a newer login after a concurrent
         // validation finishes. Also avoid re-encrypting unchanged credentials.
         VRChatSession.saveValidated(context,before,session);
@@ -168,6 +171,7 @@ public final class VRChatApi {
         JSONObject session=VRChatSession.load(context);
         if(session.optString("auth","").isEmpty()||session.optBoolean("needs2fa"))
             throw new SecurityException("Sign in to your personal VRChat account first");
+        StaffGate.assertPersonalVrchatAccount(context,session.optString("userId",""));
         return session;
     }
     public static JSONArray friends(Context context,boolean offline)throws Exception{
