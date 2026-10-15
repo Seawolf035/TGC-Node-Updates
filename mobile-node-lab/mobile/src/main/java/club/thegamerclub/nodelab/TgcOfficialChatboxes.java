@@ -56,7 +56,7 @@ public final class TgcOfficialChatboxes {
     }
     public static Template[] templates(){return ALL.clone();}
     public static boolean eligible(Context context,Template template){
-        return template!=null && StaffGate.unlocked(context) &&
+        return template!=null && StaffGate.officialOscTagsAllowed(context) &&
             StaffGate.rankTier(context)>=template.minTier;
     }
     private static HashSet<String> selectionIds(Context context){
@@ -75,8 +75,8 @@ public final class TgcOfficialChatboxes {
         return selectionIds(context).contains(templateId);
     }
     public static void setSelected(Context context,String templateId,boolean on){
-        if(!StaffGate.unlocked(context))
-            throw new SecurityException("Verified staff access required.");
+        if(!StaffGate.officialOscTagsAllowed(context))
+            throw new SecurityException("Official TGC staff and rank OSC tags are not included in delegated access.");
         Template target=null;
         for(Template template:ALL)
             if(template.id.equals(templateId)){target=template;break;}
@@ -91,7 +91,7 @@ public final class TgcOfficialChatboxes {
         prefs(context).edit().putString(ownerKey(context),saved.toString()).apply();
     }
     public static List<Template> selectedEligible(Context context){
-        if(!StaffGate.unlocked(context))return Collections.emptyList();
+        if(!StaffGate.officialOscTagsAllowed(context))return Collections.emptyList();
         HashSet<String> ids;
         try{ids=selectionIds(context);}
         catch(Exception ex){return Collections.emptyList();}
