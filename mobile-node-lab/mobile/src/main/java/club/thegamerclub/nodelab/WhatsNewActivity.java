@@ -47,7 +47,11 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.12"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.13"));
+        highlight(body,"StaffDex progress and organized achievements",
+            "See the percentage of staff you've added and open all achievement "+
+            "categories from one compact section.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.12"));
         highlight(body,"Refined StaffDex collectible titles",
             "Updated the individual achievements for Lily, Imposter and Gamewitch, "+
             "while preserving all existing unlock requirements and collections.");
@@ -76,11 +80,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Retry invitations without creating again",
             "If VRChat creates your instance but the self-invite fails, "+
             "retry the invitation without opening a duplicate instance.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.8"));
-        highlight(body,"Automatic Companion update alerts",
-            "Get an Android notification when a newer Companion version is "+
-            "available. Tap to open the built-in verified updater. Alerts "+
-            "can be controlled separately from VRChat notifications.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});

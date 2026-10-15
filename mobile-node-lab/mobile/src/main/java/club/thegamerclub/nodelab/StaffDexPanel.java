@@ -25,7 +25,7 @@ public final class StaffDexPanel extends LinearLayout {
     private final Activity activity;
     private boolean disposed=false;
     private final ExecutorService io=Executors.newSingleThreadExecutor();
-    private LinearLayout root,content;
+    private LinearLayout root,content,achievementHost;
     private TextView status;
     private EditText filter;
     private StaffDirectoryRepository.Snapshot roster;
@@ -188,10 +188,25 @@ public final class StaffDexPanel extends LinearLayout {
         if(SpecialStaffDexAchievements.complete(snapshot,combined))earned++;
         return earned;
     }
+    /** Total special progress shared by the outer header and the expanded categories. */
+    private int specialEarned(StaffDirectoryRepository.Snapshot snapshot){
+        java.util.Set<String> gm=SpecialStaffDexAchievements.gamerMusic();
+        java.util.Set<String> royal=SpecialStaffDexAchievements.royalIds(snapshot);
+        java.util.Set<String> owners=SpecialStaffDexAchievements.ownerIds(snapshot);
+        java.util.Set<String> combined=SpecialStaffDexAchievements.union(royal,owners);
+        boolean couple=SpecialStaffDexAchievements.collected(snapshot,
+            SpecialStaffDexAchievements.LILY) &&
+            SpecialStaffDexAchievements.collected(snapshot,SpecialStaffDexAchievements.SEAWOLF);
+        int earned=gmEarned(snapshot,gm)+
+            leadershipEarned(snapshot,couple,royal,owners,combined);
+        if(SpecialStaffDexAchievements.collected(snapshot,
+            SpecialStaffDexAchievements.DARKFLAMES))earned++;
+        return earned;
+    }
     /** Compact one-line header; tapping expands only that achievement group. */
     private boolean categoryHeader(String key,String title,int earned,int total,int color){
         final boolean open=expandedAchievements.contains(key);
-        LinearLayout shell=card(content);
+        LinearLayout shell=card(achievementHost==null?content:achievementHost);
         LinearLayout bar=new LinearLayout(activity);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setPadding(dp(8),dp(4),dp(8),dp(4));
@@ -219,30 +234,13 @@ public final class StaffDexPanel extends LinearLayout {
         java.util.Set<String> combined=
             SpecialStaffDexAchievements.union(royalty,owners);
         int totalSpecial=16;
-        int earned=0;
-        for(String id:GamerMusicProfiles.SET)
-            if(SpecialStaffDexAchievements.collected(roster,id))earned++;
-        if(SpecialStaffDexAchievements.complete(roster,gm))earned++;
-        for(String id:new String[]{
-            SpecialStaffDexAchievements.GAMEWITCH,
-            SpecialStaffDexAchievements.IMPOSTER,SpecialStaffDexAchievements.AJ,
-            SpecialStaffDexAchievements.ASRIEL,SpecialStaffDexAchievements.DARKFLAMES
-        })if(SpecialStaffDexAchievements.collected(roster,id))earned++;
+        int earned=specialEarned(roster);
         boolean couple=SpecialStaffDexAchievements.collected(roster,
             SpecialStaffDexAchievements.LILY) &&
-            SpecialStaffDexAchievements.collected(roster,
-                SpecialStaffDexAchievements.SEAWOLF);
-        if(couple)earned++;
-        if(SpecialStaffDexAchievements.collected(roster,
-            SpecialStaffDexAchievements.SEAWOLF))earned++;
-        if(SpecialStaffDexAchievements.collected(roster,
-            SpecialStaffDexAchievements.LILY))earned++;
-        if(SpecialStaffDexAchievements.complete(roster,royalty))earned++;
-        if(SpecialStaffDexAchievements.complete(roster,owners))earned++;
-        if(SpecialStaffDexAchievements.complete(roster,combined))earned++;
+            SpecialStaffDexAchievements.collected(roster,SpecialStaffDexAchievements.SEAWOLF);
         // Category summaries are always visible. The many achievement tiles
         // are only created when a particular category is expanded.
-        LinearLayout summary=card(content);
+        LinearLayout summary=card(achievementHost);
         summary.addView(text("SPECIAL COLLECTIONS · "+earned+"/"+totalSpecial,
             16,CompanionStyle.ACCENT,true));
         summary.addView(text(
@@ -251,7 +249,7 @@ public final class StaffDexPanel extends LinearLayout {
             12,CompanionStyle.MUTED,false));
         boolean showGm=categoryHeader("gm","♫ GAMER MUSIC",gmEarned(roster,gm),5,
             GamerMusicProfiles.CYAN);
-        LinearLayout gmPanel=showGm?card(content):null;
+        LinearLayout gmPanel=showGm?card(achievementHost):null;
         if(showGm){
             gmPanel.addView(text("Official numbered accounts, plus the full set",
                 12,CompanionStyle.MUTED,false));
@@ -280,7 +278,7 @@ public final class StaffDexPanel extends LinearLayout {
         int leadershipEarned=leadershipEarned(roster,couple,royalty,owners,combined);
         boolean showLeaders=categoryHeader("leaders","♛ LEGENDS & LEADERSHIP",
             leadershipEarned,10,ThemePreferences.royalGold());
-        LinearLayout leadership=showLeaders?card(content):null;
+        LinearLayout leadership=showLeaders?card(achievementHost):null;
         if(showLeaders){
 
         leadership.addView(text("♛ TGC LEGENDS & LEADERSHIP",15,
@@ -332,7 +330,7 @@ public final class StaffDexPanel extends LinearLayout {
             SpecialStaffDexAchievements.DARKFLAMES);
         boolean showRare=categoryHeader("rare","RARE ENCOUNTERS",
             rareDone?1:0,1,CompanionStyle.ACCENT);
-        LinearLayout rare=showRare?card(content):null;
+        LinearLayout rare=showRare?card(achievementHost):null;
         if(showRare){
 
         rare.addView(text("RARE ENCOUNTERS",15,CompanionStyle.ACCENT,true));
@@ -346,6 +344,7 @@ public final class StaffDexPanel extends LinearLayout {
     private void draw(){
         if(content==null||roster==null)return;
         content.removeAllViews();
+        achievementHost=null;
         int total=0,confirmed=0;
         for(StaffDirectoryRepository.Entry e:roster.members){
             // The player's own profile isn't collectible.
@@ -353,25 +352,38 @@ public final class StaffDexPanel extends LinearLayout {
             total++;if(e.friend)confirmed++;
         }
         final int c=confirmed,t=total;
-        status.setText("Confirmed friends: "+c+" / "+t+" staff"+
+        // Round only for display; achievement thresholds use exact integer counts.
+        int addedPercent=t>0?(int)Math.round(100.0*c/t):0;
+        String progress=t>0?addedPercent+"%":"—";
+        status.setText("Confirmed friends: "+c+" / "+t+" staff · "+progress+" added"+
             (roster.rosterComplete?"":" · partial staff list")+
             (roster.friendsComplete?"":" · friend scan incomplete")+
             "\nA sent or pending friend request does not count as collected.");
         boolean half=roster.rosterComplete&&roster.friendsComplete&&total>0&&c*2>=total;
         boolean entire=roster.rosterComplete&&roster.friendsComplete&&total>0&&c==total;
         int basic=(c>=1?1:0)+(c>=6?1:0)+(half?1:0)+(entire?1:0);
-        if(categoryHeader("basic","STAFFDEX ACHIEVEMENTS",basic,4,
+        // Only one achievement section is visible until the master is opened.
+        // Each of the four inner categories keeps its own expand/collapse state.
+        if(categoryHeader("all","ACHIEVEMENTS",basic+specialEarned(roster),20,
             CompanionStyle.ACCENT)){
-            LinearLayout achievements=card(content);
-            achievements.addView(text("Confirmed staff friends: "+c+"/"+t,
-                13,CompanionStyle.MUTED,false));
-            achievement(achievements,"First Catch!","Add 1 staff member",c>=1);
-            achievement(achievements,"Full Party","Add 6 staff members",c>=6);
-            achievement(achievements,"Half the Roster","Add at least half the confirmed roster",half);
-            achievement(achievements,"Gotta Add ’Em All!",
-                "Add every current roster member",entire);
+            achievementHost=new LinearLayout(activity);
+            achievementHost.setOrientation(LinearLayout.VERTICAL);
+            achievementHost.setPadding(dp(8),0,dp(8),dp(4));
+            content.addView(achievementHost);
+            if(categoryHeader("basic","STAFFDEX ACHIEVEMENTS",basic,4,
+                CompanionStyle.ACCENT)){
+                LinearLayout achievements=card(achievementHost);
+                achievements.addView(text("Confirmed staff friends: "+c+"/"+t,
+                    13,CompanionStyle.MUTED,false));
+                achievement(achievements,"First Catch!","Add 1 staff member",c>=1);
+                achievement(achievements,"Full Party","Add 6 staff members",c>=6);
+                achievement(achievements,"Half the Roster","Add at least half the confirmed roster",half);
+                achievement(achievements,"Gotta Add ’Em All!",
+                    "Add every current roster member",entire);
+            }
+            specialAchievements();
+            achievementHost=null;
         }
-        specialAchievements();
         content.addView(CompanionStyle.section(activity,"STAFF ROSTER"));
         String query=filter==null?"":filter.getText().toString().trim().toLowerCase(Locale.US);
         int shown=0;

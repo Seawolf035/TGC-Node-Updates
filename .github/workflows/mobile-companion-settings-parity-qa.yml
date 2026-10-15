@@ -1,9 +1,9 @@
-name: Companion Settings and Friends parity QA v0.21.12 (nonpublishing)
+name: Companion Settings and Friends parity QA v0.21.13 (nonpublishing)
 
 on:
   push:
     branches:
-      - feature/mobile-v0.21.12-final-titles
+      - feature/mobile-v0.21.13-staffdex-collection-summary
     paths:
       - 'mobile-node-lab/mobile/**'
       - '.github/workflows/mobile-companion-settings-parity-qa.yml'
@@ -73,11 +73,11 @@ jobs:
           assert 'friend_favorite_groups' in browse
           assert 'favoriteFriendGroupContents' in browse
           gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
-          assert 'versionCode 86' in gradle and "versionName '0.21.12'" in gradle
+          assert 'versionCode 87' in gradle and "versionName '0.21.13'" in gradle
           news=(p/"WhatsNewActivity.java").read_text()
           versions=[line.split('RELEASE · ')[1].split('"')[0]
             for line in news.splitlines() if 'RELEASE · v0.' in line]
-          assert versions==['v0.21.12','v0.21.11','v0.21.10','v0.21.9','v0.21.8'],versions
+          assert versions==['v0.21.13','v0.21.12','v0.21.11','v0.21.10','v0.21.9'],versions
           assert 'non-staff' not in news.lower() and 'delegated' not in news.lower()
           assert 'AJ · The Chairman' in dex
           assert 'Asriel · The Spawn of Lily and Seawolf' in dex
@@ -85,12 +85,18 @@ jobs:
           assert 'Imposter · Sus' in dex and 'Gamewitch · The Mysterious One' in dex
           assert 'Seawolf & Lily · Two Hearts' in dex
           assert 'int totalSpecial=16' in dex
+          assert 'int addedPercent=t>0?(int)Math.round(100.0*c/t):0;' in dex
+          assert 'addedPercent+"%"' in dex
+          assert 'categoryHeader("all","ACHIEVEMENTS",basic+specialEarned(roster),20' in dex
+          assert 'if(categoryHeader("all","ACHIEVEMENTS"' in dex
+          assert 'achievementHost=new LinearLayout(activity)' in dex
+          assert 'achievementHost=null;' in dex
           assert 'leadershipEarned,10' in dex
           for key in ('basic','gm','leaders','rare'):
             assert 'categoryHeader("'+key+'"' in dex
           assert 'expandedAchievements=new HashSet<>()' in dex
           assert 'categoryHeader("special"' not in dex
-          print('PASS: Settings/Friends parity, 16 compact StaffDex achievements, release v0.21.11')
+          print('PASS: Settings/Friends parity, 16 compact StaffDex achievements, release v0.21.13')
           PY
       - uses: actions/setup-java@v4
         with:
