@@ -306,7 +306,7 @@ public final class StaffDexPanel extends LinearLayout {
         specialItem(leadership,"Seawolf & Lily · Two Hearts",
             "Befriend both Seawolf and Lily",
             null,couple,ThemePreferences.royalGold());
-        specialItem(leadership,"Imposter · The Doppelgänger",
+        specialItem(leadership,"Imposter · Sus",
             "Befriend Imposter",SpecialStaffDexAchievements.IMPOSTER,
             SpecialStaffDexAchievements.collected(roster,
                 SpecialStaffDexAchievements.IMPOSTER),CompanionStyle.ACCENT);
