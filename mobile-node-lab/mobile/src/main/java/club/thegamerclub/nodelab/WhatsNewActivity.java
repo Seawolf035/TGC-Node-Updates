@@ -47,7 +47,10 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.14"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.15"));
+        highlight(body,"Onboarding, login security and tracking controls",
+            "Accept the User Agreement before linking, then complete guided setup before Home. VRChat login is screen-capture protected, tracking has optional auto-start, Quest Tools has direct controls, and Darkflames joins Legends & Leadership.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.14"));
         highlight(body,"Faster tracking and cleaner update settings",
             "Start or stop player tracking from the main Tracking tab, see device and sync "+
             "status immediately, and manage app update alerts in one Settings location.");
