@@ -81,7 +81,8 @@ jobs:
           assert 'non-staff' not in news.lower() and 'delegated' not in news.lower()
           assert 'AJ · The Chairman' in dex
           assert 'Asriel · The Spawn of Lily and Seawolf' in dex
-          assert 'Seawolf · The Founder' in dex and 'Lily · Lilium' in dex
+          assert 'Seawolf · The Founder' in dex and 'Lily · The Lil shit' in dex
+          assert 'Imposter · Sus' in dex and 'Gamewitch · The Mysterious One' in dex
           assert 'Seawolf & Lily · Two Hearts' in dex
           assert 'int totalSpecial=16' in dex
           assert 'leadershipEarned,10' in dex
