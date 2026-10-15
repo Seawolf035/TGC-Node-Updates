@@ -120,7 +120,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         brand.addView(txt("Staff Companion",19,CompanionStyle.TEXT,true));
         h.addView(brand,new LinearLayout.LayoutParams(0,-2,1f));
         if(showingUnlocked){
-            TextView status=CompanionStyle.chip(this,"● Staff",CompanionStyle.GOOD,0xFF173B37);
+            TextView status=CompanionStyle.chip(this,StaffGate.delegated(this)?
+                "● Authorized":"● Staff",CompanionStyle.GOOD,0xFF173B37);
             h.addView(status);
         }
     }
