@@ -401,6 +401,91 @@ public final class VRChatApi {
             java.net.URLEncoder.encode(term,"UTF-8")+"&n=60&offset=0",
             cookie(validSession(context)),null,null).array();
     }
+    /** Permissions issued by VRChat for this account's groups, not the TGC Relay.
+     * Returns a map of group IDs to permission names, as used by VRCX. */
+    public static JSONObject myGroupPermissions(Context context)throws Exception{
+        JSONObject session=validSession(context);
+        String user=session.optString("userId","");
+        requireId("user",user);
+        return request("GET","/users/"+user+"/groups/permissions",
+            cookie(session),null,null).object();
+    }
+    public static JSONArray groupRoles(Context context,String groupId)throws Exception{
+        requireId("group",groupId);
+        return request("GET","/groups/"+groupId+"/roles",
+            cookie(validSession(context)),null,null).array();
+    }
+    /** VRCX-compatible native instance creation through VRChat's official
+     * POST /instances. The server verifies group permissions and eligibility.
+     * NEVER synthesize an instance ID, update presence, or touch TGC group invites.
+     */
+    public static JSONObject createInstance(Context context,String worldId,
+        String access,String region,String groupId,String groupAccess,
+        JSONArray roles,boolean queue,boolean ageGate,String displayName)throws Exception{
+        requireId("world",worldId);
+        if(!worldId.matches("wrld_[0-9a-fA-F-]{36}"))
+            throw new IllegalArgumentException("Choose a valid VRChat world");
+        if(!"us".equals(region)&&!"use".equals(region)&&
+           !"eu".equals(region)&&!"jp".equals(region))
+            throw new IllegalArgumentException("Choose a supported VRChat region");
+        JSONObject session=validSession(context);
+        String account=session.optString("userId","");
+        requireId("user",account);
+        JSONObject body=new JSONObject().put("worldId",worldId).put("region",region);
+        switch(access){
+            case "public":
+                body.put("type","public");break;
+            case "friends+":
+                body.put("type","hidden").put("ownerId",account);break;
+            case "friends":
+                body.put("type","friends").put("ownerId",account);break;
+            case "invite":
+                body.put("type","private").put("ownerId",account)
+                    .put("canRequestInvite",false);break;
+            case "invite+":
+                body.put("type","private").put("ownerId",account)
+                    .put("canRequestInvite",true);break;
+            case "group":
+                requireId("group",groupId);
+                if(!groupId.matches("grp_[0-9a-fA-F-]{36}")||
+                   (!"members".equals(groupAccess)&&
+                    !"plus".equals(groupAccess)&&!"public".equals(groupAccess)))
+                    throw new IllegalArgumentException("Choose a valid group and access level");
+                body.put("type","group").put("ownerId",groupId)
+                    .put("groupAccessType",groupAccess)
+                    .put("queueEnabled",queue)
+                    .put("ageGate",ageGate);
+                if("members".equals(groupAccess)&&roles!=null&&roles.length()>0){
+                    JSONArray safeRoles=new JSONArray();
+                    if(roles.length()>80)throw new IllegalArgumentException("Too many group roles");
+                    for(int n=0;n<roles.length();n++){
+                        String role=roles.optString(n,"");
+                        if(!role.matches("grol_[0-9a-fA-F-]{36}"))
+                            throw new IllegalArgumentException("Invalid group role selection");
+                        safeRoles.put(role);
+                    }
+                    body.put("roleIds",safeRoles);
+                }
+                break;
+            default:throw new IllegalArgumentException("Choose a valid instance access type");
+        }
+        String name=displayName==null?"":displayName.trim();
+        if(name.length()>64)
+            throw new IllegalArgumentException("Instance display name is too long");
+        if(!name.isEmpty())body.put("displayName",name);
+        JSONObject created=request("POST","/instances",cookie(session),null,body).object();
+        String id=created.optString("instanceId","");
+        String location=created.optString("location","");
+        if(location.isEmpty() && !id.isEmpty())location=worldId+":"+id;
+        if(!location.startsWith(worldId+":") || location.length()>600 ||
+           location.indexOf(':')!=worldId.length())
+            throw new IllegalStateException(
+                "VRChat responded without a valid instance location. Check your VRChat account before retrying to avoid creating duplicates.");
+        // Return only the server response, with normalized location for UI.
+        created.put("location",location);
+        return created;
+    }
+
     /** Returns instances visible to this personal VRChat account. */
     public static JSONArray groupInstances(Context context,String groupId)throws Exception{
         requireId("group",groupId);
