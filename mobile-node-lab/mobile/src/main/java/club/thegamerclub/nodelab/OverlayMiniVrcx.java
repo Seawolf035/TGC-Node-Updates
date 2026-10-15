@@ -1438,6 +1438,13 @@ public final class OverlayMiniVrcx {
                 drawList();
             }catch(Exception e){message("Bookmark: "+e.getMessage());}
         });
+        button(c,"Create instance and invite myself",true,()->{
+            android.content.Intent creator=new android.content.Intent(
+                ctx,VRChatInstanceCreateActivity.class)
+                .putExtra("worldId",id)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(creator);
+        });
         button(c,"Copy world ID",false,()->copy("world ID",id));
         button(c,"Copy world link",false,
             ()->copy("world link","https://vrchat.com/home/world/"+id));
@@ -1882,6 +1889,13 @@ public final class OverlayMiniVrcx {
         LinearLayout browse=card(list);
         button(browse,"Browse and search group members",true,()->{
             memberOffset=0;host.navigate("mini_members");
+        });
+        button(browse,"Create group instance and invite myself",false,()->{
+            android.content.Intent creator=new android.content.Intent(
+                ctx,VRChatInstanceCreateActivity.class)
+                .putExtra("groupId",id)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(creator);
         });
         button(browse,"Active group instances",false,
             ()->host.navigate("mini_instances"));
