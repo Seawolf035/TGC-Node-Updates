@@ -285,7 +285,7 @@ public final class StaffDexPanel extends LinearLayout {
 
         leadership.addView(text("♛ TGC LEGENDS & LEADERSHIP",15,
             ThemePreferences.royalGold(),true));
-        specialItem(leadership,"Gamewitch · The Phantom Royalty",
+        specialItem(leadership,"Gamewitch · The Mysterious One",
             "A legendary friend request: rarely seen in VRChat",
             SpecialStaffDexAchievements.GAMEWITCH,
             SpecialStaffDexAchievements.collected(roster,
