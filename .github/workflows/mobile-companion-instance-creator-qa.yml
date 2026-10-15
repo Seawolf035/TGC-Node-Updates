@@ -56,9 +56,12 @@ jobs:
           assert 'VRChatInstanceCreateActivity.class' in home
           assert 'VRChatInstanceCreateActivity.class' in group
           assert 'android:name=".VRChatInstanceCreateActivity"' in manifest
-          assert 'versionCode 82' in gradle and "versionName '0.21.8'" in gradle
+          assert 'versionCode 83' in gradle and "versionName '0.21.9'" in gradle
+          versions=[line.split('RELEASE · ')[1].split('"')[0]
+            for line in news.splitlines() if 'RELEASE · v0.' in line]
+          assert versions==['v0.21.9','v0.21.8','v0.21.7','v0.21.6','v0.21.5'],versions
           assert 'non-staff' not in news.lower() and 'delegated' not in news.lower()
-          print("PASS: native VRChat instance creation + self-invite, group/region, privacy, unchanged v0.21.8")
+          print("PASS: native VRChat instance creation + self-invite, group/region, privacy, new v0.21.9 release and five patch history")
           PY
       - uses: actions/setup-java@v4
         with:
