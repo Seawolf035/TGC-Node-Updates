@@ -705,7 +705,15 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             "Start capture in Device & Capture Controls. Tracking works "+
             "independently of whether Quest Tools is open.",
             12,CompanionStyle.MUTED,false));
-        button(status,"Device & Capture Controls",true,()->
+        button(status,active?"Stop tracking":"Start tracking",true,()->{
+            if(active){
+                startService(new Intent(this,MobileNodeService.class)
+                    .setAction(MobileNodeService.STOP));
+                toast("Stopping tracking…");
+            }else MobileDeployActivity.startFromDashboard(this);
+            render();
+        });
+        button(status,"Device & Capture Controls",false,()->
             startActivity(new Intent(this,MobileDeployActivity.class)));
         button(status,"Refresh tracking status",false,this::render);
 

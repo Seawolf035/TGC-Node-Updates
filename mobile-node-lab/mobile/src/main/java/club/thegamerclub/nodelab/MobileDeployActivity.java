@@ -257,6 +257,11 @@ public class MobileDeployActivity extends Activity {
     runOnUiThread(()->{if(feedback!=null)feedback.setText(message);});
   }
   private void redeem(){
+    if(!CompanionLicense.accepted(this)){
+      showStatus("Accept the User Agreement before linking this device.");
+      startActivity(new Intent(this,CompanionLicenseActivity.class));
+      return;
+    }
     final String raw=setup.getText().toString().trim();
     if(raw.isEmpty()){showStatus("Paste your setup link first.");return;}
     showStatus("Connecting your device...");

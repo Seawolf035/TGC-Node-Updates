@@ -57,6 +57,7 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
     }
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
         if(!StaffGate.unlocked(this)){finish();return;}
         render();
     }
@@ -161,6 +162,16 @@ public final class VRChatAccountActivity extends StaffProtectedActivity {
         explain.setTextColor(CompanionStyle.MUTED);form.addView(explain);gap(form,10);
         user=field("EMAIL OR ORIGINAL USERNAME","Email or original username",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_NORMAL);
         pass=field("PASSWORD","Enter your password",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        pass.setTransformationMethod(android.text.method.PasswordTransformationMethod.getInstance());
+        Button visibility=CompanionStyle.button(this,"Show password",false);
+        form.addView(visibility,CompanionStyle.buttonParams(this));
+        visibility.setOnClickListener(v->{
+            boolean hidden=pass.getTransformationMethod() instanceof android.text.method.PasswordTransformationMethod;
+            int cursor=pass.getSelectionStart();
+            pass.setTransformationMethod(hidden?null:android.text.method.PasswordTransformationMethod.getInstance());
+            visibility.setText(hidden?"Hide password":"Show password");
+            pass.setSelection(Math.max(0,Math.min(cursor,pass.length())));
+        });
         gap(form,8);
         action(form,"Sign in",this::login,true);
         if(showLoginForm)action(form,"Cancel · keep saved session",()->{

@@ -370,8 +370,10 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         c.addView(notice);space(c,13);
         c.addView(txt(reason,14,CompanionStyle.MUTED,false));
         space(c,18);
-        action(c,"↗","Link this device","Use your personal staff setup link",
-            ()->startActivity(new Intent(this,MobileDeployActivity.class)));
+        action(c,"↗",CompanionLicense.accepted(this)?"Link this device":"Review User Agreement",
+            CompanionLicense.accepted(this)?"Use your personal staff setup link":"Accept before linking",
+            ()->startActivity(new Intent(this,CompanionLicense.accepted(this)?
+                MobileDeployActivity.class:CompanionLicenseActivity.class)));
         action(c,"↓","Check for updates","Install the latest Companion version",
             ()->startActivity(new Intent(this,MobileUpdaterActivity.class)));
         space(page,4);
@@ -459,6 +461,15 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             }
             return;
         }
+        if(setupAfterLink||CompanionSetupState.shouldShow(this)){
+            tab="home";
+            if(!setupLaunched){
+                setupLaunched=true;
+                setupAfterLink=false;
+                startActivity(new Intent(this,CompanionSetupActivity.class));
+            }
+            return;
+        }
         ThemePreferences.apply(this);
         showingUnlocked=true;shell(true);
         QuestBackApplication.refresh(this);
@@ -472,14 +483,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         // Set up personal VRChat before showing release highlights. Quest
         // additionally needs user-confirmed FULL logging and persisted SAF
         // Documents/Logs access. On phones Shizuku remains OPTIONAL.
-        if(setupAfterLink||CompanionSetupState.shouldShow(this)){
-            if(!setupLaunched){
-                setupLaunched=true;
-                setupAfterLink=false;
-                startActivity(new Intent(this,CompanionSetupActivity.class));
-            }
-            return;
-        }
+
         if(!whatsNewLaunched && WhatsNewActivity.shouldShow(this)){
             whatsNewLaunched=true;
             startActivity(new Intent(this,WhatsNewActivity.class));
@@ -978,7 +982,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             active?0xFF183D37:0xFF3E3325));
         space(dashboard,11);
         dashboard.addView(txt(active?"Tracking is active":
-            "Tracking is not running",19,CompanionStyle.TEXT,true));
+            "Tracking is not running",16,CompanionStyle.TEXT,true));
         space(dashboard,5);
         dashboard.addView(txt(active?
             "New VRChat player sightings are being recorded. Review the event history below.":
@@ -996,13 +1000,16 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             13,CompanionStyle.MUTED,false));
         space(dashboard,9);
         android.widget.Button start=CompanionStyle.button(this,"Start tracking",true);
-        dashboard.addView(start,CompanionStyle.buttonParams(this));
+        LinearLayout controls=new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        dashboard.addView(controls);
+        controls.addView(start,new LinearLayout.LayoutParams(0,dp(46),1f));
         start.setEnabled(!active);
         start.setOnClickListener(v->needsStaff(()->{
             if(MobileDeployActivity.startFromDashboard(this))renderUnlocked();
         }));
         android.widget.Button stop=CompanionStyle.button(this,"Stop tracking",false);
-        dashboard.addView(stop,CompanionStyle.buttonParams(this));
+        controls.addView(stop,new LinearLayout.LayoutParams(0,dp(46),1f));
         stop.setEnabled(active);
         stop.setOnClickListener(v->needsStaff(()->{
             startService(new Intent(this,MobileNodeService.class)
@@ -1011,7 +1018,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             main.postDelayed(this::renderUnlocked,1200L);
         }));
         android.widget.Button refresh=CompanionStyle.button(this,"Refresh status",false);
-        dashboard.addView(refresh,CompanionStyle.buttonParams(this));
+        controls.addView(refresh,new LinearLayout.LayoutParams(0,dp(46),1f));
         refresh.setOnClickListener(v->renderUnlocked());
         exploreLink(dashboard,"⚙","Device permissions & advanced controls",
             "Log access, Shizuku, connection and troubleshooting",
@@ -1019,10 +1026,6 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
 
         page.addView(CompanionStyle.section(this,"YOUR ACTIVITY"));
         LinearLayout stats=card();
-        twinActions(stats,Integer.toString(s.getInt("captured_total",0)),
-            "Players recorded","◎",()->openPlayerLog("current"),
-            Integer.toString(s.getInt("uploaded_total",0)),
-            "Records synced","↗",()->openPlayerLog("timeline"));
         exploreLink(stats,"◷","Join & leave history",
             "Review events and instance changes",()->openPlayerLog("timeline"));
         exploreLink(stats,"◎","Observed player list",
@@ -1065,8 +1068,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 12,CompanionStyle.MUTED,false));
         }
 
-        page.addView(CompanionStyle.section(this,"TROUBLESHOOTING"));
-        LinearLayout diagnostic=card();
+        LinearLayout diagnostic=help;
         exploreLink(diagnostic,"⚙",advanced?"Hide technical tools":
             "Show technical tools","For connection and capture troubleshooting",
             ()->{advanced=!advanced;renderUnlocked();});

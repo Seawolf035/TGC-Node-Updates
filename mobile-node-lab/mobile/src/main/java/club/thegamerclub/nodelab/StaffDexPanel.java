@@ -181,7 +181,8 @@ public final class StaffDexPanel extends LinearLayout {
         for(String id:new String[]{
             SpecialStaffDexAchievements.GAMEWITCH,
             SpecialStaffDexAchievements.IMPOSTER,SpecialStaffDexAchievements.AJ,
-            SpecialStaffDexAchievements.ASRIEL
+            SpecialStaffDexAchievements.ASRIEL,
+            SpecialStaffDexAchievements.DARKFLAMES
         })if(SpecialStaffDexAchievements.collected(snapshot,id))earned++;
         if(SpecialStaffDexAchievements.complete(snapshot,royalty))earned++;
         if(SpecialStaffDexAchievements.complete(snapshot,owners))earned++;
@@ -199,8 +200,6 @@ public final class StaffDexPanel extends LinearLayout {
             SpecialStaffDexAchievements.collected(snapshot,SpecialStaffDexAchievements.SEAWOLF);
         int earned=gmEarned(snapshot,gm)+
             leadershipEarned(snapshot,couple,royal,owners,combined);
-        if(SpecialStaffDexAchievements.collected(snapshot,
-            SpecialStaffDexAchievements.DARKFLAMES))earned++;
         return earned;
     }
     /** Compact one-line header; tapping expands only that achievement group. */
@@ -277,7 +276,7 @@ public final class StaffDexPanel extends LinearLayout {
         }
         int leadershipEarned=leadershipEarned(roster,couple,royalty,owners,combined);
         boolean showLeaders=categoryHeader("leaders","♛ LEGENDS & LEADERSHIP",
-            leadershipEarned,10,ThemePreferences.royalGold());
+            leadershipEarned,11,ThemePreferences.royalGold());
         LinearLayout leadership=showLeaders?card(achievementHost):null;
         if(showLeaders){
 
@@ -316,6 +315,11 @@ public final class StaffDexPanel extends LinearLayout {
             "Befriend Asriel",SpecialStaffDexAchievements.ASRIEL,
             SpecialStaffDexAchievements.collected(roster,
                 SpecialStaffDexAchievements.ASRIEL),CompanionStyle.ACCENT);
+        specialItem(leadership,"Darkflames · ICE Breaker",
+            "Even Border Patrol couldn't keep this one off your friends list.",
+            SpecialStaffDexAchievements.DARKFLAMES,
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.DARKFLAMES),CompanionStyle.ACCENT);
         specialProgress(leadership,roster,"Royal Flush",
             "Befriend every Royalty account (including Gamewitch)",
             royalty,ThemePreferences.royalGold());
@@ -325,20 +329,6 @@ public final class StaffDexPanel extends LinearLayout {
         specialProgress(leadership,roster,"The Entire Upper Deck",
             "Complete both Owner and Royalty collections",
             combined,ThemePreferences.royalGold());
-        }
-        boolean rareDone=SpecialStaffDexAchievements.collected(roster,
-            SpecialStaffDexAchievements.DARKFLAMES);
-        boolean showRare=categoryHeader("rare","RARE ENCOUNTERS",
-            rareDone?1:0,1,CompanionStyle.ACCENT);
-        LinearLayout rare=showRare?card(achievementHost):null;
-        if(showRare){
-
-        rare.addView(text("RARE ENCOUNTERS",15,CompanionStyle.ACCENT,true));
-        specialItem(rare,"Darkflames · ICE Breaker",
-            "Even Border Patrol couldn't keep this one off your friends list.",
-            SpecialStaffDexAchievements.DARKFLAMES,
-            SpecialStaffDexAchievements.collected(roster,
-                SpecialStaffDexAchievements.DARKFLAMES),CompanionStyle.ACCENT);
         }
     }
     private void draw(){
