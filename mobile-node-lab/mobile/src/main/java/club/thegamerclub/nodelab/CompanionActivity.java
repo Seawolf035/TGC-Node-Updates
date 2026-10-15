@@ -1209,7 +1209,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             12,CompanionStyle.MUTED,false));
         }
         if(ThemePreferences.allowed(this)){
-            page.addView(CompanionStyle.section(this,"ADMIN+ APPEARANCE"));
+            page.addView(CompanionStyle.section(this,
+                StaffGate.delegated(this)?"PERSONAL APPEARANCE":"ADMIN+ APPEARANCE"));
             LinearLayout themes=card();
             action(themes,"✦","Theme Studio",
                 "Personal UI colors, presets and custom RGB mixer",
