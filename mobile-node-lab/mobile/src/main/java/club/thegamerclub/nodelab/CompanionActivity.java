@@ -886,6 +886,9 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 LinearLayout links=card();
                 exploreLink(links,"◌","Offline friends","See friends who aren't online",
                     ()->openBrowse("friends_offline"));
+                exploreLink(links,"★","VRChat favorite friend groups",
+                    "Browse your real VRChat favorites categories",
+                    ()->openBrowse("friend_favorite_groups"));
                 exploreLink(links,"♧","Friends' locations","See where visible friends are playing",
                     ()->openFriendHub("locations"));
                 exploreLink(links,"✎","Private VRChat notes","Keep notes attached to VRChat users",
