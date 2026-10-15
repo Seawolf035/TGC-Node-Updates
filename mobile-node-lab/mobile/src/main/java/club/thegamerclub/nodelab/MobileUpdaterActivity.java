@@ -118,7 +118,7 @@ public final class MobileUpdaterActivity extends Activity {
       }finally{downloading=false;}
     });
   }
-  private JSONObject fetchManifest() throws Exception{
+  static JSONObject fetchManifest() throws Exception{
     HttpURLConnection connection=connection(FEED);
     try(InputStream stream=connection.getInputStream()){
       byte[] b=readCapped(stream,65536);
