@@ -421,7 +421,8 @@ public final class VRChatApi {
      */
     public static JSONObject createInstance(Context context,String worldId,
         String access,String region,String groupId,String groupAccess,
-        JSONArray roles,boolean queue,boolean ageGate,String displayName)throws Exception{
+        JSONArray roles,boolean queue,boolean ageGate,String displayName,
+        String minimumPerformance)throws Exception{
         requireId("world",worldId);
         if(!worldId.matches("wrld_[0-9a-fA-F-]{36}"))
             throw new IllegalArgumentException("Choose a valid VRChat world");
@@ -431,7 +432,8 @@ public final class VRChatApi {
         JSONObject session=validSession(context);
         String account=session.optString("userId","");
         requireId("user",account);
-        JSONObject body=new JSONObject().put("worldId",worldId).put("region",region);
+        JSONObject body=new JSONObject().put("worldId",worldId).put("region",region)
+            .put("ownerId",account);
         switch(access){
             case "public":
                 body.put("type","public");break;
@@ -455,6 +457,14 @@ public final class VRChatApi {
                     .put("groupAccessType",groupAccess)
                     .put("queueEnabled",queue)
                     .put("ageGate",ageGate);
+                if(minimumPerformance!=null&&!minimumPerformance.isEmpty()&&
+                   !"None".equals(minimumPerformance)){
+                    if(!"Poor".equals(minimumPerformance)&&
+                       !"Medium".equals(minimumPerformance)&&
+                       !"Good".equals(minimumPerformance))
+                        throw new IllegalArgumentException("Invalid avatar performance requirement");
+                    body.put("minimumAvatarPerformance",minimumPerformance);
+                }
                 if("members".equals(groupAccess)&&roles!=null&&roles.length()>0){
                     JSONArray safeRoles=new JSONArray();
                     if(roles.length()>80)throw new IllegalArgumentException("Too many group roles");
