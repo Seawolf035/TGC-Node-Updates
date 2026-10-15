@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.12",
-  "version_code": 86,
+  "version": "0.21.13",
+  "version_code": 87,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "8ea69b6079b6030e3d5e0f16dafaa92a50e85ab28e8aa1ab2f80c48d8bdee1ba",
-  "notes": "v0.21.12 (code 86): Refined Lily, Imposter and Gamewitch individual StaffDex achievement titles. All 20 achievements, existing unlock requirements, compact expandable categories, Settings, Friends, and the rest of the Companion remain intact."
+  "sha256": "f08707bacded155f559fc3ef66bded39d0d0caf910818e21121f9714ccb26a7d",
+  "notes": "v0.21.13 (code 87): StaffDex now shows the percentage of the current staff roster you have added, and places every achievement category inside one expandable collection with individual expandable sections. Existing 20 achievements, unlock requirements, Friends, Settings and other Companion functions remain unchanged."
 }
