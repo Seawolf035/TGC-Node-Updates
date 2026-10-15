@@ -2620,11 +2620,15 @@ public final class OverlayMiniVrcx {
             int official=TgcOfficialChatboxes.selectedEligible(ctx).size();
             boolean on=OscControlStore.rotationEnabled(ctx);
             rotating.addView(text((on?"● Rotating ":"○ Rotation OFF · ")+
-                extra+" personal and "+official+" official chatboxes selected",
+                (StaffGate.delegated(ctx)?
+                    extra+" saved personal chatboxes":
+                    extra+" personal and "+official+" official chatboxes selected"),
                 13,on?CompanionStyle.GOOD:CompanionStyle.MUTED,true));
             rotating.addView(text(
-                "Your default and saved personal chatboxes can be excluded. "+
-                "Official-only mode broadcasts only your selected unlocked TGC tags.",
+                StaffGate.delegated(ctx)?
+                    "Your personal status and saved chatboxes can be rotated independently.":
+                    "Your default and saved personal chatboxes can be excluded. "+
+                    "Official-only mode broadcasts only your selected unlocked TGC tags.",
                 12,CompanionStyle.MUTED,false));
         }catch(Exception ignored){}
         if(!StaffGate.delegated(ctx)){
@@ -2832,6 +2836,7 @@ public final class OverlayMiniVrcx {
             }catch(Exception e){message(e.getMessage());}
         });
         TextView modeLabel=text(
+            StaffGate.delegated(ctx)?"● PERSONAL CHATBOXES · No staff tags":
             OscControlStore.officialOnly(ctx)?
                 "● OFFICIAL ONLY · Default and saved personal chatboxes excluded":
                 "● MIXED MODE · Default and saved personal chatboxes available",
