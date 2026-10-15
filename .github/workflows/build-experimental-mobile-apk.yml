@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.21.8: Automatic Companion update-available notifications. An optional Android alert opens the built-in signed-APK updater; controls are separate from VRChat inbox notifications. Also includes reliability improvements and compatibility fixes."
+            "notes": "v0.21.9 (code 83): Create native VRChat world instances using your personal VRChat account, including Public, Friends+, Friends, Invite+, Invite, and permission-checked Group access. Choose region, optional group queue/roles/age gate/avatar performance and VRC+ display name; launch from Explore, worlds, groups and Floating/Quest tools. VRChat sends an invite to your own account automatically after creation. If that invite fails, retry without creating another instance. Includes condensed staff-facing release highlights. This feature does not alter TGC GM1/GM4 group invitations or Relay permissions. Companion APK remains upgrade-compatible with the permanent release signer."
           }
           JSON
           fi
