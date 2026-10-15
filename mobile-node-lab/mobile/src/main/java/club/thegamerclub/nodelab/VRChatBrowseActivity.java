@@ -37,6 +37,8 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
     private String activeQuery="";
     private Button moreButton,refreshButton;
     private java.util.HashSet<String> favoriteIds=new java.util.HashSet<>();
+    private boolean pinnedOnly=false;
+    private Button pinnedToggle;
     private boolean friendsMode(){
         return mode.equals("friends_online")||mode.equals("friends_offline");
     }
@@ -134,6 +136,17 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         controls.setPadding(dp(16),dp(10),dp(16),dp(10));root.addView(controls);
         count=text(search()?"Enter a name to search":"Loading...",13,CompanionStyle.MUTED,false);
         controls.addView(count,new LinearLayout.LayoutParams(0,-2,1f));
+        if(friendsMode()){
+            pinnedToggle=CompanionStyle.button(this,"☆ Pins",false);
+            pinnedToggle.setTextSize(12);
+            LinearLayout.LayoutParams pinParams=new LinearLayout.LayoutParams(dp(82),dp(42));
+            pinParams.rightMargin=dp(6);controls.addView(pinnedToggle,pinParams);
+            pinnedToggle.setOnClickListener(v->{
+                pinnedOnly=!pinnedOnly;
+                pinnedToggle.setText(pinnedOnly?"★ Pinned":"☆ Pins");
+                adapter.applyFilter();showCount();
+            });
+        }
         refreshButton=CompanionStyle.button(this,search()?"Search":"Refresh",false);
         controls.addView(refreshButton,new LinearLayout.LayoutParams(dp(105),dp(42)));
         refreshButton.setOnClickListener(v->load(true));
@@ -165,7 +178,9 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             boolean completeFriends=false;
             if(friendsMode()){
                 CompanionCache.Record shared=CompanionCache.read(this,"friends");
-                if(shared!=null&&(local==null||shared.updatedAt>local.updatedAt)){
+                if(shared!=null){
+                    // Always prefer the complete account snapshot to a newer
+                    // partial 60-friend first page (Floating/Quest parity).
                     local=shared;completeFriends=true;
                 }
             }
@@ -176,7 +191,7 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                 JSONObject item=items.optJSONObject(i);
                 if(item==null)continue;
                 if(fullFriendSnapshot){
-                    boolean online=item.optBoolean("isOnline",false);
+                    boolean online=FriendOrdering.online(item);
                     if(mode.equals("friends_online")&&!online)continue;
                     if(mode.equals("friends_offline")&&online)continue;
                 }
@@ -204,8 +219,8 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             (hasMore?" · More available":""));
     }
     private boolean paged(){
-        return !"groups".equals(mode)&&!"encounters".equals(mode)&&
-            !"bookmarks".equals(mode);
+        return !friendsMode()&&!"groups".equals(mode)&&
+            !"encounters".equals(mode)&&!"bookmarks".equals(mode);
     }
     private void updatePaging(){
         if(moreButton==null)return;
@@ -242,7 +257,21 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         io.execute(()->{
             try{
                 JSONArray data;
-                if(mode.equals("groups"))data=VRChatApi.groups(this);
+                if(friendsMode()){
+                    // Browse the same complete snapshot as Mini VRCX tools.
+                    // One refresh fills both online/offline lists and caches.
+                    JSONArray all=VRChatApi.friendSnapshot(this);
+                    try{CompanionCache.saveArray(this,"friends",all);}
+                    catch(Exception ignored){}
+                    data=new JSONArray();
+                    for(int i=0;i<all.length();i++){
+                        JSONObject item=all.optJSONObject(i);
+                        if(item==null)continue;
+                        boolean online=FriendOrdering.online(item);
+                        if(("friends_online".equals(mode)&&online)||
+                           ("friends_offline".equals(mode)&&!online))data.put(item);
+                    }
+                }else if(mode.equals("groups"))data=VRChatApi.groups(this);
                 else if(mode.equals("bookmarks"))data=WorldBookmarkStore.bookmarks(this);
                 else if(mode.equals("encounters")){
                     try(MobileOutbox outbox=new MobileOutbox(this)){
@@ -346,8 +375,10 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
         final LinearLayout card;
         final ImageView photo;
         final TextView placeholder,name,description;
-        Holder(LinearLayout c,ImageView image,TextView icon,TextView name,TextView description){
-            super(c);card=c;photo=image;placeholder=icon;this.name=name;this.description=description;
+        final Button pin;
+        Holder(LinearLayout c,ImageView image,TextView icon,TextView name,TextView description,Button pin){
+            super(c);card=c;photo=image;placeholder=icon;this.name=name;
+            this.description=description;this.pin=pin;
         }
     }
     private final class ResultsAdapter extends RecyclerView.Adapter<Holder>{
@@ -366,8 +397,13 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
                 .trim().toLowerCase(java.util.Locale.US);
             for(JSONObject item:data){
                 Entry result=entry(item);
-                if(phrase.isEmpty()||result.title.toLowerCase(java.util.Locale.US).contains(phrase)||
-                    result.description.toLowerCase(java.util.Locale.US).contains(phrase))
+                if(pinnedOnly&&friendsMode()&&!FriendPinStore.contains(
+                    VRChatBrowseActivity.this,result.id))continue;
+                String searchText=result.title+" "+result.description+" "+
+                    item.optString("location","")+" "+item.optString("statusDescription","")+
+                    " "+item.optString("displayName","");
+                if(phrase.isEmpty()||
+                    searchText.toLowerCase(java.util.Locale.US).contains(phrase))
                     shown.add(item);
             }
             notifyDataSetChanged();
@@ -421,9 +457,12 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             TextView desc=text("",12,CompanionStyle.MUTED,false);
             desc.setMaxLines(2);desc.setEllipsize(TextUtils.TruncateAt.END);
             labels.addView(desc);
+            Button pin=CompanionStyle.button(VRChatBrowseActivity.this,"☆",false);
+            pin.setTextSize(18);
+            card.addView(pin,new LinearLayout.LayoutParams(dp(46),dp(46)));
             TextView arrow=text("›",26,CompanionStyle.ACCENT,false);
             card.addView(arrow);
-            return new Holder(card,image,placeholder,name,desc);
+            return new Holder(card,image,placeholder,name,desc,pin);
         }
         @Override public void onBindViewHolder(Holder h,int position){
             Entry e=entry(shown.get(position));
@@ -432,6 +471,25 @@ public final class VRChatBrowseActivity extends StaffProtectedActivity {
             h.description.setVisibility(e.description.isEmpty()?View.GONE:View.VISIBLE);
             h.placeholder.setText(e.glyph);
             CompanionImages.load(h.photo,e.image);
+            h.pin.setVisibility(friendsMode()?View.VISIBLE:View.GONE);
+            if(friendsMode()){
+                String fullName=FriendOrdering.name(shown.get(position));
+                boolean pinned=FriendPinStore.contains(VRChatBrowseActivity.this,e.id);
+                h.pin.setText(pinned?"★":"☆");
+                h.pin.setContentDescription((pinned?"Unpin ":"Pin ")+fullName);
+                h.pin.setOnClickListener(v->{
+                    if(!StaffGate.unlocked(VRChatBrowseActivity.this))return;
+                    try{
+                        boolean next=!FriendPinStore.contains(VRChatBrowseActivity.this,e.id);
+                        FriendPinStore.setPinned(VRChatBrowseActivity.this,e.id,fullName,next);
+                        adapter.applyFilter();showCount();
+                    }catch(Exception ex){
+                        android.widget.Toast.makeText(VRChatBrowseActivity.this,
+                            "Couldn't change pin: "+ex.getMessage(),
+                            android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
+            }else h.pin.setOnClickListener(null);
             String prefix=e.kind.equals("user")?"usr_":e.kind.equals("world")?"wrld_":"grp_";
             boolean valid=e.id!=null&&e.id.matches(prefix+"[0-9a-fA-F-]{36}");
             h.card.setOnClickListener(valid?v->{
