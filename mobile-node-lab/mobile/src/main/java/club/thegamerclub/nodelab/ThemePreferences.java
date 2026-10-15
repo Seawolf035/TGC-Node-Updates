@@ -34,7 +34,10 @@ public final class ThemePreferences {
     public static final String[] NAMES={"TGC Default","Deep Ocean","Rose Quartz","Emerald","Royal Gold"};
     private ThemePreferences(){}
 
-    public static boolean allowed(Context c){return StaffGate.rankTier(c)>=4;}
+    /** A delegate receives full PERSONAL customization, not any staff rank. */
+    public static boolean allowed(Context c){
+        return StaffGate.delegated(c)||StaffGate.rankTier(c)>=4;
+    }
     public static synchronized int[] colors(Context c){
         if(!allowed(c))return BASE.clone();
         SharedPreferences prefs=c.getSharedPreferences(PREF,0);
