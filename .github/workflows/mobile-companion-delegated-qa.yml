@@ -55,11 +55,27 @@ jobs:
           assert 'OWNER_DISCORD_ID="197820946608947201"' in owner
           assert 'OWNER_VRCHAT_ID="usr_2a833076-03ac-4212-aeff-0708d8eab968"' in owner
           assert 'StaffGate.delegated(this)?' in main
-          assert 'versionCode 81' in gradle and "versionName '0.21.7'" in gradle
+          assert 'versionCode 82' in gradle and "versionName '0.21.8'" in gradle
           assert 'MobileRelay.post(' not in owner
           # Android cannot invent a staff rank or authorize other users.
           assert 'put("access_type","delegated")' not in relay
-          print('PASS: bounded owner-trusted exception, no rank OSC, owner preview locked, unchanged shipping version')
+          alerts=read('CompanionUpdateAlerts.java')
+          worker=read('CompanionUpdateWorker.java')
+          updater=read('MobileUpdaterActivity.java')
+          news=read('WhatsNewActivity.java')
+          assert 'MobileUpdaterActivity.fetchManifest()' in worker
+          assert 'version_code' in alerts and 'last_notified_code' in alerts
+          assert 'Companion updates' not in main or 'COMPANION APP UPDATES' in main
+          assert 'CompanionUpdateAlerts.restore(this)' in main
+          assert 'CompanionUpdateAlerts.checkOnOpen(this)' in main
+          assert 'MobileUpdaterActivity.class' in main
+          assert 'static JSONObject fetchManifest()' in updater
+          assert 'verifySameSigner(candidate)' in updater
+          assert 'version_code' in updater
+          import re
+          versions=re.findall(r'(?:LATEST|PREVIOUS STAFF) RELEASE · (v0\\.\\d+\\.\\d+)',news)
+          assert versions==['v0.21.8','v0.21.7','v0.21.6','v0.21.5','v0.21.4'],versions
+          print('PASS: owner-trusted delegated access, OSC exclusions, signed update alerts, current version')
           PY
       - uses: actions/setup-java@v4
         with:
