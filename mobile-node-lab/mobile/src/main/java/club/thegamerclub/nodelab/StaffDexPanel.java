@@ -174,6 +174,10 @@ public final class StaffDexPanel extends LinearLayout {
             boolean couple,java.util.Set<String> royalty,
             java.util.Set<String> owners,java.util.Set<String> combined){
         int earned=couple?1:0;
+        if(SpecialStaffDexAchievements.collected(snapshot,
+            SpecialStaffDexAchievements.SEAWOLF))earned++;
+        if(SpecialStaffDexAchievements.collected(snapshot,
+            SpecialStaffDexAchievements.LILY))earned++;
         for(String id:new String[]{
             SpecialStaffDexAchievements.GAMEWITCH,
             SpecialStaffDexAchievements.IMPOSTER,SpecialStaffDexAchievements.AJ,
@@ -214,7 +218,7 @@ public final class StaffDexPanel extends LinearLayout {
         java.util.Set<String> owners=SpecialStaffDexAchievements.ownerIds(roster);
         java.util.Set<String> combined=
             SpecialStaffDexAchievements.union(royalty,owners);
-        int totalSpecial=14;
+        int totalSpecial=16;
         int earned=0;
         for(String id:GamerMusicProfiles.SET)
             if(SpecialStaffDexAchievements.collected(roster,id))earned++;
@@ -229,13 +233,22 @@ public final class StaffDexPanel extends LinearLayout {
             SpecialStaffDexAchievements.collected(roster,
                 SpecialStaffDexAchievements.SEAWOLF);
         if(couple)earned++;
+        if(SpecialStaffDexAchievements.collected(roster,
+            SpecialStaffDexAchievements.SEAWOLF))earned++;
+        if(SpecialStaffDexAchievements.collected(roster,
+            SpecialStaffDexAchievements.LILY))earned++;
         if(SpecialStaffDexAchievements.complete(roster,royalty))earned++;
         if(SpecialStaffDexAchievements.complete(roster,owners))earned++;
         if(SpecialStaffDexAchievements.complete(roster,combined))earned++;
         // Category summaries are always visible. The many achievement tiles
         // are only created when a particular category is expanded.
-        categoryHeader("special","SPECIAL COLLECTIONS",earned,totalSpecial,
-            CompanionStyle.ACCENT);
+        LinearLayout summary=card(content);
+        summary.addView(text("SPECIAL COLLECTIONS · "+earned+"/"+totalSpecial,
+            16,CompanionStyle.ACCENT,true));
+        summary.addView(text(
+            "Open a category below to view its achievements. "+
+            "Only confirmed friendships count.",
+            12,CompanionStyle.MUTED,false));
         boolean showGm=categoryHeader("gm","♫ GAMER MUSIC",gmEarned(roster,gm),5,
             GamerMusicProfiles.CYAN);
         LinearLayout gmPanel=showGm?card(content):null;
@@ -266,7 +279,7 @@ public final class StaffDexPanel extends LinearLayout {
         }
         int leadershipEarned=leadershipEarned(roster,couple,royalty,owners,combined);
         boolean showLeaders=categoryHeader("leaders","♛ LEGENDS & LEADERSHIP",
-            leadershipEarned,8,ThemePreferences.royalGold());
+            leadershipEarned,10,ThemePreferences.royalGold());
         LinearLayout leadership=showLeaders?card(content):null;
         if(showLeaders){
 
@@ -278,7 +291,19 @@ public final class StaffDexPanel extends LinearLayout {
             SpecialStaffDexAchievements.collected(roster,
                 SpecialStaffDexAchievements.GAMEWITCH),
             ThemePreferences.royalGold());
-        specialItem(leadership,"Kairos & Lilium · Two Hearts",
+        specialItem(leadership,"Seawolf · The Founder",
+            "Befriend Seawolf, founder of The Gamer Club",
+            SpecialStaffDexAchievements.SEAWOLF,
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.SEAWOLF),
+            ThemePreferences.royalGold());
+        specialItem(leadership,"Lily · Lilium",
+            "Befriend Lily",
+            SpecialStaffDexAchievements.LILY,
+            SpecialStaffDexAchievements.collected(roster,
+                SpecialStaffDexAchievements.LILY),
+            ThemePreferences.royalGold());
+        specialItem(leadership,"Seawolf & Lily · Two Hearts",
             "Befriend both Seawolf and Lily",
             null,couple,ThemePreferences.royalGold());
         specialItem(leadership,"Imposter · The Doppelgänger",
