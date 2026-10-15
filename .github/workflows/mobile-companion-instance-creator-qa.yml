@@ -1,0 +1,76 @@
+name: Companion VRChat native instance creation QA (nonpublishing)
+
+on:
+  push:
+    branches:
+      - feature/mobile-vrcx-instance-creator
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-instance-creator-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check API boundary, self-invite, permissions and release unchanged
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          read=lambda n:(base/n).read_text()
+          api=read('VRChatApi.java')
+          create=read('VRChatInstanceCreateActivity.java')
+          world=read('VRChatDetailActivity.java')
+          mini=read('OverlayMiniVrcx.java')
+          quest=read('QuestToolsActivity.java')
+          home=read('CompanionActivity.java')
+          group=read('VRChatGroupToolsActivity.java')
+          manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          news=read('WhatsNewActivity.java')
+          assert 'request("POST","/instances",cookie(session),null,body)' in api
+          assert '"group-instance-open-create"' in create
+          assert '"group-instance-plus-create"' in create
+          assert '"group-instance-public-create"' in create
+          assert '"group-instance-age-gated-create"' in create
+          assert 'VRChatApi.myGroupPermissions(this)' in create
+          assert 'VRChatApi.groupRoles(this,id)' in create
+          assert 'VRChatApi.searchWorlds(this,term)' in create
+          assert 'VRChatApi.createInstance(this,world,type,server' in create
+          assert 'VRChatApi.selfInvite(this,location)' in create
+          assert 'VRChatApi.selfInvite(this,createdLocation)' in create
+          assert 'if(busy||!createdLocation.isEmpty()' in create
+          assert 'createdLocation=finalLocation' in create
+          assert 'Retry self-invite' in create
+          assert 'Copy instance' not in create and 'copy link' not in create
+          assert 'new AlertDialog.Builder(this).setTitle("Create VRChat instance?")' in create
+          assert 'VRChatInstanceCreateActivity.class' in world
+          assert 'VRChatInstanceCreateActivity.class' in mini
+          assert 'VRChatInstanceCreateActivity.class' in quest
+          assert 'VRChatInstanceCreateActivity.class' in home
+          assert 'VRChatInstanceCreateActivity.class' in group
+          assert 'android:name=".VRChatInstanceCreateActivity"' in manifest
+          assert 'versionCode 82' in gradle and "versionName '0.21.8'" in gradle
+          assert 'non-staff' not in news.lower() and 'delegated' not in news.lower()
+          print("PASS: native VRChat instance creation + self-invite, group/region, privacy, unchanged v0.21.8")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publishing or signing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
