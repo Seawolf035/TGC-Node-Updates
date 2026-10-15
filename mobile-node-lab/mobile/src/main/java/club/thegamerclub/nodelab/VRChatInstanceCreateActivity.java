@@ -427,7 +427,7 @@ public final class VRChatInstanceCreateActivity extends StaffProtectedActivity {
                    !hasPermission(group,"group-instance-age-gated-create"))
                     throw new SecurityException("Age-gated group instance permission missing");
                 JSONObject instance=VRChatApi.createInstance(this,world,type,server,
-                    group,mode,roles,queued,gate,name);
+                    group,mode,roles,queued,gate,name,performanceChoice);
                 location=instance.optString("location","");
                 try{
                     VRChatApi.selfInvite(this,location);
