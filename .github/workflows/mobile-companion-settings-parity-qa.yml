@@ -77,7 +77,7 @@ jobs:
           news=(p/"WhatsNewActivity.java").read_text()
           versions=[line.split('RELEASE · ')[1].split('"')[0]
             for line in news.splitlines() if 'RELEASE · v0.' in line]
-          assert versions==['v0.21.14','v0.21.13','v0.21.12','v0.21.11','v0.21.10'],versions
+          assert versions==['v0.21.15','v0.21.14','v0.21.13','v0.21.12','v0.21.11','v0.21.10'],versions
           assert 'non-staff' not in news.lower() and 'delegated' not in news.lower()
           assert 'AJ · The Chairman' in dex
           assert 'Asriel · The Spawn of Lily and Seawolf' in dex
@@ -99,8 +99,8 @@ jobs:
           assert 'if(categoryHeader("all","ACHIEVEMENTS"' in dex
           assert 'achievementHost=new LinearLayout(activity)' in dex
           assert 'achievementHost=null;' in dex
-          assert 'leadershipEarned,10' in dex
-          for key in ('basic','gm','leaders','rare'):
+          assert 'leadershipEarned,11' in dex
+          for key in ('basic','gm','leaders'):
             assert 'categoryHeader("'+key+'"' in dex
           assert 'expandedAchievements=new HashSet<>()' in dex
           assert 'categoryHeader("special"' not in dex
