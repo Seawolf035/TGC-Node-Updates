@@ -47,7 +47,17 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.9"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.10"));
+        highlight(body,"Cleaner, easier-to-navigate Settings",
+            "Account, alerts, automation, tools and app settings now live in "+
+            "five compact expandable groups, without removing existing controls.");
+        highlight(body,"Improved Friends search and browsing",
+            "Search the complete friends list by name, status or location; "+
+            "pin friends directly and browse your VRChat favorite friend groups.");
+        highlight(body,"New StaffDex collectible achievements",
+            "Collect special Gamer Music, Cult, leadership and rare-friend "+
+            "achievements; numbered Gamer Music profiles have custom accents.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.9"));
         highlight(body,"Create VRChat instances from the Companion",
             "Create Public, Friends, Invite or Group instances with region "+
             "and group access settings. After creation, VRChat sends an "+
@@ -71,13 +81,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Fixed device linking and guided setup",
             "After linking a phone or Quest, the Companion now opens "+
             "the guided setup instead of leaving you in Tracking Controls.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.5"));
-        highlight(body,"Smarter friend sorting",
-            "Favorite friends first, then shared instances and visible "+
-            "locations, with private or hidden locations last.");
-        highlight(body,"More reliable VRChat login sessions",
-            "Reduced unnecessary session checks and fixed cases where "+
-            "temporary API errors appeared as expired logins.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
