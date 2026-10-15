@@ -19,6 +19,7 @@ public final class StaffGate {
     private static final long OFFLINE_GRACE_MS=12L*60*1000; // max since last successful relay response
     private static volatile long approvedElapsed=0L;
     private static volatile String verifiedNode="",verifiedDiscord="",verifiedRank="";
+    private static volatile String verifiedAccessType="",authorizedVrchatUser="";
     private StaffGate(){}
 
     public static synchronized void lock(){
@@ -26,6 +27,8 @@ public final class StaffGate {
         verifiedNode="";
         verifiedDiscord="";
         verifiedRank="";
+        verifiedAccessType="";
+        authorizedVrchatUser="";
         ThemePreferences.resetRuntime();
     }
     public static boolean unlocked(Context context){
@@ -37,7 +40,24 @@ public final class StaffGate {
             return c!=null && c.nodeId.equals(verifiedNode) && c.discordId.equals(verifiedDiscord);
         }catch(Exception ignored){return false;}
     }
-    /** Exact Discord identity asserted by a currently valid Relay staff grant. */
+    /** An owner-issued, Relay-verified non-staff Companion deployment. */
+    public static boolean delegated(Context context){
+        return unlocked(context) && "delegated".equals(verifiedAccessType);
+    }
+    public static boolean officialOscTagsAllowed(Context context){
+        return unlocked(context) && !delegated(context);
+    }
+    /** The VRChat identity bound to the current delegated access grant.
+     *  Never trusted from the Android client's settings or intent extras. */
+    public static String authorizedVrchatUser(Context context){
+        return delegated(context)?authorizedVrchatUser:"";
+    }
+    public static void assertPersonalVrchatAccount(Context context,String accountId){
+        String required=authorizedVrchatUser(context);
+        if(!required.isEmpty()&&!required.equals(accountId))
+            throw new SecurityException("This delegated Companion is linked to a different VRChat account. Sign in with the authorized account.");
+    }
+    /** Exact Discord identity asserted by a currently valid Relay grant. */
     public static boolean verifiedDiscordMatches(Context context,String expectedId){
         return expectedId!=null && !expectedId.isEmpty() &&
             unlocked(context) && expectedId.equals(verifiedDiscord);
@@ -58,6 +78,7 @@ public final class StaffGate {
     }
     public static String rankLabel(Context context){
         if(!unlocked(context))return "Not verified";
+        if(delegated(context))return "Delegated Companion";
         return verifiedRank.isEmpty()?"Rank unavailable":verifiedRank;
     }
     /** True only if the last attempt was online approved; never treat cached credentials as approval. */
@@ -104,7 +125,23 @@ public final class StaffGate {
             lock();
             throw new SecurityException("TGC staff deployment revoked or no longer authorized");
         }
-        String returnedRank=result.optString("staff_rank","");
+        String access=result.optString("access_type","staff");
+        String delegatedVrcId=result.optString("linked_vrchat_user_id","");
+        if("delegated".equals(access)){
+            // Only one specific Relay-asserted grant is currently supported.
+            // Any unrecognized delegation, forged staff rank, or mismatched
+            // VRChat identity fails closed.
+            if(!"1228529346788982794".equals(creds.discordId) ||
+               !"usr_0f534ae6-c5c4-4025-9478-d5423da1f296".equals(delegatedVrcId) ||
+               !result.optString("staff_rank","").isEmpty()){
+                lock();
+                throw new SecurityException("Delegated Companion identity was not authorized");
+            }
+        }else if(!"staff".equals(access)){
+            lock();
+            throw new SecurityException("Unknown Relay Companion access grant");
+        }
+        String returnedRank="delegated".equals(access)?"":result.optString("staff_rank","");
         // Defense in depth: even a malformed rank response cannot grant
         // Royalty to a fourth ID. Backend roster sync also enforces this.
         if("The Royalty".equals(returnedRank) &&
@@ -113,6 +150,8 @@ public final class StaffGate {
             !"1385600758010876024".equals(creds.discordId))
             returnedRank="";
         verifiedRank=returnedRank;
+        verifiedAccessType=access;
+        authorizedVrchatUser="delegated".equals(access)?delegatedVrcId:"";
         verifiedNode=creds.nodeId;
         verifiedDiscord=creds.discordId;
         approvedElapsed=SystemClock.elapsedRealtime();
@@ -132,6 +171,7 @@ public final class StaffGate {
           m.contains("not authorized staff") ||
           m.contains("staff no longer") ||
           m.contains("node disabled") ||
+          m.contains("delegated companion access revoked") ||
           m.contains("relay http 401") ||
           m.contains("relay http 403");
     }
