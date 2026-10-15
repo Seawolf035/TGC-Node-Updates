@@ -834,6 +834,9 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                     ()->openBrowse("recent"));
                 exploreLink(links,"⌕","Find worlds","Discover something new",
                     ()->openBrowse("search_worlds"));
+                exploreLink(links,"◎","Create VRChat instance",
+                    "Choose a world and send yourself an invite",
+                    ()->startActivity(new Intent(this,VRChatInstanceCreateActivity.class)));
                 exploreLink(links,"◈","My groups","Your VRChat communities",
                     ()->openBrowse("groups"));
                 exploreLink(links,"◉","Favorite avatars","Browse and equip saved avatars",
