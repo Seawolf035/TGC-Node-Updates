@@ -624,7 +624,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
                 "Official rank tags","mini_osc_tags");
         }else{
             button(live,"Configure personal status",false,()->
-                switchMini("mini_osc_status"));
+                go("mini_osc_status"));
         }
         pair(live,"Rotation","mini_osc_rotation","Saved phrases","mini_osc_presets");
 
