@@ -37,7 +37,7 @@ jobs:
           assert 'int totalSpecial=16' in panel
           assert 'leadershipEarned,10' in panel
           for name in ('AJ · The Chairman','Asriel · The Spawn of Lily and Seawolf',
-                       'Seawolf · The Founder','Lily · Lilium',
+                       'Seawolf · The Founder','Lily · The Lil shit',
                        'Seawolf & Lily · Two Hearts','GM2 · Initiated into the Cult',
                        'Gamer Music: Complete Discography','Royal Flush',
                        'Owners\' Meeting','The Entire Upper Deck'):
