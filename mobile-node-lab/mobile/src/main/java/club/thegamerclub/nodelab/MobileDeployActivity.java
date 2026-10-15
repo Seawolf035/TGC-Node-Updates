@@ -358,7 +358,10 @@ public class MobileDeployActivity extends Activity {
   /** Quick-start for the main Tracking tab. Preserve the full permission flow
    * in this Activity whenever additional setup or authorization is required. */
   public static boolean startFromDashboard(Activity activity){
-    if(MobileCredentials.load(activity)==null ||
+    boolean deviceLinked=false;
+    try{deviceLinked=MobileCredentials.load(activity)!=null;}
+    catch(Exception e){deviceLinked=false;}
+    if(!deviceLinked ||
         !TrackingSetupGuide.acknowledged(activity) ||
         (QuestSafLogWatcher.isSelected(activity) &&
             !QuestSafLogWatcher.hasGrant(activity)) ||
