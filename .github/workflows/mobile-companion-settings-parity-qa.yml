@@ -85,8 +85,8 @@ jobs:
           assert 'Imposter · Sus' in dex and 'Gamewitch · The Mysterious One' in dex
           assert 'Seawolf & Lily · Two Hearts' in dex
           assert 'int totalSpecial=16' in dex
-          main=(base/'mobile/src/main/java/club/thegamerclub/nodelab/CompanionActivity.java').read_text()
-          deploy=(base/'mobile/src/main/java/club/thegamerclub/nodelab/MobileDeployActivity.java').read_text()
+          main=(p/'CompanionActivity.java').read_text()
+          deploy=(p/'MobileDeployActivity.java').read_text()
           assert 'MobileDeployActivity.startFromDashboard(this)' in main
           assert 'public static boolean startFromDashboard(Activity activity)' in deploy
           assert 'Start tracking' in main and 'Stop tracking' in main and 'Refresh status' in main
