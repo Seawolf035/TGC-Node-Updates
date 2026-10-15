@@ -2589,6 +2589,7 @@ public final class OverlayMiniVrcx {
         button(content,"Save settings & preview",false,()->{
             host.keyboard(false);message.clearFocus();updatePreview.run();
         });
+        if(!StaffGate.delegated(ctx))
         button(content,"Clear personal status & use official tags only",false,()->{
             if(TgcOfficialChatboxes.selectedEligible(ctx).isEmpty()){
                 message("Select an unlocked official TGC tag first.");
@@ -2626,21 +2627,23 @@ public final class OverlayMiniVrcx {
                 "Official-only mode broadcasts only your selected unlocked TGC tags.",
                 12,CompanionStyle.MUTED,false));
         }catch(Exception ignored){}
-        Button mode=CompanionStyle.button(ctx,
-            OscControlStore.officialOnly(ctx)?"✓ Official tags ONLY: ON":
-                "Official tags ONLY: OFF",false);
-        rotating.addView(mode,CompanionStyle.buttonParams(ctx));
-        mode.setOnClickListener(v->{
-            try{
-                boolean next=!OscControlStore.officialOnly(ctx);
-                OscControlStore.setOfficialOnly(ctx,next);
-                mode.setText(next?"✓ Official tags ONLY: ON":
-                    "Official tags ONLY: OFF");
-                preview.setText(next?
-                    "Official TGC tags only · personal status excluded":
-                    "Official-only OFF · personal settings restored");
-            }catch(Exception ex){message("Rotation mode: "+ex.getMessage());}
-        });
+        if(!StaffGate.delegated(ctx)){
+            Button mode=CompanionStyle.button(ctx,
+                OscControlStore.officialOnly(ctx)?"✓ Official tags ONLY: ON":
+                    "Official tags ONLY: OFF",false);
+            rotating.addView(mode,CompanionStyle.buttonParams(ctx));
+            mode.setOnClickListener(v->{
+                try{
+                    boolean next=!OscControlStore.officialOnly(ctx);
+                    OscControlStore.setOfficialOnly(ctx,next);
+                    mode.setText(next?"✓ Official tags ONLY: ON":
+                        "Official tags ONLY: OFF");
+                    preview.setText(next?
+                        "Official TGC tags only · personal status excluded":
+                        "Official-only OFF · personal settings restored");
+                }catch(Exception ex){message("Rotation mode: "+ex.getMessage());}
+            });
+        }
         button(rotating,"Manage rotating chatboxes",false,
             ()->host.navigate("mini_osc_rotation"));
 
@@ -2800,9 +2803,12 @@ public final class OverlayMiniVrcx {
         LinearLayout intro=card(list);
         intro.addView(text("Rotating Live Chatboxes",18,CompanionStyle.TEXT,true));
         intro.addView(text(
-            "Choose whether to include the default personal status, saved "+
-            "personal chatboxes, or only authorized official TGC tags. "+
-            "Nothing transmits until Live Chatbox is started.",
+            StaffGate.delegated(ctx)?
+                "Choose the default personal status or saved personal chatboxes. "+
+                "Nothing transmits until Live Chatbox is started.":
+                "Choose the default personal status, saved personal chatboxes, "+
+                "or authorized official TGC tags. Nothing transmits until Live "+
+                "Chatbox is started.",
             12,CompanionStyle.MUTED,false));
         intro.addView(text(
             "Each message can have its own clock and battery fields. "+
@@ -2831,20 +2837,22 @@ public final class OverlayMiniVrcx {
                 "● MIXED MODE · Default and saved personal chatboxes available",
             12,CompanionStyle.ACCENT,true);
         settings.addView(modeLabel);
-        Button exclusive=CompanionStyle.button(ctx,
-            OscControlStore.officialOnly(ctx)?
-                "Official tags only: ON":"Official tags only: OFF",false);
-        settings.addView(exclusive,CompanionStyle.buttonParams(ctx));
-        exclusive.setOnClickListener(v->{
-            try{
-                boolean next=!OscControlStore.officialOnly(ctx);
-                OscControlStore.setOfficialOnly(ctx,next);
-                exclusive.setText(next?"Official tags only: ON":"Official tags only: OFF");
-                modeLabel.setText(next?
-                    "● OFFICIAL ONLY · Personal chatboxes excluded":
-                    "● MIXED MODE · Personal chatboxes available");
-            }catch(Exception e){message(e.getMessage());}
-        });
+        if(!StaffGate.delegated(ctx)){
+            Button exclusive=CompanionStyle.button(ctx,
+                OscControlStore.officialOnly(ctx)?
+                    "Official tags only: ON":"Official tags only: OFF",false);
+            settings.addView(exclusive,CompanionStyle.buttonParams(ctx));
+            exclusive.setOnClickListener(v->{
+                try{
+                    boolean next=!OscControlStore.officialOnly(ctx);
+                    OscControlStore.setOfficialOnly(ctx,next);
+                    exclusive.setText(next?"Official tags only: ON":"Official tags only: OFF");
+                    modeLabel.setText(next?
+                        "● OFFICIAL ONLY · Personal chatboxes excluded":
+                        "● MIXED MODE · Personal chatboxes available");
+                }catch(Exception e){message(e.getMessage());}
+            });
+        }
         Button defaultToggle=CompanionStyle.button(ctx,
             OscControlStore.includeDefaultChatbox(ctx)?
                 "Default personal status: INCLUDED":"Default personal status: EXCLUDED",
@@ -2891,14 +2899,16 @@ public final class OverlayMiniVrcx {
             });
         }
 
-        section(list,"OFFICIAL TGC TAGS");
-        LinearLayout officialQuick=card(list);
-        officialQuick.addView(text(
-            "Select which rank-authorized staff tags join your Live Chatbox rotation.",
-            12,CompanionStyle.MUTED,false));
-        button(officialQuick,"Manage official tags · "+
-            TgcOfficialChatboxes.selectedEligible(ctx).size()+" enabled",
-            true,()->host.navigate("mini_osc_tags"));
+        if(!StaffGate.delegated(ctx)){
+            section(list,"OFFICIAL TGC TAGS");
+            LinearLayout officialQuick=card(list);
+            officialQuick.addView(text(
+                "Select which rank-authorized staff tags join your Live Chatbox rotation.",
+                12,CompanionStyle.MUTED,false));
+            button(officialQuick,"Manage official tags · "+
+                TgcOfficialChatboxes.selectedEligible(ctx).size()+" enabled",
+                true,()->host.navigate("mini_osc_tags"));
+        }
 
         section(list,"YOUR CHATBOXES");
         LinearLayout defaultBox=card(list);
@@ -3030,6 +3040,13 @@ public final class OverlayMiniVrcx {
             "It never uploads chat content or profiles to TGC's Relay.",null);
     }
     private void showOscTags(){
+        if(StaffGate.delegated(ctx)){
+            section(list,"PERSONAL OSC ONLY");
+            line(list,"No staff or rank tags",
+                "Your Companion grant permits personal OSC controls but not "+
+                "official TGC staff or rank-tag broadcasting.",null);
+            return;
+        }
         LinearLayout overview=card(list);
         overview.addView(text(
             "One tap to toggle. Selected tags rotate only when Live Chatbox is "+
