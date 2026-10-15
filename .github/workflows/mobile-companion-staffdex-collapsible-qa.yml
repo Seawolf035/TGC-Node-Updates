@@ -33,7 +33,7 @@ jobs:
           assert 'categoryHeader("basic"' in panel
           assert 'categoryHeader("gm"' in panel
           assert 'categoryHeader("leaders"' in panel
-          assert 'categoryHeader("rare"' in panel
+          assert 'categoryHeader("rare"' not in panel
           assert 'int totalSpecial=16' in panel
           assert 'int addedPercent=t>0?(int)Math.round(100.0*c/t):0;' in panel
           assert 'addedPercent+"%"' in panel
@@ -42,7 +42,7 @@ jobs:
           assert 'achievementHost=new LinearLayout(activity)' in panel
           assert 'LinearLayout shell=card(achievementHost==null?content:achievementHost)' in panel
           assert 'specialAchievements();' in panel
-          assert 'leadershipEarned,10' in panel
+          assert 'leadershipEarned,11' in panel
           for name in ('AJ · The Chairman','Asriel · The Spawn of Lily and Seawolf',
                        'Seawolf · The Founder','Lily · The Lil shit','Imposter · Sus',
                        'Gamewitch · The Mysterious One',
@@ -57,7 +57,7 @@ jobs:
           assert 'categoryHeader("special"' not in panel # summary is not an inert expander
           versions=[line.split('RELEASE · ')[1].split('"')[0]
             for line in notes.splitlines() if 'RELEASE · v0.' in line]
-          assert versions==['v0.21.14','v0.21.13','v0.21.12','v0.21.11','v0.21.10'],versions
+          assert versions==['v0.21.15','v0.21.14','v0.21.13','v0.21.12','v0.21.11','v0.21.10'],versions
           assert 'delegated' not in notes.lower() and 'non-staff' not in notes.lower()
           print("PASS: 16 special achievements; four nested expandable categories; v0.21.13")
           PY
