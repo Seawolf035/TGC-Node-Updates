@@ -6,8 +6,10 @@ import android.graphics.Color;
 import java.util.Locale;
 
 /**
- * Per-device colors, available ONLY under an active Relay-verified Admin+ grant.
- * Importing a VRChat palette is a PERSONAL customization, NOT a public preset.
+ * Built-in color presets are available to every currently Relay-verified
+ * Companion, including ordinary staff. The ten-channel custom editor and
+ * personal/imported color palettes retain their existing Admin+ (or explicitly
+ * delegated personal customization) gate. All changes stay on this device.
  */
 public final class ThemePreferences {
     private static final String PREF="tgc_companion_admin_theme_v1";
@@ -23,23 +25,44 @@ public final class ThemePreferences {
         0xFF090F1D,0xFF142338,0xFF1C3048,0xFF233A52,0xFF62D6F2,0xFF324D68,
         0xFF62D6F2,0xFF62D6F2,0xFFF1F8FF,0xFFB8CADE
     };
-    // Existing built-in presets intentionally unchanged; no personal examples here.
+    // Stable indices 0..4 are kept unchanged so existing theme preferences
+    // survive upgrades. New themes are appended, never inserted between them.
     private static final int[][] PRESETS={
         {0xFF090F1D,0xFF142338,0xFF1C3048,0xFF233A52,0xFF62D6F2,0xFF324D68},
         {0xFF080D1F,0xFF141936,0xFF20294B,0xFF253A5C,0xFF8B9CFF,0xFF354A74},
         {0xFF170E20,0xFF291A36,0xFF342345,0xFF483054,0xFFFF8CC3,0xFF684868},
         {0xFF080F0D,0xFF152B25,0xFF1E3D32,0xFF294A3F,0xFF68E4B0,0xFF35594D},
-        {0xFF151110,0xFF2A211B,0xFF3B2B20,0xFF503B29,0xFFE7B75D,0xFF705437}
+        {0xFF151110,0xFF2A211B,0xFF3B2B20,0xFF503B29,0xFFE7B75D,0xFF705437},
+        {0xFF100F26,0xFF252143,0xFF312858,0xFF3D3264,0xFFC2A3FF,0xFF55457D},
+        {0xFF1C1017,0xFF301C29,0xFF452433,0xFF553443,0xFFFF778D,0xFF76475C},
+        {0xFF1B1211,0xFF30211C,0xFF463025,0xFF583A2D,0xFFFFB878,0xFF79533A},
+        {0xFF081B28,0xFF142D3C,0xFF1F3E4E,0xFF2C5060,0xFF8CE2FF,0xFF3A6878},
+        {0xFF131719,0xFF222A2D,0xFF303B40,0xFF3B474C,0xFFBDD3DC,0xFF51646C},
+        {0xFF180F1E,0xFF322139,0xFF462E50,0xFF5E3A65,0xFFFFACDA,0xFF815184},
+        {0xFF101B16,0xFF22352B,0xFF2C4938,0xFF3B604A,0xFFE1F783,0xFF567859}
     };
-    public static final String[] NAMES={"TGC Default","Deep Ocean","Rose Quartz","Emerald","Royal Gold"};
+    public static final String[] NAMES={
+        "TGC Default","Deep Ocean","Rose Quartz","Emerald","Royal Gold",
+        "Midnight Violet","Crimson","Sunset Ember","Arctic Ice",
+        "Graphite","Sakura","Lime Grove"
+    };
     private ThemePreferences(){}
 
-    /** A delegate receives full PERSONAL customization, not any staff rank. */
+    /** Every live-verified Companion user may select a built-in palette. */
+    public static boolean presetAllowed(Context c){
+        return StaffGate.unlocked(c);
+    }
+    /** Existing custom-color privilege is intentionally unchanged. */
     public static boolean allowed(Context c){
         return StaffGate.delegated(c)||StaffGate.rankTier(c)>=4;
     }
+    public static String selectedPresetName(Context c){
+        if(!presetAllowed(c))return NAMES[0];
+        int idx=c.getSharedPreferences(PREF,0).getInt("preset",0);
+        return NAMES[idx>=0&&idx<NAMES.length?idx:0];
+    }
     public static synchronized int[] colors(Context c){
-        if(!allowed(c))return BASE.clone();
+        if(!presetAllowed(c))return BASE.clone();
         SharedPreferences prefs=c.getSharedPreferences(PREF,0);
         int idx=prefs.getInt("preset",0);
         if(idx<0||idx>=PRESETS.length)idx=0;
@@ -47,14 +70,14 @@ public final class ThemePreferences {
         System.arraycopy(PRESETS[idx],0,result,0,6);
         // Upgrade-safe: custom 0.20.0 accents still control icon/button colors
         // unless those new channels are explicitly customized in 0.20.1.
-        for(int i=0;i<6;i++){
+        if(allowed(c))for(int i=0;i<6;i++){
             String key="color_"+i;
             if(prefs.contains(key))
                 result[i]=0xFF000000|(prefs.getInt(key,result[i])&0xFFFFFF);
         }
         result[ICON]=result[ACCENT];
         result[BUTTON]=result[ACCENT];
-        for(int i=6;i<result.length;i++){
+        if(allowed(c))for(int i=6;i<result.length;i++){
             String key="color_"+i;
             if(prefs.contains(key))
                 result[i]=0xFF000000|(prefs.getInt(key,result[i])&0xFFFFFF);
@@ -62,7 +85,7 @@ public final class ThemePreferences {
         return result;
     }
     public static void preset(Context c,int idx){
-        if(!allowed(c)||idx<0||idx>=PRESETS.length)return;
+        if(!presetAllowed(c)||idx<0||idx>=PRESETS.length)return;
         c.getSharedPreferences(PREF,0).edit().clear().putInt("preset",idx).apply();
         apply(c);
     }
@@ -169,7 +192,7 @@ public final class ThemePreferences {
         CompanionStyle.TEXT=BASE[TEXT];CompanionStyle.MUTED=BASE[SUBTEXT];
     }
     public static synchronized void apply(Context c){
-        if(!allowed(c)){resetRuntime();return;}
+        if(!presetAllowed(c)){resetRuntime();return;}
         int[] a=colors(c);
         CompanionStyle.BG=a[BG];CompanionStyle.SURFACE=a[SURFACE];
         CompanionStyle.RAISED=a[RAISED];CompanionStyle.FIELD=a[FIELD];
