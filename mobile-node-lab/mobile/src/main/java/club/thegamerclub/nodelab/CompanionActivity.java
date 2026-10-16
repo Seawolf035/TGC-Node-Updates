@@ -46,18 +46,6 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     private boolean questShizukuExpanded=false;
     private static final int TRACKING_FOLDER_REQUEST=7152;
     private static final int TRACKING_SHIZUKU_REQUEST=7217;
-    private final Shizuku.OnRequestPermissionResultListener trackingPermissionListener=
-        (code,result)->{
-            if(code!=TRACKING_SHIZUKU_REQUEST)return;
-            runOnUiThread(()->{
-                if(isFinishing()||isDestroyed())return;
-                Toast.makeText(this,result==PackageManager.PERMISSION_GRANTED?
-                    "Shizuku permission granted. Start tracking when ready.":
-                    "Shizuku permission denied. Tracking remains off.",
-                    Toast.LENGTH_LONG).show();
-                if("tracking".equals(tab)&&StaffGate.unlocked(this))renderUnlocked();
-            });
-        };
     private String exploreCategory="friends";
     // Long settings groups stay collapsed, while the primary account group
     // opens by default. The current set survives tab redraws.
@@ -75,6 +63,19 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     private TextView verificationNotice;
     private LinearLayout page,root;
     private String tab="home";
+    private final Shizuku.OnRequestPermissionResultListener trackingPermissionListener=
+        (code,result)->{
+            if(code!=TRACKING_SHIZUKU_REQUEST)return;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                Toast.makeText(this,result==PackageManager.PERMISSION_GRANTED?
+                    "Shizuku permission granted. Start tracking when ready.":
+                    "Shizuku permission denied. Tracking remains off.",
+                    Toast.LENGTH_LONG).show();
+                if("tracking".equals(tab)&&StaffGate.unlocked(this))renderUnlocked();
+            });
+        };
+
     @Override public boolean showQuestBack(){
         return showingUnlocked && !"home".equals(tab) && StaffGate.unlocked(this);
     }
