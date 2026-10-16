@@ -1,0 +1,63 @@
+name: Companion v0.21.16 verified delegation QA (no publishing)
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.16-delegated-allowlist
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-delegates-qa.yml'
+      - '.github/workflows/build-experimental-mobile-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify verified-Relay grant, ID binding, privileges and version invariants
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          base=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          gate=(base/"StaffGate.java").read_text()
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          news=(base/"WhatsNewActivity.java").read_text()
+          publish=Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()
+          assert "versionCode 90" in gradle
+          assert "versionName '0.21.16'" in gradle
+          assert 'result.optBoolean("verified",false)' in gate
+          assert '!"mobile_companion".equals(result.optString("client_type"))' in gate
+          assert 'creds.discordId.equals(result.optString("discord_id"))' in gate
+          assert '"delegated".equals(access)' in gate
+          assert 'delegatedVrcId.matches("usr_' in gate
+          assert '!result.optString("staff_rank","").isEmpty()' in gate
+          assert 'authorizedVrchatUser="delegated".equals(access)?delegatedVrcId:""' in gate
+          assert 'public static boolean officialOscTagsAllowed' in gate
+          assert 'return unlocked(context) && !delegated(context);' in gate
+          assert '1228529346788982794' not in gate
+          assert 'usr_0f534ae6-c5c4-4025-9478-d5423da1f296' not in gate
+          versions=re.findall(r'RELEASE · v(0\\.21\\.\\d+)', news)
+          assert versions==['0.21.16','0.21.15','0.21.14','0.21.13','0.21.12'],versions
+          assert 'delegated' not in news.lower() and 'non-staff' not in news.lower()
+          assert '"notes": "v0.21.16' in publish
+          assert 'non-staff' not in publish.lower() and 'delegated' not in publish.lower()
+          print("PASS: secure live Relay delegation; staff boundary; v0.21.16; private-safe feed")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile complete Android debug app (do not publish)
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
