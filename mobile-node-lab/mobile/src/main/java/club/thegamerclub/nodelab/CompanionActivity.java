@@ -1457,10 +1457,11 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 CompanionStyle.ACCENT,true));
             space(floating,7);
             floating.addView(txt(
-                "Open Quest Tools directly from the Home screen. It provides "+
-                "native VRChat tools without a floating overlay. Floating "+
-                "windows and experimental floater recovery are permanently "+
-                "disabled on Quest. Your tracking Node runs independently.",
+                "Open Quest Tools from Home for the full Quest-native interface. "+
+                "Phone-style application overlays remain disabled on Quest. "+
+                "A separately verified owner-only 2D window preview is available "+
+                "inside Quest Tools; pinning and visibility in VRChat depend on Horizon OS. "+
+                "Player tracking runs independently.",
                 12,CompanionStyle.MUTED,false));
         }else{
         // Dev-only UI preview: visible exclusively to the exact Discord
