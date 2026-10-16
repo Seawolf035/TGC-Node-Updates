@@ -24,7 +24,7 @@ import java.util.concurrent.Executors;
 public final class StaffDirectoryActivity extends StaffProtectedActivity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private LinearLayout root,content;
-    private TextView status;
+    private TextView status,syncStatus;
     private EditText filter;
     private StaffDirectoryRepository.Snapshot roster;
     private boolean loading=false,showUncollected=false;
@@ -78,23 +78,31 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
         });
         status=text("Checking the VRChat staff group…",13,CompanionStyle.MUTED,false);
         root.addView(status);
+        syncStatus=text("Checking saved StaffDex…",12,CompanionStyle.MUTED,false);
+        root.addView(syncStatus);
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);
         root.addView(content);
         roster=StaffDirectoryRepository.cached(this);
-        if(roster!=null)draw();
-        else refresh(false);
+        if(roster!=null){draw();
+            syncStatus.setText("Showing saved results from "+savedTime(roster)+
+                " · Refreshing in background…");
+        }
+        refresh(false);
     }
     @Override protected void onResume(){
         super.onResume();
         if(!StaffGate.unlocked(this))finish();
     }
+    private String savedTime(StaffDirectoryRepository.Snapshot snapshot){
+        return android.text.format.DateFormat.format("MMM d, h:mm a",
+            new java.util.Date(snapshot.capturedAt)).toString();
+    }
     private void refresh(boolean force){
         if(loading)return;
-        if(!force){
-            StaffDirectoryRepository.Snapshot cache=StaffDirectoryRepository.cached(this);
-            if(cache!=null){roster=cache;draw();return;}
-        }
-        loading=true;status.setText("Loading live staff membership and confirmed friendships…");
+        loading=true;
+        if(roster!=null)syncStatus.setText("Showing saved results from "+savedTime(roster)+
+            " · Refreshing official roster and friendships…");
+        else syncStatus.setText("Loading the official roster and VRChat friendships…");
         io.execute(()->{
             StaffDirectoryRepository.Snapshot result=null;
             String error=null;
@@ -105,10 +113,17 @@ public final class StaffDirectoryActivity extends StaffProtectedActivity {
             runOnUiThread(()->{
                 loading=false;
                 if(isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
-                if(available!=null){roster=available;skipped.clear();draw();}
-                else{status.setText("Could not load Staff Directory: "+failure+
-                    "\nSign into VRChat and check the official roster endpoint. "+
-                    "Nothing will be counted or requested until live data loads.");}
+                if(available!=null&&available.rosterComplete&&available.friendsComplete){
+                    roster=available;skipped.clear();draw();
+                    syncStatus.setText("✓ Updated live · "+savedTime(roster));
+                }else if(roster!=null){
+                    syncStatus.setText("Could not fully update; showing saved results from "+
+                        savedTime(roster)+". Refresh when connected.");
+                }else if(available!=null){
+                    roster=available;draw();
+                    syncStatus.setText("Live friend scan incomplete; progress is provisional.");
+                }else syncStatus.setText("Could not load StaffDex: "+failure+
+                    " · Check your VRChat login and connection.");
             });
         });
     }
