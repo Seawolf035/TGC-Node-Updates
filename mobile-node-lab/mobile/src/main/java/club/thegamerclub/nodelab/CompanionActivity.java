@@ -1304,14 +1304,16 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             this::toggleOverlayRecovery);
 
         }
+        settingsBody.addView(CompanionStyle.section(this,"APPEARANCE"));
+        LinearLayout themes=settingsChild(settingsBody);
+        action(themes,"✦","Color theme",
+            "Current: "+ThemePreferences.selectedPresetName(this)+
+                " · 12 built-in palettes for everyone",
+            this::chooseBuiltInTheme);
         if(ThemePreferences.allowed(this)){
-            settingsBody.addView(CompanionStyle.section(this,
-                StaffGate.delegated(this)?"PERSONAL APPEARANCE":"ADMIN+ APPEARANCE"));
-            LinearLayout themes=settingsChild(settingsBody);
-            action(themes,"✦","Theme Studio",
-                "Personal UI colors, presets and custom RGB mixer",
+            action(themes,"◈","Advanced Theme Studio",
+                "Your saved themes, VRChat codes and custom hex / RGB mixer",
                 ()->needsStaff(()->startActivity(new Intent(this,ThemeEditorActivity.class))));
-
         }
         if(StaffGate.rankTier(this)>=7){
             LinearLayout badge=settingsChild(settingsBody);
@@ -1655,6 +1657,22 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                         Toast.LENGTH_LONG).show();
                 }
             }).show();
+    }
+    /** Presets are for all currently verified users; custom RGB stays gated. */
+    private void chooseBuiltInTheme(){
+        if(!ThemePreferences.presetAllowed(this)){revalidate();return;}
+        String[] names=ThemePreferences.NAMES;
+        String selected=ThemePreferences.selectedPresetName(this);
+        int current=0;
+        for(int i=0;i<names.length;i++)if(names[i].equals(selected))current=i;
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Choose App Color Theme")
+            .setSingleChoiceItems(names,current,(dialog,which)->{
+                if(!ThemePreferences.presetAllowed(this)){dialog.dismiss();revalidate();return;}
+                ThemePreferences.preset(this,which);
+                dialog.dismiss();
+                renderUnlocked();
+            }).setNegativeButton("Cancel",null).show();
     }
     private void chooseOverlaySize(){
         if(!StaffGate.unlocked(this))return;
