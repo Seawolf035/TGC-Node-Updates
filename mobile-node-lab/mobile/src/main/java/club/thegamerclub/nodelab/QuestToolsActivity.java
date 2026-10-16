@@ -443,7 +443,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
         button(primary,"Edit my shortcuts",false,()->go("shortcuts"));
         if(OwnerQuestFloatingPreview.eligible(this)){
             button(primary,"Open owner floating 2D panel (experimental)",true,()->
-                startActivity(new Intent(this,QuestFloatingToolsActivity.class)));
+                startActivity(new Intent(this,QuestFloatingToolsActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
             primary.addView(text("Uses Horizon OS window/pin controls. Visibility "+
                 "over VRChat is controlled by the headset and is not guaranteed.",
                 12,CompanionStyle.MUTED,false));
