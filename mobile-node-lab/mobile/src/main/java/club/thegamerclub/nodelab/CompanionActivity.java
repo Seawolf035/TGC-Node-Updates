@@ -13,6 +13,9 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.net.Uri;
+import android.content.pm.PackageManager;
+import rikka.shizuku.Shizuku;
 import org.json.JSONObject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,6 +43,20 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     private boolean verifying=false,showingUnlocked=false,advanced=false;
     private boolean trackingGuideExpanded=false;
     private boolean trackingInfoExpanded=false;
+    private static final int TRACKING_FOLDER_REQUEST=7152;
+    private static final int TRACKING_SHIZUKU_REQUEST=7217;
+    private final Shizuku.OnRequestPermissionResultListener trackingPermissionListener=
+        (code,result)->{
+            if(code!=TRACKING_SHIZUKU_REQUEST)return;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                Toast.makeText(this,result==PackageManager.PERMISSION_GRANTED?
+                    "Shizuku permission granted. Start tracking when ready.":
+                    "Shizuku permission denied. Tracking remains off.",
+                    Toast.LENGTH_LONG).show();
+                if("tracking".equals(tab)&&StaffGate.unlocked(this))renderUnlocked();
+            });
+        };
     private String exploreCategory="friends";
     // Long settings groups stay collapsed, while the primary account group
     // opens by default. The current set survives tab redraws.
@@ -268,6 +285,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         super.onCreate(saved);
         enforceQuestOverlaySetting();
         TrackingSetupGuide.initialize(this);
+        Shizuku.addRequestPermissionResultListener(trackingPermissionListener);
         if(saved!=null){
             tab=saved.getString("tab","home");
             advanced=saved.getBoolean("advanced",false);
@@ -356,6 +374,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         main.removeCallbacks(refreshGate);
         main.removeCallbacks(refreshHome);
         if(staffDexPanel!=null){staffDexPanel.dispose();staffDexPanel=null;}
+        Shizuku.removeRequestPermissionResultListener(trackingPermissionListener);
         gateWorker.shutdownNow();homeWorker.shutdownNow();super.onDestroy();
     }
     private void locked(String reason){
@@ -957,11 +976,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             });
         }
     }
-    /**
-     * One user-facing tracking dashboard. Home's adjacent Tools/Tracking
-     * shortcut navigates here; the dedicated Device & Capture Controls
-     * activity owns only capture start/stop, pairing and OS log permissions.
-     */
+    /** One user-facing Tracking tab, including permissions and diagnostics. */
     private void renderTracking(){
         page.setPadding(dp(15),dp(12),dp(15),dp(24));
         page.addView(CompanionStyle.section(this,"TRACKING"));
@@ -1011,16 +1026,14 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             if(checked)TrackingAutoStart.maybeStart(this);
         });
         dashboard.addView(auto);
-        android.widget.Button start=CompanionStyle.button(this,"Start tracking",true);
+        android.widget.Button start=CompanionStyle.button(this,"Start",true);
         LinearLayout controls=new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
         dashboard.addView(controls);
         controls.addView(start,new LinearLayout.LayoutParams(0,dp(46),1f));
         start.setEnabled(!active);
-        start.setOnClickListener(v->needsStaff(()->{
-            if(MobileDeployActivity.startFromDashboard(this))renderUnlocked();
-        }));
-        android.widget.Button stop=CompanionStyle.button(this,"Stop tracking",false);
+        start.setOnClickListener(v->needsStaff(this::startTrackingInline));
+        android.widget.Button stop=CompanionStyle.button(this,"Stop",false);
         controls.addView(stop,new LinearLayout.LayoutParams(0,dp(46),1f));
         stop.setEnabled(active);
         stop.setOnClickListener(v->needsStaff(()->{
@@ -1029,12 +1042,11 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             Toast.makeText(this,"Stopping tracking…",Toast.LENGTH_SHORT).show();
             main.postDelayed(this::renderUnlocked,1200L);
         }));
-        android.widget.Button refresh=CompanionStyle.button(this,"Refresh status",false);
+        android.widget.Button refresh=CompanionStyle.button(this,"Refresh",false);
         controls.addView(refresh,new LinearLayout.LayoutParams(0,dp(46),1f));
         refresh.setOnClickListener(v->renderUnlocked());
-        exploreLink(dashboard,"⚙","Device permissions & advanced controls",
-            "Log access, Shizuku, connection and troubleshooting",
-            ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
+        // No secondary Device & Capture Controls screen: every tracker control
+        // and permission is available on this one scrollable Tracking page.
 
         page.addView(CompanionStyle.section(this,"YOUR ACTIVITY"));
         LinearLayout stats=card();
@@ -1067,11 +1079,10 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 13,CompanionStyle.MUTED,false));
             space(help,8);
             help.addView(txt(quest?
-                "Quest: select Documents/Logs in Device & Capture Controls. "+
-                "If read-only folder tracking fails, open the controls' Advanced "+
-                "tools to select the Shizuku fallback.":
-                "Android phone: grant Shizuku permission through Device & Capture "+
-                "Controls. Other Companion features work without Shizuku.",
+                "Quest: select Documents/Logs below. If read-only folder tracking "+
+                "fails, stop the tracker and select Shizuku fallback below.":
+                "Android phone: authorize Shizuku in the permissions section below. "+
+                "Other Companion features work without Shizuku.",
                 13,CompanionStyle.MUTED,false));
             space(help,8);
             help.addView(txt(
@@ -1080,19 +1091,166 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 12,CompanionStyle.MUTED,false));
         }
 
-        LinearLayout diagnostic=help;
-        exploreLink(diagnostic,"⚙",advanced?"Hide technical tools":
-            "Show technical tools","For connection and capture troubleshooting",
+        page.addView(CompanionStyle.section(this,"DEVICE PERMISSIONS & CONNECTION"));
+        LinearLayout access=card();
+        boolean hasNode=false;
+        try{hasNode=MobileCredentials.load(this)!=null;}
+        catch(Exception ignored){}
+        if(!hasNode){
+            access.addView(txt("This device is not linked to the invite network.",
+                13,CompanionStyle.GOLD,false));
+            exploreLink(access,"🔗","Link this device",
+                "Use your authorized one-time setup link",
+                ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class))));
+        }
+        if(quest){
+            final boolean folderSelected=QuestSafLogWatcher.isSelected(this);
+            final boolean folderGranted=QuestSafLogWatcher.hasGrant(this);
+            access.addView(txt("Quest source: "+(folderSelected?"Documents/Logs folder":"Shizuku fallback")+
+                " · Folder permission: "+(folderGranted?"Granted":"Not granted"),
+                13,folderGranted?CompanionStyle.GOOD:CompanionStyle.GOLD,false));
+            access.addView(txt("Folder: "+QuestSafLogWatcher.grantedPath(this),
+                12,CompanionStyle.MUTED,false));
+            exploreLink(access,"▣",folderGranted?"Change Documents/Logs folder":
+                    "Grant Documents/Logs folder access",
+                active?"Stop tracking before changing the log source":
+                    "Read-only folder permission · recommended for Quest",
+                ()->needsStaff(()->{
+                    if(trackingRunning())trackingNotice("Stop tracking before changing the log source.");
+                    else chooseQuestLogFolder();
+                }));
+            if(!folderSelected){
+                exploreLink(access,"✓","Use folder tracking (recommended)",
+                    "Select the normal Quest log-reader method",()->needsStaff(()->{
+                        if(trackingRunning())trackingNotice("Stop tracking before changing modes.");
+                        else if(!QuestSafLogWatcher.hasGrant(this))chooseQuestLogFolder();
+                        else{QuestSafLogWatcher.selectFolderMode(this);renderUnlocked();}
+                    }));
+            }
+            exploreLink(access,"◇","Shizuku alternative (Quest)",
+                "Use only if Documents/Logs permission does not work",
+                ()->{trackingInfoExpanded=!trackingInfoExpanded;renderUnlocked();});
+            if(!folderSelected && trackingInfoExpanded){
+                access.addView(txt("Shizuku fallback selected. Stop tracking before changing methods.",
+                    12,CompanionStyle.GOLD,false));
+            }
+            if(folderSelected && trackingInfoExpanded){
+                exploreLink(access,"◇","Switch to Shizuku fallback",
+                    "Advanced method; requires a running Shizuku service",
+                    ()->needsStaff(()->{
+                        if(trackingRunning())trackingNotice("Stop tracking first.");
+                        else{QuestSafLogWatcher.selectShizuku(this);renderUnlocked();}
+                    }));
+            }
+        }
+        if(!quest || !QuestSafLogWatcher.isSelected(this)){
+            boolean shizukuAvailable=false,shizukuGranted=false;
+            try{
+                shizukuAvailable=Shizuku.pingBinder();
+                shizukuGranted=shizukuAvailable &&
+                    Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED;
+            }catch(Exception ignored){}
+            access.addView(txt("Shizuku: "+(shizukuGranted?"Ready":
+                shizukuAvailable?"Permission required":"Not running"),
+                13,shizukuGranted?CompanionStyle.GOOD:CompanionStyle.GOLD,false));
+            exploreLink(access,"✓","Request Shizuku permission",
+                "Authorizes read-only access for phone / fallback log tracking",
+                ()->needsStaff(this::requestTrackingShizuku));
+            exploreLink(access,"ⓘ","Shizuku setup guide",
+                "Open the official installation and setup instructions",
+                ()->openTrackingGuideUrl("https://shizuku.rikka.app/guide/setup/"));
+        }
+        exploreLink(access,"⚙",advanced?"Hide connection diagnostics":
+            "Show connection diagnostics","Service, watcher, Relay and capture counts",
             ()->{advanced=!advanced;renderUnlocked();});
         if(advanced){
-            exploreLink(diagnostic,"◉","Device & connection details",
-                "Tracking status, permissions and Relay information",
-                ()->needsStaff(()->startActivity(new Intent(this,MobileDeployActivity.class)
-                    .putExtra("advanced",true))));
-            exploreLink(diagnostic,"⌘","Advanced tracking diagnostics",
-                "Low-level logs and tracking troubleshooting",
-                ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
+            String serviceMode=s.getString("tracking_mode","Not started");
+            long hb=s.getLong("service_heartbeat_at",0);
+            access.addView(txt("Log method: "+serviceMode+
+                "\nService heartbeat: "+(hb==0?"Never":Math.max(0,
+                (System.currentTimeMillis()-hb)/1000)+" seconds ago")+
+                "\nWatcher: "+s.getString("watcher","Not started")+
+                "\nLog source found: "+s.getBoolean("watch_source",false)+
+                "\nWatcher polls: "+s.getInt("watch_polls",0)+
+                "\nNew joins: "+s.getInt("watch_joins",0)+
+                "\nRead errors: "+s.getInt("watch_errors",0)+
+                "\nBytes processed: "+s.getLong("watch_bytes",0)+
+                "\nRelay: "+s.getString("relay","Not checked")+
+                "\nRejected records: "+s.getInt("rejected_total",0),
+                12,CompanionStyle.MUTED,false));
         }
+    }
+    private void trackingNotice(String message){
+        Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+    }
+    private boolean trackingRunning(){
+        android.content.SharedPreferences s=getSharedPreferences("tgc_mobile_node_status",0);
+        long hb=s.getLong("service_heartbeat_at",0);
+        return s.getBoolean("running",false)&&hb>0 &&
+            System.currentTimeMillis()-hb<90_000L;
+    }
+    private void openTrackingGuideUrl(String url){
+        try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}
+        catch(Exception ignored){trackingNotice("Visit https://shizuku.rikka.app/guide/setup/");}
+    }
+    private void chooseQuestLogFolder(){
+        if(!QuestDevice.isQuestDevice() || trackingRunning())return;
+        Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
+            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try{startActivityForResult(pick,TRACKING_FOLDER_REQUEST);}
+        catch(Exception ex){trackingNotice("Quest could not open the folder picker.");}
+    }
+    private void requestTrackingShizuku(){
+        try{
+            if(!Shizuku.pingBinder()){trackingNotice("Start Shizuku first, then retry.");return;}
+            if(Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
+                Shizuku.requestPermission(TRACKING_SHIZUKU_REQUEST);
+                trackingNotice("Allow the Shizuku permission prompt.");
+            }else trackingNotice("Shizuku permission already granted.");
+        }catch(Exception ex){trackingNotice("Shizuku connection unavailable.");}
+    }
+    private void startTrackingInline(){
+        if(!TrackingSetupGuide.acknowledged(this)){
+            trackingGuideExpanded=true;renderUnlocked();
+            trackingNotice("Complete the tracking setup guide first.");return;
+        }
+        try{
+            if(MobileCredentials.load(this)==null){
+                trackingNotice("Link this device in Device Permissions below first.");return;
+            }
+            if(QuestSafLogWatcher.isSelected(this)){
+                if(!QuestSafLogWatcher.hasGrant(this)){
+                    trackingNotice("Grant Documents/Logs permission below first.");
+                    chooseQuestLogFolder();return;
+                }
+            }else if(!Shizuku.pingBinder()){
+                trackingNotice("Start Shizuku first; setup is on this page.");return;
+            }else if(Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
+                requestTrackingShizuku();return;
+            }
+            if(android.os.Build.VERSION.SDK_INT>=33 &&
+                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=
+                    PackageManager.PERMISSION_GRANTED)
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},451);
+            Intent start=new Intent(this,MobileNodeService.class).setAction(MobileNodeService.START);
+            if(android.os.Build.VERSION.SDK_INT>=26)startForegroundService(start);
+            else startService(start);
+            trackingNotice("Starting player tracking…");
+            main.postDelayed(this::renderUnlocked,1200L);
+        }catch(Exception ex){trackingNotice("Couldn't start tracking: "+ex.getMessage());}
+    }
+    @Override protected void onActivityResult(int request,int result,Intent data){
+        super.onActivityResult(request,result,data);
+        if(request!=TRACKING_FOLDER_REQUEST)return;
+        if(result!=RESULT_OK||data==null||data.getData()==null){
+            trackingNotice("Folder selection canceled.");return;
+        }
+        try{
+            QuestSafLogWatcher.selectFolder(this,data.getData());
+            trackingNotice("Documents/Logs selected. Start tracking when ready.");
+        }catch(Exception ex){trackingNotice("Folder permission failed: "+ex.getMessage());}
+        if("tracking".equals(tab)&&StaffGate.unlocked(this))renderUnlocked();
     }
     private LinearLayout settingsChild(LinearLayout root){
         LinearLayout section=new LinearLayout(this);
