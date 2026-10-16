@@ -25,7 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.json.JSONObject;
 
-/** Staff-facing setup and tracking. Diagnostic details are hidden behind Advanced. */
+/** One-time enrollment only. Main Companion Tracking tab owns capture and permissions. */
 public class MobileDeployActivity extends Activity {
   private EditText setup;
   private TextView status,technicalStatus,feedback,questFolderStatus;
