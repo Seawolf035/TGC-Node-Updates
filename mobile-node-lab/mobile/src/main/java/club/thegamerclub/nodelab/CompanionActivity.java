@@ -309,6 +309,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         }else if(getIntent().getBooleanExtra("open_tracking_setup",false)){
             tab="tracking";
             trackingGuideExpanded=true;
+        }else if(getIntent().getBooleanExtra("open_tracking_tab",false)){
+            tab="tracking";
         }
         locked("Checking your staff access...");
         InboxAlertSettings.restore(this);
@@ -327,6 +329,10 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             setupLaunched=false;
             tab="home";
             questTabs.clear();
+        }
+        if(intent!=null && intent.getBooleanExtra("open_tracking_tab",false)){
+            tab="tracking";
+            if(showingUnlocked && StaffGate.unlocked(this))renderUnlocked();
         }
         if(intent!=null && intent.getBooleanExtra("open_main_menu",false)){
             // Quest Tools' explicit Main Menu always returns to Home, even
@@ -1163,6 +1169,11 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 "Open the official installation and setup instructions",
                 ()->openTrackingGuideUrl("https://shizuku.rikka.app/guide/setup/"));
         }
+        if(hasNode){
+            exploreLink(access,"⊗","Unlink this device",
+                "Stops tracking and clears local Node setup and unsent sightings",
+                ()->needsStaff(this::confirmUnlinkTrackingDevice));
+        }
         exploreLink(access,"⚙",advanced?"Hide connection diagnostics":
             "Show connection diagnostics","Service, watcher, Relay and capture counts",
             ()->{advanced=!advanced;renderUnlocked();});
@@ -1182,6 +1193,23 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
                 "\nRejected records: "+s.getInt("rejected_total",0),
                 12,CompanionStyle.MUTED,false));
         }
+    }
+    private void confirmUnlinkTrackingDevice(){
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Unlink this device?")
+            .setMessage("This stops player tracking and clears this device's Node link, "+
+                "unsent sightings and saved local player/log history. "+
+                "Your personal VRChat account remains signed in.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Unlink",(d,w)->{
+                startService(new Intent(this,MobileNodeService.class)
+                    .setAction(MobileNodeService.STOP));
+                MobileCredentials.clear(this);
+                try(MobileOutbox outbox=new MobileOutbox(this)){outbox.wipe();}
+                StaffGate.lock();
+                trackingNotice("Device unlinked. Request a new deployment link to reconnect.");
+                renderUnlocked();
+            }).show();
     }
     private void trackingNotice(String message){
         Toast.makeText(this,message,Toast.LENGTH_LONG).show();
