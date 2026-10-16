@@ -54,9 +54,9 @@ jobs:
           assert 'public boolean collectedId(String vrchatId)' in repo
           assert 'return snapshot.rosterComplete && snapshot.friendsComplete' in special
           assert 'roster=StaffDirectoryRepository.cached(activity);' in panel
-          assert 'else refresh(false)' not in panel
+          assert '}else refresh(false);' in panel  # Always refresh on open even with saved data
           assert 'if(roster!=null){' in panel
-          assert 'else refresh(false)' not in legacy
+          assert 'refresh(false);' in legacy  # Legacy route also refreshes on open
           assert 'refresh(false);' in panel and 'refresh(false);' in legacy
           assert 'syncStatus.setText("Showing saved results from "' in panel
           assert 'if(loading)return;' in panel
