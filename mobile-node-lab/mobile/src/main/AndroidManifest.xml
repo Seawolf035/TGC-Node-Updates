@@ -42,7 +42,10 @@
   <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/tgc_update_paths"/>
  </provider>
  <activity android:name=".QuestToolsActivity" android:exported="false"/>
- <activity android:name=".QuestFloatingToolsActivity" android:exported="false" android:resizeableActivity="true"/>
+ <activity android:name=".QuestFloatingToolsActivity"
+   android:exported="false" android:resizeableActivity="true"
+   android:taskAffinity="club.thegamerclub.nodelab.questpanel"
+   android:launchMode="singleTask"/>
  <activity android:name=".ThemeEditorActivity" android:exported="false"/>
  <activity android:name=".StaffDirectoryActivity" android:exported="false"/>
  <activity android:name=".CompanionSetupActivity" android:exported="false"/>
