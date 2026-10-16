@@ -126,9 +126,8 @@ public final class ThemeEditorActivity extends StaffProtectedActivity {
         }
 
         page.addView(CompanionStyle.section(this,"QUICK THEMES"));
-        for(int i=0;i<ThemePreferences.NAMES.length;i++){
-            final int idx=i;
-            button(page,ThemePreferences.NAMES[i],()->{
+        for(int idx:ThemePreferences.availablePresetIndices(this)){
+            button(page,ThemePreferences.NAMES[idx],()->{
                 ThemePreferences.preset(this,idx);
                 render(true);
             });
