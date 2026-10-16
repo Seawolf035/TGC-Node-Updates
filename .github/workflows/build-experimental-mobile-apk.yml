@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.21.16 (code 90): Companion stability and account-linking compatibility improvements. Existing tracking, Friends, StaffDex, OSC, notifications and saved settings are preserved."
+            "notes": "v0.21.17 (code 91): Tracking now has one consolidated page for capture controls, log permissions, and diagnostics. All verified Companions can choose from 12 built-in app color themes. Existing tracking, Friends, StaffDex, OSC, and settings are preserved."
           }
           JSON
           fi
