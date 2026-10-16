@@ -1495,6 +1495,13 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             this::toggleOverlayRecovery);
 
         }
+        // Keep the former low-level Shizuku test lab available, but away
+        // from the one-page everyday Tracking UI.
+        if(!questSystem){
+            action(floating,"⌘","Advanced Shizuku diagnostic lab",
+                "Optional low-level log-reader troubleshooting",
+                ()->needsStaff(()->startActivity(new Intent(this,MainActivity.class))));
+        }
         settingsBody.addView(CompanionStyle.section(this,"APPEARANCE"));
         LinearLayout themes=settingsChild(settingsBody);
         action(themes,"✦","Color theme",
