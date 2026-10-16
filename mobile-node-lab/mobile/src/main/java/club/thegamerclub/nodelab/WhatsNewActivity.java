@@ -47,7 +47,10 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.15"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.16"));
+        highlight(body,"Companion reliability improvements",
+            "Improved account linking compatibility and security checks while keeping existing features and settings.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.15"));
         highlight(body,"Onboarding, login security and tracking controls",
             "Accept the User Agreement before linking, then complete guided setup before Home. VRChat login is screen-capture protected, tracking has optional auto-start, Quest Tools has direct controls, and Darkflames joins Legends & Leadership.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.14"));
@@ -62,23 +65,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Refined StaffDex collectible titles",
             "Updated the individual achievements for Lily, Imposter and Gamewitch, "+
             "while preserving all existing unlock requirements and collections.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.11"));
-        highlight(body,"Compact, expandable StaffDex achievements",
-            "Achievements now open in individual categories with unlock counts, "+
-            "instead of filling the screen with every collectible at once.");
-        highlight(body,"More special StaffDex collectibles",
-            "Seawolf and Lily now each have an individual achievement in "+
-            "addition to their shared collection, with updated AJ and Asriel titles.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.10"));
-        highlight(body,"Cleaner, easier-to-navigate Settings",
-            "Account, alerts, automation, tools and app settings now live in "+
-            "five compact expandable groups, without removing existing controls.");
-        highlight(body,"Improved Friends search and browsing",
-            "Search the complete friends list by name, status or location; "+
-            "pin friends directly and browse your VRChat favorite friend groups.");
-        highlight(body,"New StaffDex collectible achievements",
-            "Collect special Gamer Music, Cult, leadership and rare-friend "+
-            "achievements; numbered Gamer Music profiles have custom accents.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
