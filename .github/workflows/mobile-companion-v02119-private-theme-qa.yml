@@ -1,0 +1,103 @@
+name: Companion v0.21.19 exclusive optional palette QA (nonpublishing)
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.19-devinity-exclusive-preset
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-v02119-private-theme-qa.yml'
+      - '.github/workflows/build-experimental-mobile-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact identity gates, opt-in selection and unchanged public palettes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          read=lambda x:(base/x).read_text()
+          theme=read('ThemePreferences.java')
+          companion=read('CompanionActivity.java')
+          editor=read('ThemeEditorActivity.java')
+          news=read('WhatsNewActivity.java')
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          feed=Path('.github/workflows/build-experimental-mobile-apk.yml').read_text()
+          gate=read('StaffGate.java')
+          assert "versionCode 93" in gradle and "versionName '0.21.19'" in gradle
+          assert 'private static final int DEVINITY_PRESET=12;' in theme
+          assert 'DEVINITY_DISCORD="1228529346788982794"' in theme
+          assert '"usr_0f534ae6-c5c4-4025-9478-d5423da1f296"' in theme
+          assert 'StaffGate.delegated(c)' in theme
+          assert 'StaffGate.verifiedDiscordMatches(c,DEVINITY_DISCORD)' in theme
+          assert 'DEVINITY_VRCHAT.equals(StaffGate.authorizedVrchatUser(c))' in theme
+          assert 'DEVINITY_VRCHAT.equals(session.optString("userId",""))' in theme
+          assert '!session.optBoolean("needs2fa",true)' in theme
+          assert 'idx!=DEVINITY_PRESET||devinityPresetEligible(c)' in theme
+          assert 'if(!canSelect(c,idx))idx=0;' in theme
+          assert 'if(!canSelect(c,idx))return;' in theme
+          assert 'int limit=devinityPresetEligible(c)?PRESETS.length:DEVINITY_PRESET;' in theme
+          assert 'ThemePreferences.availablePresetIndices(this)' in companion
+          assert 'ThemePreferences.availablePresetIndices(this)' in editor
+          assert 'ThemePreferences.preset(this,indices[which]);' in companion
+          assert 'ThemePreferences.preset(this,idx);' in editor
+          assert '"Devinity · Blood Rose"' in theme
+          assert 'result[ICON]=idx==DEVINITY_PRESET?DEVINITY_FINISH[0]' in theme
+          assert 'result[BUTTON]=idx==DEVINITY_PRESET?DEVINITY_FINISH[1]' in theme
+          # Verify the original 12 remain exactly unchanged in the same order.
+          entries=re.search(r'private static final int\[\]\[\] PRESETS=\{(.*?)\n    \};',theme,re.S)
+          assert entries
+          palettes=re.findall(r'\{(0xFF[0-9A-Fa-f, ]+)\}',entries.group(1))
+          assert len(palettes)==13,len(palettes)
+          expected_first=[
+            '0xFF090F1D,0xFF142338,0xFF1C3048,0xFF233A52,0xFF62D6F2,0xFF324D68',
+            '0xFF080D1F,0xFF141936,0xFF20294B,0xFF253A5C,0xFF8B9CFF,0xFF354A74',
+            '0xFF170E20,0xFF291A36,0xFF342345,0xFF483054,0xFFFF8CC3,0xFF684868',
+            '0xFF080F0D,0xFF152B25,0xFF1E3D32,0xFF294A3F,0xFF68E4B0,0xFF35594D',
+            '0xFF151110,0xFF2A211B,0xFF3B2B20,0xFF503B29,0xFFE7B75D,0xFF705437',
+            '0xFF100F26,0xFF252143,0xFF312858,0xFF3D3264,0xFFC2A3FF,0xFF55457D',
+            '0xFF1C1017,0xFF301C29,0xFF452433,0xFF553443,0xFFFF778D,0xFF76475C',
+            '0xFF1B1211,0xFF30211C,0xFF463025,0xFF583A2D,0xFFFFB878,0xFF79533A',
+            '0xFF081B28,0xFF142D3C,0xFF1F3E4E,0xFF2C5060,0xFF8CE2FF,0xFF3A6878',
+            '0xFF131719,0xFF222A2D,0xFF303B40,0xFF3B474C,0xFFBDD3DC,0xFF51646C',
+            '0xFF180F1E,0xFF322139,0xFF462E50,0xFF5E3A65,0xFFFFACDA,0xFF815184',
+            '0xFF101B16,0xFF22352B,0xFF2C4938,0xFF3B604A,0xFFE1F783,0xFF567859'
+          ]
+          assert palettes[:12]==expected_first
+          assert '0xFF0A090B,0xFF1B1116,0xFF2A161E' in palettes[12]
+          names=re.search(r'public static final String\[\] NAMES=\{(.*?)\n    \};',theme,re.S)
+          assert names
+          names=re.findall(r'"([^"]+)"',names.group(1))
+          assert len(names)==13 and names[-1]=='Devinity · Blood Rose'
+          # No default or automatic assignment to preset index 12. Choosing it
+          # must be a conscious tap in the existing settings menus.
+          assert 'putInt("preset",idx)' in theme
+          assert 'putInt("preset",DEVINITY_PRESET)' not in theme
+          assert 'putInt("preset",12)' not in theme
+          assert 'public static boolean delegated(Context context)' in gate
+          assert 'return unlocked(context) && "delegated".equals(verifiedAccessType);' in gate
+          assert '"notes": "v0.21.19' in feed
+          assert 'Devinity' not in feed and '1228529346788982794' not in feed
+          versions=re.findall(r'RELEASE · v(0\.21\.\d+)',news)
+          assert versions==['0.21.19','0.21.18','0.21.17','0.21.16','0.21.15'],versions
+          print('PASS: no forced theme, 12 unchanged shared themes, exact delegated pair-only 13th theme, no rank changes')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Assemble complete APK without signing or publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
