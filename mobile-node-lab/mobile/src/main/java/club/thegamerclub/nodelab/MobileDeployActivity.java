@@ -80,6 +80,16 @@ public class MobileDeployActivity extends Activity {
     helpExpanded=state!=null && state.getBoolean("shizuku_help_expanded",false);
     questFallbackExpanded=state!=null && state.getBoolean("quest_fallback_expanded",false);
     TrackingSetupGuide.initialize(this);
+    // This Activity is now enrollment-only. Existing linked, authenticated
+    // devices always use the one Tracking tab for capture and permissions.
+    boolean linked=false;
+    try{linked=MobileCredentials.load(this)!=null;}catch(Exception ignored){}
+    if(linked && StaffGate.unlocked(this)){
+      Intent tracking=new Intent(this,CompanionActivity.class)
+          .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP)
+          .putExtra("open_tracking_tab",true);
+      startActivity(tracking);finish();return;
+    }
     ScrollView scroll=new ScrollView(this);
     scroll.setBackgroundColor(CompanionStyle.BG);
     LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
@@ -116,7 +126,14 @@ public class MobileDeployActivity extends Activity {
         setup.setText(data.getItemAt(0).coerceToText(this));
     },false);
     action(enrollment,"Link this device",this::redeem,true);
-
+    enrollment.addView(title(
+        "After linking, all tracking controls, log permissions and diagnostics "+
+        "are on the single Tracking tab. This screen is only for device enrollment.",
+        13));
+    return;
+    /* The old capture screen is no longer used. Kept temporarily for source
+       compatibility while its helper methods move into the Tracking page. */
+    /*
     LinearLayout dashboard=CompanionStyle.card(this);
     root.addView(dashboard,CompanionStyle.cardParams(this));
     dashboard.addView(CompanionStyle.section(this,"CAPTURE CONTROLS"));
@@ -240,6 +257,7 @@ public class MobileDeployActivity extends Activity {
     unlinkControl=action(advancedPane,"Unlink this device",this::unlinkConfirm,false);
     setAdvanced();
     refresh();
+    */
   }
   private void setAdvanced(){
     if(technicalStatus==null || advancedPane==null)return;
@@ -519,7 +537,7 @@ public class MobileDeployActivity extends Activity {
   @Override protected void onResume(){
     super.onResume();
     handler.removeCallbacks(autoRefresh);
-    handler.postDelayed(autoRefresh,2000);
+    if(status!=null)handler.postDelayed(autoRefresh,2000);
   }
   @Override protected void onSaveInstanceState(Bundle state){
     state.putBoolean("shizuku_help_expanded",helpExpanded);
