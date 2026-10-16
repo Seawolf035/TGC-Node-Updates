@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.17",
-  "version_code": 91,
+  "version": "0.21.18",
+  "version_code": 92,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "58f5aa494928d9957910bf7933e32537e1580f2669b83d626424f91c2337a24e",
-  "notes": "v0.21.17 (code 91): Tracking now has one consolidated page for capture controls, log permissions, and diagnostics. All verified Companions can choose from 12 built-in app color themes. Existing tracking, Friends, StaffDex, OSC, and settings are preserved."
+  "sha256": "d881d85f3e7d24bb776fa9a5acd5625863fd454510e8aea1c40c2b4e62f51855",
+  "notes": "v0.21.18 (code 92): StaffDex now opens instantly with its last saved roster and achievements while refreshing in the background. Saved results remain visible if the connection is unavailable. Existing tracking, Friends, OSC, themes and settings are preserved."
 }
