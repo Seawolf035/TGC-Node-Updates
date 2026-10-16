@@ -128,11 +128,12 @@ public final class StaffGate {
         String access=result.optString("access_type","staff");
         String delegatedVrcId=result.optString("linked_vrchat_user_id","");
         if("delegated".equals(access)){
-            // Only one specific Relay-asserted grant is currently supported.
-            // Any unrecognized delegation, forged staff rank, or mismatched
-            // VRChat identity fails closed.
-            if(!"1228529346788982794".equals(creds.discordId) ||
-               !"usr_0f534ae6-c5c4-4025-9478-d5423da1f296".equals(delegatedVrcId) ||
+            // The current *authenticated Relay node_status* response is the
+            // authority for an owner-entered Discord + VRChat identity binding.
+            // Keep each delegate rankless; never accept a client-supplied VRChat ID,
+            // a malformed binding, or a spoofed/unverified node response.
+            if(!creds.discordId.matches("[0-9]{15,22}") ||
+               !delegatedVrcId.matches("usr_[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}") ||
                !result.optString("staff_rank","").isEmpty()){
                 lock();
                 throw new SecurityException("Delegated Companion identity was not authorized");
