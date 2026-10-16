@@ -98,12 +98,12 @@ public class MobileDeployActivity extends Activity {
     CompanionStyle.safeArea(this,scroll);
     action(root,"← Back",this::finish,false);
     spacer(root,12);
-    root.addView(CompanionStyle.section(this,"DEVICE & CAPTURE"));
-    root.addView(title("Tracking controls",28));
+    root.addView(CompanionStyle.section(this,"DEVICE ENROLLMENT"));
+    root.addView(title("Link this device",28));
     spacer(root,7);
     TextView intro=title(QuestDevice.isQuestDevice()?
-        "Start or stop capture, manage read-only Documents/Logs permission, and maintain this Quest connection.":
-        "Start or stop capture, manage Shizuku log access, and maintain this phone connection.",14);
+        "Enter a one-time Companion link for this headset. Tracking controls and Quest log permissions are on the Tracking tab.":
+        "Enter a one-time Companion link for this phone. Tracking controls and Shizuku access are on the Tracking tab.",14);
     intro.setTextColor(CompanionStyle.MUTED);
     root.addView(intro);spacer(root,14);
     enrollment=CompanionStyle.card(this);
