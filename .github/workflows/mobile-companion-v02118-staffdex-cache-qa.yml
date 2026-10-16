@@ -1,0 +1,87 @@
+name: Companion v0.21.18 cached-first StaffDex QA (nonpublishing)
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.18-staffdex-cached-first
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-v02118-staffdex-cache-qa.yml'
+      - '.github/workflows/build-experimental-mobile-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify complete snapshots, per-user scoping and stale-while-revalidate source behavior
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          src=lambda f:(root/f).read_text()
+          repo=src('StaffDirectoryRepository.java')
+          panel=src('StaffDexPanel.java')
+          legacy=src('StaffDirectoryActivity.java')
+          news=src('WhatsNewActivity.java')
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          feed=Path('.github/workflows/build-experimental-mobile-apk.yml').read_text()
+          special=src('SpecialStaffDexAchievements.java')
+          assert "versionCode 92" in gradle and "versionName '0.21.18'" in gradle
+          assert 'DEX_CACHE_PREF="tgc_staffdex_saved_snapshot_v1"' in repo
+          assert 'public static synchronized Snapshot cached(Context c)' in repo
+          assert 'String[] scope=viewerScope(c);' in repo
+          assert '!StaffGate.unlocked(c)' in repo
+          assert 'StaffGate.assertPersonalVrchatAccount(c,user)' in repo
+          assert 'scope[0].equals(saved.optString("discord",""))' in repo
+          assert 'scope[1].equals(saved.optString("account",""))' in repo
+          assert 'scope[1].equals(s.accountId)' in repo
+          assert 'scope[0].equals(cacheDiscord)' in repo
+          assert 'saved.put("captured_at",s.capturedAt)' in repo
+          assert 'saved.put("members",members)' in repo
+          assert 'saved.put("friend_ids",compactFriends(s))' in repo
+          assert 'saved.optInt("schema",0)!=DEX_CACHE_SCHEMA' in repo
+          assert 'saved.optJSONArray("members")' in repo
+          assert 'saved.optJSONArray("friend_ids")' in repo
+          assert 'at<=0 || at>now+60000L' in repo
+          assert 'if(!s.rosterComplete||!s.friendsComplete)return;' in repo
+          assert 'if(scope!=null&&self.equals(scope[1])&&friendCoverage)' in repo
+          assert 'SpecialStaffDexAchievements.gamerMusic()' in repo
+          assert 'SpecialStaffDexAchievements.royalIds(snapshot)' in repo
+          assert 'SpecialStaffDexAchievements.ownerIds(snapshot)' in repo
+          assert 'public boolean collectedId(String vrchatId)' in repo
+          assert 'return snapshot.rosterComplete && snapshot.friendsComplete' in special
+          assert 'roster=StaffDirectoryRepository.cached(activity);' in panel
+          assert 'else refresh(false)' not in panel
+          assert 'if(roster!=null){' in panel
+          assert 'else refresh(false)' not in legacy
+          assert 'refresh(false);' in panel and 'refresh(false);' in legacy
+          assert 'syncStatus.setText("Showing saved results from "' in panel
+          assert 'if(loading)return;' in panel
+          assert 'if(available!=null&&available.rosterComplete&&available.friendsComplete)' in panel
+          assert 'else if(roster!=null)' in panel
+          assert 'String snapshotTime' in panel
+          assert 'skipped.clear();draw();' in panel
+          assert 'io.shutdownNow()' in panel
+          assert 'if(available!=null&&available.rosterComplete&&available.friendsComplete)' in legacy
+          assert '"notes": "v0.21.18' in feed
+          matches=re.findall(r'RELEASE · v(0\.21\.\d+)',news)
+          assert matches==['0.21.18','0.21.17','0.21.16','0.21.15','0.21.14'],matches
+          print('PASS: account-scoped saved StaffDex, captured timestamp, cached-first UI, refresh on open, incomplete-scan safeguards, all original achievements intact')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile complete debug app without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
