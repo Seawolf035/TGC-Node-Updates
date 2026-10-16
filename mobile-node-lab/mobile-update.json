@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.15",
-  "version_code": 89,
+  "version": "0.21.16",
+  "version_code": 90,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "769e2e1a35a7ed4c1195ea65f2bbf634a8d3719f3371903dc8603488b741040c",
-  "notes": "v0.21.15 (code 89): User Agreement before device linking; mandatory guided setup before Home; VRChat password visibility and screen-capture protection; optional tracking auto-start on phone and Quest; compact Tracking dashboard and direct Quest Tools controls; Darkflames moved to Legends & Leadership; improved Android app-update notification channel diagnostics and retry."
+  "sha256": "847305012cadc6ad7f028d38f050aba06b8cfae136201c505f38f178741cc797",
+  "notes": "v0.21.16 (code 90): Companion stability and account-linking compatibility improvements. Existing tracking, Friends, StaffDex, OSC, notifications and saved settings are preserved."
 }
