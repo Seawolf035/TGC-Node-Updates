@@ -1506,7 +1506,9 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         LinearLayout themes=settingsChild(settingsBody);
         action(themes,"✦","Color theme",
             "Current: "+ThemePreferences.selectedPresetName(this)+
-                " · 12 built-in palettes for everyone",
+                (ThemePreferences.devinityPresetEligible(this)?
+                    " · 12 shared + 1 exclusive palette":
+                    " · 12 built-in palettes for everyone"),
             this::chooseBuiltInTheme);
         if(ThemePreferences.allowed(this)){
             action(themes,"◈","Advanced Theme Studio",
@@ -1859,15 +1861,22 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     /** Presets are for all currently verified users; custom RGB stays gated. */
     private void chooseBuiltInTheme(){
         if(!ThemePreferences.presetAllowed(this)){revalidate();return;}
-        String[] names=ThemePreferences.NAMES;
+        // UI choices use stable underlying indices; private presets are never
+        // listed for other users, and the repository also guards direct calls.
+        final int[] indices=ThemePreferences.availablePresetIndices(this);
+        final String[] names=new String[indices.length];
         String selected=ThemePreferences.selectedPresetName(this);
         int current=0;
-        for(int i=0;i<names.length;i++)if(names[i].equals(selected))current=i;
+        for(int i=0;i<indices.length;i++){
+            names[i]=ThemePreferences.NAMES[indices[i]];
+            if(names[i].equals(selected))current=i;
+        }
         new android.app.AlertDialog.Builder(this)
             .setTitle("Choose App Color Theme")
             .setSingleChoiceItems(names,current,(dialog,which)->{
                 if(!ThemePreferences.presetAllowed(this)){dialog.dismiss();revalidate();return;}
-                ThemePreferences.preset(this,which);
+                if(which<0||which>=indices.length)return;
+                ThemePreferences.preset(this,indices[which]);
                 dialog.dismiss();
                 renderUnlocked();
             }).setNegativeButton("Cancel",null).show();
