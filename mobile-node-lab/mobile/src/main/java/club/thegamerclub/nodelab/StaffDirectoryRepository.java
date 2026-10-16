@@ -332,8 +332,8 @@ public final class StaffDirectoryRepository {
         for(Entry e:results)e.friend=validUser(e.id)&&friends.contains(e.id);
         Snapshot snapshot=new Snapshot(self,results,true,friendCoverage,friends);
         String[] scope=viewerScope(c);
-        if(scope!=null&&self.equals(scope[1])){
-            if(friendCoverage)storeComplete(c,snapshot,scope[0]);
+        if(scope!=null&&self.equals(scope[1])&&friendCoverage){
+            storeComplete(c,snapshot,scope[0]);
             synchronized(StaffDirectoryRepository.class){
                 cache=snapshot;cacheDiscord=scope[0];
             }
