@@ -441,6 +441,13 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             }
         }
         button(primary,"Edit my shortcuts",false,()->go("shortcuts"));
+        if(OwnerQuestFloatingPreview.eligible(this)){
+            button(primary,"Open owner floating 2D panel (experimental)",true,()->
+                startActivity(new Intent(this,QuestFloatingToolsActivity.class)));
+            primary.addView(text("Uses Horizon OS window/pin controls. Visibility "+
+                "over VRChat is controlled by the headset and is not guaranteed.",
+                12,CompanionStyle.MUTED,false));
+        }
 
         LinearLayout social=card("VRCHAT · DISCOVER & CONNECT");
         pair(social,"Friends","mini_friends","Inbox","mini_inbox");
