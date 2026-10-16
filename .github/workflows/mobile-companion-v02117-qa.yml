@@ -1,0 +1,92 @@
+name: Companion v0.21.17 tracking, presets and Quest panel QA (nonpublishing)
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.17-tracking-single-page-quest-floating-preview
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-v02117-qa.yml'
+      - '.github/workflows/build-experimental-mobile-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify one tracking page, exact owner gate, all-staff presets, version and privacy invariants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          read=lambda p:(root/p).read_text()
+          companion=read('CompanionActivity.java')
+          enrollment=read('MobileDeployActivity.java')
+          colors=read('ThemePreferences.java')
+          owner=read('OwnerQuestFloatingPreview.java')
+          panel=read('QuestFloatingToolsActivity.java')
+          quest=read('QuestDevice.java')
+          quest_ui=read('QuestToolsActivity.java')
+          manifest=Path('mobile-node-lab/mobile/src/main/AndroidManifest.xml').read_text()
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          news=read('WhatsNewActivity.java')
+          feed=Path('.github/workflows/build-experimental-mobile-apk.yml').read_text()
+          assert "versionCode 91" in gradle and "versionName '0.21.17'" in gradle
+          assert 'Shizuku.addRequestPermissionResultListener(trackingPermissionListener)' in companion
+          assert 'Shizuku.removeRequestPermissionResultListener(trackingPermissionListener)' in companion
+          assert 'private void renderTracking()' in companion
+          assert 'private void startTrackingInline()' in companion
+          assert 'private void chooseQuestLogFolder()' in companion
+          assert 'private void requestTrackingShizuku()' in companion
+          assert 'private void confirmUnlinkTrackingDevice()' in companion
+          assert 'Device permissions & advanced controls' not in companion
+          assert 'MobileDeployActivity.startFromDashboard(this)' not in companion
+          assert 'dashboard.addView(CompanionStyle.section(this,"CAPTURE CONTROLS"))' not in enrollment
+          assert 'This Activity is now enrollment-only.' in enrollment
+          assert 'private void chooseBuiltInTheme()' in companion
+          assert '"Color theme"' in companion
+          assert 'return StaffGate.unlocked(c);' in colors
+          assert 'public static boolean presetAllowed(Context c)' in colors
+          assert 'return StaffGate.delegated(c)||StaffGate.rankTier(c)>=4;' in colors
+          assert 'if(allowed(c))for(int i=0;i<6;i++)' in colors
+          assert 'if(allowed(c))for(int i=6;i<result.length;i++)' in colors
+          old=['TGC Default','Deep Ocean','Rose Quartz','Emerald','Royal Gold']
+          pos=[colors.index('"'+name+'"') for name in old]
+          assert pos==sorted(pos),pos
+          match=re.search(r'public static final String\[\] NAMES=\{([^}]+)\}',colors,re.S)
+          assert match
+          names=re.findall(r'"([^"]+)"',match.group(1))
+          assert len(names)==12,len(names)
+          assert names[:5]==old,names
+          assert 'OwnerQuestFloatingPreview.verifyLive(this)' in panel
+          assert 'StaffGate.verifiedDiscordMatches(context,DISCORD_ID)' in owner
+          assert 'StaffGate.delegated(context)' in owner
+          assert 'VRChatApi.currentUser(context)' in owner
+          assert 'OwnerQuestFloatingPreview.eligible(this)' in quest_ui
+          assert 'QuestFloatingToolsActivity.class' in quest_ui
+          assert 'android:name=".QuestFloatingToolsActivity"' in manifest
+          assert 'return !isQuestDevice();' in quest  # phone overlay remains phone-only
+          assert 'StaffGate.verifiedDiscordMatches' not in colors
+          versions=re.findall(r'RELEASE · v(0\.21\.\d+)',news)
+          assert versions==['0.21.17','0.21.16','0.21.15','0.21.14','0.21.13'],versions
+          assert 'delegated' not in news.lower() and 'owner-only' not in news.lower()
+          assert '"notes": "v0.21.17' in feed
+          assert 'owner-only' not in feed.lower()
+          print('PASS: one Tracking page, preserved 5 old presets + 7 new themes, exact owner Quest panel and v0.21.17 invariants')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build complete debug APK without signing or publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
