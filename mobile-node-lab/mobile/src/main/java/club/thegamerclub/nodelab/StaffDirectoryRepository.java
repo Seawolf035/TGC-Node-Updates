@@ -1,6 +1,8 @@
 package club.thegamerclub.nodelab;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import org.json.JSONException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
@@ -34,6 +36,10 @@ public final class StaffDirectoryRepository {
         "https://script.google.com/macros/s/AKfycbx0MRdKsYmz1B82M3KYZ28_fcyTrdavMTsTxNkLm2-ijyXAaR-1hbpa2fhDB_zXZAmrCg/exec?format=json";
     private static final long CACHE_MS=15L*60*1000;
     private static volatile Snapshot cache;
+    private static volatile String cacheDiscord="";
+    private static final String DEX_CACHE_PREF="tgc_staffdex_saved_snapshot_v1";
+    private static final String DEX_CACHE_KEY="last_complete";
+    private static final int DEX_CACHE_SCHEMA=1;
     private static volatile Map<String,String> rankCache=Collections.emptyMap();
     private static volatile long rankCacheAt=0L;
     private StaffDirectoryRepository(){}
@@ -57,10 +63,16 @@ public final class StaffDirectoryRepository {
         public final long capturedAt;
         Snapshot(String accountId,ArrayList<Entry> members,
                  boolean rosterComplete,boolean friendsComplete,Set<String> friendIds){
+            this(accountId,members,rosterComplete,friendsComplete,friendIds,
+                System.currentTimeMillis());
+        }
+        Snapshot(String accountId,ArrayList<Entry> members,
+                 boolean rosterComplete,boolean friendsComplete,Set<String> friendIds,
+                 long capturedAt){
             this.accountId=accountId;this.members=members;
             this.rosterComplete=rosterComplete;this.friendsComplete=friendsComplete;
             this.friendIds=Collections.unmodifiableSet(new HashSet<>(friendIds));
-            this.capturedAt=System.currentTimeMillis();
+            this.capturedAt=capturedAt;
         }
         /** A user's own VRChat account satisfies an account collection item
          * without requiring an impossible self-friend request. */
@@ -196,17 +208,117 @@ public final class StaffDirectoryRepository {
         rankCache=Collections.unmodifiableMap(names);
         rankCacheAt=System.currentTimeMillis();
     }
-    public static synchronized Snapshot cached(Context c){
-        Snapshot s=cache;
+    /**
+     * StaffDex uses stale-while-revalidate: a last successfully completed scan
+     * remains readable even after 15 minutes or process restart. Its timestamp
+     * is always shown in UI; it is NOT evidence of live membership.
+     * Cache is scoped to BOTH signed-in VRChat and verified Discord identity.
+     */
+    private static String[] viewerScope(Context c){
+        if(!StaffGate.unlocked(c))return null;
         try{
-            String userId=VRChatSession.load(c).optString("userId","");
-            if(s!=null&&userId.equals(s.accountId)&&
-               System.currentTimeMillis()-s.capturedAt<CACHE_MS)return s;
-        }catch(Exception ignored){}
-        return null;
+            MobileCredentials.Record creds=MobileCredentials.load(c);
+            JSONObject session=VRChatSession.load(c);
+            String user=session.optString("userId","");
+            if(creds==null||!validDiscord(creds.discordId)||
+               !validUser(user)||session.optString("auth","").isEmpty()||
+               session.optBoolean("needs2fa",true))return null;
+            StaffGate.assertPersonalVrchatAccount(c,user);
+            return new String[]{creds.discordId,user};
+        }catch(Exception ignored){return null;}
+    }
+    private static JSONArray compactFriends(Snapshot snapshot){
+        Set<String> eligible=new HashSet<>();
+        for(Entry e:snapshot.members)if(validUser(e.id))eligible.add(e.id);
+        eligible.addAll(SpecialStaffDexAchievements.gamerMusic());
+        eligible.addAll(SpecialStaffDexAchievements.royalIds(snapshot));
+        eligible.addAll(SpecialStaffDexAchievements.ownerIds(snapshot));
+        for(String id:new String[]{
+            SpecialStaffDexAchievements.LILY,SpecialStaffDexAchievements.SEAWOLF,
+            SpecialStaffDexAchievements.DARKFLAMES})eligible.add(id);
+        JSONArray ids=new JSONArray();
+        for(String id:snapshot.friendIds)if(eligible.contains(id))ids.put(id);
+        return ids;
+    }
+    /** Called on the background refresh thread only; never saves partial scans. */
+    private static void storeComplete(Context c,Snapshot s,String expectedDiscord){
+        if(!s.rosterComplete||!s.friendsComplete)return;
+        String[] scope=viewerScope(c);
+        if(scope==null||!scope[0].equals(expectedDiscord)||
+           !scope[1].equals(s.accountId))return;
+        try{
+            JSONObject saved=new JSONObject();
+            saved.put("schema",DEX_CACHE_SCHEMA);
+            saved.put("discord",scope[0]);saved.put("account",scope[1]);
+            saved.put("captured_at",s.capturedAt);
+            JSONArray members=new JSONArray();
+            for(Entry e:s.members){
+                JSONObject m=new JSONObject();
+                m.put("id",e.id);m.put("discord",e.discordId);
+                m.put("name",e.name);m.put("avatar",e.avatarUrl);
+                m.put("rank",e.rank);
+                members.put(m);
+            }
+            saved.put("members",members);
+            saved.put("friend_ids",compactFriends(s));
+            c.getSharedPreferences(DEX_CACHE_PREF,Context.MODE_PRIVATE).edit()
+                .putString(DEX_CACHE_KEY,saved.toString()).commit();
+        }catch(Exception ignored){
+            // Disk cache is an optimization; a write failure never breaks live data.
+        }
+    }
+    public static synchronized Snapshot cached(Context c){
+        String[] scope=viewerScope(c);
+        if(scope==null)return null;
+        Snapshot s=cache;
+        if(s!=null&&scope[1].equals(s.accountId)&&
+           scope[0].equals(cacheDiscord))return s;
+        try{
+            SharedPreferences preferences=c.getSharedPreferences(
+                DEX_CACHE_PREF,Context.MODE_PRIVATE);
+            String json=preferences.getString(DEX_CACHE_KEY,"");
+            if(json.isEmpty()||json.length()>300000)return null;
+            JSONObject saved=new JSONObject(json);
+            long at=saved.optLong("captured_at",0L);
+            long now=System.currentTimeMillis();
+            if(saved.optInt("schema",0)!=DEX_CACHE_SCHEMA ||
+               !scope[0].equals(saved.optString("discord","")) ||
+               !scope[1].equals(saved.optString("account","")) ||
+               at<=0 || at>now+60000L)return null;
+            JSONArray rows=saved.optJSONArray("members");
+            JSONArray friends=saved.optJSONArray("friend_ids");
+            if(rows==null||friends==null||rows.length()<1||rows.length()>500||
+               friends.length()>1000)return null;
+            ArrayList<Entry> members=new ArrayList<>();
+            Set<String> ids=new HashSet<>();
+            Set<String> seenDiscord=new HashSet<>();
+            for(int i=0;i<rows.length();i++){
+                JSONObject m=rows.optJSONObject(i);
+                if(m==null)return null;
+                String id=m.optString("id","");
+                String discord=m.optString("discord","");
+                String rank=standardRank(m.optString("rank",""));
+                if(!validDiscord(discord)||!seenDiscord.add(discord)||
+                   tier(rank)==0)return null;
+                // Missing VRChat IDs are valid for real roster entries.
+                if(!id.isEmpty()&&!validUser(id))return null;
+                members.add(new Entry(id,discord,m.optString("name","Staff"),
+                    m.optString("avatar",""),rank));
+            }
+            for(int i=0;i<friends.length();i++){
+                String id=friends.optString(i,"");
+                if(!validUser(id))return null;
+                ids.add(id);
+            }
+            for(Entry e:members)e.friend=validUser(e.id)&&ids.contains(e.id);
+            Snapshot loaded=new Snapshot(scope[1],members,true,true,ids,at);
+            cache=loaded;cacheDiscord=scope[0];
+            return loaded;
+        }catch(Exception ignored){return null;}
     }
     public static synchronized void clear(){
-        cache=null;rankCache=Collections.emptyMap();rankCacheAt=0L;
+        cache=null;cacheDiscord="";
+        rankCache=Collections.emptyMap();rankCacheAt=0L;
     }
     public static Snapshot load(Context c)throws Exception{
         if(!StaffGate.unlocked(c))throw new SecurityException("Staff verification required");
@@ -219,7 +331,13 @@ public final class StaffDirectoryRepository {
         boolean friendCoverage=loadFriends(c,friends);
         for(Entry e:results)e.friend=validUser(e.id)&&friends.contains(e.id);
         Snapshot snapshot=new Snapshot(self,results,true,friendCoverage,friends);
-        if(StaffGate.unlocked(c))cache=snapshot;
+        String[] scope=viewerScope(c);
+        if(scope!=null&&self.equals(scope[1])){
+            if(friendCoverage)storeComplete(c,snapshot,scope[0]);
+            synchronized(StaffDirectoryRepository.class){
+                cache=snapshot;cacheDiscord=scope[0];
+            }
+        }
         return snapshot;
     }
     /** Read-only roster lookup, never VRChat group membership or displayed bio. */
