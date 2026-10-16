@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.21.14 (code 88): Start, stop and refresh player tracking directly on the Tracking tab with device and sync status visible. Consolidated app-update alerts into App, Battery & Legal and removed duplicate update controls from Notifications. All existing tracking, Shizuku, Settings, Friends and StaffDex functions are preserved."
+            "notes": "v0.21.16 (code 90): Companion stability and account-linking compatibility improvements. Existing tracking, Friends, StaffDex, OSC, notifications and saved settings are preserved."
           }
           JSON
           fi
