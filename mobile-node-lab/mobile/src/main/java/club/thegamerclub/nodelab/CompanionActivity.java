@@ -43,6 +43,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     private boolean verifying=false,showingUnlocked=false,advanced=false;
     private boolean trackingGuideExpanded=false;
     private boolean trackingInfoExpanded=false;
+    private boolean questShizukuExpanded=false;
     private static final int TRACKING_FOLDER_REQUEST=7152;
     private static final int TRACKING_SHIZUKU_REQUEST=7217;
     private final Shizuku.OnRequestPermissionResultListener trackingPermissionListener=
@@ -291,6 +292,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             advanced=saved.getBoolean("advanced",false);
             trackingGuideExpanded=saved.getBoolean("tracking_guide_expanded",false);
             trackingInfoExpanded=saved.getBoolean("tracking_info_expanded",false);
+            questShizukuExpanded=saved.getBoolean("quest_shizuku_expanded",false);
             String savedCategory=saved.getString("explore_category","friends");
             if(isExploreCategory(savedCategory))exploreCategory=savedCategory;
             java.util.ArrayList<String> history=saved.getStringArrayList("quest_tab_history");
@@ -342,6 +344,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         out.putBoolean("setup_after_link",setupAfterLink);
         out.putBoolean("tracking_guide_expanded",trackingGuideExpanded);
         out.putBoolean("tracking_info_expanded",trackingInfoExpanded);
+        out.putBoolean("quest_shizuku_expanded",questShizukuExpanded);
         out.putString("explore_category",exploreCategory);
         if(QuestDevice.isQuestDevice())
             out.putStringArrayList("quest_tab_history",
@@ -1129,12 +1132,12 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             }
             exploreLink(access,"◇","Shizuku alternative (Quest)",
                 "Use only if Documents/Logs permission does not work",
-                ()->{trackingInfoExpanded=!trackingInfoExpanded;renderUnlocked();});
-            if(!folderSelected && trackingInfoExpanded){
+                ()->{questShizukuExpanded=!questShizukuExpanded;renderUnlocked();});
+            if(!folderSelected && questShizukuExpanded){
                 access.addView(txt("Shizuku fallback selected. Stop tracking before changing methods.",
                     12,CompanionStyle.GOLD,false));
             }
-            if(folderSelected && trackingInfoExpanded){
+            if(folderSelected && questShizukuExpanded){
                 exploreLink(access,"◇","Switch to Shizuku fallback",
                     "Advanced method; requires a running Shizuku service",
                     ()->needsStaff(()->{
