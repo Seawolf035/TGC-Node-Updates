@@ -47,7 +47,11 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.16"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.17"));
+        highlight(body,"One Tracking screen and more themes",
+            "Tracking controls, Quest log-folder permission, Shizuku setup and diagnostics "+
+            "now live together. Every verified Companion can choose from 12 built-in color themes.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.16"));
         highlight(body,"Companion reliability improvements",
             "Improved account linking compatibility and security checks while keeping existing features and settings.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.15"));
@@ -61,10 +65,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"StaffDex progress and organized achievements",
             "See the percentage of staff you've added and open all achievement "+
             "categories from one compact section.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.12"));
-        highlight(body,"Refined StaffDex collectible titles",
-            "Updated the individual achievements for Lily, Imposter and Gamewitch, "+
-            "while preserving all existing unlock requirements and collections.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
