@@ -39,14 +39,50 @@ public final class ThemePreferences {
         {0xFF081B28,0xFF142D3C,0xFF1F3E4E,0xFF2C5060,0xFF8CE2FF,0xFF3A6878},
         {0xFF131719,0xFF222A2D,0xFF303B40,0xFF3B474C,0xFFBDD3DC,0xFF51646C},
         {0xFF180F1E,0xFF322139,0xFF462E50,0xFF5E3A65,0xFFFFACDA,0xFF815184},
-        {0xFF101B16,0xFF22352B,0xFF2C4938,0xFF3B604A,0xFFE1F783,0xFF567859}
+        {0xFF101B16,0xFF22352B,0xFF2C4938,0xFF3B604A,0xFFE1F783,0xFF567859},
+        // This final palette is PRIVATE to the exact Relay-authorized delegate.
+        // Appended after index 11, leaving every existing preset unchanged.
+        {0xFF0A090B,0xFF1B1116,0xFF2A161E,0xFF321A25,0xFFDB3557,0xFF713145}
     };
     public static final String[] NAMES={
         "TGC Default","Deep Ocean","Rose Quartz","Emerald","Royal Gold",
         "Midnight Violet","Crimson","Sunset Ember","Arctic Ice",
-        "Graphite","Sakura","Lime Grove"
+        "Graphite","Sakura","Lime Grove","Devinity · Blood Rose"
+    };
+    private static final int DEVINITY_PRESET=12;
+    private static final String DEVINITY_DISCORD="1228529346788982794";
+    private static final String DEVINITY_VRCHAT=
+        "usr_0f534ae6-c5c4-4025-9478-d5423da1f296";
+    private static final int[] DEVINITY_FINISH={
+        0xFFFFAAC4, // Icons: soft pink
+        0xFFFFB4C8, // Primary buttons: warm pale rose
+        0xFFFFF3F6, // Readable nearly white text
+        0xFFDEAFBE  // Soft pink secondary text
     };
     private ThemePreferences(){}
+    /** Existing Relay identity must match BOTH accounts; the theme grants NO roles. */
+    public static boolean devinityPresetEligible(Context c){
+        if(!StaffGate.delegated(c)||
+           !StaffGate.verifiedDiscordMatches(c,DEVINITY_DISCORD)||
+           !DEVINITY_VRCHAT.equals(StaffGate.authorizedVrchatUser(c)))return false;
+        try{
+            org.json.JSONObject session=VRChatSession.load(c);
+            return DEVINITY_VRCHAT.equals(session.optString("userId","")) &&
+                !session.optString("auth","").isEmpty() &&
+                !session.optBoolean("needs2fa",true);
+        }catch(Exception e){return false;}
+    }
+    private static boolean canSelect(Context c,int idx){
+        return presetAllowed(c) && idx>=0 && idx<PRESETS.length &&
+            (idx!=DEVINITY_PRESET||devinityPresetEligible(c));
+    }
+    /** Actual list of preset indices the signed-in user may see or select. */
+    public static int[] availablePresetIndices(Context c){
+        int limit=devinityPresetEligible(c)?PRESETS.length:DEVINITY_PRESET;
+        int[] indices=new int[limit];
+        for(int i=0;i<limit;i++)indices[i]=i;
+        return indices;
+    }
 
     /** Every live-verified Companion user may select a built-in palette. */
     public static boolean presetAllowed(Context c){
@@ -59,13 +95,13 @@ public final class ThemePreferences {
     public static String selectedPresetName(Context c){
         if(!presetAllowed(c))return NAMES[0];
         int idx=c.getSharedPreferences(PREF,0).getInt("preset",0);
-        return NAMES[idx>=0&&idx<NAMES.length?idx:0];
+        return NAMES[canSelect(c,idx)?idx:0];
     }
     public static synchronized int[] colors(Context c){
         if(!presetAllowed(c))return BASE.clone();
         SharedPreferences prefs=c.getSharedPreferences(PREF,0);
         int idx=prefs.getInt("preset",0);
-        if(idx<0||idx>=PRESETS.length)idx=0;
+        if(!canSelect(c,idx))idx=0;
         int[] result=BASE.clone();
         System.arraycopy(PRESETS[idx],0,result,0,6);
         // Upgrade-safe: custom 0.20.0 accents still control icon/button colors
@@ -75,8 +111,12 @@ public final class ThemePreferences {
             if(prefs.contains(key))
                 result[i]=0xFF000000|(prefs.getInt(key,result[i])&0xFFFFFF);
         }
-        result[ICON]=result[ACCENT];
-        result[BUTTON]=result[ACCENT];
+        result[ICON]=idx==DEVINITY_PRESET?DEVINITY_FINISH[0]:result[ACCENT];
+        result[BUTTON]=idx==DEVINITY_PRESET?DEVINITY_FINISH[1]:result[ACCENT];
+        if(idx==DEVINITY_PRESET){
+            result[TEXT]=DEVINITY_FINISH[2];
+            result[SUBTEXT]=DEVINITY_FINISH[3];
+        }
         if(allowed(c))for(int i=6;i<result.length;i++){
             String key="color_"+i;
             if(prefs.contains(key))
@@ -85,7 +125,7 @@ public final class ThemePreferences {
         return result;
     }
     public static void preset(Context c,int idx){
-        if(!presetAllowed(c)||idx<0||idx>=PRESETS.length)return;
+        if(!canSelect(c,idx))return;
         c.getSharedPreferences(PREF,0).edit().clear().putInt("preset",idx).apply();
         apply(c);
     }
