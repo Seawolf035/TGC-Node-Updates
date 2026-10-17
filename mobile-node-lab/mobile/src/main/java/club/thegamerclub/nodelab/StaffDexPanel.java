@@ -225,6 +225,15 @@ public final class StaffDexPanel extends LinearLayout {
         if(SpecialStaffDexAchievements.complete(snapshot,combined))earned++;
         return earned;
     }
+    /**
+     * Hidden rewards are completely absent from the catalog and total until
+     * unlocked by a COMPLETE confirmed-friend scan. A pending friendship,
+     * sightings data, or membership in a TGC group never qualifies.
+     */
+    private int hiddenEarned(StaffDirectoryRepository.Snapshot snapshot){
+        return SpecialStaffDexAchievements.collected(snapshot,
+            SpecialStaffDexAchievements.DEVINITY)?1:0;
+    }
     /** Total special progress shared by the outer header and the expanded categories. */
     private int specialEarned(StaffDirectoryRepository.Snapshot snapshot){
         java.util.Set<String> gm=SpecialStaffDexAchievements.gamerMusic();
@@ -235,7 +244,7 @@ public final class StaffDexPanel extends LinearLayout {
             SpecialStaffDexAchievements.LILY) &&
             SpecialStaffDexAchievements.collected(snapshot,SpecialStaffDexAchievements.SEAWOLF);
         int earned=gmEarned(snapshot,gm)+
-            leadershipEarned(snapshot,couple,royal,owners,combined);
+            leadershipEarned(snapshot,couple,royal,owners,combined)+hiddenEarned(snapshot);
         return earned;
     }
     /** Compact one-line header; tapping expands only that achievement group. */
@@ -268,7 +277,7 @@ public final class StaffDexPanel extends LinearLayout {
         java.util.Set<String> owners=SpecialStaffDexAchievements.ownerIds(roster);
         java.util.Set<String> combined=
             SpecialStaffDexAchievements.union(royalty,owners);
-        int totalSpecial=16;
+        int totalSpecial=16+hiddenEarned(roster);
         int earned=specialEarned(roster);
         boolean couple=SpecialStaffDexAchievements.collected(roster,
             SpecialStaffDexAchievements.LILY) &&
@@ -366,6 +375,19 @@ public final class StaffDexPanel extends LinearLayout {
             "Complete both Owner and Royalty collections",
             combined,ThemePreferences.royalGold());
         }
+        // This category, reward and even its count do NOT exist in the
+        // visible UI until the user's friendship has been confirmed.
+        if(hiddenEarned(roster)>0){
+            boolean showCommunity=categoryHeader("community",
+                "✦ COMMUNITY ENCOUNTERS",1,1,NotableCommunityProfiles.ROSE);
+            if(showCommunity){
+                LinearLayout community=card(achievementHost);
+                specialItem(community,"Devinity • The Gothic Puppy",
+                    "You befriended Seawolf's Second Wife.",
+                    SpecialStaffDexAchievements.DEVINITY,true,
+                    NotableCommunityProfiles.ROSE);
+            }
+        }
     }
     private void draw(){
         if(content==null||roster==null)return;
@@ -390,7 +412,8 @@ public final class StaffDexPanel extends LinearLayout {
         int basic=(c>=1?1:0)+(c>=6?1:0)+(half?1:0)+(entire?1:0);
         // Only one achievement section is visible until the master is opened.
         // Each of the four inner categories keeps its own expand/collapse state.
-        if(categoryHeader("all","ACHIEVEMENTS",basic+specialEarned(roster),20,
+        if(categoryHeader("all","ACHIEVEMENTS",basic+specialEarned(roster),
+            20+hiddenEarned(roster),
             CompanionStyle.ACCENT)){
             achievementHost=new LinearLayout(activity);
             achievementHost.setOrientation(LinearLayout.VERTICAL);
