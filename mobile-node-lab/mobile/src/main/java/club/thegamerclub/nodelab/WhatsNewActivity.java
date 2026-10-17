@@ -47,7 +47,11 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.21"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.22"));
+        highlight(body,"Thematic profiles",
+            "Selected community profiles now have signature colors and details in "+
+            "Companion and Floating/Quest profile views.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.21"));
         highlight(body,"VRChat API handling improvements",
             "Improved how Companion identifies API requests for better service compatibility.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.20"));
@@ -62,10 +66,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"StaffDex opens faster",
             "Your last saved staff roster, friend collections and achievement progress appear "+
             "immediately. StaffDex checks for updated data in the background whenever you open it.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.17"));
-        highlight(body,"One Tracking screen and more themes",
-            "Tracking controls, Quest log-folder permission, Shizuku setup and diagnostics "+
-            "now live together. Every verified Companion can choose from 12 built-in color themes.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
