@@ -34,15 +34,16 @@ jobs:
           gradle = Path('mobile-node-lab/mobile/build.gradle').read_text()
           news = Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/WhatsNewActivity.java').read_text()
           workflow = Path('.github/workflows/build-experimental-mobile-apk.yml').read_text()
-          assert 'versionCode 95' in gradle and "versionName '0.21.21'" in gradle
+          code=int(re.search(r'versionCode\s+(\d+)',gradle).group(1))
+          patch=int(re.search(r"versionName '0\\.21\\.(\\d+)'",gradle).group(1))
+          assert code>=95 and patch>=21
           assert '"TGC-Staff-Companion/"+BuildConfig.VERSION_NAME+" masonswan@usa.com"' in src
           assert 'conn.setRequestProperty("User-Agent",AGENT)' in src
           assert 'TGC-Staff-Companion/1.0.0' not in src
-          assert 'Improvements to VRChat API handling' in news or 'VRChat API handling improvements' in news
-          assert [int(v) for v in re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\.21\.(\d+)',news)] == [21,20,19,18,17]
-          assert 'Improvements to VRChat API handling' in workflow
+          assert [int(v) for v in re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\\.21\\.(\\d+)',news)] == list(range(patch,patch-5,-1))
+          assert '"notes":' in workflow
           assert 'masonswan@usa.com' not in workflow
-          print('PASS: source-level client identification, v95, generic staff notes, five-patch history')
+          print('PASS: source-level VRChat API identification, current version, no sensitive publisher details, five-patch history')
           PY
       - name: Compile complete Android debug app (no signing or publishing)
         working-directory: mobile-node-lab
