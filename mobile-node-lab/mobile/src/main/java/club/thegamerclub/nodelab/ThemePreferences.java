@@ -51,8 +51,7 @@ public final class ThemePreferences {
     };
     private static final int DEVINITY_PRESET=12;
     private static final String DEVINITY_DISCORD="1228529346788982794";
-    private static final String DEVINITY_VRCHAT=
-        "usr_0f534ae6-c5c4-4025-9478-d5423da1f296";
+    private static final String DEVINITY_VRCHAT=NotableCommunityProfiles.DEVINITY;
     private static final int[] DEVINITY_FINISH={
         0xFFFFAAC4, // Icons: soft pink
         0xFFFFB4C8, // Primary buttons: warm pale rose
