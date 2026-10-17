@@ -37,6 +37,7 @@ jobs:
           theme=get("ThemePreferences.java")
           catalog=get("SpecialStaffDexAchievements.java")
           panel=get("StaffDexPanel.java")
+          directory=get("StaffDirectoryRepository.java")
           detail=get("VRChatDetailActivity.java")
           overlay=get("OverlayMiniVrcx.java")
           notes=get("WhatsNewActivity.java")
@@ -53,6 +54,8 @@ jobs:
           assert 'snapshot.friendsComplete && id!=null' in catalog
           assert '!id.equals(snapshot.accountId) && snapshot.friendIds.contains(id)' in catalog
           assert 'collectedCommunityFriend(snapshot,' in panel
+          assert 'SpecialStaffDexAchievements.DEVINITY})eligible.add(id);' in directory
+          assert 'saved.put("friend_ids",compactFriends(s))' in directory
           assert 'if(hiddenEarned(roster)>0)' in panel
           assert '20+hiddenEarned(roster)' in panel
           assert 'int totalSpecial=16+hiddenEarned(roster)' in panel
