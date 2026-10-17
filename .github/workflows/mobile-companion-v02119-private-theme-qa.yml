@@ -52,7 +52,7 @@ jobs:
           # Verify the original 12 remain exactly unchanged in the same order.
           entries=re.search(r'private static final int\[\]\[\] PRESETS=\{(.*?)\n    \};',theme,re.S)
           assert entries
-          palettes=re.findall(r'\{(0xFF[0-9A-Fa-f, ]+)\}',entries.group(1))
+          palettes=re.findall(r'\{((?:0xFF[0-9A-Fa-f]{6},){5}0xFF[0-9A-Fa-f]{6})\}',entries.group(1))
           assert len(palettes)==13,len(palettes)
           expected_first=[
             '0xFF090F1D,0xFF142338,0xFF1C3048,0xFF233A52,0xFF62D6F2,0xFF324D68',
