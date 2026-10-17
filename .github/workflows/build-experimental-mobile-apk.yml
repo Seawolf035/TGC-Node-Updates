@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.21.19 (code 93): Optional account-specific appearance preset added for its authorized user. All existing built-in themes, cached StaffDex, tracking, Friends, OSC and Quest Tools remain unchanged."
+            "notes": "v0.21.20 (code 94): Account-exclusive appearance themes can also be previewed by the verified TGC owner for testing. All choices remain optional; access controls, existing themes, StaffDex, tracking, OSC and Quest Tools are unchanged."
           }
           JSON
           fi
