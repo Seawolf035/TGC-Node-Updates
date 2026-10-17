@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - feature/mobile-vrchat-api-identification
+  pull_request:
+    branches:
+      - experiment/mobile-node-lab
   workflow_dispatch:
 permissions:
   contents: read
