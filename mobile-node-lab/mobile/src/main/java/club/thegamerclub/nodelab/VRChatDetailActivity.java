@@ -153,6 +153,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
     private void show(JSONObject item,JSONObject local){
         status.setVisibility(View.GONE);
         String title=item.optString("displayName",item.optString("name","Unknown"));
+        boolean bloodRoseProfile=kind.equals("user")&&NotableCommunityProfiles.devinity(id);
         // VRChat's 2026 profile art uses *different* banner and icon fields.
         // The avatar image must never replace an explicitly configured banner.
         String hero=kind.equals("user")?
@@ -173,7 +174,9 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
             item.optString("bannerColor","")),0xFF244E67);
         int bannerBottom=profileColor(item.optString("backgroundGradientBottom",
             item.optString("bannerColor","")),0xFF15283F);
-        banner.setBackground(CompanionStyle.gradient(this,bannerTop,bannerBottom,18));
+        banner.setBackground(CompanionStyle.gradient(this,
+            bloodRoseProfile?NotableCommunityProfiles.SURFACE:bannerTop,
+            bloodRoseProfile?NotableCommunityProfiles.RAISED:bannerBottom,18));
         banner.setClipToOutline(true);
         content.addView(banner,new LinearLayout.LayoutParams(-1,dp(158)));
         ImageView background=new ImageView(this);
@@ -182,13 +185,19 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
         CompanionImages.load(background,hero);
         TextView label=CompanionStyle.chip(this,
             kind.equals("user")?"PLAYER":kind.equals("world")?"WORLD":"GROUP",
-            CompanionStyle.TEXT,0xCC123149);
+            bloodRoseProfile?NotableCommunityProfiles.ROSE:CompanionStyle.TEXT,
+            bloodRoseProfile?0xDD2A161E:0xCC123149);
         FrameLayout.LayoutParams tag=new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.START);
         tag.setMargins(dp(12),0,0,dp(12));banner.addView(label,tag);
         space(content,13);
 
         LinearLayout person=new LinearLayout(this);person.setGravity(Gravity.CENTER_VERTICAL);
         content.addView(person);
+        if(bloodRoseProfile){
+            person.setPadding(dp(9),dp(9),dp(9),dp(9));
+            person.setBackground(CompanionStyle.gradient(this,
+                NotableCommunityProfiles.SURFACE,NotableCommunityProfiles.RAISED,16));
+        }
         FrameLayout photo=new FrameLayout(this);
         photo.setBackground(CompanionStyle.shape(this,CompanionStyle.RAISED,16,0));
         photo.setClipToOutline(true);
@@ -209,6 +218,7 @@ public final class VRChatDetailActivity extends StaffProtectedActivity {
             // Official Gamer Music account cosmetics use owner-specified VRChat
             // IDs, not a username or an inherited Royalty rank.
             GamerMusicProfiles.decorate(this,id,names,header,photo);
+            NotableCommunityProfiles.decorate(this,id,names,header,photo);
             addStaffBadge(id,names,header,photo);
         }
         String descriptor=kind.equals("user")?item.optString("pronouns",""):
