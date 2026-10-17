@@ -62,6 +62,12 @@ public final class SpecialStaffDexAchievements {
         return snapshot.rosterComplete && snapshot.friendsComplete &&
             !ids.isEmpty() && count(snapshot,ids)==ids.size();
     }
+    /** True friendship only: notable non-staff users cannot earn self-friend awards. */
+    public static boolean collectedCommunityFriend(
+        StaffDirectoryRepository.Snapshot snapshot,String id){
+        return snapshot.friendsComplete && id!=null &&
+            !id.equals(snapshot.accountId) && snapshot.friendIds.contains(id);
+    }
     public static boolean collected(StaffDirectoryRepository.Snapshot snapshot,
         String id){
         return snapshot.friendsComplete && snapshot.collectedId(id);
