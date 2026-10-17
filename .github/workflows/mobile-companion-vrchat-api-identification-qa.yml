@@ -35,12 +35,12 @@ jobs:
           news = Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/WhatsNewActivity.java').read_text()
           workflow = Path('.github/workflows/build-experimental-mobile-apk.yml').read_text()
           code=int(re.search(r'versionCode\s+(\d+)',gradle).group(1))
-          patch=int(re.search(r"versionName '0\\.21\\.(\\d+)'",gradle).group(1))
+          patch=int(re.search(r"versionName '0\.21\.(\d+)'",gradle).group(1))
           assert code>=95 and patch>=21
           assert '"TGC-Staff-Companion/"+BuildConfig.VERSION_NAME+" masonswan@usa.com"' in src
           assert 'conn.setRequestProperty("User-Agent",AGENT)' in src
           assert 'TGC-Staff-Companion/1.0.0' not in src
-          assert [int(v) for v in re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\\.21\\.(\\d+)',news)] == list(range(patch,patch-5,-1))
+          assert [int(v) for v in re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\.21\.(\d+)',news)] == list(range(patch,patch-5,-1))
           assert '"notes":' in workflow
           assert 'masonswan@usa.com' not in workflow
           print('PASS: source-level VRChat API identification, current version, no sensitive publisher details, five-patch history')
