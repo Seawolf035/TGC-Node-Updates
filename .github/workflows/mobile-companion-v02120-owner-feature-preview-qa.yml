@@ -1,0 +1,87 @@
+name: Companion v0.21.20 verified owner feature-preview QA (nonpublishing)
+on:
+  push:
+    branches:
+      - feature/mobile-v0.21.20-owner-feature-preview-access
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-v02120-owner-feature-preview-qa.yml'
+      - '.github/workflows/build-experimental-mobile-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact authenticated owner override, legacy delegate gate, opt-in and permissions integrity
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          read=lambda x:(base/x).read_text()
+          feature=read('OwnerFeaturePreviewAccess.java')
+          theme=read('ThemePreferences.java')
+          screen=read('CompanionActivity.java')
+          editor=read('ThemeEditorActivity.java')
+          gate=read('StaffGate.java')
+          news=read('WhatsNewActivity.java')
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          feed=Path('.github/workflows/build-experimental-mobile-apk.yml').read_text()
+          assert "versionCode 94" in gradle and "versionName '0.21.20'" in gradle
+          assert 'public static boolean eligible(Context context)' in feature
+          assert 'OWNER_DISCORD_ID="197820946608947201"' in feature
+          assert 'OWNER_VRCHAT_ID="usr_2a833076-03ac-4212-aeff-0708d8eab968"' in feature
+          assert 'StaffGate.delegated(context)' in feature
+          assert 'StaffGate.verifiedDiscordMatches(context,OWNER_DISCORD_ID)' in feature
+          assert 'OWNER_VRCHAT_ID.equals(session.optString("userId",""))' in feature
+          assert '!session.optString("auth","").isEmpty()' in feature
+          assert '!session.optBoolean("needs2fa",true)' in feature
+          assert 'return devinityPresetEligible(c)||OwnerFeaturePreviewAccess.eligible(c);' in theme
+          assert 'idx!=DEVINITY_PRESET||exclusivePresetEligible(c)' in theme
+          assert 'int limit=exclusivePresetEligible(c)?PRESETS.length:DEVINITY_PRESET;' in theme
+          assert 'if(!canSelect(c,idx))idx=0;' in theme
+          assert 'if(!canSelect(c,idx))return;' in theme
+          assert 'StaffGate.delegated(c)' in theme
+          assert 'DEVINITY_VRCHAT.equals(StaffGate.authorizedVrchatUser(c))' in theme
+          assert 'OwnerFeaturePreviewAccess.eligible(this)' in screen
+          assert '"Choose App Color Theme · Owner Preview"' in screen
+          assert 'ThemePreferences.availablePresetIndices(this)' in screen
+          assert 'ThemePreferences.availablePresetIndices(this)' in editor
+          assert 'ThemePreferences.preset(this,indices[which]);' in screen
+          # There is no forced/migrated selection for either user.
+          assert 'putInt("preset",DEVINITY_PRESET)' not in theme
+          assert 'putInt("preset",12)' not in theme
+          assert 'putInt("preset",idx)' in theme
+          assert '"Devinity · Blood Rose"' in theme
+          # All 13 previously published themes remain unchanged, in order.
+          colors=re.search(r'private static final int\[\]\[\] PRESETS=\{(.*?)\n    \};',theme,re.S)
+          assert colors
+          entries=re.findall(r'\{((?:0xFF[0-9A-Fa-f]{6},){5}0xFF[0-9A-Fa-f]{6})\}',colors.group(1))
+          assert len(entries)==13,len(entries)
+          assert entries[0]=='0xFF090F1D,0xFF142338,0xFF1C3048,0xFF233A52,0xFF62D6F2,0xFF324D68'
+          assert entries[12]=='0xFF0A090B,0xFF1B1116,0xFF2A161E,0xFF321A25,0xFFDB3557,0xFF713145'
+          assert 'return unlocked(context) && "delegated".equals(verifiedAccessType);' in gate
+          assert '"notes": "v0.21.20' in feed
+          assert '197820946608947201' not in feed
+          assert 'Devinity' not in feed
+          versions=re.findall(r'RELEASE · v(0\.21\.\d+)',news)
+          assert versions==['0.21.20','0.21.19','0.21.18','0.21.17','0.21.16'],versions
+          print('PASS: owner exact pair, delegate preserved, owner can preview exclusive palette, no forced theme, all prior palettes intact, no backend bypass')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build complete debug APK without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
