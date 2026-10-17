@@ -1506,9 +1506,11 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         LinearLayout themes=settingsChild(settingsBody);
         action(themes,"✦","Color theme",
             "Current: "+ThemePreferences.selectedPresetName(this)+
-                (ThemePreferences.devinityPresetEligible(this)?
-                    " · 12 shared + 1 exclusive palette":
-                    " · 12 built-in palettes for everyone"),
+                (OwnerFeaturePreviewAccess.eligible(this)?
+                    " · 12 shared + 1 owner-test exclusive theme":
+                    ThemePreferences.devinityPresetEligible(this)?
+                        " · 12 shared + 1 exclusive palette":
+                        " · 12 built-in palettes for everyone"),
             this::chooseBuiltInTheme);
         if(ThemePreferences.allowed(this)){
             action(themes,"◈","Advanced Theme Studio",
@@ -1872,7 +1874,9 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             if(names[i].equals(selected))current=i;
         }
         new android.app.AlertDialog.Builder(this)
-            .setTitle("Choose App Color Theme")
+            .setTitle(OwnerFeaturePreviewAccess.eligible(this)?
+                "Choose App Color Theme · Owner Preview":
+                "Choose App Color Theme")
             .setSingleChoiceItems(names,current,(dialog,which)->{
                 if(!ThemePreferences.presetAllowed(this)){dialog.dismiss();revalidate();return;}
                 if(which<0||which>=indices.length)return;
