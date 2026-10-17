@@ -72,13 +72,20 @@ public final class ThemePreferences {
                 !session.optBoolean("needs2fa",true);
         }catch(Exception e){return false;}
     }
+    /** Shared owner-preview override for exclusive UI themes.
+     *  Intended user's access stays intact; owner access is strictly a
+     *  UI/appearance preview, not a delegated account or backend privilege.
+     */
+    public static boolean exclusivePresetEligible(Context c){
+        return devinityPresetEligible(c)||OwnerFeaturePreviewAccess.eligible(c);
+    }
     private static boolean canSelect(Context c,int idx){
         return presetAllowed(c) && idx>=0 && idx<PRESETS.length &&
-            (idx!=DEVINITY_PRESET||devinityPresetEligible(c));
+            (idx!=DEVINITY_PRESET||exclusivePresetEligible(c));
     }
     /** Actual list of preset indices the signed-in user may see or select. */
     public static int[] availablePresetIndices(Context c){
-        int limit=devinityPresetEligible(c)?PRESETS.length:DEVINITY_PRESET;
+        int limit=exclusivePresetEligible(c)?PRESETS.length:DEVINITY_PRESET;
         int[] indices=new int[limit];
         for(int i=0;i<limit;i++)indices[i]=i;
         return indices;
