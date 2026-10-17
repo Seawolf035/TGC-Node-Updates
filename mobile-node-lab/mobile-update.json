@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.18",
-  "version_code": 92,
+  "version": "0.21.19",
+  "version_code": 93,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "d881d85f3e7d24bb776fa9a5acd5625863fd454510e8aea1c40c2b4e62f51855",
-  "notes": "v0.21.18 (code 92): StaffDex now opens instantly with its last saved roster and achievements while refreshing in the background. Saved results remain visible if the connection is unavailable. Existing tracking, Friends, OSC, themes and settings are preserved."
+  "sha256": "9b658b248dab38e7b0c25eef84ffc28c81a0085dad0056bbc915b79199ac3913",
+  "notes": "v0.21.19 (code 93): Optional account-specific appearance preset added for its authorized user. All existing built-in themes, cached StaffDex, tracking, Friends, OSC and Quest Tools remain unchanged."
 }
