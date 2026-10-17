@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.21",
-  "version_code": 95,
+  "version": "0.21.22",
+  "version_code": 96,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "3922a62a12dc30f15ba3b36bf6c03869b428875dd0cff12959577c623b4e0855",
-  "notes": "v0.21.21 (code 95): Improvements to VRChat API handling and service compatibility. All existing Companion features and settings are preserved."
+  "sha256": "a2dee0f8267db6864056aa6671575f59d36e6c243dbec5ecaa9623eb37b8139e",
+  "notes": "v0.21.22 (code 96): Thematic profiles — selected community profiles now have signature appearance and accents in Companion and Floating/Quest profile views. Existing features and settings are preserved."
 }
