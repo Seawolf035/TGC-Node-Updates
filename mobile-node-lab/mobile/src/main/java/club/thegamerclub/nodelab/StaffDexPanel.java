@@ -231,7 +231,7 @@ public final class StaffDexPanel extends LinearLayout {
      * sightings data, or membership in a TGC group never qualifies.
      */
     private int hiddenEarned(StaffDirectoryRepository.Snapshot snapshot){
-        return SpecialStaffDexAchievements.collected(snapshot,
+        return SpecialStaffDexAchievements.collectedCommunityFriend(snapshot,
             SpecialStaffDexAchievements.DEVINITY)?1:0;
     }
     /** Total special progress shared by the outer header and the expanded categories. */
