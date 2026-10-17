@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.20",
-  "version_code": 94,
+  "version": "0.21.21",
+  "version_code": 95,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "288591a9c075c7a5faa938cce5ad607389f19875d6ded963bb3687ce5029b761",
-  "notes": "v0.21.20 (code 94): Account-exclusive appearance themes can also be previewed by the verified TGC owner for testing. All choices remain optional; access controls, existing themes, StaffDex, tracking, OSC and Quest Tools are unchanged."
+  "sha256": "3922a62a12dc30f15ba3b36bf6c03869b428875dd0cff12959577c623b4e0855",
+  "notes": "v0.21.21 (code 95): Improvements to VRChat API handling and service compatibility. All existing Companion features and settings are preserved."
 }
