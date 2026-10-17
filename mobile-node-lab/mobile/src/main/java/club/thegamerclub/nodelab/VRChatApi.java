@@ -16,7 +16,7 @@ import java.util.Locale;
 /** Personal-account VRChat API client: sessions NEVER go through the TGC relay. */
 public final class VRChatApi {
     private static final String API="https://api.vrchat.cloud/api/1";
-    private static final String AGENT="TGC-Staff-Companion/1.0.0 (Android VRChat companion)";
+    private static final String AGENT="TGC-Staff-Companion/"+BuildConfig.VERSION_NAME+" masonswan@usa.com";
     private VRChatApi(){}
 
     private static final class Response {
