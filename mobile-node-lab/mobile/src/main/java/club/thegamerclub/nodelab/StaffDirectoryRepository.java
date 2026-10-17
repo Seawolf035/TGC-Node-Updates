@@ -235,7 +235,8 @@ public final class StaffDirectoryRepository {
         eligible.addAll(SpecialStaffDexAchievements.ownerIds(snapshot));
         for(String id:new String[]{
             SpecialStaffDexAchievements.LILY,SpecialStaffDexAchievements.SEAWOLF,
-            SpecialStaffDexAchievements.DARKFLAMES})eligible.add(id);
+            SpecialStaffDexAchievements.DARKFLAMES,
+            SpecialStaffDexAchievements.DEVINITY})eligible.add(id);
         JSONArray ids=new JSONArray();
         for(String id:snapshot.friendIds)if(eligible.contains(id))ids.put(id);
         return ids;
