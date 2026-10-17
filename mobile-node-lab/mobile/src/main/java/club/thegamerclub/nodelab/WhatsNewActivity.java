@@ -47,7 +47,11 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.19"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.20"));
+        highlight(body,"Owner-exclusive theme testing",
+            "Verified owner accounts can preview account-exclusive appearance presets "+
+            "without changing anyone else's access or preferred colors.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.19"));
         highlight(body,"Personalized appearance",
             "Added a new optional color theme for an approved account. All existing "+
             "themes and saved settings are preserved. Other Companion features are unchanged.");
@@ -62,9 +66,6 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.16"));
         highlight(body,"Companion reliability improvements",
             "Improved account linking compatibility and security checks while keeping existing features and settings.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.15"));
-        highlight(body,"Onboarding, login security and tracking controls",
-            "Accept the User Agreement before linking, then complete guided setup before Home. VRChat login is screen-capture protected, tracking has optional auto-start, Quest Tools has direct controls, and Darkflames joins Legends & Leadership.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
