@@ -47,7 +47,10 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.20"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.21"));
+        highlight(body,"VRChat API handling improvements",
+            "Improved how Companion identifies API requests for better service compatibility.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.20"));
         highlight(body,"Owner-exclusive theme testing",
             "Verified owner accounts can preview account-exclusive appearance presets "+
             "without changing anyone else's access or preferred colors.");
@@ -63,9 +66,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"One Tracking screen and more themes",
             "Tracking controls, Quest log-folder permission, Shizuku setup and diagnostics "+
             "now live together. Every verified Companion can choose from 12 built-in color themes.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.16"));
-        highlight(body,"Companion reliability improvements",
-            "Improved account linking compatibility and security checks while keeping existing features and settings.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
