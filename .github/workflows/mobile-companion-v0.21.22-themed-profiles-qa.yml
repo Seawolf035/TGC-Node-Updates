@@ -1,0 +1,71 @@
+name: QA Companion v0.21.22 thematic profiles (no publication)
+
+on:
+  push:
+    branches: [feature/mobile-v0.21.22-themed-profiles-hidden-collectible]
+  pull_request:
+    branches: [experiment/mobile-node-lab]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-themed-profiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Check ID-only cosmetics, hidden progress, staff isolation and public changelog
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          get=lambda n:(root/n).read_text(encoding="utf-8")
+          profile=get("NotableCommunityProfiles.java")
+          theme=get("ThemePreferences.java")
+          catalog=get("SpecialStaffDexAchievements.java")
+          panel=get("StaffDexPanel.java")
+          detail=get("VRChatDetailActivity.java")
+          overlay=get("OverlayMiniVrcx.java")
+          notes=get("WhatsNewActivity.java")
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          publisher=Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()
+          assert 'versionCode 96' in gradle and "versionName '0.21.22'" in gradle
+          exact='usr_0f534ae6-c5c4-4025-9478-d5423da1f296'
+          assert profile.count(exact)==1
+          assert 'private static final String DEVINITY_VRCHAT=NotableCommunityProfiles.DEVINITY;' in theme
+          assert 'public static final String DEVINITY=NotableCommunityProfiles.DEVINITY;' in catalog
+          assert 'return DEVINITY.equals(viewedVrchatId);' in profile
+          assert 'NotableCommunityProfiles.decorate(this,id,names,header,photo)' in detail
+          assert 'NotableCommunityProfiles.decorateMini(ctx,id,details,heading,portrait)' in overlay
+          assert 'snapshot.friendsComplete && id!=null' in catalog
+          assert '!id.equals(snapshot.accountId) && snapshot.friendIds.contains(id)' in catalog
+          assert 'collectedCommunityFriend(snapshot,' in panel
+          assert 'if(hiddenEarned(roster)>0)' in panel
+          assert '20+hiddenEarned(roster)' in panel
+          assert 'int totalSpecial=16+hiddenEarned(roster)' in panel
+          assert 'Devinity • The Gothic Puppy' in panel
+          assert "You befriended Seawolf's Second Wife." in panel
+          assert 'for(StaffDirectoryRepository.Entry e:roster.members)' in panel
+          for public in (notes,publisher):
+              assert 'Thematic profiles' in public
+              for hidden in ('The Gothic Puppy','Second Wife','HIDDEN ACHIEVEMENTS','COMMUNITY ENCOUNTERS','usr_0f534ae6'):
+                  assert hidden not in public, "Secret accidentally revealed in staff-facing release metadata"
+          assert [int(v) for v in re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\.21\.(\d+)', notes)]==[22,21,20,19,18]
+          print("PASS: exact-ID themed profiles, friendship-only hidden reward, untouched staff-roster model, private release notes, five patch highlights")
+          PY
+      - name: Compile entire native Android app; do not sign or publish
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
