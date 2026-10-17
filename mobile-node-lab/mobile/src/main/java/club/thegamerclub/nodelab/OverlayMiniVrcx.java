@@ -1171,6 +1171,9 @@ public final class OverlayMiniVrcx {
     private void showProfile(){
         String id=target;
         LinearLayout info=card(list);
+        if(NotableCommunityProfiles.devinity(id))
+            info.setBackground(CompanionStyle.gradient(ctx,
+                NotableCommunityProfiles.SURFACE,NotableCommunityProfiles.RAISED,16));
         String name=profile.optString("displayName","VRChat user");
         LinearLayout header=new LinearLayout(ctx);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -1198,6 +1201,7 @@ public final class OverlayMiniVrcx {
             portrait.setBackground(CompanionStyle.shape(ctx,CompanionStyle.RAISED,
                 11,GamerMusicProfiles.accent(id)));
         }
+        NotableCommunityProfiles.decorateMini(ctx,id,details,heading,portrait);
         String presence=profile.optString("status","");
         details.addView(text(VRChatPresenceIndicator.label(presence),12,
             VRChatPresenceIndicator.color(presence),true));
