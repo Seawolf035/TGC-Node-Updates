@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.24",
-  "version_code": 98,
+  "version": "0.21.25",
+  "version_code": 99,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "a623be1abf9befc00e632c2b9c0bfe6a6c40988ed7a6e1de6031840b576a3ae0",
-  "notes": "v0.21.24 (code 98): Fix guided setup return and staff-access screen recovery; resume setup without relinking or clearing saved VRChat sessions."
+  "sha256": "0b461acc8b41be62724042f780a4c4da5759d80ff465239841ae0a29b14768ee",
+  "notes": "v0.21.25 (code 99): Finish Setup now responds with clear missing-step guidance and live VRChat account recheck, preserving staff sessions and existing setup data."
 }
