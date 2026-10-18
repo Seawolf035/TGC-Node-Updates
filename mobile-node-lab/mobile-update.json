@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.22",
-  "version_code": 96,
+  "version": "0.21.23",
+  "version_code": 97,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "a2dee0f8267db6864056aa6671575f59d36e6c243dbec5ecaa9623eb37b8139e",
-  "notes": "v0.21.22 (code 96): Thematic profiles — selected community profiles now have signature appearance and accents in Companion and Floating/Quest profile views. Existing features and settings are preserved."
+  "sha256": "96772a70432744095e52f2b758ca281aede698266e0c528834a14d68b81989fa",
+  "notes": "v0.21.23 (code 97): Age Check Tool — calculate birthdate ranges and possible birth months from a claimed age directly in Floating and Quest Tools. Offline only; no date history is stored."
 }
