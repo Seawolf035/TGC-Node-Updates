@@ -47,7 +47,11 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.22"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.23"));
+        highlight(body,"Age Check Tool",
+            "Calculate possible birth months and exact birthday ranges from a claimed age. "+
+            "Available in Floating and Quest Tools, completely offline.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.22"));
         highlight(body,"Thematic profiles",
             "Selected community profiles now have signature colors and details in "+
             "Companion and Floating/Quest profile views.");
@@ -62,10 +66,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Personalized appearance",
             "Added a new optional color theme for an approved account. All existing "+
             "themes and saved settings are preserved. Other Companion features are unchanged.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.18"));
-        highlight(body,"StaffDex opens faster",
-            "Your last saved staff roster, friend collections and achievement progress appear "+
-            "immediately. StaffDex checks for updated data in the background whenever you open it.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
