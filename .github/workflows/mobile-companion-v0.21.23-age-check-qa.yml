@@ -1,0 +1,80 @@
+name: QA Companion v0.21.23 Age Check Tool (no publishing)
+on:
+  push:
+    branches: [feature/mobile-v0.21.23-age-check-hidden-community]
+  pull_request:
+    branches: [experiment/mobile-node-lab]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-calculator-and-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Exact offline calendar boundary regressions (no Android or VRChat access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          build=$(mktemp -d)
+          javac -d "$build"             mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/AgeCheckMath.java             mobile-node-lab/age-check-tests/AgeCheckMathTest.java
+          java -cp "$build" club.thegamerclub.nodelab.AgeCheckMathTest
+      - name: Static privacy, staff isolation, exact ID, app integration and publisher QA
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          base=Path('mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab')
+          rd=lambda name:(base/name).read_text(encoding='utf-8')
+          gradle=Path('mobile-node-lab/mobile/build.gradle').read_text()
+          publisher=Path('.github/workflows/build-experimental-mobile-apk.yml').read_text()
+          notes=rd('WhatsNewActivity.java')
+          age=rd('AgeCheckTool.java')
+          math=rd('AgeCheckMath.java')
+          floating=rd('FloatingCompanionService.java')
+          quest=rd('QuestToolsActivity.java')
+          quest_float=rd('QuestFloatingToolsActivity.java')
+          achievements=rd('SpecialStaffDexAchievements.java')
+          staffdex=rd('StaffDexPanel.java')
+          directory=rd('StaffDirectoryRepository.java')
+          assert 'versionCode 97' in gradle and "versionName '0.21.23'" in gradle
+          assert 'Age Check Tool' in publisher and 'Age Check Tool' in notes
+          assert [int(v) for v in re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\.21\.(\d+)',notes)]==[23,22,21,20,19]
+          assert 'AgeCheckTool.attach(this,ageCard,' in floating
+          assert 'AgeCheckTool.attach(this,ageCheck,null,null);' in quest
+          assert 'AgeCheckTool.attach(this,ageCard,null,null);' in quest_float
+          assert 'setOverlayKeyboard(true)' in floating
+          assert 'setOverlayKeyboard(false)' in floating
+          assert 'LocalDate.now()' in age
+          assert 'getSharedPreferences' not in age and 'new URL(' not in age
+          assert 'minusYears(claimedAge+1L).plusDays(1)' in math
+          assert 'int count=0' in staffdex and 'hiddenEarned(roster)>0' in staffdex
+          assert 'snapshot.friendsComplete && id!=null' in achievements
+          assert '!id.equals(snapshot.accountId) && snapshot.friendIds.contains(id)' in achievements
+          for key, vrchat in (('SOUP','usr_d2698c92-1c49-4fde-bf3b-ea1809cceed1'),
+                              ('KLASHY','usr_42d46072-71c6-4fb9-8391-d1bbd0e543a3')):
+              assert f'public static final String {key}="{vrchat}"' in achievements
+              assert f'SpecialStaffDexAchievements.{key}' in staffdex
+              assert f'SpecialStaffDexAchievements.{key}' in directory
+          assert '20+hiddenEarned(roster)' in staffdex
+          for public in (notes,publisher):
+              for hidden in ('Devinity','Gothic Puppy','Second Wife','Soup','Pregnant Man','Jeremie',
+                             'Klashy','Black Cat','Neow you found him','COMMUNITY ENCOUNTERS',
+                             'usr_d2698c92','usr_42d46072'):
+                  assert hidden not in public, 'Secret achievement leaked to public release metadata'
+          print('PASS offline-only UI, calendar contract, scoped friend persistence and public release privacy')
+          PY
+      - name: Compile complete Android app (no signing or publishing)
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
