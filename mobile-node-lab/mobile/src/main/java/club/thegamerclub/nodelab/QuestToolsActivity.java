@@ -760,6 +760,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             startActivity(new Intent(this,CompanionSetupActivity.class)));
     }
     private void showTools(){
+        LinearLayout ageCheck=card("AGE CHECK · OFFLINE");
+        AgeCheckTool.attach(this,ageCheck,null,null);
         LinearLayout account=card("ACCOUNT & SOCIAL");
         pair(account,"Favorite friend groups","mini_friend_favorites",
             "Find mutuals via a friend","mini_friends");
