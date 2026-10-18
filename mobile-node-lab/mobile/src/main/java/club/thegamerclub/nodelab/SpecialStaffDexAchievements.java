@@ -19,6 +19,9 @@ public final class SpecialStaffDexAchievements {
     public static final String DARKFLAMES="usr_cd566dbc-b21d-4a84-9548-4767128f0bec";
     // NOT staff. Uses the same exact VRChat account as her exclusive theme.
     public static final String DEVINITY=NotableCommunityProfiles.DEVINITY;
+    // Owner-specified notable community users, NOT official TGC staff.
+    public static final String SOUP="usr_d2698c92-1c49-4fde-bf3b-ea1809cceed1";
+    public static final String KLASHY="usr_42d46072-71c6-4fb9-8391-d1bbd0e543a3";
     // The former staff's independently operated Gamer Music Jr is excluded.
     private SpecialStaffDexAchievements(){}
 
