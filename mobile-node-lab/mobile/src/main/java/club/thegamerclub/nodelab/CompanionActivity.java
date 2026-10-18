@@ -54,6 +54,10 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     private StaffDexPanel staffDexPanel;
     private boolean setupLaunched=false;
     private boolean setupAfterLink=false;
+    // Back/Finish Later must NOT strand a verified staff member on
+    // "Checking your staff access..." with a stale setupLaunched flag.
+    private boolean setupDeferred=false;
+    private static final int GUIDED_SETUP_REQUEST=7159;
     private boolean licenseLaunched=false;
     private boolean foreground=false;
     private boolean whatsNewLaunched=false;
@@ -294,6 +298,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             trackingGuideExpanded=saved.getBoolean("tracking_guide_expanded",false);
             trackingInfoExpanded=saved.getBoolean("tracking_info_expanded",false);
             questShizukuExpanded=saved.getBoolean("quest_shizuku_expanded",false);
+            setupDeferred=saved.getBoolean("setup_deferred",false);
             String savedCategory=saved.getString("explore_category","friends");
             if(isExploreCategory(savedCategory))exploreCategory=savedCategory;
             java.util.ArrayList<String> history=saved.getStringArrayList("quest_tab_history");
@@ -303,7 +308,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         }
         setupAfterLink=(saved!=null&&saved.getBoolean("setup_after_link",false))||
             getIntent().getBooleanExtra("open_setup_after_link",false);
-        if(setupAfterLink)tab="home";
+        if(setupAfterLink){tab="home";setupDeferred=false;}
         if(getIntent().getBooleanExtra("open_main_menu",false)){
             tab="home";
             questTabs.clear();
@@ -328,6 +333,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             // controls screen. Wait for live staff verification onResume.
             setupAfterLink=true;
             setupLaunched=false;
+            setupDeferred=false;
             tab="home";
             questTabs.clear();
         }
@@ -349,6 +355,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     @Override protected void onSaveInstanceState(Bundle out){
         out.putString("tab",tab);out.putBoolean("advanced",advanced);
         out.putBoolean("setup_after_link",setupAfterLink);
+        out.putBoolean("setup_deferred",setupDeferred);
         out.putBoolean("tracking_guide_expanded",trackingGuideExpanded);
         out.putBoolean("tracking_info_expanded",trackingInfoExpanded);
         out.putBoolean("quest_shizuku_expanded",questShizukuExpanded);
@@ -405,6 +412,8 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             CompanionLicense.accepted(this)?"Use your personal staff setup link":"Accept before linking",
             ()->startActivity(new Intent(this,CompanionLicense.accepted(this)?
                 MobileDeployActivity.class:CompanionLicenseActivity.class)));
+        action(c,"↻","Retry staff verification","Recheck your existing device link without clearing credentials",
+            this::revalidate);
         action(c,"↓","Check for updates","Install the latest Companion version",
             ()->startActivity(new Intent(this,MobileUpdaterActivity.class)));
         space(page,4);
@@ -494,13 +503,37 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         }
         if(setupAfterLink||CompanionSetupState.shouldShow(this)){
             tab="home";
+            if(setupDeferred){
+                // Staff authorization is already verified. This is an incomplete
+                // onboarding checklist, NOT a revoked Relay deployment.
+                locked("Staff access verified. Guided setup was paused; "
+                    +"your device link and VRChat session were kept.");
+                LinearLayout resume=card();
+                resume.addView(txt("Continue setup when you're ready.",16,
+                    CompanionStyle.TEXT,true));
+                action(resume,"✓","Resume setup",
+                    "Review unfinished steps and confirm completion",
+                    ()->{
+                        if(!StaffGate.unlocked(this)){revalidate();return;}
+                        setupDeferred=false;
+                        setupLaunched=false;
+                        renderUnlocked();
+                    });
+                action(resume,"↻","Recheck existing staff access",
+                    "Retry without unlinking your device",this::revalidate);
+                return;
+            }
             if(!setupLaunched){
                 setupLaunched=true;
                 setupAfterLink=false;
-                startActivity(new Intent(this,CompanionSetupActivity.class));
+                startActivityForResult(new Intent(this,CompanionSetupActivity.class),
+                    GUIDED_SETUP_REQUEST);
             }
             return;
         }
+        // Setup may also finish through Settings. Clear the deferred state
+        // once the complete checklist is genuinely persisted.
+        setupDeferred=false;
         ThemePreferences.apply(this);
         showingUnlocked=true;shell(true);
         QuestBackApplication.refresh(this);
@@ -1274,6 +1307,19 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
+        if(request==GUIDED_SETUP_REQUEST){
+            setupLaunched=false;
+            setupAfterLink=false;
+            // Never turn a canceled guide into a failed staff authentication.
+            // A result is OK only when the setup state itself is complete.
+            setupDeferred=result!=RESULT_OK || !CompanionSetupState.isComplete(this);
+            if(StaffGate.unlocked(this))renderUnlocked();
+            else{
+                locked("Reconnecting to your existing staff authorization...");
+                revalidate();
+            }
+            return;
+        }
         if(request!=TRACKING_FOLDER_REQUEST)return;
         if(result!=RESULT_OK||data==null||data.getData()==null){
             trackingNotice("Folder selection canceled.");return;

@@ -255,8 +255,18 @@ public final class CompanionSetupActivity extends StaffProtectedActivity {
             finishing=true;setResult(RESULT_OK);finish();
         });
         button(finishCard,"I'll finish setup later",false,this::finish);
-        if(!ready)message("Follow the steps above. Completed steps are saved and "+
-            "you can return here anytime from Settings.");
+        if(!ready){
+            String missing=!signed?"Sign in to your personal VRChat account first.":
+                verifying?"Checking your VRChat session online. Use Check VRChat session if needed.":
+                !liveVerified?"Your VRChat session is saved but not verified online. "+
+                    "Tap Check VRChat session; you can keep the existing login.":
+                quest&&!CompanionSetupState.fullLoggingAcknowledged(this)?
+                    "Tap I've enabled FULL logging after choosing Full in VRChat's Debug settings.":
+                quest&&!QuestSafLogWatcher.hasGrant(this)?
+                    "Grant read-only Documents/Logs folder permission on your Quest.":
+                    "Review the incomplete steps above.";
+            message(missing+" Your saved device link and completed steps are preserved.");
+        }
     }
     private void pickFolder(){
         if(!QuestDevice.isQuestDevice())return;

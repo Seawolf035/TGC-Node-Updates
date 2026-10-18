@@ -1,0 +1,69 @@
+name: QA Companion v0.21.24 setup-return recovery (never publish)
+on:
+  push:
+    branches: [fix/mobile-v0.21.24-setup-return-recovery]
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/mobile-companion-v0.21.24-setup-recovery-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify setup-return lifecycle and non-destructive authorization invariants
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          main=(base/"CompanionActivity.java").read_text()
+          setup=(base/"CompanionSetupActivity.java").read_text()
+          state=(base/"CompanionSetupState.java").read_text()
+          gate=(base/"StaffGate.java").read_text()
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          notes=(base/"WhatsNewActivity.java").read_text()
+          publisher=Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()
+          assert "versionCode 98" in gradle and "versionName '0.21.24'" in gradle
+          assert 'applicationId \'club.thegamerclub.nodelab\'' in gradle
+          assert 'setupDeferred=result!=RESULT_OK || !CompanionSetupState.isComplete(this);' in main
+          assert 'if(request==GUIDED_SETUP_REQUEST)' in main
+          assert 'setupLaunched=false;' in main
+          assert 'out.putBoolean("setup_deferred",setupDeferred);' in main
+          assert 'setupDeferred=saved.getBoolean("setup_deferred",false);' in main
+          assert 'startActivityForResult(new Intent(this,CompanionSetupActivity.class)' in main
+          assert 'GUIDED_SETUP_REQUEST);' in main
+          assert 'if(setupDeferred){' in main
+          assert 'Resume setup' in main and 'Retry staff verification' in main
+          assert 'StaffGate.unlocked(this)' in main and 'StaffGate.verifyOnline(this)' in main
+          assert "MobileCredentials.clear(this)" not in main and "VRChatSession.clear(this)" not in main
+          assert 'CompanionSetupState.complete(this)' in setup
+          assert 'setResult(RESULT_OK);finish();' in setup
+          assert 'finishButton.setEnabled(ready)' in setup
+          assert 'Your saved device link and completed steps are preserved.' in setup
+          assert 'QuestSafLogWatcher.hasGrant(this)' in setup
+          assert 'fullLoggingAcknowledged(this)' in setup
+          assert 'MobileRelay.post(creds.url,MobileRelay.authorized(creds,"node_status"))' in gate
+          assert 'lock();' in gate and 'confirmRelayApproval(creds,result);' in gate
+          assert 'LATEST RELEASE · v0.21.24' in notes
+          assert 'v0.21.24 (code 98): Fix guided setup' in publisher
+          assert 'TGC_ANDROID_RELEASE_KEYSTORE_B64' in publisher
+          assert 'Signed release certificate matches existing published APK.' in publisher
+          print("PASS: setup result routing, recoverable paused state, full Quest checks, owner-issued staff gate, preserved credentials, updater and signer")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile actual Android debug APK without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
