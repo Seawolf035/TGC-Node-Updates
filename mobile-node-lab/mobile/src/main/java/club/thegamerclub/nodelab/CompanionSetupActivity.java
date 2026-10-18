@@ -32,6 +32,8 @@ public final class CompanionSetupActivity extends StaffProtectedActivity {
     private boolean verifying=false,liveVerified=false,verifyAttempted=false;
     private String verifiedUserId="";
     private boolean finishing=false;
+    private boolean pendingFinish=false;
+    private String lastVerificationError="";
     private int dp(int n){return CompanionStyle.dp(this,n);}
     private TextView text(String label,int size,int color,boolean bold){
         return CompanionStyle.text(this,label,size,color,bold);
@@ -75,35 +77,119 @@ public final class CompanionSetupActivity extends StaffProtectedActivity {
     private void verifyAccount(){
         if(verifying||finishing)return;
         if(!CompanionSetupState.vrchatSessionReady(this)){
-            liveVerified=false;verifyAttempted=true;
-            if(connectionStatus!=null)
-                connectionStatus.setText("Not signed in. Open VRChat Login below.");
+            liveVerified=false;
+            verifiedUserId="";
+            verifyAttempted=true;
+            lastVerificationError="No complete VRChat login for your authorized account. "
+                +"Open VRChat Login and finish signing in, including 2FA if prompted.";
+            if(connectionStatus!=null)connectionStatus.setText(lastVerificationError);
+            if(pendingFinish){
+                pendingFinish=false;
+                message(lastVerificationError);
+            }
             return;
         }
         verifying=true;
-        if(connectionStatus!=null)connectionStatus.setText("Checking your VRChat session…");
+        if(connectionStatus!=null)
+            connectionStatus.setText("Checking your VRChat session…");
+        if(pendingFinish)
+            message("Checking your saved VRChat login online before finishing setup…");
         worker.execute(()->{
-            boolean success=false;String result="";
+            boolean success=false;
+            String result="";
             try{
                 JSONObject account=VRChatApi.currentUser(this);
                 String userId=account.optString("id","");
+                JSONObject saved=VRChatSession.load(this);
+                String expected=saved.optString("userId","");
+                // An authenticated but DIFFERENT account must not satisfy
+                // the linked owner's setup, including delegated Companions.
                 success=userId.matches("usr_[0-9a-fA-F-]{36}") &&
+                    userId.equals(expected) &&
                     CompanionSetupState.vrchatSessionReady(this);
-                result=success?userId:"VRChat did not return an authenticated account.";
-            }catch(Exception e){result=e.getMessage()==null?"Connection failed":e.getMessage();}
+                result=success?userId:
+                    "VRChat did not verify the saved linked account. "
+                    +"Check your personal VRChat login.";
+            }catch(Exception e){
+                result=e.getMessage()==null?"Connection unavailable":e.getMessage();
+            }
             final boolean valid=success;
             final String note=result;
             runOnUiThread(()->{
-                verifying=false;verifyAttempted=true;
-                if(finishing||isFinishing()||isDestroyed()||!StaffGate.unlocked(this))return;
+                verifying=false;
+                verifyAttempted=true;
+                if(finishing||isFinishing()||isDestroyed()||
+                   !StaffGate.unlocked(this))return;
                 liveVerified=valid;
                 verifiedUserId=valid?note:"";
+                lastVerificationError=valid?"":note;
+                boolean finishingRequested=pendingFinish;
+                pendingFinish=false;
+                if(finishingRequested&&valid){
+                    if(CompanionSetupState.complete(this)&&
+                       CompanionSetupState.isComplete(this)){
+                        finishing=true;
+                        setResult(RESULT_OK);
+                        finish();
+                        return;
+                    }
+                    lastVerificationError="Setup could not be saved. "
+                        +"Check the steps and retry without unlinking your device.";
+                }
                 render();
-                if(!valid && connectionStatus!=null)
-                    connectionStatus.setText("VRChat verification unavailable: "+note);
+                if(!valid){
+                    if(connectionStatus!=null)
+                        connectionStatus.setText("VRChat verification unavailable: "+note);
+                }
+                if(finishingRequested)
+                    message(valid?lastVerificationError:
+                        "Cannot finish yet: "+lastVerificationError+
+                        " Your saved device link was not changed.");
             });
         });
     }
+
+    /**
+     * Never disable the final button. Explain the exact missing step, or run
+     * a real online VRChat check. Do not bypass the existing staff or Quest
+     * safeguards; no cached Relay/VRChat success is fabricated.
+     */
+    private void finishSetup(){
+        if(finishing||isFinishing()||isDestroyed())return;
+        if(!StaffGate.unlocked(this)||!CompanionLicense.accepted(this)){
+            message("Staff verification or agreement is required. "
+                +"Return to the Companion and retry your existing staff link.");
+            return;
+        }
+        if(!CompanionSetupState.vrchatSessionReady(this)){
+            message("Sign in to your personal authorized VRChat account and "
+                +"complete two-factor authentication if required, then retry.");
+            return;
+        }
+        if(QuestDevice.isQuestDevice()){
+            if(!CompanionSetupState.fullLoggingAcknowledged(this)){
+                message("In VRChat, set Debug → Logging to Full, then tap "
+                    +"I've enabled FULL logging in VRChat above.");
+                return;
+            }
+            if(!QuestSafLogWatcher.hasGrant(this)){
+                message("Grant read-only Documents/Logs folder access in "
+                    +"Step 3 before finishing Quest setup.");
+                return;
+            }
+        }
+        if(verifying){
+            pendingFinish=true;
+            message("VRChat account check is already running. "
+                +"Setup will finish automatically if verification succeeds.");
+            return;
+        }
+        pendingFinish=true;
+        // ALWAYS recheck the live VRChat account at final submission.
+        // A saved cookie or the previously green label alone is not enough.
+        verifyAccount();
+    }
+
     private void render(){
         if(isFinishing()||isDestroyed())return;
         ThemePreferences.apply(this);
@@ -246,20 +332,17 @@ public final class CompanionSetupActivity extends StaffProtectedActivity {
                 QuestSafLogWatcher.hasGrant(this)));
         Button finishButton=CompanionStyle.button(this,"Finish Setup & Open Companion",true);
         finishCard.addView(finishButton,CompanionStyle.buttonParams(this));
-        finishButton.setEnabled(ready);
-        finishButton.setOnClickListener(v->{
-            if(!liveVerified||!CompanionSetupState.complete(this)){
-                message("Some setup steps aren't finished. Review the steps above.");
-                return;
-            }
-            finishing=true;setResult(RESULT_OK);finish();
-        });
+        // Keep it clickable even if VRChat/Quest setup is incomplete so users
+        // get a specific error and can retry, rather than an inert button.
+        finishButton.setEnabled(true);
+        finishButton.setOnClickListener(v->finishSetup());
         button(finishCard,"I'll finish setup later",false,this::finish);
         if(!ready){
             String missing=!signed?"Sign in to your personal VRChat account first.":
                 verifying?"Checking your VRChat session online. Use Check VRChat session if needed.":
                 !liveVerified?"Your VRChat session is saved but not verified online. "+
-                    "Tap Check VRChat session; you can keep the existing login.":
+                    (lastVerificationError.isEmpty()?"Tap Finish Setup to check again.":
+                      lastVerificationError+" Tap Finish Setup to retry. "):
                 quest&&!CompanionSetupState.fullLoggingAcknowledged(this)?
                     "Tap I've enabled FULL logging after choosing Full in VRChat's Debug settings.":
                 quest&&!QuestSafLogWatcher.hasGrant(this)?

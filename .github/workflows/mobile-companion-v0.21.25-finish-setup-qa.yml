@@ -1,0 +1,85 @@
+name: QA Companion v0.21.25 Finish Setup action (never publish)
+
+on:
+  push:
+    branches: [fix/mobile-v0.21.25-finish-setup-action]
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - '.github/workflows/build-experimental-mobile-apk.yml'
+      - '.github/workflows/mobile-companion-v0.21.25-finish-setup-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check real action, identity verification, Quest requirements and release privacy
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          r=lambda f:(root/f).read_text()
+          setup=r("CompanionSetupActivity.java")
+          state=r("CompanionSetupState.java")
+          home=r("CompanionActivity.java")
+          gate=r("StaffGate.java")
+          notes=r("WhatsNewActivity.java")
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          build=Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()
+          assert "versionCode 99" in gradle and "versionName '0.21.25'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          button=setup[setup.index('Button finishButton='):setup.index('button(finishCard,"I')]
+          assert 'finishButton.setEnabled(true)' in button
+          assert 'finishButton.setOnClickListener(v->finishSetup());' in button
+          assert 'finishButton.setEnabled(ready)' not in setup
+          assert 'private void finishSetup()' in setup
+          assert 'StaffGate.unlocked(this)||!CompanionLicense.accepted(this)' in setup
+          assert 'if(!CompanionSetupState.vrchatSessionReady(this))' in setup
+          assert 'if(QuestDevice.isQuestDevice())' in setup
+          assert 'if(!CompanionSetupState.fullLoggingAcknowledged(this))' in setup
+          assert 'if(!QuestSafLogWatcher.hasGrant(this))' in setup
+          assert 'message("Grant read-only Documents/Logs folder access' in setup
+          assert 'pendingFinish=true;' in setup and 'if(verifying)' in setup
+          assert 'verifyAccount();' in setup
+          assert 'userId.equals(expected)' in setup
+          assert 'CompanionSetupState.complete(this)' in setup
+          assert 'CompanionSetupState.isComplete(this)' in setup
+          assert 'setResult(RESULT_OK);' in setup and 'finish();' in setup
+          assert 'Cannot finish yet: ' in setup
+          assert 'MobileCredentials.clear(this)' not in setup
+          assert 'VRChatSession.clear(this)' not in setup
+          assert 'setupDeferred=result!=RESULT_OK || !CompanionSetupState.isComplete(this);' in home
+          assert 'Resume setup' in home
+          assert 'StaffGate.verifyOnline(this)' in home
+          assert 'return fullLoggingAcknowledged(context)' in state
+          assert 'QuestSafLogWatcher.hasGrant(context)' in state
+          assert 'LATEST RELEASE · v0.21.25' in notes
+          assert 'PREVIOUS STAFF RELEASE · v0.21.24' in notes
+          assert 'v0.21.25 (code 99): Finish Setup' in build
+          assert 'TGC_ANDROID_RELEASE_KEYSTORE_B64' in build
+          assert 'Signed release certificate matches existing published APK.' in build
+          for hidden in ('Devinity','Gothic Puppy','Second Wife','Pregnant Man',
+                         'Soup','Klashy','Black Cat','Neow you found him',
+                         'usr_d2698c92','usr_42d46072'):
+              assert hidden not in notes and hidden not in build
+          print("PASS: clickable finish, live account identity, explicit prerequisites, preserved enrollments and signing")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build actual Android debug app without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace

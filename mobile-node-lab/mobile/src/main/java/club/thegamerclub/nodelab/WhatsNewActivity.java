@@ -47,7 +47,12 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.24"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.25"));
+        highlight(body,"Finish Setup button repaired",
+            "Finish Setup always responds, tells you which step is missing, "+
+            "and rechecks VRChat when you press it. Existing staff and "+
+            "VRChat logins, Quest folder grants and setup progress are kept.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.24"));
         highlight(body,"Setup and staff access recovery",
             "Fixes a stuck Checking staff access screen after returning from guided "+
             "setup. You can now resume unfinished steps without relinking or "+
@@ -63,10 +68,6 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.21"));
         highlight(body,"VRChat API handling improvements",
             "Improved how Companion identifies API requests for better service compatibility.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.20"));
-        highlight(body,"Owner-exclusive theme testing",
-            "Verified owner accounts can preview account-exclusive appearance presets "+
-            "without changing anyone else's access or preferred colors.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
