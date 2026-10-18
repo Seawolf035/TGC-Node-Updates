@@ -3,8 +3,6 @@ name: QA Companion v0.21.22 thematic profiles (no publication)
 on:
   push:
     branches: [feature/mobile-v0.21.22-themed-profiles-hidden-collectible]
-  pull_request:
-    branches: [experiment/mobile-node-lab]
   workflow_dispatch:
 
 permissions:
