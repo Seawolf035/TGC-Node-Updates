@@ -71,6 +71,9 @@ public final class QuestFloatingToolsActivity extends Activity {
         button("Your VRChat status",()->open(PresenceActivity.class));
         button("Current instance",()->open(VRChatInstanceActivity.class));
         button("Player history",()->open(PlayerActivityLogActivity.class));
+        LinearLayout ageCard=CompanionStyle.card(this);
+        actions.addView(ageCard,CompanionStyle.cardParams(this));
+        AgeCheckTool.attach(this,ageCard,null,null);
         button("Full Quest Tools",()->open(QuestToolsActivity.class));
         button("Close floating panel",this::finish);
         actions.setVisibility(View.GONE);
