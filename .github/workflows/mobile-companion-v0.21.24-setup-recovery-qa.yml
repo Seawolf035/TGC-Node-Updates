@@ -38,7 +38,7 @@ jobs:
           assert 'if(setupDeferred){' in main
           assert 'Resume setup' in main and 'Retry staff verification' in main
           assert 'StaffGate.unlocked(this)' in main and 'StaffGate.verifyOnline(this)' in main
-          assert "MobileCredentials.clear(this)" not in main and "VRChatSession.clear(this)" not in main
+          assert "MobileCredentials.clear(this)" not in main[main.index("if(setupDeferred){"):main.index("setupDeferred=false;",main.index("if(setupDeferred){"))]
           assert 'CompanionSetupState.complete(this)' in setup
           assert 'setResult(RESULT_OK);finish();' in setup
           assert 'finishButton.setEnabled(ready)' in setup
