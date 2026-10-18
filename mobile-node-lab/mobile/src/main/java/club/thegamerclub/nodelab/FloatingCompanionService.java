@@ -1762,6 +1762,11 @@ public final class FloatingCompanionService extends Service {
         });
     }
     private void showTools(){
+        section(panelContent,"AGE CHECK · OFFLINE");
+        LinearLayout ageCard=panelCard(panelContent);
+        AgeCheckTool.attach(this,ageCard,
+            ()->setOverlayKeyboard(true),
+            ()->setOverlayKeyboard(false));
         section(panelContent,"YOUR VRCHAT STATUS");
         LinearLayout statusCard=panelCard(panelContent);
         presenceActionLabel=text(presenceDescription,16,CompanionStyle.ACCENT,true);
