@@ -231,8 +231,13 @@ public final class StaffDexPanel extends LinearLayout {
      * sightings data, or membership in a TGC group never qualifies.
      */
     private int hiddenEarned(StaffDirectoryRepository.Snapshot snapshot){
-        return SpecialStaffDexAchievements.collectedCommunityFriend(snapshot,
-            SpecialStaffDexAchievements.DEVINITY)?1:0;
+        int count=0;
+        for(String id:new String[]{
+            SpecialStaffDexAchievements.DEVINITY,
+            SpecialStaffDexAchievements.SOUP,
+            SpecialStaffDexAchievements.KLASHY
+        })if(SpecialStaffDexAchievements.collectedCommunityFriend(snapshot,id))count++;
+        return count;
     }
     /** Total special progress shared by the outer header and the expanded categories. */
     private int specialEarned(StaffDirectoryRepository.Snapshot snapshot){
@@ -378,14 +383,30 @@ public final class StaffDexPanel extends LinearLayout {
         // This category, reward and even its count do NOT exist in the
         // visible UI until the user's friendship has been confirmed.
         if(hiddenEarned(roster)>0){
+            int communityEarned=hiddenEarned(roster);
             boolean showCommunity=categoryHeader("community",
-                "✦ COMMUNITY ENCOUNTERS",1,1,NotableCommunityProfiles.ROSE);
+                "✦ COMMUNITY ENCOUNTERS",communityEarned,communityEarned,
+                NotableCommunityProfiles.ROSE);
             if(showCommunity){
                 LinearLayout community=card(achievementHost);
-                specialItem(community,"Devinity • The Gothic Puppy",
-                    "You befriended Seawolf's Second Wife.",
-                    SpecialStaffDexAchievements.DEVINITY,true,
-                    NotableCommunityProfiles.ROSE);
+                if(SpecialStaffDexAchievements.collectedCommunityFriend(roster,
+                    SpecialStaffDexAchievements.DEVINITY))
+                    specialItem(community,"Devinity • The Gothic Puppy",
+                        "You befriended Seawolf's Second Wife.",
+                        SpecialStaffDexAchievements.DEVINITY,true,
+                        NotableCommunityProfiles.ROSE);
+                if(SpecialStaffDexAchievements.collectedCommunityFriend(roster,
+                    SpecialStaffDexAchievements.SOUP))
+                    specialItem(community,"Soup • The Pregnant Man",
+                        "Jeremie is the father! We all know it!",
+                        SpecialStaffDexAchievements.SOUP,true,
+                        CompanionStyle.ACCENT);
+                if(SpecialStaffDexAchievements.collectedCommunityFriend(roster,
+                    SpecialStaffDexAchievements.KLASHY))
+                    specialItem(community,"Klashy • The Black Cat",
+                        "Neow you found him!",
+                        SpecialStaffDexAchievements.KLASHY,true,
+                        CompanionStyle.ACCENT);
             }
         }
     }
