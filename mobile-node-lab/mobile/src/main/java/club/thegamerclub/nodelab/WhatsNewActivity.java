@@ -48,8 +48,8 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
         body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.27"));
-        highlight(body,"Companion refinements",
-            "Small improvements while keeping your existing features and settings.");
+        highlight(body,"Minor bug fix",
+            "Minor bug fix.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.26"));
         highlight(body,"Avatar height presets",
             "Set 0.80 m or 2.00 m eye height from Floating and Quest OSC tools. "+
