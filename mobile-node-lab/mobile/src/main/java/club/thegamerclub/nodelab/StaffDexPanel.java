@@ -429,9 +429,9 @@ public final class StaffDexPanel extends LinearLayout {
                         CompanionStyle.ACCENT);
                 if(SpecialStaffDexAchievements.collectedCommunityFriend(roster,
                     SpecialStaffDexAchievements.KAITLYN))
-                    // No owner-specific subtitle/description has been supplied yet.
-                    // Keep the exact known VRChat handle without inventing lore.
-                    specialItem(community,"Kaitlynslayer","",
+                    // Hidden until confirmed friendship, like all community rewards.
+                    specialItem(community,"Kaitlynslayer • Free VRC+? NICE!",
+                        "Gifts VRC+ to The Gamer Club staff.",
                         SpecialStaffDexAchievements.KAITLYN,true,
                         CompanionStyle.ACCENT);
             }
