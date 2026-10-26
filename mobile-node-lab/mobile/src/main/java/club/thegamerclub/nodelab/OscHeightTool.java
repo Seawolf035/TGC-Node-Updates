@@ -205,16 +205,17 @@ public final class OscHeightTool {
         catch(Exception e){status.setText(e.getMessage());return;}
         status.setText("Sending "+AvatarEyeHeightOsc.display(metres)+"…");
         worker.execute(()->{
-            final String message;
+            String result;
             try{
                 if(!expected.equals(account(c)))
                     throw new SecurityException("VRChat account changed; height not sent.");
                 VRChatOscChat.sendEyeHeight(metres);
-                message="Sent "+AvatarEyeHeightOsc.display(metres)+
+                result="Sent "+AvatarEyeHeightOsc.display(metres)+
                     " to local OSC. Verify avatar height in VRChat.";
             }catch(Exception e){
-                message="OSC height: "+(e.getMessage()==null?"Send failed.":e.getMessage());
+                result="OSC height: "+(e.getMessage()==null?"Send failed.":e.getMessage());
             }
+            final String message=result;
             parent.post(()->status.setText(message));
         });
     }
