@@ -22,6 +22,8 @@ public final class SpecialStaffDexAchievements {
     // Owner-specified notable community users, NOT official TGC staff.
     public static final String SOUP="usr_d2698c92-1c49-4fde-bf3b-ea1809cceed1";
     public static final String KLASHY="usr_42d46072-71c6-4fb9-8391-d1bbd0e543a3";
+    public static final String WESMAN="usr_7a5238d4-9017-49dd-a0df-df25800d119c";
+    public static final String KAITLYN="usr_a4ee31d2-0c71-4e12-a0ab-4c1c6693a315";
     // The former staff's independently operated Gamer Music Jr is excluded.
     private SpecialStaffDexAchievements(){}
 
