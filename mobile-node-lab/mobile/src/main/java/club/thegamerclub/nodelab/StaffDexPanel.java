@@ -178,9 +178,21 @@ public final class StaffDexPanel extends LinearLayout {
         LinearLayout words=new LinearLayout(activity);
         words.setOrientation(LinearLayout.VERTICAL);
         line.addView(words,new LinearLayout.LayoutParams(0,-2,1));
-        words.addView(text((owned?"✓ ":"○ ")+title,14,
-            owned?CompanionStyle.GOOD:color,true));
-        words.addView(text(description,11,CompanionStyle.MUTED,false));
+        TextView awardTitle=text((owned?"✓ ":"○ ")+title,14,
+            owned?CompanionStyle.GOOD:color,true);
+        if(SpecialStaffDexAchievements.WESMAN.equals(userId)){
+            // Only the username has a strike, not the owner's "That one dude" suffix.
+            android.text.SpannableString styled=new android.text.SpannableString(
+                awardTitle.getText());
+            int start=(owned?"✓ ":"○ ").length();
+            styled.setSpan(new android.text.style.StrikethroughSpan(),
+                start,start+"Wesman4real1".length(),
+                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            awardTitle.setText(styled);
+        }
+        words.addView(awardTitle);
+        if(description!=null&&!description.isEmpty())
+            words.addView(text(description,11,CompanionStyle.MUTED,false));
         if(userId!=null && userId.matches("usr_[0-9a-fA-F-]{36}")){
             Button visit=CompanionStyle.button(activity,"Profile ›",false);
             visit.setTextSize(12);
@@ -235,7 +247,9 @@ public final class StaffDexPanel extends LinearLayout {
         for(String id:new String[]{
             SpecialStaffDexAchievements.DEVINITY,
             SpecialStaffDexAchievements.SOUP,
-            SpecialStaffDexAchievements.KLASHY
+            SpecialStaffDexAchievements.KLASHY,
+            SpecialStaffDexAchievements.WESMAN,
+            SpecialStaffDexAchievements.KAITLYN
         })if(SpecialStaffDexAchievements.collectedCommunityFriend(snapshot,id))count++;
         return count;
     }
@@ -406,6 +420,19 @@ public final class StaffDexPanel extends LinearLayout {
                     specialItem(community,"Klashy • The Black Cat",
                         "Neow you found him!",
                         SpecialStaffDexAchievements.KLASHY,true,
+                        CompanionStyle.ACCENT);
+                if(SpecialStaffDexAchievements.collectedCommunityFriend(roster,
+                    SpecialStaffDexAchievements.WESMAN))
+                    specialItem(community,"Wesman4real1 • That one dude",
+                        "You met them? Cool!",
+                        SpecialStaffDexAchievements.WESMAN,true,
+                        CompanionStyle.ACCENT);
+                if(SpecialStaffDexAchievements.collectedCommunityFriend(roster,
+                    SpecialStaffDexAchievements.KAITLYN))
+                    // No owner-specific subtitle/description has been supplied yet.
+                    // Keep the exact known VRChat handle without inventing lore.
+                    specialItem(community,"Kaitlynslayer","",
+                        SpecialStaffDexAchievements.KAITLYN,true,
                         CompanionStyle.ACCENT);
             }
         }
