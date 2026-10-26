@@ -1,0 +1,92 @@
+name: QA Companion v0.21.26 OSC eyeheight and hidden StaffDex (never publish)
+on:
+  push:
+    branches: [feature/mobile-v0.21.26-height-staffdex]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test documented OSC eyeheight bounds and float32 packet
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          javac -d "$tmp" \
+            mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/AvatarEyeHeightOsc.java \
+            mobile-node-lab/osc-height-tests/AvatarEyeHeightOscTest.java
+          java -cp "$tmp" club.thegamerclub.nodelab.AvatarEyeHeightOscTest
+      - name: Hidden award, saved heights, identity and release metadata safeguards
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          source=lambda name:(root/name).read_text()
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          publisher=Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()
+          notes=source("WhatsNewActivity.java")
+          awards=source("SpecialStaffDexAchievements.java")
+          panel=source("StaffDexPanel.java")
+          cached=source("StaffDirectoryRepository.java")
+          tool=source("OscHeightTool.java")
+          protocol=source("AvatarEyeHeightOsc.java")
+          sender=source("VRChatOscChat.java")
+          floating=source("FloatingCompanionService.java")
+          quest=source("QuestToolsActivity.java")
+          assert "versionCode 100" in gradle and "versionName '0.21.26'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          assert 'LATEST RELEASE · v0.21.26' in notes
+          assert re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\.21\.(\d+)',notes)==['26','25','24','23','22']
+          assert 'v0.21.26 (code 100): Added' in publisher
+          for name,id in [('WESMAN','usr_7a5238d4-9017-49dd-a0df-df25800d119c'),
+                          ('KAITLYN','usr_a4ee31d2-0c71-4e12-a0ab-4c1c6693a315')]:
+              assert f'public static final String {name}="{id}"' in awards
+              assert f'SpecialStaffDexAchievements.{name}' in cached
+              assert panel.count(f'SpecialStaffDexAchievements.{name}')>=2
+          assert 'StrikethroughSpan' in panel
+          assert '"You met them? Cool!"' in panel
+          assert '"Kaitlynslayer",""' in panel  # no invented missing owner subtitle
+          assert 'collectedCommunityFriend(roster' in panel
+          assert 'snapshot.friendsComplete && id!=null' in awards
+          assert '!id.equals(snapshot.accountId) && snapshot.friendIds.contains(id)' in awards
+          assert '20+hiddenEarned(roster)' in panel
+          assert 'if(hiddenEarned(roster)>0)' in panel
+          assert 'OscHeightTool.attach(this,advanced,io,null,null)' in quest
+          assert 'OscHeightTool.attach(this,controls,eventsWorker' in floating
+          assert 'setOverlayKeyboard(true)' in floating
+          assert 'setOverlayKeyboard(false)' in floating
+          assert 'Float.parseFloat' in protocol and 'Float.isFinite' in protocol
+          assert '/avatar/eyeheight' in protocol and 'writeFloat(metres)' in protocol
+          assert 'AvatarEyeHeightOsc.packet(metres)' in sender
+          assert '0.8f,2.0f' in tool and 'MAX_CUSTOM=12' in tool
+          assert 'Float.toString(height)' in tool
+          assert 'VRChatSession.load(c)' in tool and 'StaffGate.unlocked(c)' in tool
+          assert '127.0.0.1:9000' in tool
+          assert 'getSharedPreferences(PREF' in tool
+          assert 'delete(c,label)' in tool and 'save(c,name.getText()' in tool
+          for public in [publisher, notes]:
+              for hidden in ['Wesman','Kaitlyn','That one dude','You met them? Cool!',
+                             'usr_a4ee31d2','usr_7a5238d4','Soup','Klashy',
+                             'Devinity','Pregnant Man']:
+                  assert hidden not in public, 'Hidden achievement leaked publicly: '+hidden
+          print("PASS: hidden rewards, exact IDs, snapshot inclusion, account-scoped manual OSC and editorial privacy")
+          PY
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build Android debug app without publication
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
