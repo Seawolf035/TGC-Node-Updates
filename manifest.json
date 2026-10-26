@@ -5,32 +5,30 @@
   "releases": {
     "standalone": {
       "channel": "standalone",
-      "version": "1.1.10",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.10_Required_Update.zip",
-      "sha256": "981bec830dc04fe81caa88526499ce4884d22c01419858a513f1d6425a29f607",
+      "version": "1.1.11",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/standalone/TGC_Invite_Node_v1.1.11_Mandatory_Terms_Update.zip",
+      "sha256": "ed9003679c8c1566c17e772439ce493d1e80e374defe79a133a032dd0c83c3e3",
       "policy": "required",
-      "notes": "Required update: detects VRChat.exe running without usable VRChat output logs; warns after a 60-second grace period and clears on recovery. No changes to tracking, deployment, queue, or credentials.",
-      "published_at": "2026-10-11T16:33:06Z",
-      "hotfix_revision": 0
+      "notes": "Mandatory update: read and accept the TGC Desktop Terms of Use before using the official Node or Staff Launcher. Existing credentials, queues and settings are preserved.",
+      "published_at": "2026-10-26T07:37:45Z"
     },
     "plugin": {
       "channel": "plugin",
-      "version": "1.1.10-plugin",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.10-plugin_Required_Update.zip",
-      "sha256": "9e96872a0e1c6e4371be8a0013c3ab5f6e060c6500a612006e068b832e9a8402",
+      "version": "1.1.11-plugin",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/plugin/TGC_Invite_Node_Plugin_v1.1.11-plugin_Mandatory_Terms_Update.zip",
+      "sha256": "033c1651ac9a8d56123ff2e80391eea01f02ae6340d1b9bffe4421e4d9b6f905",
       "policy": "required",
-      "notes": "Required update: detects VRChat.exe running without usable VRChat output logs; warns after a 60-second grace period and clears on recovery. No changes to tracking, deployment, queue, or credentials.",
-      "published_at": "2026-10-11T16:33:06Z",
-      "hotfix_revision": 0
+      "notes": "Mandatory update: read and accept the TGC Desktop Terms of Use before using the official Node or Staff Launcher. Existing credentials, queues and settings are preserved.",
+      "published_at": "2026-10-26T07:37:45Z"
     },
     "staff_launcher": {
       "channel": "staff_launcher",
-      "version": "1.1.5",
-      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.5_Required_Logging_Warning.zip",
-      "sha256": "abaa6d04d14f89e3a0861a6349966b969f328e032d04971d380bd40b7f785069",
+      "version": "1.1.6",
+      "url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/main/updates/staff-launcher/TGC_Staff_Launcher_v1.1.6_Mandatory_Terms_Update.zip",
+      "sha256": "3b07a855aa228016a0fb87752d49b39399b5f9b1c810fdde3e4feaefd96844c9",
       "policy": "required",
-      "notes": "Required Staff Launcher 1.1.5: embedded Invite Node v1.1.10-staff warns when VRChat logs are missing/empty despite VRChat running, and clears warning on recovery. Preserves existing verification, credentials, queue and VR slots.",
-      "published_at": "2026-10-11T16:33:06Z"
+      "notes": "Mandatory update: read and accept the TGC Desktop Terms of Use before using the official Node or Staff Launcher. Existing credentials, queues and settings are preserved.",
+      "published_at": "2026-10-26T07:37:45Z"
     }
   }
 }
