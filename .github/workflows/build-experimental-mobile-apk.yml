@@ -137,7 +137,7 @@ jobs:
             "version_code": $version_code,
             "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
             "sha256": "$digest",
-            "notes": "v0.21.27 (code 101): Small Companion refinements; existing features, account settings and OSC controls remain available."
+            "notes": "v0.21.27 (code 101): Minor bug fix."
           }
           JSON
           fi
