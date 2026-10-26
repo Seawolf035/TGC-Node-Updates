@@ -63,6 +63,14 @@ def apply_gate(kind, code, gate):
             '    def _sync_once(self):\n'
             '        if not tgc_terms_accepted("standalone"):\n'
             '            return', "node upload guard")
+        code = replace_once(code, '    def _post(self, payload, timeout=25):',
+            '    def _post(self, payload, timeout=25):\n'
+            '        if not tgc_terms_accepted("standalone"):\n'
+            '            raise PermissionError("TGC Terms of Use not accepted.")', "node Relay request gate")
+        code = replace_once(code, '    def _post_to_url(self, url, payload, timeout=25):',
+            '    def _post_to_url(self, url, payload, timeout=25):\n'
+            '        if not tgc_terms_accepted("standalone"):\n'
+            '            raise PermissionError("TGC Terms of Use not accepted.")', "node direct deploy gate")
         code = replace_once(code, '    def redeem_deployment(self):',
             '    def redeem_deployment(self):\n'
             '        if not tgc_terms_accepted("standalone"):\n'
@@ -97,6 +105,14 @@ def apply_gate(kind, code, gate):
             '    def _sync_once(self):\n'
             '        if not tgc_terms_accepted("plugin"):\n'
             '            return', "plugin upload gate")
+        code = replace_once(code, '    def _post(self, payload, timeout=25):',
+            '    def _post(self, payload, timeout=25):\n'
+            '        if not tgc_terms_accepted("plugin"):\n'
+            '            raise PermissionError("TGC Terms of Use not accepted.")', "plugin Relay request gate")
+        code = replace_once(code, '    def _post_to_url(self, url, payload, timeout=25):',
+            '    def _post_to_url(self, url, payload, timeout=25):\n'
+            '        if not tgc_terms_accepted("plugin"):\n'
+            '            raise PermissionError("TGC Terms of Use not accepted.")', "plugin direct deploy gate")
         code = replace_once(code, '    def redeem_deployment(self):',
             '    def redeem_deployment(self):\n'
             '        if not tgc_terms_accepted("plugin"):\n'
