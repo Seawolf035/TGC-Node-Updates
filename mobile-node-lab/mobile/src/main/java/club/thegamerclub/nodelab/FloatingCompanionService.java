@@ -1647,6 +1647,8 @@ public final class FloatingCompanionService extends Service {
         LinearLayout controls=panelCard(panelContent);
         action(controls,"My avatar parameter controls",true,
             ()->go("mini_osc_parameters"));
+        OscHeightTool.attach(this,controls,eventsWorker,
+            ()->setOverlayKeyboard(true),()->setOverlayKeyboard(false));
         controls.addView(text("Add your avatar's exact parameter name; send Bool, Int or Float values. Only compatible avatars react.",
             12,CompanionStyle.MUTED,false));
 
