@@ -47,7 +47,10 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.26"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.27"));
+        highlight(body,"Companion refinements",
+            "Small improvements while keeping your existing features and settings.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.26"));
         highlight(body,"Avatar height presets",
             "Set 0.80 m or 2.00 m eye height from Floating and Quest OSC tools. "+
             "Enter, name, save and reuse personal custom heights."); 
@@ -65,10 +68,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Age Check Tool",
             "Calculate possible birth months and exact birthday ranges from a claimed age. "+
             "Available in Floating and Quest Tools, completely offline.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.22"));
-        highlight(body,"Thematic profiles",
-            "Selected community profiles now have signature colors and details in "+
-            "Companion and Floating/Quest profile views.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
