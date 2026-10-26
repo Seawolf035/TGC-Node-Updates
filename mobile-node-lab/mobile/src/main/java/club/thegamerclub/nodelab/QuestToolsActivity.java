@@ -670,6 +670,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             12,CompanionStyle.MUTED,false));}
         pair(quick,"Compose message","mini_chat","Edit phrases","mini_osc_presets");
         LinearLayout advanced=card("AVATAR & TYPING OSC");
+        OscHeightTool.attach(this,advanced,io,null,null);
         pair(advanced,"Avatar parameters","mini_osc_parameters",
             "OSC status","mini_osc_status");
         button(advanced,"Typing indicator ON",false,()->sendTyping(true));
