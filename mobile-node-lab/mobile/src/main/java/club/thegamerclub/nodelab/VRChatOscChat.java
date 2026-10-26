@@ -171,6 +171,15 @@ public final class VRChatOscChat {
         transmit(buffer.toByteArray());
     }
 
+    /**
+     * Sends the documented global VRChat OSC eye-height setting, not a
+     * custom /avatar/parameters float (those are -1..1).
+     * One explicit manual send; never auto-apply on launch.
+     */
+    public static synchronized void sendEyeHeight(float metres)throws Exception{
+        transmit(AvatarEyeHeightOsc.packet(metres));
+    }
+
     private static void transmit(byte[] data)throws Exception{
         InetAddress loopback=InetAddress.getByAddress(LOOPBACK);
         try(DatagramSocket socket=new DatagramSocket()){
