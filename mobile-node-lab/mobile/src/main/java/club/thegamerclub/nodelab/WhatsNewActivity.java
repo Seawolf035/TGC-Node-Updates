@@ -47,7 +47,11 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.25"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.26"));
+        highlight(body,"Avatar height presets",
+            "Set 0.80 m or 2.00 m eye height from Floating and Quest OSC tools. "+
+            "Enter, name, save and reuse personal custom heights."); 
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.25"));
         highlight(body,"Finish Setup button repaired",
             "Finish Setup always responds, tells you which step is missing, "+
             "and rechecks VRChat when you press it. Existing staff and "+
@@ -65,9 +69,6 @@ public final class WhatsNewActivity extends Activity {
         highlight(body,"Thematic profiles",
             "Selected community profiles now have signature colors and details in "+
             "Companion and Floating/Quest profile views.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.21"));
-        highlight(body,"VRChat API handling improvements",
-            "Improved how Companion identifies API requests for better service compatibility.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
