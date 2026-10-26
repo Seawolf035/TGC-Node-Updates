@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.25",
-  "version_code": 99,
+  "version": "0.21.26",
+  "version_code": 100,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "0b461acc8b41be62724042f780a4c4da5759d80ff465239841ae0a29b14768ee",
-  "notes": "v0.21.25 (code 99): Finish Setup now responds with clear missing-step guidance and live VRChat account recheck, preserving staff sessions and existing setup data."
+  "sha256": "c456dca4130add637580d6433f8213a199aee30ffa15c132c1e9f27344c696c2",
+  "notes": "v0.21.26 (code 100): Added 0.80 m and 2.00 m OSC avatar eye-height presets, plus named saved custom heights in Floating and Quest OSC tools."
 }
