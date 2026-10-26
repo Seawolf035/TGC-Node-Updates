@@ -1,0 +1,60 @@
+name: QA Companion v0.21.27 hidden award copy (no publishing)
+on:
+  push:
+    branches: [feature/mobile-v0.21.27-kaitlyn-award-title]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact hidden award copy, privacy, account safety, and patch metadata
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          panel=(root/"StaffDexPanel.java").read_text()
+          catalog=(root/"SpecialStaffDexAchievements.java").read_text()
+          roster=(root/"StaffDirectoryRepository.java").read_text()
+          notes=(root/"WhatsNewActivity.java").read_text()
+          publisher=Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()
+          build=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          assert 'specialItem(community,"Kaitlynslayer • Free VRC+? NICE!",' in panel
+          assert '"Gifts VRC+ to The Gamer Club staff."' in panel
+          assert 'if(SpecialStaffDexAchievements.collectedCommunityFriend(roster,' in panel
+          assert 'SpecialStaffDexAchievements.KAITLYN,true,' in panel
+          assert 'if(hiddenEarned(roster)>0)' in panel
+          assert '20+hiddenEarned(roster)' in panel
+          assert 'snapshot.friendsComplete && id!=null' in catalog
+          assert '!id.equals(snapshot.accountId) && snapshot.friendIds.contains(id)' in catalog
+          assert 'usr_a4ee31d2-0c71-4e12-a0ab-4c1c6693a315' in catalog
+          assert 'SpecialStaffDexAchievements.KAITLYN' in roster
+          assert 'versionCode 101' in build and "versionName '0.21.27'" in build
+          assert "applicationId 'club.thegamerclub.nodelab'" in build
+          assert re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\.21\.(\d+)', notes)==['27','26','25','24','23']
+          assert 'v0.21.27 (code 101)' in publisher
+          for public in [notes,publisher]:
+              for forbidden in ['Kaitlynslayer','Free VRC+? NICE!','Gifts VRC+',
+                                'usr_a4ee31d2','Wesman4real1','That one dude',
+                                'Devinity','Soup','Klashy']:
+                  assert forbidden not in public, "Private reward exposed in public release metadata"
+          print("PASS: exact award copy, hidden-until-confirmed-friendship semantics, five patch notes, privacy")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile full Android debug APK without publishing
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
