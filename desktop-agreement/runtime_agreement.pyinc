@@ -1,0 +1,169 @@
+# Shared template inserted into each desktop entrypoint by the release builder.
+# Pure Python 3.8+; no external dependencies, no Relay call.
+import getpass as _tgc_terms_getpass
+import hashlib as _tgc_terms_hashlib
+import json as _tgc_terms_json
+import os as _tgc_terms_os
+from pathlib import Path as _TgcTermsPath
+from datetime import datetime as _TgcTermsDatetime, timezone as _TgcTermsTimezone
+from tkinter import ttk as _tgc_terms_ttk, messagebox as _tgc_terms_messagebox
+import tkinter as _tgc_terms_tk
+
+TGC_DESKTOP_TERMS_VERSION = "2026-10-26.1"
+TGC_DESKTOP_TERMS_TEXT = __TGC_TERMS_LITERAL__
+TGC_DESKTOP_TERMS_SHA256 = _tgc_terms_hashlib.sha256(
+    TGC_DESKTOP_TERMS_TEXT.encode("utf-8")
+).hexdigest()
+_TGC_TERMS_SCOPES = frozenset(("standalone", "plugin", "staff_launcher"))
+
+
+def tgc_terms_record_path(scope):
+    if scope not in _TGC_TERMS_SCOPES:
+        raise ValueError("Unrecognized TGC terms scope.")
+    # LOCALAPPDATA belongs to this Windows user; not the installation or Node key.
+    # Per-scope evidence is independent for Node, plugin, and Staff Launcher.
+    local = _tgc_terms_os.environ.get("LOCALAPPDATA")
+    base = _TgcTermsPath(local) if local else _TgcTermsPath.home() / ".local" / "share"
+    return base / "TheGamerClub" / "DesktopAgreements" / (scope + ".json")
+
+
+def tgc_terms_accepted(scope):
+    try:
+        record = _tgc_terms_json.loads(
+            tgc_terms_record_path(scope).read_text(encoding="utf-8")
+        )
+        return (
+            isinstance(record, dict)
+            and record.get("agreement_version") == TGC_DESKTOP_TERMS_VERSION
+            and record.get("agreement_sha256") == TGC_DESKTOP_TERMS_SHA256
+            and record.get("program") == scope
+            and record.get("windows_user") == _tgc_terms_getpass.getuser()
+            and bool(record.get("accepted_at_utc"))
+        )
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def tgc_terms_save_acceptance(scope):
+    target = tgc_terms_record_path(scope)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "agreement_version": TGC_DESKTOP_TERMS_VERSION,
+        "agreement_sha256": TGC_DESKTOP_TERMS_SHA256,
+        "program": scope,
+        "windows_user": _tgc_terms_getpass.getuser(),
+        "accepted_at_utc": _TgcTermsDatetime.now(_TgcTermsTimezone.utc).isoformat(),
+    }
+    # Atomic commit so a cancelled or interrupted write never grants acceptance.
+    import tempfile as _tgc_terms_tempfile
+    with _tgc_terms_tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=str(target.parent), suffix=".tmp", delete=False
+    ) as tmp:
+        temp_name = tmp.name
+        _tgc_terms_json.dump(payload, tmp, indent=2)
+        tmp.write("\n")
+        tmp.flush()
+        _tgc_terms_os.fsync(tmp.fileno())
+    try:
+        _tgc_terms_os.replace(temp_name, target)
+    finally:
+        if _tgc_terms_os.path.exists(temp_name):
+            _tgc_terms_os.remove(temp_name)
+    if not tgc_terms_accepted(scope):
+        raise RuntimeError("Could not verify saved agreement acceptance.")
+
+
+def _tgc_terms_dialog(root, scope, required):
+    if not isinstance(TGC_DESKTOP_TERMS_TEXT, str) or len(TGC_DESKTOP_TERMS_TEXT) < 2500:
+        _tgc_terms_messagebox.showerror("TGC agreement error",
+            "The agreement is missing or incomplete. TGC features cannot start.")
+        return False
+    dlg = _tgc_terms_tk.Toplevel(root)
+    dlg.title("The Gamer Club - Terms of Use" if required else "TGC Terms of Use")
+    dlg.geometry("800x610")
+    dlg.minsize(600, 420)
+    dlg.configure(bg="#142338")
+    accepted = {"value": False}
+    def decline():
+        accepted["value"] = False
+        dlg.destroy()
+    dlg.protocol("WM_DELETE_WINDOW", decline)
+    outer = _tgc_terms_ttk.Frame(dlg, padding=15)
+    outer.pack(fill="both", expand=True)
+    _tgc_terms_ttk.Label(
+        outer, text="TGC Desktop Software Agreement", font=("Segoe UI", 17, "bold")
+    ).pack(anchor="w", pady=(0, 5))
+    _tgc_terms_ttk.Label(
+        outer, text="Read the terms below before enabling this TGC program."
+        if required else "Current terms for this TGC desktop program.",
+        wraplength=730,
+    ).pack(anchor="w", pady=(0, 8))
+    area = _tgc_terms_ttk.Frame(outer)
+    area.pack(fill="both", expand=True)
+    scroller = _tgc_terms_ttk.Scrollbar(area, orient="vertical")
+    readout = _tgc_terms_tk.Text(
+        area, wrap="word", height=22, width=90,
+        font=("Segoe UI", 10), padx=10, pady=10,
+        yscrollcommand=scroller.set
+    )
+    scroller.configure(command=readout.yview)
+    scroller.pack(side="right", fill="y")
+    readout.pack(side="left", fill="both", expand=True)
+    readout.insert("1.0", TGC_DESKTOP_TERMS_TEXT)
+    readout.configure(state="disabled")
+    if required:
+        agreed = _tgc_terms_tk.BooleanVar(value=False)
+        check = _tgc_terms_ttk.Checkbutton(
+            outer, text="I have read and agree to the TGC Desktop Software Terms of Use",
+            variable=agreed
+        )
+        check.pack(anchor="w", pady=(12, 7))
+        _tgc_terms_ttk.Label(
+            outer, text="Declining will leave this TGC software inactive. "
+            "Your existing credentials, settings and queued sightings are preserved.",
+            wraplength=710,
+        ).pack(anchor="w", pady=(0, 5))
+    buttons = _tgc_terms_ttk.Frame(outer)
+    buttons.pack(fill="x", pady=(6, 0))
+    _tgc_terms_ttk.Button(
+        buttons, text="Decline" if required else "Close",
+        command=decline
+    ).pack(side="right", padx=(8, 0))
+    if required:
+        def affirm():
+            if not agreed.get():
+                _tgc_terms_messagebox.showwarning(
+                    "Please confirm acceptance",
+                    "You must check the agreement box before pressing I Agree.",
+                    parent=dlg,
+                )
+                return
+            try:
+                tgc_terms_save_acceptance(scope)
+            except Exception as exc:
+                _tgc_terms_messagebox.showerror(
+                    "Cannot save agreement",
+                    "The agreement could not be saved. TGC features remain inactive.\n"
+                    + str(exc), parent=dlg
+                )
+                return
+            accepted["value"] = True
+            dlg.destroy()
+        _tgc_terms_ttk.Button(
+            buttons, text="I Agree", command=affirm
+        ).pack(side="right")
+    dlg.lift()
+    dlg.focus_force()
+    dlg.grab_set()
+    root.wait_window(dlg)
+    return bool(accepted["value"] and tgc_terms_accepted(scope)) if required else False
+
+
+def tgc_terms_require(root, scope):
+    if tgc_terms_accepted(scope):
+        return True
+    return _tgc_terms_dialog(root, scope, required=True)
+
+
+def tgc_terms_view(root):
+    return _tgc_terms_dialog(root, "standalone", required=False)
