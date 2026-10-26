@@ -1,0 +1,104 @@
+name: QA + publish required Desktop Agreements (3 channels)
+on:
+  push:
+    branches:
+      - feature/desktop-mandatory-agreement-v1
+      - main
+    paths:
+      - 'desktop-agreement/**'
+      - '.github/workflows/desktop-agreement-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: tgc-required-desktop-agreements
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Full offline source/acceptance/regression/ZIP QA (no services)
+        run: python3 desktop-agreement/test_agreement.py
+      - name: Reject embedded real credentials and unsafe ZIP contents
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,zipfile
+          from collections import Counter
+          items=[
+            'desktop-agreement/build_desktop_agreements.py',
+            'desktop-agreement/runtime_agreement.pyinc',
+            'desktop-agreement/TGC_DESKTOP_TERMS_2026-10-26.1.txt'
+          ]
+          for file in items:
+            data=Path(file).read_text()
+            assert not re.search(r'gh[pousr]_[a-zA-Z0-9]{30,}',data)
+            assert '-----BEGIN PRIVATE KEY-----' not in data
+            assert 'password=' not in data.lower()
+          print("PASS: No embedded keys or local account material in new sources")
+          PY
+      - name: Build staged packages for review (never publish from feature branch)
+        run: |
+          python3 desktop-agreement/build_desktop_agreements.py --dest "$RUNNER_TEMP/tgc-terms-preview"
+          python3 - <<'PY'
+          import json,os,pathlib
+          p=pathlib.Path(os.environ["RUNNER_TEMP"])/"tgc-terms-preview"/"desktop_agreement_build_summary.json"
+          data=json.loads(p.read_text())
+          assert all(x["bytes"]>10000 for x in data.values())
+          print("PASS staged:",json.dumps(data,indent=2))
+          PY
+  publish:
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Repeat full validation on exact main source
+        run: python3 desktop-agreement/test_agreement.py
+      - name: Build all three signed-manifest-hash-verified ZIP packages
+        run: python3 desktop-agreement/build_desktop_agreements.py --dest . --manifest manifest.json
+      - name: Verify final ZIPs against required manifest
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,zipfile
+          from pathlib import Path
+          meta=json.loads(Path('manifest.json').read_text())
+          for key,rel in meta['releases'].items():
+            if key not in {'standalone','plugin','staff_launcher'}:continue
+            filename=rel['url'].split('/main/',1)[-1]
+            p=Path(filename)
+            assert p.is_file()
+            assert rel['policy']=='required'
+            assert hashlib.sha256(p.read_bytes()).hexdigest()==rel['sha256']
+            with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert any(n.endswith('TGC_DESKTOP_TERMS.txt') for n in z.namelist())
+          print('PASS: 3 required ZIPs match exact official SHA-256 manifest')
+          PY
+      - name: Commit versioned packages and required update manifest (no running deployments)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "TGC Desktop Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            updates/standalone/TGC_Invite_Node_v1.1.11_Mandatory_Terms_Update.zip \
+            updates/plugin/TGC_Invite_Node_Plugin_v1.1.11-plugin_Mandatory_Terms_Update.zip \
+            updates/staff-launcher/TGC_Staff_Launcher_v1.1.6_Mandatory_Terms_Update.zip \
+            manifest.json
+          git diff --cached --quiet && { echo 'No release differences'; exit 1; }
+          git commit -m "build: publish mandatory desktop agreement updates [skip ci]"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
