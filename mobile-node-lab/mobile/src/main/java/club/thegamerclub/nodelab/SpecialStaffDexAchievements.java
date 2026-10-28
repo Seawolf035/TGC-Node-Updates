@@ -67,11 +67,26 @@ public final class SpecialStaffDexAchievements {
         return snapshot.rosterComplete && snapshot.friendsComplete &&
             !ids.isEmpty() && count(snapshot,ids)==ids.size();
     }
-    /** True friendship only: notable non-staff users cannot earn self-friend awards. */
+    /**
+     * Community Encounter rewards only apply to non-staff. Use the official
+     * roster's immutable VRChat account IDs, NEVER fuzzy username matches.
+     * Named Leadership/Staff achievements elsewhere are intentionally exempt:
+     * their fixed owner-defined awards must never be hidden by role changes.
+     */
+    public static boolean isCurrentStaff(
+        StaffDirectoryRepository.Snapshot snapshot,String id){
+        if(snapshot==null||!snapshot.rosterComplete||id==null)return false;
+        for(StaffDirectoryRepository.Entry entry:snapshot.members)
+            if(id.equals(entry.id))return true;
+        return false;
+    }
+    /** Current roster + complete confirmed friendship required; no self-awards. */
     public static boolean collectedCommunityFriend(
         StaffDirectoryRepository.Snapshot snapshot,String id){
-        return snapshot.friendsComplete && id!=null &&
-            !id.equals(snapshot.accountId) && snapshot.friendIds.contains(id);
+        return snapshot!=null&&snapshot.rosterComplete&&
+            snapshot.friendsComplete&&id!=null&&
+            !isCurrentStaff(snapshot,id)&&
+            !id.equals(snapshot.accountId)&&snapshot.friendIds.contains(id);
     }
     public static boolean collected(StaffDirectoryRepository.Snapshot snapshot,
         String id){
