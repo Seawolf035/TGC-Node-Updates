@@ -30,8 +30,9 @@ public final class StaffDexPanel extends LinearLayout {
     private EditText filter;
     private StaffDirectoryRepository.Snapshot roster;
     private boolean loading=false,showUncollected=false;
-    // Never reveal Community Encounters from a stale saved roster. A fresh
-    // successful roster+friend scan is required for each panel session.
+    // Fresh-roster eligibility applies ONLY to Wesman's special award.
+    // The four other hidden Community Encounters keep their original
+    // friendship-based unlocks even when a roster refresh is unavailable.
     private static final long COMMUNITY_ROSTER_TTL_MS=10L*60*1000L;
     private long communityRosterVerifiedAt=0L;
     private final Runnable communityRecheck=new Runnable(){
@@ -39,7 +40,7 @@ public final class StaffDexPanel extends LinearLayout {
             if(disposed||activity.isFinishing()||activity.isDestroyed()||
                 !StaffGate.unlocked(activity))return;
             communityRosterVerifiedAt=0L;
-            if(roster!=null)draw(); // wipe previously visible community cards first
+            if(roster!=null)draw(); // remove only Wesman's transient award; preserve all other hidden rewards
             refresh(false);
             postDelayed(this,COMMUNITY_ROSTER_TTL_MS);
         }
@@ -147,8 +148,8 @@ public final class StaffDexPanel extends LinearLayout {
             return;
         }
         loading=true;
-        // Cached staff snapshots must NEVER reveal a newly promoted community
-        // member while an up-to-date authoritative roster is still loading.
+        // Only Wesman's optional award must be concealed during roster refresh.
+        // All four existing non-dynamic Community awards stay visible.
         communityRosterVerifiedAt=0L;
         if(roster!=null)draw();
         if(roster!=null){
@@ -266,22 +267,21 @@ public final class StaffDexPanel extends LinearLayout {
         return earned;
     }
     /**
-     * Hidden rewards are completely absent from the catalog and total until
-     * unlocked by a COMPLETE confirmed-friend scan AND a freshly checked
-     * official roster excluding anyone currently staff. No cached roster may
-     * reveal them during refresh or offline. Existing fixed staff awards are
-     * governed by their own separate category, never by this eligibility gate.
+     * Hide unknown friendship rewards until actually earned, not while waiting
+     * for an unrelated staff roster refresh. Only Wesman's Community Encounter
+     * is dynamic by explicit owner instruction. Counts use the SAME conditions
+     * as the rendered award cards.
      */
     private int hiddenEarned(StaffDirectoryRepository.Snapshot snapshot){
-        if(!communityRosterFresh())return 0;
         int count=0;
         for(String id:new String[]{
             SpecialStaffDexAchievements.DEVINITY,
             SpecialStaffDexAchievements.SOUP,
             SpecialStaffDexAchievements.KLASHY,
-            SpecialStaffDexAchievements.WESMAN,
             SpecialStaffDexAchievements.KAITLYN
         })if(SpecialStaffDexAchievements.collectedCommunityFriend(snapshot,id))count++;
+        if(communityRosterFresh()&&
+            SpecialStaffDexAchievements.collectedWesmanCommunityFriend(snapshot))count++;
         return count;
     }
     /** Total special progress shared by the outer header and the expanded categories. */
@@ -427,7 +427,7 @@ public final class StaffDexPanel extends LinearLayout {
         }
         // This category, reward and even its count do NOT exist in the
         // visible UI until the user's friendship has been confirmed.
-        if(communityRosterFresh()&&hiddenEarned(roster)>0){
+        if(hiddenEarned(roster)>0){
             int communityEarned=hiddenEarned(roster);
             boolean showCommunity=categoryHeader("community",
                 "✦ COMMUNITY ENCOUNTERS",communityEarned,communityEarned,
@@ -452,8 +452,8 @@ public final class StaffDexPanel extends LinearLayout {
                         "Neow you found him!",
                         SpecialStaffDexAchievements.KLASHY,true,
                         CompanionStyle.ACCENT);
-                if(SpecialStaffDexAchievements.collectedCommunityFriend(roster,
-                    SpecialStaffDexAchievements.WESMAN))
+                if(communityRosterFresh()&&
+                    SpecialStaffDexAchievements.collectedWesmanCommunityFriend(roster))
                     specialItem(community,"Wesman4real1 • That one dude",
                         "You met them? Cool!",
                         SpecialStaffDexAchievements.WESMAN,true,
