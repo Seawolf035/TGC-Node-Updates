@@ -27,6 +27,20 @@ public final class CommunityEligibilityTest {
             "Base friendship is still confirmed for Wesman");
         check(SpecialStaffDexAchievements.collectedWesmanCommunityFriend(outside),
             "Wesman unlock exists when non-staff and a confirmed friend");
+        // Owner's explicit permanent exception: Devinity stays available
+        // even if she joins staff, and even when staff roster refresh fails.
+        String devinity=SpecialStaffDexAchievements.DEVINITY;
+        StaffDirectoryRepository.Snapshot devinityPromoted=roster(viewer,true,true,friends,
+            new StaffDirectoryRepository.Entry(devinity,"Owner"),founder);
+        check(SpecialStaffDexAchievements.collectedCommunityFriend(devinityPromoted,devinity),
+            "Devinity's hidden award remains earned even if she joins staff");
+        StaffDirectoryRepository.Snapshot devinityOffline=roster(viewer,false,true,friends,founder);
+        check(SpecialStaffDexAchievements.collectedCommunityFriend(devinityOffline,devinity),
+            "Devinity stays earned during an offline or stale staff roster");
+        StaffDirectoryRepository.Snapshot devinityNoFriend=roster(viewer,true,true,
+            Collections.emptySet(),new StaffDirectoryRepository.Entry(devinity,"Owner"));
+        check(!SpecialStaffDexAchievements.collectedCommunityFriend(devinityNoFriend,devinity),
+            "Always available means eligible, not visible without confirmed friendship");
         StaffDirectoryRepository.Snapshot promotion=roster(viewer,true,true,friends,
             new StaffDirectoryRepository.Entry(wesman,"Trial Moderator"),founder);
         check(SpecialStaffDexAchievements.isCurrentStaff(promotion,wesman),
