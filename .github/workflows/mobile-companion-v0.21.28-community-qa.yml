@@ -1,0 +1,88 @@
+name: QA Companion v0.21.28 dynamic Community Encounters (never publish)
+on:
+  push:
+    branches: [feature/mobile-v0.21.28-dynamic-community-awards]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test current roster, promotion, departure and unchanged fixed staff achievements
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          javac -d "$tmp" \
+            mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/SpecialStaffDexAchievements.java \
+            mobile-node-lab/community-award-tests/StaffDirectoryRepository.java \
+            mobile-node-lab/community-award-tests/GamerMusicProfiles.java \
+            mobile-node-lab/community-award-tests/NotableCommunityProfiles.java \
+            mobile-node-lab/community-award-tests/CommunityEligibilityTest.java
+          java -cp "$tmp" club.thegamerclub.nodelab.CommunityEligibilityTest
+      - name: Privacy, cache and public update metadata invariants
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          panel=(root/"StaffDexPanel.java").read_text()
+          catalog=(root/"SpecialStaffDexAchievements.java").read_text()
+          roster=(root/"StaffDirectoryRepository.java").read_text()
+          whatsnew=(root/"WhatsNewActivity.java").read_text()
+          publisher=Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          assert "versionCode 102" in gradle and "versionName '0.21.28'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          assert re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\.21\.(\d+)',whatsnew)==['28','27','26','25','24']
+          assert 'v0.21.28 (code 102): Minor bug fix.' in publisher
+          assert 'LATEST RELEASE · v0.21.28' in whatsnew
+          assert 'highlight(body,"Minor bug fix"' in whatsnew
+          assert 'public static boolean isCurrentStaff(' in catalog
+          assert 'id.equals(entry.id)' in catalog
+          assert '!isCurrentStaff(snapshot,id)' in catalog
+          assert 'snapshot.rosterComplete' in catalog and 'snapshot.friendsComplete' in catalog
+          assert 'collectedCommunityFriend(snapshot,id)' in panel
+          assert 'collectedCommunityFriend(roster,' in panel
+          assert 'if(!communityRosterFresh())return 0;' in panel
+          assert 'if(communityRosterFresh()&&hiddenEarned(roster)>0)' in panel
+          assert 'private long communityRosterVerifiedAt=0L;' in panel
+          assert 'communityRosterVerifiedAt=0L;' in panel
+          assert 'communityRosterVerifiedAt=System.currentTimeMillis();' in panel
+          assert 'if(roster!=null)draw(); // wipe previously visible community cards first' in panel
+          assert 'postDelayed(communityRecheck,COMMUNITY_ROSTER_TTL_MS)' in panel
+          assert 'removeCallbacks(communityRecheck)' in panel
+          assert 'if(available!=null&&available.rosterComplete&&available.friendsComplete)' in panel
+          assert 'roster=StaffDirectoryRepository.cached(activity)' in panel
+          assert 'rosterComplete' in roster and 'friendsComplete' in roster
+          # Named existing staff trophies intentionally do not use the community filter.
+          for fixed in ['GAMEWITCH','SEAWOLF','LILY','IMPOSTER','AJ','ASRIEL','DARKFLAMES']:
+              assert 'SpecialStaffDexAchievements.'+fixed in panel
+          for community in ['DEVINITY','SOUP','KLASHY','WESMAN','KAITLYN']:
+              assert 'SpecialStaffDexAchievements.'+community in panel
+          assert 'StrikethroughSpan' in panel
+          assert 'Kaitlynslayer • Free VRC+? NICE!' in panel
+          for public in [whatsnew,publisher]:
+              for hidden in ['Kaitlynslayer','Wesman4real1','Free VRC+? NICE!',
+                             'That one dude','usr_7a5238d4','usr_a4ee31d2',
+                             'DEVINITY','KLASHY','SOUP']:
+                  assert hidden not in public, 'Private reward leaked into public release notes'
+          print('PASS: roster-only hidden Community Encounters, stale-cache concealment, fixed staff preserved, privacy')
+          PY
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android debug APK without publication
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
