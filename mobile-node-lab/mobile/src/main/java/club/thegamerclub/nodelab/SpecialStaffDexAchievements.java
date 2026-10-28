@@ -68,11 +68,16 @@ public final class SpecialStaffDexAchievements {
             !ids.isEmpty() && count(snapshot,ids)==ids.size();
     }
     /**
-     * Community Encounter rewards only apply to non-staff. Use the official
-     * roster's immutable VRChat account IDs, NEVER fuzzy username matches.
-     * Named Leadership/Staff achievements elsewhere are intentionally exempt:
-     * their fixed owner-defined awards must never be hidden by role changes.
+     * Existing Community Encounters retain their original friendship-only
+     * eligibility. Do not silently remove Devinity, Soup, Klashy or Kaitlyn
+     * because of a roster refresh or staff promotion.
      */
+    public static boolean collectedCommunityFriend(
+        StaffDirectoryRepository.Snapshot snapshot,String id){
+        return snapshot!=null&&snapshot.friendsComplete&&id!=null&&
+            !id.equals(snapshot.accountId)&&snapshot.friendIds.contains(id);
+    }
+    /** Immutable VRChat ID check against an authoritative, complete roster. */
     public static boolean isCurrentStaff(
         StaffDirectoryRepository.Snapshot snapshot,String id){
         if(snapshot==null||!snapshot.rosterComplete||id==null)return false;
@@ -80,13 +85,16 @@ public final class SpecialStaffDexAchievements {
             if(id.equals(entry.id))return true;
         return false;
     }
-    /** Current roster + complete confirmed friendship required; no self-awards. */
-    public static boolean collectedCommunityFriend(
-        StaffDirectoryRepository.Snapshot snapshot,String id){
+    /**
+     * Explicit opt-in dynamic non-staff eligibility for Wesman ONLY.
+     * Do not apply to any of the other hidden/fixed achievements.
+     * StaffDexPanel additionally demands a fresh online roster before use.
+     */
+    public static boolean collectedWesmanCommunityFriend(
+        StaffDirectoryRepository.Snapshot snapshot){
         return snapshot!=null&&snapshot.rosterComplete&&
-            snapshot.friendsComplete&&id!=null&&
-            !isCurrentStaff(snapshot,id)&&
-            !id.equals(snapshot.accountId)&&snapshot.friendIds.contains(id);
+            collectedCommunityFriend(snapshot,WESMAN)&&
+            !isCurrentStaff(snapshot,WESMAN);
     }
     public static boolean collected(StaffDirectoryRepository.Snapshot snapshot,
         String id){
