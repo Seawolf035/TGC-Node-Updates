@@ -30,6 +30,24 @@ public final class StaffDexPanel extends LinearLayout {
     private EditText filter;
     private StaffDirectoryRepository.Snapshot roster;
     private boolean loading=false,showUncollected=false;
+    // Never reveal Community Encounters from a stale saved roster. A fresh
+    // successful roster+friend scan is required for each panel session.
+    private static final long COMMUNITY_ROSTER_TTL_MS=10L*60*1000L;
+    private long communityRosterVerifiedAt=0L;
+    private final Runnable communityRecheck=new Runnable(){
+        @Override public void run(){
+            if(disposed||activity.isFinishing()||activity.isDestroyed()||
+                !StaffGate.unlocked(activity))return;
+            communityRosterVerifiedAt=0L;
+            if(roster!=null)draw(); // wipe previously visible community cards first
+            refresh(false);
+            postDelayed(this,COMMUNITY_ROSTER_TTL_MS);
+        }
+    };
+    private boolean communityRosterFresh(){
+        return communityRosterVerifiedAt>0L &&
+            System.currentTimeMillis()-communityRosterVerifiedAt<COMMUNITY_ROSTER_TTL_MS;
+    }
     /** All achievements are collapsed initially, even when already unlocked. */
     private final Set<String> expandedAchievements=new HashSet<>();
     private int nextIndex=0;
@@ -98,6 +116,8 @@ public final class StaffDexPanel extends LinearLayout {
             button(controls,"Sign in to VRChat",true,()->activity.startActivity(
                 new Intent(activity,VRChatAccountActivity.class)));
         }else refresh(false);
+        // Keep the roster status current even while StaffDex stays open.
+        postDelayed(communityRecheck,COMMUNITY_ROSTER_TTL_MS);
     }
     private boolean hasVrchatLogin(){
         try{
@@ -112,7 +132,9 @@ public final class StaffDexPanel extends LinearLayout {
             "MMM d, h:mm a",new java.util.Date(snapshot.capturedAt)).toString();
     }
     /** Release asynchronous resources before the main tab replaces this panel. */
-    public void dispose(){disposed=true;io.shutdownNow();}
+    public void dispose(){
+        disposed=true;removeCallbacks(communityRecheck);io.shutdownNow();
+    }
     /**
      * Always revalidate in the background on StaffDex open. Keep the previous
      * completed snapshot on screen until a complete scan succeeds, and keep
@@ -125,6 +147,10 @@ public final class StaffDexPanel extends LinearLayout {
             return;
         }
         loading=true;
+        // Cached staff snapshots must NEVER reveal a newly promoted community
+        // member while an up-to-date authoritative roster is still loading.
+        communityRosterVerifiedAt=0L;
+        if(roster!=null)draw();
         if(roster!=null){
             syncStatus.setText("Showing saved results from "+snapshotTime(roster)+
                 " · Refreshing roster and friends…");
@@ -144,7 +170,9 @@ public final class StaffDexPanel extends LinearLayout {
                 if(disposed||activity.isFinishing()||activity.isDestroyed()||
                    !StaffGate.unlocked(activity))return;
                 if(available!=null&&available.rosterComplete&&available.friendsComplete){
-                    roster=available;skipped.clear();draw();
+                    roster=available;
+                    communityRosterVerifiedAt=System.currentTimeMillis();
+                    skipped.clear();draw();
                     syncStatus.setText("✓ Updated from the official roster and VRChat · "+
                         snapshotTime(available));
                 }else if(roster!=null){
@@ -239,10 +267,13 @@ public final class StaffDexPanel extends LinearLayout {
     }
     /**
      * Hidden rewards are completely absent from the catalog and total until
-     * unlocked by a COMPLETE confirmed-friend scan. A pending friendship,
-     * sightings data, or membership in a TGC group never qualifies.
+     * unlocked by a COMPLETE confirmed-friend scan AND a freshly checked
+     * official roster excluding anyone currently staff. No cached roster may
+     * reveal them during refresh or offline. Existing fixed staff awards are
+     * governed by their own separate category, never by this eligibility gate.
      */
     private int hiddenEarned(StaffDirectoryRepository.Snapshot snapshot){
+        if(!communityRosterFresh())return 0;
         int count=0;
         for(String id:new String[]{
             SpecialStaffDexAchievements.DEVINITY,
@@ -396,7 +427,7 @@ public final class StaffDexPanel extends LinearLayout {
         }
         // This category, reward and even its count do NOT exist in the
         // visible UI until the user's friendship has been confirmed.
-        if(hiddenEarned(roster)>0){
+        if(communityRosterFresh()&&hiddenEarned(roster)>0){
             int communityEarned=hiddenEarned(roster);
             boolean showCommunity=categoryHeader("community",
                 "✦ COMMUNITY ENCOUNTERS",communityEarned,communityEarned,
