@@ -47,7 +47,10 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.27"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.28"));
+        highlight(body,"Minor bug fix",
+            "Minor bug fix.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.27"));
         highlight(body,"Minor bug fix",
             "Minor bug fix.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.26"));
@@ -64,10 +67,6 @@ public final class WhatsNewActivity extends Activity {
             "Fixes a stuck Checking staff access screen after returning from guided "+
             "setup. You can now resume unfinished steps without relinking or "+
             "clearing your saved VRChat login.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.23"));
-        highlight(body,"Age Check Tool",
-            "Calculate possible birth months and exact birthday ranges from a claimed age. "+
-            "Available in Floating and Quest Tools, completely offline.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
