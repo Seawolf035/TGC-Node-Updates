@@ -47,7 +47,10 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.28"));
+        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.29"));
+        highlight(body,"Minor bug fix",
+            "Minor bug fix.");
+        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.28"));
         highlight(body,"Minor bug fix",
             "Minor bug fix.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.27"));
@@ -62,11 +65,6 @@ public final class WhatsNewActivity extends Activity {
             "Finish Setup always responds, tells you which step is missing, "+
             "and rechecks VRChat when you press it. Existing staff and "+
             "VRChat logins, Quest folder grants and setup progress are kept.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.24"));
-        highlight(body,"Setup and staff access recovery",
-            "Fixes a stuck Checking staff access screen after returning from guided "+
-            "setup. You can now resume unfinished steps without relinking or "+
-            "clearing your saved VRChat login.");
         Button continueBtn=CompanionStyle.button(this,"Continue to Companion",true);
         body.addView(continueBtn,CompanionStyle.buttonParams(this));
         continueBtn.setOnClickListener(v->{markSeen(this);finish();});
