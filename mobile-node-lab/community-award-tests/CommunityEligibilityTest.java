@@ -14,60 +14,70 @@ public final class CommunityEligibilityTest {
         String wesman=SpecialStaffDexAchievements.WESMAN;
         String kaitlyn=SpecialStaffDexAchievements.KAITLYN;
         String fixed=SpecialStaffDexAchievements.SEAWOLF;
-        Set<String> friends=new HashSet<>(Arrays.asList(wesman,kaitlyn,fixed));
-        StaffDirectoryRepository.Snapshot outside=roster(viewer,true,true,friends,
-            new StaffDirectoryRepository.Entry(fixed,"The Royalty"));
-        check(SpecialStaffDexAchievements.collectedCommunityFriend(outside,wesman),
-            "Former staff member gets community reward after leaving staff, if still friends");
-        check(SpecialStaffDexAchievements.collectedCommunityFriend(outside,kaitlyn),
-            "Non-staff encounter remains eligible");
-        StaffDirectoryRepository.Snapshot promotion=roster(viewer,true,true,friends,
-            new StaffDirectoryRepository.Entry(wesman,"Trial Moderator"),
-            new StaffDirectoryRepository.Entry(fixed,"The Royalty"));
-        check(SpecialStaffDexAchievements.isCurrentStaff(promotion,wesman),
-            "Trial Moderator is staff for Community eligibility");
-        check(!SpecialStaffDexAchievements.collectedCommunityFriend(promotion,wesman),
-            "Community reward ceases to EXIST even for an already confirmed friend");
-        check(SpecialStaffDexAchievements.collectedCommunityFriend(promotion,kaitlyn),
-            "Unchanged non-staff friend remains eligible");
-        check(SpecialStaffDexAchievements.collected(promotion,fixed),
-            "Existing fixed leadership achievement is NOT dynamically suppressed");
-        StaffDirectoryRepository.Snapshot demotion=roster(viewer,true,true,friends,
-            new StaffDirectoryRepository.Entry(fixed,"The Royalty"));
-        check(SpecialStaffDexAchievements.collectedCommunityFriend(demotion,wesman),
-            "Award dynamically reappears following staff departure, no archived unlock needed");
-        StaffDirectoryRepository.Snapshot staffKaitlyn=roster(viewer,true,true,friends,
-            new StaffDirectoryRepository.Entry(kaitlyn,"Moderator"));
-        check(!SpecialStaffDexAchievements.collectedCommunityFriend(staffKaitlyn,kaitlyn),
-            "Other community encounters follow same non-staff-only policy");
-        check(SpecialStaffDexAchievements.collectedCommunityFriend(staffKaitlyn,wesman),
-            "Staff state of one encounter does not suppress others");
-        StaffDirectoryRepository.Snapshot partial=roster(viewer,false,true,friends);
-        check(!SpecialStaffDexAchievements.collectedCommunityFriend(partial,wesman),
-            "Incomplete staff roster must not unlock hidden community awards");
-        StaffDirectoryRepository.Snapshot partialFriends=roster(viewer,true,false,friends);
-        check(!SpecialStaffDexAchievements.collectedCommunityFriend(partialFriends,wesman),
-            "Incomplete friend scan must not unlock hidden community awards");
-        StaffDirectoryRepository.Snapshot self=roster(wesman,true,true,friends);
-        check(!SpecialStaffDexAchievements.collectedCommunityFriend(self,wesman),
-            "No self-collect");
-        check(!SpecialStaffDexAchievements.collectedCommunityFriend(null,wesman),
-            "Missing snapshot fails closed");
-        check(!SpecialStaffDexAchievements.collectedCommunityFriend(outside,null),
-            "Missing user ID fails closed");
-        StaffDirectoryRepository.Snapshot noFriend=roster(viewer,true,true,
-            Collections.emptySet(),new StaffDirectoryRepository.Entry(fixed,"The Royalty"));
-        check(!SpecialStaffDexAchievements.collectedCommunityFriend(noFriend,wesman),
-            "Former staff must still be a confirmed friend");
-        for(String id:new String[]{
+        String[] originalCommunity={
             SpecialStaffDexAchievements.DEVINITY,SpecialStaffDexAchievements.SOUP,
-            SpecialStaffDexAchievements.KLASHY,SpecialStaffDexAchievements.WESMAN,
-            SpecialStaffDexAchievements.KAITLYN}){
-            StaffDirectoryRepository.Snapshot current=roster(viewer,true,true,
-                Collections.singleton(id),new StaffDirectoryRepository.Entry(id,"Admin"));
-            check(!SpecialStaffDexAchievements.collectedCommunityFriend(current,id),
-                "No Community Encounter for current staff ID "+id);
+            SpecialStaffDexAchievements.KLASHY,SpecialStaffDexAchievements.KAITLYN
+        };
+        Set<String> friends=new HashSet<>(Arrays.asList(wesman,fixed));
+        friends.addAll(Arrays.asList(originalCommunity));
+        StaffDirectoryRepository.Entry founder=
+            new StaffDirectoryRepository.Entry(fixed,"The Royalty");
+        StaffDirectoryRepository.Snapshot outside=roster(viewer,true,true,friends,founder);
+        check(SpecialStaffDexAchievements.collectedCommunityFriend(outside,wesman),
+            "Base friendship is still confirmed for Wesman");
+        check(SpecialStaffDexAchievements.collectedWesmanCommunityFriend(outside),
+            "Wesman unlock exists when non-staff and a confirmed friend");
+        StaffDirectoryRepository.Snapshot promotion=roster(viewer,true,true,friends,
+            new StaffDirectoryRepository.Entry(wesman,"Trial Moderator"),founder);
+        check(SpecialStaffDexAchievements.isCurrentStaff(promotion,wesman),
+            "Trial Moderator is staff according to official roster");
+        check(!SpecialStaffDexAchievements.collectedWesmanCommunityFriend(promotion),
+            "Wesman reward vanishes while staff even if viewer remains a friend");
+        check(SpecialStaffDexAchievements.collectedCommunityFriend(promotion,wesman),
+            "Underlying original friend collection remains untouched (the display gate is separate)");
+        check(SpecialStaffDexAchievements.collected(promotion,fixed),
+            "Named fixed staff/leadership achievement unchanged");
+        for(String id:originalCommunity){
+            check(SpecialStaffDexAchievements.collectedCommunityFriend(outside,id),
+                "Original community unlock still exists when earned: "+id);
+            check(SpecialStaffDexAchievements.collectedCommunityFriend(promotion,id),
+                "Wesman's promotion cannot remove another hidden unlock: "+id);
+            StaffDirectoryRepository.Snapshot current=roster(viewer,true,true,friends,
+                new StaffDirectoryRepository.Entry(id,"Admin"),founder);
+            check(SpecialStaffDexAchievements.collectedCommunityFriend(current,id),
+                "Other explicitly defined hidden achievements are NOT dynamically reclassified: "+id);
+            StaffDirectoryRepository.Snapshot incompleteRoster=roster(viewer,false,true,friends,founder);
+            check(SpecialStaffDexAchievements.collectedCommunityFriend(incompleteRoster,id),
+                "Original hidden friend rewards stay visible while roster is loading/offline: "+id);
         }
-        System.out.println("PASS: dynamic Community-only suppression, return after leaving, fixed staff unchanged, friendship & roster fail-closed");
+        StaffDirectoryRepository.Snapshot demotion=roster(viewer,true,true,friends,founder);
+        check(SpecialStaffDexAchievements.collectedWesmanCommunityFriend(demotion),
+            "Wesman reward can return following staff departure");
+        StaffDirectoryRepository.Snapshot partial=roster(viewer,false,true,friends,founder);
+        check(!SpecialStaffDexAchievements.collectedWesmanCommunityFriend(partial),
+            "Only Wesman needs a complete authoritative staff roster");
+        StaffDirectoryRepository.Snapshot partialFriends=roster(viewer,true,false,friends,founder);
+        check(!SpecialStaffDexAchievements.collectedWesmanCommunityFriend(partialFriends),
+            "Wesman must be confirmed friend on a complete scan");
+        for(String id:originalCommunity)
+            check(!SpecialStaffDexAchievements.collectedCommunityFriend(partialFriends,id),
+                "Others retain original complete-friend requirement");
+        StaffDirectoryRepository.Snapshot self=roster(wesman,true,true,friends,founder);
+        check(!SpecialStaffDexAchievements.collectedWesmanCommunityFriend(self),
+            "Wesman cannot earn himself");
+        check(!SpecialStaffDexAchievements.collectedWesmanCommunityFriend(null),
+            "Unknown roster never shows Wesman");
+        check(!SpecialStaffDexAchievements.collectedCommunityFriend(null,kaitlyn),
+            "Original rewards reject missing snapshot");
+        check(!SpecialStaffDexAchievements.collectedCommunityFriend(outside,null),
+            "Original rewards reject missing ID");
+        StaffDirectoryRepository.Snapshot noFriend=roster(viewer,true,true,
+            Collections.emptySet(),founder);
+        check(!SpecialStaffDexAchievements.collectedWesmanCommunityFriend(noFriend),
+            "Wesman still requires friend");
+        for(String id:originalCommunity)
+            check(!SpecialStaffDexAchievements.collectedCommunityFriend(noFriend,id),
+                "No other hidden rewards without confirmed friendship");
+        System.out.println("PASS: four original hidden rewards preserved across roster changes/offline; Wesman-only dynamic staff; fixed awards unchanged");
     }
 }
