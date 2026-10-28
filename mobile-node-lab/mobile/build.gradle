@@ -26,8 +26,8 @@ android {
         applicationId 'club.thegamerclub.nodelab'
         minSdk 26
         targetSdk 35
-        versionCode 101
-        versionName '0.21.27'
+        versionCode 102
+        versionName '0.21.28'
     }
     buildFeatures { aidl true; buildConfig true }
     compileOptions {
