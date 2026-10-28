@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "channel": "mobile_companion",
-  "version": "0.21.28",
-  "version_code": 102,
+  "version": "0.21.29",
+  "version_code": 103,
   "apk_url": "https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk",
-  "sha256": "6496332ff416cfed3d290c47a02a59d74750e71bab3ccf96960e360c7693bf32",
-  "notes": "v0.21.28 (code 102): Minor bug fix."
+  "sha256": "eba2825efc64b09ebb9305eb0ed97b4d6465c2fd1d027a13d0f1c71c5b89baae",
+  "notes": "v0.21.29 (code 103): Minor bug fix."
 }
