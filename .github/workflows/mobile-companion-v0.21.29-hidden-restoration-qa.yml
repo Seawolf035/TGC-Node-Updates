@@ -1,0 +1,98 @@
+name: QA Companion v0.21.29 restore original hidden Community rewards
+on:
+  push:
+    branches: [hotfix/mobile-v0.21.29-preserve-hidden-community]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test Wesman-only dynamic staff and four original hidden rewards
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          javac -d "$tmp" \
+            mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/SpecialStaffDexAchievements.java \
+            mobile-node-lab/community-award-tests/StaffDirectoryRepository.java \
+            mobile-node-lab/community-award-tests/GamerMusicProfiles.java \
+            mobile-node-lab/community-award-tests/NotableCommunityProfiles.java \
+            mobile-node-lab/community-award-tests/CommunityEligibilityTest.java
+          java -cp "$tmp" club.thegamerclub.nodelab.CommunityEligibilityTest
+      - name: Regression guards for award rendering, counters, and release secrecy
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          panel=(root/"StaffDexPanel.java").read_text()
+          catalog=(root/"SpecialStaffDexAchievements.java").read_text()
+          whatsnew=(root/"WhatsNewActivity.java").read_text()
+          publisher=Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()
+          gradle=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          assert "versionCode 103" in gradle and "versionName '0.21.29'" in gradle
+          assert "applicationId 'club.thegamerclub.nodelab'" in gradle
+          assert re.findall(r'(?:LATEST RELEASE|PREVIOUS STAFF RELEASE) · v0\.21\.(\d+)',whatsnew)==['29','28','27','26','25']
+          assert 'v0.21.29 (code 103): Minor bug fix.' in publisher
+          assert 'LATEST RELEASE · v0.21.29' in whatsnew
+          assert 'highlight(body,"Minor bug fix"' in whatsnew
+          assert 'public static boolean isCurrentStaff(' in catalog
+          assert 'collectedWesmanCommunityFriend(' in catalog
+          # Other hidden achievements must depend ONLY on a complete personal friend scan.
+          old_method=catalog.split('public static boolean collectedCommunityFriend(',1)[1].split(
+              'public static boolean isCurrentStaff(',1)[0]
+          assert 'snapshot.friendsComplete' in old_method
+          assert 'isCurrentStaff(' not in old_method
+          assert 'snapshot.rosterComplete' not in old_method
+          assert 'snapshot.friendIds.contains(id)' in old_method
+          dynamic=catalog.split('public static boolean collectedWesmanCommunityFriend(',1)[1].split(
+              'public static boolean collected(',1)[0]
+          assert 'collectedCommunityFriend(snapshot,WESMAN)' in dynamic
+          assert '!isCurrentStaff(snapshot,WESMAN)' in dynamic
+          # The count must include FOUR normal hidden awards, then opt-in Wesman alone.
+          count=panel.split('private int hiddenEarned(',1)[1].split('private int specialEarned(',1)[0]
+          assert 'if(!communityRosterFresh())return 0;' not in count
+          for name in ['DEVINITY','SOUP','KLASHY','KAITLYN']:
+              assert 'SpecialStaffDexAchievements.'+name in count
+          assert 'SpecialStaffDexAchievements.WESMAN,' not in count
+          assert 'if(communityRosterFresh()&&' in count
+          assert 'collectedWesmanCommunityFriend(snapshot)' in count
+          assert 'if(hiddenEarned(roster)>0)' in panel
+          assert 'if(communityRosterFresh()&&' in panel
+          assert 'collectedWesmanCommunityFriend(roster)' in panel
+          for name in ['DEVINITY','SOUP','KLASHY','KAITLYN']:
+              assert 'collectedCommunityFriend(roster,' in panel
+          assert 'if(available!=null&&available.rosterComplete&&available.friendsComplete)' in panel
+          assert 'roster=StaffDirectoryRepository.cached(activity)' in panel
+          assert 'communityRosterVerifiedAt=0L;' in panel
+          assert 'postDelayed(communityRecheck,COMMUNITY_ROSTER_TTL_MS)' in panel
+          assert 'removeCallbacks(communityRecheck)' in panel
+          assert 'StrikethroughSpan' in panel
+          assert 'Kaitlynslayer • Free VRC+? NICE!' in panel
+          for fixed in ['GAMEWITCH','SEAWOLF','LILY','IMPOSTER','AJ','ASRIEL','DARKFLAMES']:
+              assert 'SpecialStaffDexAchievements.'+fixed in panel
+          for public in [whatsnew,publisher]:
+              for hidden in ['Kaitlynslayer','Wesman4real1','Free VRC+? NICE!',
+                             'That one dude','usr_7a5238d4','usr_a4ee31d2',
+                             'DEVINITY','KLASHY','SOUP']:
+                  assert hidden not in public, 'Private reward leaked into public release notes'
+          print('PASS: original four hidden awards restored, Wesman only dynamic, counters match cards, fixed achievements unchanged, release secrecy')
+          PY
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile full Android debug APK without publication
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
