@@ -729,6 +729,13 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
             this::openInviteCode);
         action(essentials,"⌕","Search people","Find someone on VRChat",
             ()->openBrowse("search_users"));
+        action(essentials,"ⓘ","Setup & troubleshooting",
+            "Review device linking, permissions, and optional tracking",
+            ()->needsStaff(()->startActivity(
+                new Intent(this,CompanionSetupActivity.class))));
+        action(essentials,"↓","App updates & release notes",
+            "Check for the newest signed TGC Companion version",
+            ()->startActivity(new Intent(this,MobileUpdaterActivity.class)));
         updateHomeIndicators();
         loadHomeHistory();
     }
