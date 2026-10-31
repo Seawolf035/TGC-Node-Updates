@@ -1883,7 +1883,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         }catch(Exception ignored){}
         boolean quest=QuestDevice.isQuestDevice();
         String details=
-            "TGC Companion v"+BuildConfig.VERSION_NAME+"\\n"+
+            "TGC Companion v"+BuildConfig.VERSION_NAME+"\n"+
             "Player tracking: "+(nodeLive?"Running":"Not currently running")+
             (quest?"\nQuest Tools: available from Home (no floating window)":
               "\nFloating tools: "+(overlayLive?"Running":"Not currently running")+
