@@ -286,7 +286,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
     }
     private boolean isHub(){
         // The shortcuts editor has its own native layout, not a MiniVRCX page.
-        return isPrimaryTab()||"shortcuts".equals(page);
+        return isPrimaryTab()||"shortcuts".equals(page)||"height".equals(page);
     }
     /** Explicit exit to the COMPANION HOME, never to a stale Settings page. */
     private void returnToMainMenu(){
@@ -412,6 +412,7 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             case "home":showHome();break;
             case "social":showSocial();break;
             case "osc":showOsc();break;
+            case "height":showHeight();break;
             case "tracking":showTracking();break;
             case "shortcuts":showShortcuts();break;
             default:showTools();break;
@@ -440,6 +441,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
                     ()->openShortcut(key));
             }
         }
+        button(primary,"Avatar eye height · quick presets",false,
+            ()->go("height"));
         button(primary,"Edit my shortcuts",false,()->go("shortcuts"));
         if(OwnerQuestFloatingPreview.eligible(this)){
             button(primary,"Open owner floating 2D panel (experimental)",true,()->
@@ -597,7 +600,14 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             main.post(()->toast(reply));
         });
     }
+    private void showHeight(){
+        LinearLayout height=card("AVATAR HEIGHT · QUICK CONTROLS");
+        OscHeightTool.attach(this,height,io,null,null);
+    }
     private void showOsc(){
+        LinearLayout heightShortcut=card("AVATAR EYE HEIGHT");
+        button(heightShortcut,"0.80 m / 2.00 m / custom presets",true,
+            ()->go("height"));
         LinearLayout live=card("LIVE CHATBOX · "+(QuestDevice.isQuestDevice()?
             "QUEST NATIVE":"PHONE PREVIEW"));
         oscSummary=text(QuestOscService.summary(),12,CompanionStyle.ACCENT,true);
@@ -670,7 +680,8 @@ public final class QuestToolsActivity extends StaffProtectedActivity implements 
             12,CompanionStyle.MUTED,false));}
         pair(quick,"Compose message","mini_chat","Edit phrases","mini_osc_presets");
         LinearLayout advanced=card("AVATAR & TYPING OSC");
-        OscHeightTool.attach(this,advanced,io,null,null);
+        button(advanced,"Eye-height presets & saved heights",false,
+            ()->go("height"));
         pair(advanced,"Avatar parameters","mini_osc_parameters",
             "OSC status","mini_osc_status");
         button(advanced,"Typing indicator ON",false,()->sendTyping(true));
