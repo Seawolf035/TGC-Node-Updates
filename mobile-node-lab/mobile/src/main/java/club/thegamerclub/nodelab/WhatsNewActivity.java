@@ -47,15 +47,17 @@ public final class WhatsNewActivity extends Activity {
         body.addView(CompanionStyle.text(this,"What's New",29,CompanionStyle.TEXT,true));
         body.addView(CompanionStyle.text(this,"Companion v"+BuildConfig.VERSION_NAME+
             " · Staff-facing release highlights",13,CompanionStyle.MUTED,false));
-        body.addView(CompanionStyle.section(this,"LATEST RELEASE · v0.21.29"));
-        highlight(body,"Minor bug fix",
-            "Minor bug fix.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.28"));
-        highlight(body,"Minor bug fix",
-            "Minor bug fix.");
-        body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.27"));
-        highlight(body,"Minor bug fix",
-            "Minor bug fix.");
+        body.addView(CompanionStyle.section(this,"OFFICIAL STAFF RELEASE · v1.0.0"));
+        highlight(body,"Avatar eye height, one tap away",
+            "Find the 0.80 m and 2.00 m OSC presets at the top of OSC tools, "+
+            "or open the dedicated height page from Home and your customizable quick bar. "+
+            "Your saved personal heights are preserved.");
+        highlight(body,"Help and updates from Home",
+            "Open device setup and troubleshooting, or check for signed updates, "+
+            "straight from the main Companion Home screen.");
+        highlight(body,"A smoother staff starting point",
+            "The same sign-in, saved settings, staff permissions and "+
+            "existing tools remain in place. No account migration is required.");
         body.addView(CompanionStyle.section(this,"PREVIOUS STAFF RELEASE · v0.21.26"));
         highlight(body,"Avatar height presets",
             "Set 0.80 m or 2.00 m eye height from Floating and Quest OSC tools. "+
