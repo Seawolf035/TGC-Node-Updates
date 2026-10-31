@@ -1176,6 +1176,7 @@ public final class FloatingCompanionService extends Service {
         switch(selectedTab){
             case "social":showSocial();break;
             case "osc":showOscDashboard();break;
+            case "height":showHeight();break;
             case "tracking":showTracking();break;
             case "tools":showTools();break;
             case "home":showHome();break;
@@ -1236,6 +1237,7 @@ public final class FloatingCompanionService extends Service {
         section(panelContent,"QUICK ACTIONS");
         LinearLayout quick=panelCard(panelContent);
         pinnedShortcuts(quick);
+        action(quick,"Avatar eye height · quick presets",false,()->go("height"));
         action(quick,"Customize shortcuts",false,()->go("customize"));
 
         section(panelContent,"VRCHAT · DISCOVER & CONNECT");
@@ -1534,7 +1536,18 @@ public final class FloatingCompanionService extends Service {
         });
     }
 
+    private void showHeight(){
+        section(panelContent,"AVATAR HEIGHT · QUICK CONTROLS");
+        LinearLayout height=panelCard(panelContent);
+        OscHeightTool.attach(this,height,eventsWorker,
+            ()->setOverlayKeyboard(true),()->setOverlayKeyboard(false));
+    }
+
     private void showOscDashboard(){
+        section(panelContent,"AVATAR EYE HEIGHT");
+        LinearLayout heightShortcut=panelCard(panelContent);
+        action(heightShortcut,"0.80 m / 2.00 m / custom presets",true,
+            ()->go("height"));
         section(panelContent,"FAST CHATBOX CONTROLS");
         LinearLayout fast=panelCard(panelContent);
         oscQuickStatus=text(oscLiveSummary(),12,
@@ -1647,8 +1660,8 @@ public final class FloatingCompanionService extends Service {
         LinearLayout controls=panelCard(panelContent);
         action(controls,"My avatar parameter controls",true,
             ()->go("mini_osc_parameters"));
-        OscHeightTool.attach(this,controls,eventsWorker,
-            ()->setOverlayKeyboard(true),()->setOverlayKeyboard(false));
+        action(controls,"Eye-height presets & saved heights",false,
+            ()->go("height"));
         controls.addView(text("Add your avatar's exact parameter name; send Bool, Int or Float values. Only compatible avatars react.",
             12,CompanionStyle.MUTED,false));
 
