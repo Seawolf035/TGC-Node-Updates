@@ -1883,6 +1883,7 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         }catch(Exception ignored){}
         boolean quest=QuestDevice.isQuestDevice();
         String details=
+            "TGC Companion v"+BuildConfig.VERSION_NAME+"\\n"+
             "Player tracking: "+(nodeLive?"Running":"Not currently running")+
             (quest?"\nQuest Tools: available from Home (no floating window)":
               "\nFloating tools: "+(overlayLive?"Running":"Not currently running")+
@@ -1901,6 +1902,16 @@ public final class CompanionActivity extends Activity implements QuestBackHost {
         new android.app.AlertDialog.Builder(this)
             .setTitle("Background health")
             .setMessage(details)
+            .setNeutralButton("Copy summary",(dialog,which)->{
+                android.content.ClipboardManager clipboard=
+                    (android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                if(clipboard!=null){
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText(
+                        "TGC Companion background health",details));
+                    Toast.makeText(this,"Copied diagnostics (no credentials)",
+                        Toast.LENGTH_SHORT).show();
+                }
+            })
             .setNegativeButton("Close",null)
             .setPositiveButton("Android app settings",(dialog,which)->{
                 try{
