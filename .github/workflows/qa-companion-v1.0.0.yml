@@ -1,0 +1,88 @@
+name: QA TGC Staff Companion v1.0.0 (no publication)
+on:
+  push:
+    branches: [feature/mobile-v1.0.0-staff-release]
+    paths:
+      - 'mobile-node-lab/mobile/**'
+      - 'mobile-node-lab/osc-height-tests/**'
+      - '.github/workflows/qa-companion-v1.0.0.yml'
+      - '.github/workflows/build-experimental-mobile-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify eye height wire protocol and presets
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          javac -d "$tmp" mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab/AvatarEyeHeightOsc.java mobile-node-lab/osc-height-tests/AvatarEyeHeightOscTest.java
+          java -cp "$tmp" club.thegamerclub.nodelab.AvatarEyeHeightOscTest
+      - name: Check v1.0.0 navigability, device separation, privacy and OTA upgrade assumptions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path("mobile-node-lab/mobile/src/main/java/club/thegamerclub/nodelab")
+          read=lambda f:(root/f).read_text()
+          g=Path("mobile-node-lab/mobile/build.gradle").read_text()
+          assert "versionName '1.0.0'" in g and "versionCode 104" in g
+          assert "applicationId 'club.thegamerclub.nodelab'" in g
+          assert 'companionRelease' in g and 'TGC_ANDROID_KEYSTORE_FILE' in g
+          pref=read("OverlayPreferences.java")
+          assert '"height"' in pref and 'case "height":return "height";' in pref
+          assert 'case "height":return "Avatar eye height";' in pref
+          quest=read("QuestToolsActivity.java")
+          floating=read("FloatingCompanionService.java")
+          assert 'case "height":showHeight();break;' in quest
+          assert 'case "height":showHeight();break;' in floating
+          assert '||"height".equals(page)' in quest
+          assert 'OscHeightTool.attach(this,height,io,null,null);' in quest
+          assert 'OscHeightTool.attach(this,height,eventsWorker,' in floating
+          assert '() ->go("height")' not in floating
+          assert '()->go("height")' in quest and '()->go("height")' in floating
+          assert 'OscHeightTool.attach(this,advanced,io,null,null);' not in quest
+          assert 'OscHeightTool.attach(this,controls,eventsWorker,' not in floating
+          assert 'setOverlayKeyboard(true)' in floating and 'setOverlayKeyboard(false)' in floating
+          assert 'StaffGate.unlocked(this)' in floating and 'canUseTools()' in quest
+          tool=read("OscHeightTool.java")
+          assert 'VRChatSession.load(c)' in tool and 'MAX_CUSTOM=12' in tool
+          assert '127.0.0.1:9000' in tool
+          home=read("CompanionActivity.java")
+          assert '"Setup & troubleshooting"' in home
+          assert '"App updates & release notes"' in home
+          whats=read("WhatsNewActivity.java")
+          assert "OFFICIAL STAFF RELEASE · v1.0.0" in whats
+          assert "LATEST RELEASE · v0.21.29" not in whats
+          import json
+          feed=json.loads(Path("mobile-node-lab/mobile-update.json").read_text())
+          assert feed['version']=='0.21.29' and feed['version_code']==103, "Do not promote a test build into the staff feed"
+          for visible in [whats,Path(".github/workflows/build-experimental-mobile-apk.yml").read_text()]:
+              for confidential in ['usr_a4ee31d2','usr_7a5238d4','Kaitlynslayer','Wesman','Devinity']:
+                  assert confidential not in visible, "Hidden StaffDex info leaked in release notes"
+          print("PASS: height routing, quick shortcuts, setup/update navigation, privacy and upgrade compatibility")
+          PY
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android APK without publishing or accessing release signing keys
+        working-directory: mobile-node-lab
+        run: gradle :mobile:assembleDebug --no-daemon --stacktrace
+      - name: Archive unsigned-for-release diagnostic build (QA only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TGC-Companion-v1.0.0-QA-Only
+          path: mobile-node-lab/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
