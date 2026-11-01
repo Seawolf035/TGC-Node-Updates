@@ -54,7 +54,7 @@ jobs:
           $root = "owner-preview-source"
           New-Item -ItemType Directory -Path "$root/tgc_cocompanion/legacy" -Force | Out-Null
           $source = "co-companion/tgc_cocompanion"
-          $include = @("__init__.py", "permissions.py", "sessions.py", "osc.py", "staff_lease.py", "launch_controller.py", "windows_process.py", "log_diagnostics.py", "pilot_enrollment.py", "owner_pilot.py", "vrchat_personal.py", "staffdex_desktop.py", "desktop_osc_tools.py", "desktop_pages.py", "desktop_theme.py", "desktop_update_page.py", "owner_updater.py", "desktop_more_pages.py")
+          $include = @("__init__.py", "permissions.py", "sessions.py", "osc.py", "staff_lease.py", "launch_controller.py", "windows_process.py", "log_diagnostics.py", "pilot_enrollment.py", "owner_pilot.py", "vrchat_personal.py", "staffdex_desktop.py", "desktop_osc_tools.py", "desktop_pages.py", "desktop_theme.py", "desktop_update_page.py", "owner_updater.py", "desktop_more_pages.py", "desktop_collection_pages.py")
           foreach ($file in $include) { Copy-Item "$source/$file" "$root/tgc_cocompanion/$file" -ErrorAction Stop }
           Copy-Item "$source/legacy/__init__.py" "$root/tgc_cocompanion/legacy/__init__.py"
           Copy-Item "$source/legacy/tgc_vrchat_multilog.py" "$root/tgc_cocompanion/legacy/tgc_vrchat_multilog.py"
