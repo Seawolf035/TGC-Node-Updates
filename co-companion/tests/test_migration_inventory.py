@@ -45,7 +45,10 @@ class MigrationInventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "other").write_bytes(b"private")
-            (root / "tgc_staff_node_key.dpapi").symlink_to(root / "other")
+            try:
+                (root / "tgc_staff_node_key.dpapi").symlink_to(root / "other")
+            except OSError:
+                self.skipTest("This Windows user lacks permission to create symlinks")
             result = inspect_staff_installation(root)
             self.assertIn("tgc_staff_node_key.dpapi", result.runtime_files_missing)
             self.assertFalse(result.migration_authorized)
