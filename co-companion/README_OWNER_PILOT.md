@@ -1,3 +1,13 @@
+# TGC Co-Companion — Python v0.3+ with built-in Updates (owner preview)
+
+**Recommended Windows owner installation (replaces EXE delivery):** If your running v0.2 has no Updates tab, use the one-time `TGC_CoCompanion_Python_SelfUpdating_v0.3_Installer.zip` package, launch `INSTALL_FROM_V02.bat`, then launch `RUN_OWNER_PILOT.bat` inside the newly installed Python folder. The one-time bootstrap downloads ONLY source files from the latest successful GitHub Actions commit on `feature/co-companion-foundation`, validates every file against the Git blob hash, and places the source under `%LOCALAPPDATA%\\TGC\\CoCompanionOwnerPilot\\installed_versions\\python-<commit>`. Your existing v0.2 folder and all AppData enrollment, sessions, saved phrases and StaffDex remain in place. It requires Python 3.11+, Tcl/Tk, and network access to GitHub; no venv.
+
+**After that, all updates are handled in Co-Companion itself:** `Go to page → Updates → Check For Updates → Install Python Update → Restart`. The built-in owner-preview Python updater queries successful CI runs from the **exact** owner branch, reads the immutable Git commit tree, downloads only allowlisted `co-companion/` files from `raw.githubusercontent.com` and checks each against its Git blob hash before atomically staging a new folder. The old version remains for rollback; no GitHub PAT or manual ZIP or EXE is required. A failed, incomplete or tampered update never overwrites the current app.
+
+**Status:** GitHub Actions `41322794303` reported SUCCESS on code commit `05b56e313a2b86c074918afb3098c8e97e2ea989`, covering offline Windows+Linux tests and artifact packaging. This does **not** establish that the owner has installed or run it on Windows. EXE instructions below are retained for legacy archival installs; the Python route above is now recommended. This is owner-only, not a staff release, and does not update any live Relay, Node, Staff Launcher or Main Launcher.
+
+---
+
 # TGC Co-Companion — Windows Owner Preview v0.3
 
 **Owner-only development build. NOT a staff release.**
