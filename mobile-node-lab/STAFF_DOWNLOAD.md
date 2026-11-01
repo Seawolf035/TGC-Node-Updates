@@ -40,8 +40,11 @@ Follow the video and make sure Developer Mode is switched on before continuing. 
 1. On your Quest, open **Discord** and tap the **TGC Staff Companion download-page link** shared by staff.
 2. On the page, tap **Download TGC Staff Companion** at the top to download the app directly from the link in Discord.
 3. Open **Files** on your Quest, then find the download in **Downloads** or **Recent**.
-4. Select the file and choose **Open with → Package Installer** if that option appears, then tap **Install**.
-5. Open your app library and find **TGC Staff Companion**. If it doesn't appear right away, check **Unknown Sources**.
+4. **Do NOT tap the downloaded APK to open it directly.** Instead, find the **three dots (⋯)** next to the downloaded file and select that menu.
+5. From the three-dot menu, choose **Open with → Package Installer**, then tap **Install**.
+6. Open your app library and find **TGC Staff Companion**. If it doesn't appear right away, check **Unknown Sources**.
+
+**Important for Quest:** Use the **three-dot menu (⋯) next to the APK** — don't simply tap the APK itself.
 
 **Can't find Package Installer or can't install it this way?** That's okay — follow the computer method below instead.
 
