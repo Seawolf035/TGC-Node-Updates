@@ -30,25 +30,28 @@ That's it! You're ready to explore the Companion.
 
 Follow the video and make sure Developer Mode is switched on before continuing. You only need to set it up once unless your Quest settings change.
 
-### Step 2: Install the Companion
+### Step 2: Install directly on your Quest (recommended)
 
-**Option A — Using a computer (recommended)**
+**You don't need a computer to try this method.** Make sure you've enabled Developer Mode using the video above first.
 
-1. Click **Download TGC Staff Companion** at the top of this page to save the app on your computer.
-2. Download **[SideQuest](https://sidequestvr.com/)** and open it.
-3. Connect your Quest to your computer with a USB-C cable that can transfer files. If a permission prompt appears inside your headset, approve it.
-4. In SideQuest, choose **Install APK file from folder**, then select the Companion file you downloaded.
-5. On your Quest, open your app library and look for **TGC Staff Companion**. If needed, check **Unknown Sources**.
+1. Put on your Quest and open **Browser**.
+2. Open this page in the Quest browser and tap **Download TGC Staff Companion** at the top.
+3. Open **Files** on your Quest, then find the download in **Downloads** or **Recent**.
+4. Select the file and choose **Open with → Package Installer** if that option appears, then tap **Install**.
+5. Open your app library and find **TGC Staff Companion**. If it doesn't appear right away, check **Unknown Sources**.
 
-**Option B — Directly on your Quest (if your headset offers this option)**
+**Can't find Package Installer or can't install it this way?** That's okay — follow the computer method below instead.
 
-1. **Complete Step 1 and enable Developer Mode first.**
-2. Open your Quest's **Browser**, return to this page, and tap **Download TGC Staff Companion**.
-3. Open **Files** and find the download.
-4. If you see an option such as **Open with → Package Installer**, choose it and follow the prompts.
-5. Find **TGC Staff Companion** in your app library or **Unknown Sources**.
+### Backup option: Install using a computer
 
-**Don't see an install option in Files?** Use Option A with SideQuest instead.
+If direct installation isn't available on your Quest, you can use **SideQuest** on a computer.
+
+1. Make sure **Developer Mode** is already enabled using the video above.
+2. On your computer, click **Download TGC Staff Companion** at the top of this page.
+3. Download **[SideQuest](https://sidequestvr.com/)** and open it.
+4. Connect your Quest with a USB-C cable that supports file transfers. Put on the headset and allow the connection if asked.
+5. In SideQuest, select **Install APK file from folder** and choose the Companion file you downloaded.
+6. Back on your Quest, find **TGC Staff Companion** in your app library or **Unknown Sources**.
 
 Once it's installed, open the Companion and follow the on-screen setup and staff verification steps.
 
