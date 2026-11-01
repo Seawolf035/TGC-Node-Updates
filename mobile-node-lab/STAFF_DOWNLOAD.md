@@ -16,11 +16,14 @@ Welcome to the official download page for **TGC Staff Companion**! This app brin
 2. Open your phone's **Downloads** and tap the file you downloaded.
 3. Tap **Install**. If your phone asks whether to allow installs from your browser or Files app, approve it for this installation.
 4. Open **TGC Staff Companion** and follow its setup instructions.
-5. Complete your TGC staff verification, then sign into VRChat with **your own account** when prompted.
+5. **Message Seawolf to get your TGC staff verification code.** You'll need this to finish setting up the app.
+6. Follow the app's instructions to verify with your code, then sign into VRChat with **your own account** when prompted.
 
 That's it! You're ready to explore the Companion.
 
 ## 🥽 Installing on a Meta Quest
+
+**You'll need a TGC staff verification code from Seawolf to finish setting up the Companion.** You can ask for it before or after installing.
 
 ### Step 1: Turn on Developer Mode
 
@@ -53,7 +56,7 @@ If direct installation isn't available on your Quest, you can use **SideQuest** 
 5. In SideQuest, select **Install APK file from folder** and choose the Companion file you downloaded.
 6. Back on your Quest, find **TGC Staff Companion** in your app library or **Unknown Sources**.
 
-Once it's installed, open the Companion and follow the on-screen setup and staff verification steps.
+Once it's installed, open the Companion. **Message Seawolf for your TGC staff verification code** if you haven't already, then follow the on-screen setup instructions and enter your code when asked.
 
 > **Need a hand?** Ask the TGC staff team for help. Don't uninstall an older Companion just to try again.
 
@@ -78,7 +81,7 @@ Only download updates from this official page or from inside the Companion.
 - **Can't find the app on Quest?** Check your app library or **Unknown Sources**.
 - **Phone won't let you install?** Open the downloaded file from Downloads and follow the permission prompt.
 - **Update says “App not installed”?** **Don't uninstall your existing Companion.** Ask TGC staff for help so you don't lose your saved information.
-- **Can't access staff tools?** Make sure you've completed the app's staff verification. Downloading the app alone doesn't grant staff access.
+- **Can't access staff tools?** Ask Seawolf for your TGC staff verification code and complete the app's verification. Downloading the app alone doesn't grant staff access.
 - **Something else isn't working?** Open **Setup & troubleshooting** from the Companion's Home screen, or ask the TGC staff team.
 
 **A quick safety reminder:** Never share your VRChat or Discord password, login codes, or saved account information with anyone helping you set up the app.
