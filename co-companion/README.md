@@ -4,7 +4,8 @@
 > Do not distribute this as a replacement for an installed TGC Node or Staff Launcher.
 > This initial milestone has no functioning VRChat launcher, Node/Relay connection,
 > account sign-in, or Companion pairing. It includes a **non-operational Tkinter
-> navigation preview**, not a connected staff application.
+> navigation preview**, plus safe offline-tested tracking and PCVR control
+> adapters. None are connected to real staff authorization or a network server.
 
 ## Product definition
 
@@ -35,10 +36,15 @@ Launcher **after a verified, in-place migration**. Existing customized-inviter
 | `tgc_cocompanion/permissions.py` | Fail-closed, **not** self-issuing 1–4 permission policy; atomic provisional slot reservations |
 | `tgc_cocompanion/sessions.py` | Explicit process/OSC-port mapping; refuses ambiguous, stale or unknown targets |
 | `tgc_cocompanion/osc.py` | Packet encoders for chatbox, float/bool/int avatar parameters and avatar eye height; local-loopback-only sender |
-| `tgc_cocompanion/app.py`, `__main__.py` | Locked, non-operational Windows navigation preview; no real actions |\n| `tests/test_foundation.py` | Offline policy / multiple clients / OSC regression tests |
+| `tgc_cocompanion/app.py`, `__main__.py` | Locked Windows navigation preview; no staff actions enabled |
+| `tgc_cocompanion/legacy/tgc_vrchat_multilog.py` | Exact, unchanged shared log watcher from published v1.1.11 Node |
+| `tgc_cocompanion/tracking.py` | Gated local-only log watcher; no Relay/SQLite/IDs retained by adapter |
+| `tgc_cocompanion/log_diagnostics.py` | Metadata-only VRChat log readiness checker |
+| `tgc_cocompanion/pcvr_bridge.py` | No-listener high-level remote OSC command policy; unconnected until secure pairing |
+| `tests/test_foundation.py`, `test_tracking.py`, `test_pcvr_bridge.py` | Offline regression and permission/routing tests |
 | `.github/workflows/co-companion-foundation.yml` | Nonpublishing Python compile and tests on this branch only |
 
-**These are foundation components, shown in a non-operational interface only; they are not wired to a Windows Node service, verified authorization system or VRChat runtime.**
+**These are development components. The GUI remains a locked preview. The log watcher and PCVR command bridge are tested as independent modules but are NOT yet wired to a Windows Node/Relay service, verified authorization system, encrypted mobile pairing, or live VRChat runtime.**
 The port-to-process mapping is **not** inferred or invented; the planned launcher/
 discovery layer must supply it only after validating ownership.
 
@@ -50,7 +56,21 @@ From repository root, with Python 3.11+:
 PYTHONPATH=co-companion python -m unittest discover -s co-companion/tests -p 'test_*.py' -v
 ```
 
-No real UDP sends, VRChat API calls or Relay connections occur in tests.\n\nThe **locked UI preview** can be opened locally on a Windows development machine\nwith Python/Tkinter installed:\n\n```sh\nPYTHONPATH=co-companion python -m tgc_cocompanion\n```\n\nIt deliberately has no live features or staff verification, and is **not a release**.
+No real UDP sends, VRChat API calls or Relay connections occur in tests.
+
+The **locked UI preview** can be opened locally on a Windows development machine
+with Python/Tkinter installed:
+
+```sh
+PYTHONPATH=co-companion python -m tgc_cocompanion
+```
+
+It deliberately has no live staff features or verified sign-in. Do not
+install this over the current Node/Staff Launcher.
+
+The follow-up [PCVR tracking and migration contract](PCVR_TRACKING_AND_MIGRATION.md)
+describes the exact legacy source reuse, local-only diagnostics, security
+boundaries, pairing requirements and safeguards before a production replacement.
 
 ## Source baselines verified before development
 
@@ -64,7 +84,8 @@ As of November 1, 2026, the **public** `TGC-Node-Updates/main` updater identifie
 
 The Staff Launcher currently provides **three** VRChat slots (one VR plus Desktop
 slots), embedded Node, staff verification, desktop Terms and updater. Published
-ZIP source remains authoritative pending complete extraction and behavior review.
+ZIP source remains authoritative pending full Node/Staff Launcher behavior review.
+The shared `tgc_vrchat_multilog.py` has now been recovered exactly from the Node ZIP.
 Do not claim the legacy systems are migrated until end-to-end tests pass.
 
 ## Security and compatibility requirements
@@ -100,15 +121,17 @@ Do not claim the legacy systems are migrated until end-to-end tests pass.
 
 ## Near-term development work, in order
 
-1. Extract and audit both published Windows ZIP sources (no stored credentials).
-   Reuse the *existing* `tgc_vrchat_multilog`, queuing, ACK, Terms, and updater
-   components without rewriting their semantics.
+1. **Shared watcher recovered** from official Node v1.1.11 ZIP, with local-only
+   tracking wrapper, no-network diagnostics and offline tests. Next audit the
+   legacy Node and Staff Launcher enrollment/queue/Terms/instance code in full;
+   preserve the existing semantics rather than rewriting the uploader.
 2. Add a testable backend adapter for owner-issued quota and verified identity.
    Define revocation, expiry, rate limits, launch-slot gating and migrations.
 3. Build Co-Companion's Windows UI with all promised sections. Only enable
    real actions after correct enrollment and verified capability.
 4. Build the Windows Node/launcher adapter and a one-collector migration path.
-5. Add secure local Quest/phone pairing, source switch between standalone/PCVR,
-   remote OSC and verified user-experience testing.
+5. **High-level PCVR OSC dispatch policy staged** without a listener; next add
+   actual secure Quest/phone pairing, explicit source selection, encrypted
+   transport and real device verification.
 6. Keep the standalone Node/Staff Launcher packages maintained until migration
    and rollback are proven. Keep Plugin Node untouched.
