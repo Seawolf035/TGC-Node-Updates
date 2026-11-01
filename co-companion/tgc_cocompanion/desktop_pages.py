@@ -346,8 +346,9 @@ class DesktopPages:
             if not member.vrchat_id:status="No VRChat ID"
             self.dex_table.insert("",tk.END,values=(member.name,member.rank,status))
         for title,earned in snapshot.visible_rewards().items():
-            if earned or title in ("GM1","GM2","GM3","GM4","All Gamer Music Accounts"):
-                self.rewards.insert(tk.END,("✓ " if earned else "○ ")+title)
+            # The visible Mobile catalog includes its 16 normal awards;
+            # hidden community rewards are returned ONLY after collection.
+            self.rewards.insert(tk.END,("✓ " if earned else "○ ")+title)
         stamp=datetime.fromtimestamp(snapshot.captured_at).strftime("%Y-%m-%d %H:%M")
         self.dex_status.set(f"{snapshot.earned}/{snapshot.total} staff collected • Complete scan at {stamp} • "+
                             f"{len(snapshot.members)} staff in roster")
