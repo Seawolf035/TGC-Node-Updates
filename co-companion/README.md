@@ -3,9 +3,10 @@
 > **Not a production release.** Development branch: `feature/co-companion-foundation`.
 > Do not distribute this as a replacement for an installed TGC Node or Staff Launcher.
 > This initial milestone has no functioning VRChat launcher, Node/Relay connection,
-> account sign-in, or Companion pairing. It includes a **non-operational Tkinter
-> navigation preview**, plus safe offline-tested tracking and PCVR control
-> adapters. None are connected to real staff authorization or a network server.
+> account sign-in, or Companion pairing. It includes the original **locked general-interface preview**, plus a separate
+> **owner-only Windows pilot** for verifying the ONE existing TGC Relay after
+> manual rollout, local VRChat launching, OSC chatbox and log diagnostics.
+> That pilot deliberately does NOT upload sightings or replace any Node.
 
 ## Product definition
 
@@ -47,7 +48,10 @@ Launcher **after a verified, in-place migration**. Existing customized-inviter
 | `tgc_cocompanion/migration_inventory.py` | Read-only encrypted credential/queue file inventory; no migration enabled |
 | `tgc_cocompanion/legacy_node_supervisor.py` | Fail-closed, not-yet-wired embedded Node startup supervisor |
 | `tgc_cocompanion/staff_lease.py` | Server-validated, expiring Relay entitlement adapter; no live endpoint connected |
-| `tests/test_*.py` | 118 synthetic/offline tests, Windows and Linux CI; no live sessions |
+| `tgc_cocompanion/pilot_enrollment.py`, `owner_pilot.py` | Isolated owner-only Windows verification, Terms and VRChat/OSC testing; no uploader |
+| `TGC_DESKTOP_TERMS.txt` | Exact official Terms text recovered from published Staff Launcher |
+| `RUN_OWNER_PILOT.bat`, `README_OWNER_PILOT.md` | Manual owner-only Windows bootstrap instructions |
+| `tests/test_*.py` | 124 synthetic/offline tests, Windows and Linux CI; no live sessions |
 | `.github/workflows/co-companion-foundation.yml` | Nonpublishing Python compile and tests on this branch only |
 
 **These are development components. The GUI remains a locked preview.** The
@@ -79,6 +83,13 @@ PYTHONPATH=co-companion python -m tgc_cocompanion
 
 It deliberately has no live staff features or verified sign-in. Do not
 install this over the current Node/Staff Launcher.
+
+The limited [OWNER PILOT installation instructions](README_OWNER_PILOT.md)
+describe a manually downloadable, **nonpublishing** GitHub Actions artifact
+that uses an isolated staff_launcher enrollment and does NOT start the Node
+uploader. It requires the Co-Companion single-account pilot flag on the
+**existing** Relay, off by default, and manual owner-only deployment after
+reconciling the exact currently live Apps Script source.
 
 The [Milestone 4 staff lease and owner-grants contract](MILESTONE_4_STAFF_LEASE_AND_OWNER_GRANTS.md)
 records new *unpublished* Relay endpoints, the expiring PC staff lease and
