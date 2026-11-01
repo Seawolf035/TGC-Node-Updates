@@ -46,7 +46,7 @@ Launcher **after a verified, in-place migration**. Existing customized-inviter
 | `tgc_cocompanion/windows_process.py` | Actual VRChat.exe exact-marker process finder and bounded launch.exe adapter |
 | `tgc_cocompanion/migration_inventory.py` | Read-only encrypted credential/queue file inventory; no migration enabled |
 | `tgc_cocompanion/legacy_node_supervisor.py` | Fail-closed, not-yet-wired embedded Node startup supervisor |
-| `tests/test_*.py` | 96 synthetic/offline tests, Windows and Linux CI; no live sessions |
+| `tests/test_*.py` | 98 synthetic/offline tests, Windows and Linux CI; no live sessions |
 | `.github/workflows/co-companion-foundation.yml` | Nonpublishing Python compile and tests on this branch only |
 
 **These are development components. The GUI remains a locked preview.** The
