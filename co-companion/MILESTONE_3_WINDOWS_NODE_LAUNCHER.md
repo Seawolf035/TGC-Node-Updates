@@ -90,7 +90,7 @@ PCVR OSC bridge. Existing standalone Quest tracking remains separate.
 
 The nonpublishing GitHub Actions workflow now runs **Linux AND Windows** jobs.
 Both compile all Co-Companion Python source and run the *same* offline unit
-suite. **96 tests passed on both operating systems** (run `41302480242`,
+suite. **98 tests passed on both operating systems** (run `41302480242`,
 Nov 1, 2026). Coverage includes:
 - owner-grant one-to-four limit, expired/revoked grants, in-flight slot
   counting, launch failure, 1VR/desktop slot mapping;
@@ -102,7 +102,7 @@ Nov 1, 2026). Coverage includes:
 - existing multi-log tracking, PCVR OSC remote-action validation, privacy,
   rate limits and replay protection.
 
-The Windows job identified a bounded filesystem timestamp rounding issue in
+Two additional regression tests confirm that a legacy Node's upload thread and watcher must really stop before the supervisor reports a safe shutdown. The Windows job identified a bounded filesystem timestamp rounding issue in
 metadata-only log diagnostics. It is fixed with a 2-second future skew
 tolerance and a regression test; rerun confirms Windows and Linux pass.
 
