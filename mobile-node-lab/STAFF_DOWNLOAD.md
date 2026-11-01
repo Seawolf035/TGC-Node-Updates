@@ -1,31 +1,83 @@
-# TGC Staff Companion — official Android download
+# The Gamer Club — Staff Companion
 
-**Current public release link (stable):**
-[Download the signed TGC Staff Companion APK](https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk)
+Welcome to the official download page for **TGC Staff Companion**! This app brings helpful VRChat and TGC staff tools to your **Android phone** or **Meta Quest**.
 
-**Check the published version:** [Official update manifest](https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/mobile-update.json).
+### [⬇️ Download TGC Staff Companion](https://raw.githubusercontent.com/Seawolf035/TGC-Node-Updates/experiment/mobile-node-lab/mobile-node-lab/downloads/TGC_Staff_Companion_Release.apk)
 
-This link always targets the latest **published, signed** Companion APK, not a GitHub Actions debug build or an experimental candidate. Only share the link as **v1.0.0** once the update manifest reports `1.0.0` / build `104` and the signing/Android build checks pass. Until then the existing published release remains current.
+**Already have the app?** You can update it from inside the Companion. **Do not uninstall it just to update** — you could lose your saved setup and settings.
 
-## Staff install instructions
+> **Staff access:** Anyone can download the app, but you must be an approved TGC staff member to use staff-only features.
 
-1. Open the **signed APK** link above on your Android phone, download the file, and approve the Android installation prompt. If Android asks, allow installs from the browser or Files app you used. This is a direct APK distribution; it is not a Google Play listing.
-2. Open **TGC Staff Companion**, review the User Agreement and complete your own approved staff/device setup and verification. A public download link **never grants staff access**.
-3. Sign into VRChat with your **own account** using the in-app flow. Never share a Discord/VRChat password, one-time code, or account cookie with another staff member.
-4. For phone player tracking only, opt into Shizuku and grant the required device permissions if you choose to use that optional feature. Other Companion tools do not require Shizuku. Quest uses its own supported setup and permissions.
-5. For later releases, open **Home > App updates & release notes**, or **Settings > App, Battery & Legal > Check for updates**. The updater verifies the published file hash and APK signing identity before offering installation.
+---
 
-## Where to find things
+## 📱 Installing on an Android phone
 
-- **Avatar eye height:** Floating Tools or Quest Tools > Home > Avatar eye height, or near the top of their OSC tab. The same account-scoped 0.80 m, 2.00 m, and custom presets are retained. Add **Avatar eye height** to customizable Home shortcuts / persistent quick bar if desired.
-- **Setup and troubleshooting:** Main Companion > Home > More > Setup & troubleshooting.
-- **Support diagnostics:** Main Companion > Settings > App, Battery & Legal > Background health > **Copy summary**. This copies app status, not passwords or tokens.
-- **What's New:** Main Companion > Settings > App, Battery & Legal > What's New, and on first launch after a signed update.
+1. Tap **Download TGC Staff Companion** above.
+2. Open your phone's **Downloads** and tap the file you downloaded.
+3. Tap **Install**. If your phone asks whether to allow installs from your browser or Files app, approve it for this installation.
+4. Open **TGC Staff Companion** and follow its setup instructions.
+5. Complete your TGC staff verification, then sign into VRChat with **your own account** when prompted.
 
-## Upgrade and authenticity
+That's it! You're ready to explore the Companion.
 
-- The official package identifier is `club.thegamerclub.nodelab`. The signing certificate must match the prior signed official APK to preserve in-place upgrades and settings.
-- Staff using a **debug-key preview** rather than the official signed APK may encounter Android's “app not installed” / signing conflict; **do not uninstall** casually, because uninstalling erases local app data. Ask for help with backup/transition first.
-- This repository is public so that the Android package can be downloaded. No Main Launcher source, Relay credentials, VRChat cookies, DPAPI session state, staff keys, or Android signing keys are required or included in the APK download instructions.
-- Downloading an APK is not proof of successful app/device authorization. Staff-only functions remain gated.
-- The app is for Android/Quest where supported, **not iOS**.
+## 🥽 Installing on a Meta Quest
+
+### Easiest option: Install directly on the headset
+
+On newer Quest software, you may be able to install the Companion without a computer.
+
+1. Put on your Quest and open its **Browser**.
+2. Open this page and tap **Download TGC Staff Companion** above.
+3. Open **Files** on your Quest and look under **Downloads** or **Recent**.
+4. Find the downloaded file, select its **three-dot menu**, and choose **Open with → Package Installer** if available.
+5. Tap **Install**, then open **TGC Staff Companion** from your app library.
+
+**Don't see “Package Installer”?** Use the computer method below instead.
+
+### Other option: Install using a computer
+
+For this method, you'll first need to turn on **Developer Mode** on your Quest. This is a headset setting that allows you to install apps outside the Quest store.
+
+**▶️ [Watch this step-by-step video to enable Developer Mode on your Quest](https://youtu.be/K3p3P3fCeHo?is=XNw2l6Vs88lLafPl)**
+
+After following the video:
+
+1. On your computer, click **Download TGC Staff Companion** at the top of this page.
+2. Download and open **[SideQuest](https://sidequestvr.com/)** on your computer.
+3. Connect your Quest to your computer with a USB-C cable that supports data. Put on the headset and allow the connection if asked.
+4. In SideQuest, choose the option to **install an APK file from your computer**, then select the Companion file you downloaded.
+5. On your Quest, look in your **app library** for TGC Staff Companion. If you don't see it, check **Unknown Sources**.
+
+Open the Companion and follow the on-screen setup and staff verification steps.
+
+> **Need help?** Ask the TGC staff team before changing or removing anything on your headset.
+
+---
+
+## ✨ What's inside?
+
+The Companion includes useful VRChat tools, staff features, friends and profile tools, avatar height controls, and more. Some optional tools ask for extra permissions or setup; the app will guide you through them.
+
+You don't need to turn on every optional feature to start using the Companion.
+
+## 🔄 Updating the Companion
+
+**Keep the app installed and update it in place.** This helps preserve your saved settings and sign-ins.
+
+To check for an update, open **TGC Staff Companion → Home → App updates & release notes**. You can also find **Check for updates** in the app's Settings.
+
+Only download updates from this official page or from inside the Companion.
+
+## ❓ Having trouble?
+
+- **Can't find the app on Quest?** Check your app library or **Unknown Sources**.
+- **Phone won't let you install?** Open the downloaded file from Downloads and follow the permission prompt.
+- **Update says “App not installed”?** **Don't uninstall your existing Companion.** Ask TGC staff for help so you don't lose your saved information.
+- **Can't access staff tools?** Make sure you've completed the app's staff verification. Downloading the app alone doesn't grant staff access.
+- **Something else isn't working?** Open **Setup & troubleshooting** from the Companion's Home screen, or ask the TGC staff team.
+
+**A quick safety reminder:** Never share your VRChat or Discord password, login codes, or saved account information with anyone helping you set up the app.
+
+---
+
+*TGC Staff Companion is an Android/Meta Quest app. It is not available for iPhone or iPad.*
