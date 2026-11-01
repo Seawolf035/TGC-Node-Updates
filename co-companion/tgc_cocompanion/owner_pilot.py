@@ -79,8 +79,17 @@ class OwnerPilotApp:
                   wraplength=900).pack(anchor="w", pady=(0, 6))
         ttk.Label(frame, textvariable=self.status_var, foreground="#a05518",
                   wraplength=900).pack(anchor="w", pady=(0, 9))
+        # A page selector keeps ALL screens reachable at 1280x720 and high
+        # Windows DPI even if notebook tabs overflow horizontally.
+        nav=ttk.Frame(frame);nav.pack(fill="x",pady=(0,7))
+        ttk.Label(nav,text="Go to page:").pack(side="left",padx=(0,8))
+        self.page_select=tk.StringVar(value="Home")
+        self.page_picker=ttk.Combobox(nav,textvariable=self.page_select,
+                                     state="readonly",width=28)
+        self.page_picker.pack(side="left")
         notebook = ttk.Notebook(frame)
         notebook.pack(fill="both", expand=True)
+        self._main_notebook=notebook
         verify = ttk.Frame(notebook, padding=15)
         notebook.add(verify, text="Verification")
         ttk.Label(verify, text="Verification requires a one-time Staff Launcher deployment link created"
@@ -146,6 +155,27 @@ class OwnerPilotApp:
         # but personal VRChat cookies NEVER pass through TGC Relay or Node.
         from .desktop_pages import DesktopPages
         self.features=DesktopPages(self,notebook)
+        self._page_names=[notebook.tab(t,"text") for t in notebook.tabs()]
+        self.page_picker.configure(values=self._page_names)
+        self.page_picker.bind("<<ComboboxSelected>>",self._choose_page)
+        notebook.bind("<<NotebookTabChanged>>",self._page_changed)
+        notebook.select(0)
+
+    def _choose_page(self,event=None):
+        title=self.page_select.get()
+        try:
+            index=self._page_names.index(title)
+            self._main_notebook.select(index)
+        except (ValueError,AttributeError):
+            return
+
+    def _page_changed(self,event=None):
+        try:
+            index=self._main_notebook.index(self._main_notebook.select())
+            if 0 <= index < len(self._page_names):
+                self.page_select.set(self._page_names[index])
+        except (ValueError,AttributeError):
+            pass
 
     def _terms_valid(self) -> bool:
         try:
