@@ -3,8 +3,8 @@
 > **Not a production release.** Development branch: `feature/co-companion-foundation`.
 > Do not distribute this as a replacement for an installed TGC Node or Staff Launcher.
 > The original general-interface scaffold remains a non-operational preview;
-> the **real Windows owner pilot is now v0.2**, with a dark Home dashboard,
-> personal VRChat login/2FA, friends/social, StaffDex, full local OSC Studio
+> the **real Windows owner pilot is now v0.3**, with a dark Home dashboard,
+> personal VRChat login/2FA, friends/social, StaffDex, full local OSC Studio, avatars, profiles, notes, presence, inbox actions and owner-preview in-app updating
 > and the previously proven 1–4-slot VRChat launcher. It runs against the ONE
 > existing TGC Relay using the owner-only pilot lease. It deliberately does
 > NOT upload sightings or replace any Node.
@@ -55,9 +55,13 @@ Launcher **after a verified, in-place migration**. Existing customized-inviter
 | `tgc_cocompanion/vrchat_personal.py` | DPAPI encrypted, separate personal VRChat API login/2FA + friends/worlds/groups/inbox |
 | `tgc_cocompanion/staffdex_desktop.py` | Official TGC roster + complete friends scans + Mobile 16 visible awards and earned-only hidden awards |
 | `tgc_cocompanion/desktop_osc_tools.py` | Personal saved OSC phrases, rotation, PTT safe release, avatar height and parameters |
-| `tgc_cocompanion/desktop_pages.py`, `desktop_theme.py` | Real Windows Home, VRChat Account, Social, StaffDex and OSC Studio tabs, dark navy/cyan GUI |
+| `tgc_cocompanion/desktop_pages.py`, `desktop_theme.py` | Windows Home, personal VRChat Account, Social, StaffDex and OSC Studio |
+| `tgc_cocompanion/desktop_more_pages.py` | User/world/group profiles, personal notes, status and consented friend/invite actions |
+| `tgc_cocompanion/desktop_collection_pages.py` | Avatar favorites, locally scoped world bookmarks, personal inbox |
+| `tgc_cocompanion/owner_updater.py`, `desktop_update_page.py` | Owner-only GitHub Actions build check, digest verified ZIP staging, in-app restart |
+| `build_info.json` (CI-generated) | Pin update to exactly successful GitHub workflow run SHA/id |
 | `owner_pilot_entry.py` | Self-contained Windows EXE build entrypoint (no venv or Python required) |
-| `tests/test_*.py` | 149 offline tests on Linux 3.11 and Windows 3.13; real Tk GUI smoke on Windows |
+| `tests/test_*.py` | Additional v0.3 offline tests on Linux 3.11 and Windows 3.13; full packaged GUI smoke on Windows |
 | `.github/workflows/co-companion-foundation.yml` | Nonpublishing Python compile and tests on this branch only |
 
 **These are development components. The owner-only v0.2 GUI has functional
@@ -98,6 +102,10 @@ that uses an isolated staff_launcher enrollment and does NOT start the Node
 uploader. It requires the Co-Companion single-account pilot flag on the
 **existing** Relay, off by default, and manual owner-only deployment after
 reconciling the exact currently live Apps Script source.
+
+The [Milestone 6 v0.3 updater and deeper feature implementation](MILESTONE_6_OWNER_PREVIEW_UPDATES.md)
+covers the verified owner-preview ZIP staging/restart and new personal VRChat
+profiles/notes, avatar favorites, bookmarks, inbox and presence pages.
 
 The [Milestone 5 Mobile parity implementation](MILESTONE_5_OWNER_PREVIEW_MOBILE_PARITY.md)
 records the v0.2 source, retained v0.1 launcher, GUI, social, full initial
