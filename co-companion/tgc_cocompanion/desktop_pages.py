@@ -449,8 +449,11 @@ class DesktopPages:
     def _osc_tick(self):
         if self._closed:return
         if self.controls is not None:
-            try:self.controls.rotate_tick()
-            except Exception as exc:self._notice("Rotation stopped: "+str(exc))
+            try:
+                self.controls.release_if_overdue(300)
+                self.controls.rotate_tick()
+            except Exception as exc:
+                self._notice("OSC safety action: "+str(exc))
         self.root.after(1000,self._osc_tick)
 
     def close(self):
