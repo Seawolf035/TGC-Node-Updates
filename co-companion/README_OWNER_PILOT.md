@@ -9,18 +9,18 @@ simply to install this Windows preview.
 ## Install v0.3 over your working v0.2
 
 1. Exit the old Co-Companion window. This does not close VRChat processes.
-2. Download `TGC-CoCompanion-v0.3-OWNER-EXE-NOT-STAFF` from the latest
+2. Download `TGC-CoCompanion-OWNER-EXE-NOT-STAFF` from the latest
    SUCCESSFUL GitHub Actions build on
    `Seawolf035/TGC-Node-Updates` `feature/co-companion-foundation`.
 3. GitHub downloads an outer ZIP; open it and extract the contained
    `TGC_CoCompanion_OwnerPreview_v0.3_WINDOWS.zip` to a **NEW** folder.
 4. Extract that Windows ZIP. Keep the EXE and its `_internal` folder
-   together. Run `TGC_CoCompanion_OwnerPreview_v0.3.exe`.
+   together. Run `TGC_CoCompanion_OwnerPreview.exe`.
 5. Existing Windows user enrollment, Desktop Terms, personal VRChat
    sessions, StaffDex data and saved OSC phrases remain in
    `%LOCALAPPDATA%\\TGC\\CoCompanionOwnerPilot`. They are not
    stored alongside the EXE. Sign in or Verify Pilot Access if needed.
-6. This is a self-contained Windows EXE, with **no Python, pip or .venv**.
+6. This is a self-contained Windows EXE with a STABLE executable name across future owner previews, with **no Python, pip or .venv**.
    The original source/BAT artifact is available for debugging only.
    Windows may warn because this owner build is unsigned.
 
@@ -31,7 +31,7 @@ simply to install this Windows preview.
    GitHub**. This uses your ordinary browser's GitHub sign-in, not a
    GitHub token stored inside Co-Companion.
 3. Download the artifact named
-   `TGC-CoCompanion-v0.3-OWNER-EXE-NOT-STAFF` from the successful
+   `TGC-CoCompanion-OWNER-EXE-NOT-STAFF` from the successful
    workflow. **KEEP THE OUTER ZIP UNEXTRACTED** for this step.
 4. Return to Co-Companion, click **Install Downloaded Update ZIP** and
    select the untouched GitHub artifact ZIP.
