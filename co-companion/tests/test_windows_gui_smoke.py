@@ -26,7 +26,9 @@ class WindowsGuiSmokeTests(unittest.TestCase):
                     walk(root)
                     for expected in ("Home","Verification","VRChat Launcher",
                                      "OSC","Tracking Diagnostics","VRChat Account",
-                                     "Social","StaffDex","OSC Studio"):
+                                     "Social","StaffDex","OSC Studio",
+                                     "Profiles","Presence","Avatars","Bookmarks",
+                                     "Inbox","Updates"):
                         self.assertIn(expected,tabs)
                     self.assertIsNone(ui.lease)
                     self.assertFalse(ui.enrollment.enrolled)
