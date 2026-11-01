@@ -121,6 +121,25 @@ class NodeSupervisorTests(unittest.TestCase):
             self.supervisor.start()
         self.assertFalse(self.supervisor.running)
 
+    def test_stuck_legacy_uploader_blocks_stopped_state(self):
+        self.supervisor.start()
+        thread = Mock()
+        thread.is_alive.return_value = True
+        self.node.sync_thread = thread
+        with self.assertRaises(UnsafeNodeTakeover):
+            self.supervisor.stop()
+        self.assertTrue(self.supervisor.running)
+        thread.join.assert_called_once_with(timeout=10.0)
+
+    def test_running_legacy_log_watcher_blocks_stopped_state(self):
+        self.supervisor.start()
+        watcher = Mock()
+        watcher.is_running.return_value = True
+        self.node.watcher = watcher
+        with self.assertRaises(UnsafeNodeTakeover):
+            self.supervisor.stop()
+        self.assertTrue(self.supervisor.running)
+
     def test_failed_stop_never_claims_stopped(self):
         self.supervisor.start()
         self.node.stop = Mock(side_effect=RuntimeError("synthetic stop failure"))
