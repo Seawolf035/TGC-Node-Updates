@@ -156,7 +156,11 @@ def source_manifest(sha: str, api_get=_json) -> dict[str, str]:
     tree_sha = commit.get("tree", {}).get("sha") if isinstance(commit, dict) else None
     if not isinstance(tree_sha, str) or not HEX.fullmatch(tree_sha):
         raise PreviewUpdateError("GitHub commit has no usable source tree")
-    cache = {"": _tree(tree_sha, api_get)}
+    root_tree = _tree(tree_sha, api_get)
+    project = root_tree.get("co-companion")
+    if not project or project.get("type") != "tree" or not HEX.fullmatch(str(project.get("sha", ""))):
+        raise PreviewUpdateError("Co-Companion project directory was not found")
+    cache = {"": _tree(project["sha"], api_get)}
     manifest = {}
     total = 0
     for relative in SOURCE_FILES:
