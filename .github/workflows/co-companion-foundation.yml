@@ -1,0 +1,27 @@
+name: Co-Companion foundation tests (nonpublishing)
+
+on:
+  push:
+    branches: [feature/co-companion-foundation]
+    paths:
+      - 'co-companion/**'
+      - '.github/workflows/co-companion-foundation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile foundation modules
+        run: python -m compileall -q co-companion/tgc_cocompanion co-companion/tests
+      - name: Test without network or VRChat
+        env:
+          PYTHONPATH: co-companion
+        run: python -m unittest discover -s co-companion/tests -p 'test_*.py' -v
