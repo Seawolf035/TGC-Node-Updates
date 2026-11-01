@@ -57,7 +57,10 @@ def scan_log_readiness(
             except OSError:
                 continue
             found += 1
-            if stat.st_size > 0 and 0 <= moment - stat.st_mtime <= max_age_seconds:
+            # NTFS/filesystem timestamp rounding can put a just-written
+            # file fractionally ahead of time.time(). Allow a bounded 2s
+            # tolerance, never arbitrary future timestamps.
+            if stat.st_size > 0 and -2.0 <= moment - stat.st_mtime <= max_age_seconds:
                 recent += 1
     except OSError:
         return LogReadiness(True, 0, 0, vr_running,
