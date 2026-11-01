@@ -1,0 +1,118 @@
+THE GAMER CLUB
+DESKTOP NODES AND STAFF LAUNCHER
+TERMS OF USE AND LIMITED SOFTWARE LICENSE
+
+Agreement version: 2026-10-26.1
+Effective date: October 26, 2026
+Creator: Seawolf (public creator name)
+Copyright © 2026 Seawolf for original material lawfully owned by Seawolf.
+Third-party materials remain owned and licensed by their respective rights holders.
+
+PLEASE READ THIS AGREEMENT BEFORE USING THE OFFICIAL SOFTWARE.
+
+These terms govern the official TGC Standalone Invite Node, TGC Invite Node Plugin, TGC Staff Launcher, their embedded Nodes, updates, and the related The Gamer Club (TGC) invitation network services ("Desktop Software"). The Desktop Software is distinct from the TGC Staff Companion Android/Quest application, which has its own agreement. This agreement does not govern unrelated VRChat applications, third-party plugin hosts, or independent uses of third-party components under their own licenses.
+
+By affirmatively selecting "I Agree" in the Desktop Software, you accept these terms for your own authorized use of the applicable TGC program. If you decline, close the terms window, or cannot load the agreement, the relevant TGC Node or Staff Launcher feature must not start or upload information. The host application of an optional Node plugin may continue operating without the TGC plugin.
+
+1. SCOPE AND PERMISSION
+
+1.1. Seawolf licenses original protectable TGC Desktop Software components only to the extent Seawolf has the legal authority to do so.
+1.2. Subject to this Agreement, applicable law, and any current TGC staff authorization, you receive a limited, personal, nonexclusive, nontransferable, revocable permission to install and operate official Desktop Software for approved TGC duties or testing.
+1.3. Agreement acceptance does not grant membership, staff rank, Node enrollment, moderation power, a Relay key, permission to operate central inviters, or rights to another person's VRChat credentials.
+1.4. TGC may limit or revoke access to TGC-controlled services as permitted by law and applicable policies.
+1.5. The permission is not a transfer of ownership and does not cover another party's intellectual property beyond rights given by that party.
+
+2. OWNERSHIP AND THIRD-PARTY COMPONENTS
+
+2.1. Seawolf retains the original rights Seawolf lawfully holds in original TGC source code, interface art, documentation, brand assets and other contributions.
+2.2. Other contributors and upstream projects retain their own intellectual-property rights. The Node Plugin integrates with a third-party VRChat automation host; it does not change that host's license or claim exclusive ownership of its code.
+2.3. Any applicable open-source license, hosting-service right, mandatory legal exception, right of interoperability, fair use or independently developed work is preserved. Public availability of a ZIP or repository does not automatically grant an unrestricted license to unrelated proprietary TGC components.
+2.4. TGC trademarks, staff badges, service access, names and verification identities may not be used to impersonate an official product or person.
+2.5. Nothing here grants ownership of VRChat, other users' avatars, third-party tools, plugins, assets, data or services.
+
+3. OFFICIAL USE AND SECURITY
+
+3.1. Use only your own assigned TGC staff identity, accounts and deployment links. Do not transfer or disclose active Relay keys, private setup URLs, Windows DPAPI material, passwords, cookies or authentication tokens.
+3.2. Do not forge collected sightings, staff identities, account relationships, verification responses, invitation credits, remote commands or Relay events.
+3.3. Do not bypass revocation, an enrollment gate, required updates, rate limits, logging authorization or other TGC service access controls.
+3.4. A Node is a collector, not an official moderation system or independent authority to issue group invitations. It does not authorize its operator to scrape unrelated data, make unauthorized VRChat API requests, or bypass platform security.
+3.5. Report suspected leaked credentials, compromised devices, fake staff access or misuse to TGC management using the usual official staff channels.
+
+4. LOCAL LOG COLLECTION AND NETWORK DATA
+
+4.1. When voluntarily enabled and authorized, the Node reads relevant VRChat desktop output logs on your local machine and detects player-join observations.
+4.2. The Node may record VRChat user IDs, display names, observation timestamps, and local Node attribution; it may send selected sightings and related operational records to TGC's configured Relay for the invitation network. It does not need to transmit full output logs as part of normal collection.
+4.3. Observations can remain in the device's local retry queue while the internet or Relay is unavailable. Once uploaded, central TGC systems may store received observations and use them for authorized invite processing. A fixed central deletion/retention period is NOT promised by this Agreement.
+4.4. The operator must follow TGC privacy and staff rules and applicable law. Your acceptance is for your own operation of this tool; it does not purport to consent on behalf of other VRChat users whose activities are observed.
+4.5. The Software may send limited device/node status, staff attribution, version and verification information needed for network security and maintenance. It must not be used as a general-purpose surveillance service.
+4.6. Protect any data visible in staff dashboards, logs and local SQLite databases. Do not publish identifiable player histories, export stored identities for unrelated purposes, or distribute private group activity without authorization.
+
+5. PERMISSIONS, ACCOUNTS AND DEVICES
+
+5.1. The authorized TGC staff/Relay enrollment process remains separate from this license. A deployment link or valid token does not override these terms, and acceptance alone does not enroll a Node.
+5.2. You are responsible for keeping a Windows account and local TGC data directories reasonably secure and for using the tools only from systems you are permitted to operate.
+5.3. Acceptance is recorded locally for the current Windows user and applicable program type with the agreement version and content hash. The local record is not a VRChat credential or proof of continuing staff status.
+5.4. Each individual operator must affirmatively agree before using these official TGC features. Do not share an already-unlocked user session with someone else as a substitute for their own acceptance.
+5.5. On an amended agreement version, changed agreement content, new Windows user, or deleted/invalid acceptance record, the gate may require new affirmative acceptance.
+
+6. STAFF LAUNCHER AND OSC
+
+6.1. Staff Launcher provides limited authorized staff access to local VRChat instance management, optional OSC controls and an embedded Node.
+6.2. VRChat controls, OS processes, ports, microphone input, OSC chatbox changes and avatar scaling may be constrained by the operating system, the client, worlds, network conditions and third-party limits.
+6.3. Follow all TGC staff role policies, instance limits, age/safety rules and moderation procedures. Cosmetic features, a valid agreement or access to an OSC button do not grant moderation privilege.
+6.4. Do not use automated VRChat features to evade platform restrictions or interfere with other members.
+
+7. SOFTWARE AND UPDATE INTEGRITY
+
+7.1. Use the official TGC release sources and normal update channels. Validate update provenance and expected package integrity.
+7.2. Important software updates can be marked REQUIRED. When required, the supported installer may pause ordinary network activity until the official update is installed.
+7.3. Back up user-owned data before replacing program files. Keep local node configuration, DPAPI-protected keys, saved settings, SQLite queues, verification records, and other account-specific data. Do not copy another staff member's credentials.
+7.4. Local technical troubleshooting and authorized security testing remain allowed where permission or law provides it. Do not use test builds to impersonate official production releases.
+7.5. TGC may discontinue or change services, subject to any applicable legal obligations; continued compatibility with future VRChat or Windows releases is not guaranteed.
+
+8. THIRD-PARTY RULES
+
+8.1. You remain responsible for complying with VRChat's applicable Terms, Community Guidelines, API rules, and any separate terms governing Steam, Windows, Discord, GitHub and other integrated services.
+8.2. These TGC terms cannot confer permissions or exceptions prohibited by a third-party provider. Nothing here supersedes valid mandatory legal protections.
+
+9. SAFE OPERATION AND USER CONDUCT
+
+9.1. Use reasonable care to prevent account compromise, accidental disclosure, unauthorized deployments, misuse of personal data and disruption of TGC events.
+9.2. Do not access other people's private files, impersonate members, send unauthorized invitations or attempt to interfere with staff verification.
+9.3. Stop using the affected TGC network function if your authorization is revoked, a system explicitly requires a new version, or you discover an active compromise.
+
+10. SERVICE DISCLAIMERS
+
+10.1. To the extent permitted by applicable law, official Desktop Software is provided "AS IS" and "AS AVAILABLE" without guarantees of uninterrupted operation, fitness for a particular purpose or successful delivery of every log event.
+10.2. A local queue record or Relay acknowledgment is not proof that any invitation was sent or received.
+10.3. Connectivity, VRChat log output, Windows and antivirus rules, account access, API policies and third-party application changes may interrupt operation.
+
+11. LIABILITY
+
+11.1. To the extent applicable law permits, the rights holders are not responsible for indirect or consequential losses from interruption, third-party outages, user misconfiguration or unauthorized actions.
+11.2. Nothing excludes liability that cannot lawfully be excluded, restricts statutory protections that cannot be waived, or imposes an unlawful forfeiture of rights.
+
+12. TERMINATION AND DECLINING
+
+12.1. You may decline by selecting "Decline" or closing the agreement dialog. The TGC program should remain inactive until you later choose to agree.
+12.2. If TGC terminates your staff or Node authorization, this agreement does not override that revocation.
+12.3. Removing local acceptance is not the same as deleting enrolled keys, accounts or user data. Existing local operational records should remain available for authorized recovery and deletion procedures.
+
+13. CHANGES TO THESE TERMS
+
+13.1. A materially changed agreement must display its updated content and obtain a new affirmative acceptance before the affected TGC program resumes use.
+13.2. Merely visiting a repository, viewing source, downloading an archive, or using a third-party plugin host does not by itself constitute assent to this click-through Agreement.
+13.3. Acceptance evidence is stored locally, not automatically sent as a new personal-data event to the Relay.
+
+14. GOVERNING LAW AND SEVERABILITY
+
+14.1. Rights and obligations are subject to applicable law and mandatory protections. No mandatory right is waived by an overbroad clause.
+14.2. If one provision is invalid or unenforceable, the remaining lawful provisions continue to the extent permitted.
+14.3. This document does not invent an arbitration obligation, waive class-action rights, or select a jurisdiction without additional notice and agreement.
+
+15. QUESTIONS
+
+15.1. For authorization, operation or agreement questions, contact the appropriate TGC owner or designated staff administrator using the established TGC staff support channels.
+15.2. Do not include passwords, session cookies, private deployment links or other active secrets in routine support messages.
+
+BY CHECKING "I HAVE READ AND AGREE" AND PRESSING "I AGREE", YOU ACKNOWLEDGE THIS AGREEMENT AND AFFIRM YOUR OWN ACCEPTANCE FOR THE SELECTED TGC PROGRAM.
