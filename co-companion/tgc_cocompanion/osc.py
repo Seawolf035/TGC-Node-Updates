@@ -62,6 +62,19 @@ def avatar_parameter(name: str, value: bool | int | float) -> bytes:
     raise OscError("Avatar parameter must be bool, int -128..127, or float -1..1")
 
 
+def voice_input(pressed: bool) -> bytes:
+    """Safe push-to-talk command; caller must guarantee eventual release."""
+    if type(pressed) is not bool:
+        raise OscError("Voice input state must be true or false")
+    return packet("/input/Voice", ",T" if pressed else ",F")
+
+
+def chatbox_typing(typing: bool) -> bytes:
+    if type(typing) is not bool:
+        raise OscError("Typing status must be true or false")
+    return packet("/chatbox/typing", ",T" if typing else ",F")
+
+
 class LocalOscSender:
     """Explicit PC client port required; always sends to loopback only."""
 
