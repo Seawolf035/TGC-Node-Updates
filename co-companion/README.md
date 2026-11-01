@@ -46,7 +46,8 @@ Launcher **after a verified, in-place migration**. Existing customized-inviter
 | `tgc_cocompanion/windows_process.py` | Actual VRChat.exe exact-marker process finder and bounded launch.exe adapter |
 | `tgc_cocompanion/migration_inventory.py` | Read-only encrypted credential/queue file inventory; no migration enabled |
 | `tgc_cocompanion/legacy_node_supervisor.py` | Fail-closed, not-yet-wired embedded Node startup supervisor |
-| `tests/test_*.py` | 98 synthetic/offline tests, Windows and Linux CI; no live sessions |
+| `tgc_cocompanion/staff_lease.py` | Server-validated, expiring Relay entitlement adapter; no live endpoint connected |
+| `tests/test_*.py` | 118 synthetic/offline tests, Windows and Linux CI; no live sessions |
 | `.github/workflows/co-companion-foundation.yml` | Nonpublishing Python compile and tests on this branch only |
 
 **These are development components. The GUI remains a locked preview.** The
@@ -79,7 +80,9 @@ PYTHONPATH=co-companion python -m tgc_cocompanion
 It deliberately has no live staff features or verified sign-in. Do not
 install this over the current Node/Staff Launcher.
 
-The [PCVR tracking and migration contract](PCVR_TRACKING_AND_MIGRATION.md)
+The [Milestone 4 staff lease and owner-grants contract](MILESTONE_4_STAFF_LEASE_AND_OWNER_GRANTS.md)
+records new *unpublished* Relay endpoints, the expiring PC staff lease and
+118 offline tests. The [PCVR tracking and migration contract](PCVR_TRACKING_AND_MIGRATION.md)
 describes source reuse, local-only diagnostics, security boundaries and
 pairing requirements. [Windows Node + Launcher milestone 3](MILESTONE_3_WINDOWS_NODE_LAUNCHER.md)
 describes the actual legacy Staff Launcher/Node integration boundaries, the
@@ -144,7 +147,9 @@ Do not claim the legacy systems are migrated until end-to-end tests pass.
 2. **Local launch policy and Node supervisor implemented offline:** matching
    Staff Launcher `--osc` arguments, owner grant 1–4, one selected VR slot,
    actual VRChat.exe marker validation and a blocked-by-default Node takeover.
-   **Next: the actual TGC online authorization adapter + owner-issued quota.**
+   **Completed offline: an expiring online-authorization client adapter and
+   separate owner-grant Relay feature branch. Live backend deployment and
+   approved owner UI are NOT implemented.**
 3. Build and connect the real Windows GUI sections, keeping actions disabled
    until staff enrollment, license and capabilities are verified.
 4. Engineer a one-collector Windows Node migration with live-process
