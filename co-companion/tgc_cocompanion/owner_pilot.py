@@ -42,9 +42,11 @@ class OwnerPilotApp:
         if os.name != "nt":
             raise RuntimeError("TGC Co-Companion owner pilot runs only on Windows")
         self.root = root
+        from .desktop_theme import apply_desktop_theme
+        apply_desktop_theme(self.root)
         self.root.title("TGC Co-Companion — Owner Pilot 0.2 (NOT A STAFF RELEASE)")
-        self.root.geometry("1100x720")
-        self.root.minsize(800, 520)
+        self.root.geometry("1120x650")
+        self.root.minsize(900, 520)
         self.enrollment = PilotEnrollment()
         self.lease: RelayStaffLease | None = None
         self.launcher: ManagedVRChatLauncher | None = None
