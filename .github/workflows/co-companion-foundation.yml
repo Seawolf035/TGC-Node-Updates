@@ -76,6 +76,8 @@ jobs:
           python -m pip install --disable-pip-version-check "pyinstaller>=6.16,<7"
           python -m PyInstaller --noconfirm --clean --onedir --console --name TGC_CoCompanion_OwnerPreview_v0.3 --paths co-companion --add-data "co-companion/TGC_DESKTOP_TERMS.txt;." --add-data "co-companion/build_info.json;." --hidden-import win32crypt --hidden-import psutil co-companion/owner_pilot_entry.py
           if (!(Test-Path "dist/TGC_CoCompanion_OwnerPreview_v0.3/TGC_CoCompanion_OwnerPreview_v0.3.exe")) { throw "Windows executable missing" }
+          & "dist/TGC_CoCompanion_OwnerPreview_v0.3/TGC_CoCompanion_OwnerPreview_v0.3.exe" --smoke-check
+          if ($LASTEXITCODE -ne 0) { throw "Bundled owner-preview EXE failed GUI smoke test" }
           Copy-Item "co-companion/build_info.json" "dist/TGC_CoCompanion_OwnerPreview_v0.3/build_info.json"
           python -c "import json, pathlib; a=json.loads(pathlib.Path('dist/TGC_CoCompanion_OwnerPreview_v0.3/build_info.json').read_text(encoding='utf-8-sig')); assert a['sha']=='$env:GITHUB_SHA'; print('Verified build provenance:',a['sha'])"
           Copy-Item "co-companion/README_OWNER_PILOT.md" "dist/TGC_CoCompanion_OwnerPreview_v0.3/README_OWNER_PILOT.md"
