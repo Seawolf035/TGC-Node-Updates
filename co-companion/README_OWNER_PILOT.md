@@ -1,104 +1,114 @@
-# TGC Co-Companion — Windows Owner Preview v0.2
+# TGC Co-Companion — Windows Owner Preview v0.3
 
-**Owner-only development release. NOT a staff-wide release or production update.**
+**Owner-only development build. NOT a staff release.**
 
-The original v0.1 owner pilot's **1–4 instance authorization, separate Node
-enrollment, mandatory desktop Terms and Relay are preserved**. This is still
-the ONE existing TGC Invite Relay and the existing Main Launcher v2.2.32
-owner-pilot permissions panel. The new social features talk **directly to
-the personal VRChat API**, not through TGC Relay.
+Your working 1–4-instance authorization and existing **single** TGC Relay are
+unchanged. Do NOT reissue your enrollment or redeploy the Relay/Main Launcher
+simply to install this Windows preview.
 
-## Installing v0.2 over your working v0.1 pilot
+## Install v0.3 over your working v0.2
 
-1. **Close the old Co-Companion window.** Running VRChat clients do not get
-   automatically closed, so you may leave VRChat open.
-2. Download the `TGC-CoCompanion-v0.2-OWNER-EXE-NOT-STAFF` artifact from
-   the latest successful GitHub Actions run on
-   `Seawolf035/TGC-Node-Updates` branch
-   `feature/co-companion-foundation`. Extract its inner ZIP into a **NEW**
-   folder, *including* the `_internal` directory and EXE.
-3. Run `TGC_CoCompanion_OwnerPreview_v0.2.exe`. **No Python, .venv,
-   pip, or BAT is required.** The unsigned preview may trigger Windows
-   SmartScreen. Verify you downloaded it from your own official GitHub
-   Actions run before choosing to run it.
-4. Your existing *separate* v0.1 enrollment remains in
-   `%LOCALAPPDATA%\\TGC\\CoCompanionOwnerPilot`. The new application
-   reads it under the same Windows user. **Do not delete your old Node
-   queue, DPAPI key or profile.** You should generally be able to click
-   **Verify Pilot Access** without generating another one-time deployment.
-5. The existing Main Launcher still controls owner-only pilot enablement
-   and 1–4 instance grants. If already enabled, **you do not need to
-   redeploy the Relay or reinstall the Main Launcher for v0.2**.
-6. In Co-Companion, open the **VRChat Account** tab, sign into your own
-   VRChat account (complete TOTP/email 2FA if requested), then use the
-   **Social**, **StaffDex** and **OSC Studio** tabs. Test social READ
-   operations first, then local OSC with a selected running VRChat PID.
-7. Alternative for debugging: download the
-   `TGC-CoCompanion-v0.2-OWNER-SOURCE-NOT-STAFF` artifact, unzip in a
-   new folder, and run `RUN_OWNER_PILOT.bat` with Python 3.13. The BAT
-   uses your system Python; **no virtual environment is created**.
+1. Exit the old Co-Companion window. This does not close VRChat processes.
+2. Download `TGC-CoCompanion-v0.3-OWNER-EXE-NOT-STAFF` from the latest
+   SUCCESSFUL GitHub Actions build on
+   `Seawolf035/TGC-Node-Updates` `feature/co-companion-foundation`.
+3. GitHub downloads an outer ZIP; open it and extract the contained
+   `TGC_CoCompanion_OwnerPreview_v0.3_WINDOWS.zip` to a **NEW** folder.
+4. Extract that Windows ZIP. Keep the EXE and its `_internal` folder
+   together. Run `TGC_CoCompanion_OwnerPreview_v0.3.exe`.
+5. Existing Windows user enrollment, Desktop Terms, personal VRChat
+   sessions, StaffDex data and saved OSC phrases remain in
+   `%LOCALAPPDATA%\\TGC\\CoCompanionOwnerPilot`. They are not
+   stored alongside the EXE. Sign in or Verify Pilot Access if needed.
+6. This is a self-contained Windows EXE, with **no Python, pip or .venv**.
+   The original source/BAT artifact is available for debugging only.
+   Windows may warn because this owner build is unsigned.
 
-## Windows features added in v0.2
+## NEW in v0.3 — Updates inside the app
 
-- **Home:** live staff lease, personal VRChat identity, running-instance
-  count and StaffDex progress, with quick navigation.
-- **VRChat Account:** personal username/password HTTPS login, TOTP/email
-  2FA, current profile and logout. Passwords are **never saved**; personal
-  VRChat cookies are stored under this Windows user's DPAPI key in a
-  separate encrypted file, never in TGC Node data or Relay.
-- **Social:** online/offline friends, account's favorite/recent worlds,
-  user/world search, groups, modern inbox, explicit paginated loading and
-  external VRChat web profile links. This first pass is **READ ONLY**
-  for safety; it does not send friend requests/invites or alter groups.
-- **StaffDex:** exact public official TGC roster source used by the
-  Android/Quest Companion, full online + offline VRChat friends scan,
-  rank/order/collection progress, 5 Gamer Music achievements and 11
-  leadership achievements. Hidden community awards remain **hidden
-  until earned**, with the dynamic non-staff Wesman check. The last
-  complete scan is stored encrypted and scoped to BOTH immutable
-  Discord staff ID and personal VRChat account. No partial scan counts.
-- **OSC Studio:** personal-account-separated saved chatbox messages (up
-  to 24), selectable VRChat PID, rotating messages (5s minimum), avatar
-  height buttons (0.8m, 2.0m and custom), bool/int/float avatar
-  parameters and push-to-talk hold/release. Rotation stops on access
-  loss; held microphone is released on button-up, exit or after 300s.
-- **Windows style:** navy/blue appearance, Home dashboard and dedicated
-  feature tabs without requiring a Quest, Android phone, or extra app.
-- **Retained:** original 1–4 owner-granted VRChat instance slots, one VR
-  and remaining Desktop, local log-health diagnostics, and the separate
-  desktop agreement/Relay enrollment.
+1. Use **Go to page → Updates** and click **Check For Updates**.
+2. If a newer owner-preview build exists, click **Open Latest Build in
+   GitHub**. This uses your ordinary browser's GitHub sign-in, not a
+   GitHub token stored inside Co-Companion.
+3. Download the artifact named
+   `TGC-CoCompanion-v0.3-OWNER-EXE-NOT-STAFF` from the successful
+   workflow. **KEEP THE OUTER ZIP UNEXTRACTED** for this step.
+4. Return to Co-Companion, click **Install Downloaded Update ZIP** and
+   select the untouched GitHub artifact ZIP.
+5. Co-Companion checks the SHA256 of the entire downloaded artifact
+   against GitHub's current successful workflow metadata, verifies the
+   exact embedded commit/run identity and checks the ZIP's structure,
+   then stages it under the SAME WINDOWS USER'S pilot AppData folder
+   in a NEW version directory. It never overwrites the currently
+   running EXE, TGC Node queue, credential key, existing VRChat clients
+   or any staff application.
+6. Accept **Restart Into New Co-Companion**. The previous EXE remains
+   intact in its original folder; run that old EXE to roll back if
+   needed. All per-user enrollment remains shared.
 
-## Security, permissions and limitations
+**Why isn't this one-click downloading yet?** GitHub Actions artifacts
+may require GitHub authentication. We deliberately use your browser
+instead of requesting/storing a GitHub PAT or introducing a second
+public update server. Check/install/restart and rollback are now
+handled inside the app. An owner-preview RELEASE channel could add
+direct one-click downloading later without touching the production
+staff updater.
 
-- Your **Co-Companion owner pilot still DOES NOT start the old Node sighting
-  collector/uploader or create another uploader.** Continue using your
-  existing Node / Staff Launcher for production sightings until the
-  approved in-place migration has been engineered and tested.
-- There is **one existing Relay**, and Co-Companion remains restricted to
-  the single owner-approved pilot Discord account. Its staff lease
-  expires promptly without refresh; it cannot grant itself slots.
-- The existing owner Main Launcher Central Key is never requested by
-  Co-Companion and personal VRChat cookies are never sent to TGC Relay.
-- The social API routes and all StaffDex achievements originate from
-  the actual Android/Quest Mobile Companion source. VRChat imposes API
-  rate limits; do not spam refresh buttons.
-- This preview uses standard desktop Tk widgets, **not** a Quest floating
-  overlay. Native PCVR display and optional secure mobile/Quest pairing
-  remain later milestones.
-- **Still in development:** exact Staff Launcher Node migration and
-  single-uploader locking, friends/inbox write actions, avatars/favorites
-  management, deep groups and instance creation, detailed profiles/notes,
-  full themes, all Mobile achievements/notifications, secure phone pairing,
-  first-party updater, signed official staff installer. There is still
-  more work before this replaces your existing desktop software.
-- No signed production release, APK, Relay code or staff rollout was
-  triggered by the v0.2 build.
+## More Mobile/Quest Companion features added in v0.3
 
-## Tests
+- **Profiles** — read full personal VRChat user details (using the
+  modern profile endpoint with fallback), world and group details,
+  check friendship, send a confirmed friend request, request an
+  invite, and save a private personal-account user note (1–2000
+  characters). All writes require explicit user confirmation.
+- **Presence** — read/edit your personal VRChat status and
+  32-character status message, with confirmation before writing.
+- **Avatars** — browse your actual VRChat avatar favorites and favorite
+  group names, view selected avatar details, and explicitly choose
+  an avatar to wear (with confirmation).
+- **Bookmarks** — save up to 100 personal-account-scoped local world
+  bookmarks; bookmark a selected world directly from Social. These
+  don't alter VRChat world-favorite quotas or TGC Relay data.
+- **Inbox** — a dedicated notification list with explicit Mark Seen
+  and confirmed Dismiss operations using personal VRChat API.
+- **Updates** — in-app check/download guidance, integrity verification,
+  staged install, restart, and old-EXE rollback.
+- **Preserved from v0.2** — Home, dark theme, personal VRChat account/
+  TOTP/email 2FA, online/offline Friends, user/world search, favorite
+  and recent worlds, groups, StaffDex real roster and friendship-based
+  achievements, OSC Studio with personal phrases, rotating chatboxes,
+  avatar parameters/height, push-to-talk, original VRChat launcher and
+  metadata-only tracking diagnostics.
 
-Nonpublishing CI compiles all modules and runs Python unit tests on Linux
-and Windows 3.13, including headless/networkless Windows Tk creation.
-The Windows job builds *both* the source ZIP and a bundled EXE ZIP after
-tests pass. This does not prove real VRChat network, real 2FA, OSC output
-or physical Quest/PCVR compatibility; the owner pilot is meant to test
-those safely on your own Windows PC.
+## Security and limitations
+
+- The existing **one Relay** and Main Launcher permissions panel still
+  authorize the single explicitly enabled pilot Discord ID. No Relay
+  or Main Launcher update is required solely for v0.3.
+- Personal VRChat credentials/sessions remain separate from TGC
+  enrollment. Passwords are never saved; cookies encrypted using
+  the current Windows user's DPAPI. No Central Key is requested.
+- **Co-Companion still does NOT run the production Node sighting
+  collector/uploader.** Keep your old Staff Launcher/Node running
+  for authorized TGC sightings until the single-uploader migration
+  is tested. Do not copy old keys/queues into the preview.
+- Native Quest/Android pairing, the PCVR overlay, full instance
+  creation/group moderation, all extended avatar favorites, advanced
+  notification rules, theme editor, and complete automatic tracking
+  and self-update channel are **not yet implemented**.
+- GitHub Actions artifacts expire; the Updates page should report no
+  newer completed build if artifacts are expired or unavailable.
+- Verified online functions are subject to VRChat's API limits.
+  Avoid spamming refreshes or friend requests. Do not claim
+  a UDP OSC packet guarantees in-game delivery.
+- This app, its integrations and updater have been tested with
+  synthetic/offline data and bundled Tk on Windows CI. They still need
+  your physical Windows/VRChat testing before any staff-wide release.
+
+## Source and development status
+
+Full source is on the isolated
+`feature/co-companion-foundation` development branch.
+The nonpublishing Windows CI produces both an owner-only source ZIP
+and a Windows EXE ZIP; no GitHub production/main release, staff
+update manifest or Relay deployment changes are performed.
