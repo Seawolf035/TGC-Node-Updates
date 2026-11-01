@@ -122,7 +122,7 @@ class PersonalVRChat:
                     and data.get("auth") and not data.get("needs2fa")):
                 _cookie_header(data)
                 self._session = data
-        except (OSError, ValueError, VRChatApiError, Exception):
+        except Exception:  # Invalid DPAPI/session data must never unlock the account
             self._session = None
 
     @property
@@ -235,25 +235,6 @@ class PersonalVRChat:
         if not isinstance(result, list) or len(result) > 100:
             raise VRChatApiError("Unexpected VRChat list response")
         return [row for row in result if isinstance(row, dict)]
-
-    def all_friends(self) -> tuple[set[str], bool]:
-        """Require full online AND offline scan before StaffDex progress is trusted."""
-        ids = set()
-        for offline in (False, True):
-            ended = False
-            for offset in range(0, 9961, 60):
-                for row in self.browse("offline" if offline else "online", offset=offset):
-                    identifier = row.get("id")
-                    if isinstance(identifier, str) and USER_ID.fullmatch(identifier):
-                        ids.add(identifier)
-                # Need count from original page for completeness, below handled
-                # by separate helper to avoid issuing duplicate requests.
-                # We cannot know terminal page here without its length.
-                # Updated by _friend_scan below.
-                pass
-            if not ended:
-                return ids, False
-        return ids, True
 
     def friend_snapshot(self) -> set[str]:
         """Never save partial friend snapshots or report false achievement unlocks."""
