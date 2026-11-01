@@ -42,8 +42,8 @@ class OwnerPilotApp:
         if os.name != "nt":
             raise RuntimeError("TGC Co-Companion owner pilot runs only on Windows")
         self.root = root
-        self.root.title("TGC Co-Companion — Owner Pilot 0.1 (NOT A STAFF RELEASE)")
-        self.root.geometry("990x660")
+        self.root.title("TGC Co-Companion — Owner Pilot 0.2 (NOT A STAFF RELEASE)")
+        self.root.geometry("1100x720")
         self.root.minsize(800, 520)
         self.enrollment = PilotEnrollment()
         self.lease: RelayStaffLease | None = None
@@ -71,7 +71,7 @@ class OwnerPilotApp:
     def _build(self):
         frame = ttk.Frame(self.root, padding=10)
         frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text="TGC Co-Companion — Owner Pilot",
+        ttk.Label(frame, text="TGC Co-Companion — Owner Pilot v0.2",
                   font=("Segoe UI", 20, "bold")).pack(anchor="w")
         ttk.Label(frame, text="The existing TGC Relay • One explicitly approved test account • No Invite Network uploader",
                   wraplength=900).pack(anchor="w", pady=(0, 6))
@@ -140,11 +140,10 @@ class OwnerPilotApp:
         diagnostics=ttk.Button(tracking,text="Check PC VRChat Log Health",command=self._diagnose)
         diagnostics.pack(anchor="w");self.control_buttons.append(diagnostics)
         ttk.Label(tracking,textvariable=self.log_health_var,wraplength=740).pack(anchor="w",pady=(10,0))
-        misc=ttk.Frame(notebook,padding=15);notebook.add(misc,text="Other Features")
-        ttk.Label(misc,text="Social, StaffDex, Achievements, device pairing and full Node migration are still in development.",
-                  wraplength=750).pack(anchor="w")
-        ttk.Label(misc,text="This early owner pilot tests verification, permissions, PC launches, OSC and local diagnostics only.",
-                  wraplength=750).pack(anchor="w",pady=8)
+        # Mobile Companion parity pages share the same pilot permission lease,
+        # but personal VRChat cookies NEVER pass through TGC Relay or Node.
+        from .desktop_pages import DesktopPages
+        self.features=DesktopPages(self,notebook)
 
     def _terms_valid(self) -> bool:
         try:
@@ -298,7 +297,12 @@ class OwnerPilotApp:
 
     def _close(self):
         self._stop=True
-        self.root.destroy()
+        # Stop rotation and guarantee held PTT release on application exit.
+        try:
+            if hasattr(self,"features"):
+                self.features.close()
+        finally:
+            self.root.destroy()
 
 
 def main():
