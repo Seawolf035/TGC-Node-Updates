@@ -105,6 +105,17 @@ class LegacyStaffNodeSupervisor:
             # Don't clear the running flag if the Node cannot stop. This is
             # safer than falsely permitting a second collector/uploader.
             self._node.stop()
+            watcher = getattr(self._node, "watcher", None)
+            if watcher is not None and watcher.is_running():
+                raise UnsafeNodeTakeover("Legacy log watcher has not stopped")
+            thread = getattr(self._node, "sync_thread", None)
+            if thread is not None and thread.is_alive():
+                # The legacy Node sync worker may still be blocked on a
+                # network request. Keep running=True until it exits;
+                # do not falsely permit a replacement uploader.
+                thread.join(timeout=10.0)
+                if thread.is_alive():
+                    raise UnsafeNodeTakeover("Legacy Node uploader has not stopped")
             self._running = False
             return True
 
