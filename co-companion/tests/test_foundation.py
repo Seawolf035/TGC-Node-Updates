@@ -64,7 +64,7 @@ class PermissionTests(unittest.TestCase):
         with self.assertRaises(AccessDenied):
             gate.reserve(2, now=self.NOW)
         gate.release(claim)
-        with self.assertRaises(AccessDenied):
+        with self.assertRaises(ValueError):
             gate.reserve(-1, now=self.NOW)
 
     def test_revocation_denies_new_reservations(self):
