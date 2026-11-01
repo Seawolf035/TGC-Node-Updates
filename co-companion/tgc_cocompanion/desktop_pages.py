@@ -42,9 +42,72 @@ class DesktopPages:
         self._build_social(notebook)
         self._build_staffdex(notebook)
         self._build_osc(notebook)
+        self._build_home(notebook)
         self._account_state()
         self._load_presets()
         self.root.after(1000,self._osc_tick)
+
+    def _build_home(self, notebook):
+        self.home=ttk.Frame(notebook,padding=(22,18))
+        notebook.insert(0,self.home,text="Home")
+        ttk.Label(self.home,text="Welcome to TGC Co-Companion",
+                  font=("Segoe UI",19,"bold")).pack(anchor="w")
+        ttk.Label(self.home,text="One Windows hub for VRChat, TGC staff tools and PCVR",
+                  wraplength=850).pack(anchor="w",pady=(4,15))
+        self.home_staff=tk.StringVar(value="TGC staff: not verified")
+        self.home_vrc=tk.StringVar(value="Personal VRChat: not connected")
+        self.home_instance=tk.StringVar(value="VRChat instances: not checked")
+        self.home_dex=tk.StringVar(value="StaffDex: sign in to VRChat")
+        for var in (self.home_staff,self.home_vrc,self.home_instance,self.home_dex):
+            card=ttk.LabelFrame(self.home,text=(
+                "Staff Access" if var is self.home_staff else
+                "VRChat Account" if var is self.home_vrc else
+                "VRChat Sessions" if var is self.home_instance else "StaffDex"
+            ),padding=(15,9))
+            card.pack(fill="x",pady=5)
+            ttk.Label(card,textvariable=var,font=("Segoe UI",11)).pack(anchor="w")
+        ttk.Label(self.home,text="Quick Access",font=("Segoe UI",12,"bold")).pack(anchor="w",pady=(13,6))
+        bar=ttk.Frame(self.home);bar.pack(anchor="w")
+        for label in ("Verification","VRChat Launcher","VRChat Account","Social","StaffDex","OSC Studio"):
+            ttk.Button(bar,text=label,
+                       command=lambda name=label:self._select_tab(notebook,name)).pack(side="left",padx=(0,7))
+        ttk.Label(self.home,text="Owner pilot: no Invite Network sightings uploader and no Quest/phone pairing yet.",
+                  wraplength=850).pack(anchor="w",pady=(16,4))
+        self.root.after(2000,self._home_tick)
+
+    @staticmethod
+    def _select_tab(notebook,title):
+        for tab in notebook.tabs():
+            if notebook.tab(tab,"text")==title:
+                notebook.select(tab)
+                return
+
+    def _home_tick(self):
+        if self._closed:return
+        try:
+            access=self.owner.lease.current() if self.owner.lease else None
+            self.home_staff.set(
+                "Authorized: "+self.owner.enrollment.discord_id+
+                f"  •  {access.max_instances} managed instance slots"
+                if access else "Staff access: verify in the Verification tab"
+            )
+            self.home_vrc.set(
+                self.account.display_name+" • "+self.account.user_id
+                if self.account.signed_in else "Sign in to personal VRChat to use Social & StaffDex"
+            )
+            if self.owner.launcher:
+                statuses=self.owner.launcher.statuses()
+                active=sum(x.pid is not None for x in statuses)
+                limit=access.max_instances if access else 0
+                self.home_instance.set(f"{active}/{limit} authorized processes running")
+            else:self.home_instance.set("Configure launcher after verification")
+            self.home_dex.set(
+                f"{self._snapshot.earned}/{self._snapshot.total} collected"
+                if self._snapshot else "Run a complete roster and friends scan to unlock progress"
+            )
+        except Exception:
+            self.home_instance.set("VRChat process discovery unavailable")
+        self.root.after(10000,self._home_tick)
 
     def _eligible(self,personal=False):
         lease=self.owner.lease.current() if self.owner.lease else None
@@ -252,7 +315,9 @@ class DesktopPages:
             self.dex_table.column(k,width=w,stretch=True)
         self.dex_table.pack(fill="both",expand=True,padx=(0,6))
         ttk.Label(right,text="Achievements",font=("Segoe UI",12,"bold")).pack(anchor="w")
-        self.rewards=tk.Listbox(right,height=18)
+        self.rewards=tk.Listbox(right,height=18,bg="#16243A",fg="#E7F1FF",
+                                selectbackground="#25456A",selectforeground="#36D3FF",
+                                borderwidth=0,highlightthickness=0)
         self.rewards.pack(fill="both",expand=True)
         self._cached_dex()
 
@@ -309,7 +374,9 @@ class DesktopPages:
         ttk.Entry(row,textvariable=self.phrase_name,width=24).pack(side="left",padx=(0,7))
         ttk.Button(row,text="Save Current Text",command=self._save_phrase).pack(side="left",padx=(0,7))
         ttk.Button(row,text="Delete Selected",command=self._delete_phrase).pack(side="left")
-        self.phrases=tk.Listbox(presets,height=4,exportselection=False)
+        self.phrases=tk.Listbox(presets,height=4,exportselection=False,
+                                bg="#16243A",fg="#E7F1FF",selectbackground="#25456A",
+                                selectforeground="#36D3FF",borderwidth=0,highlightthickness=0)
         self.phrases.pack(fill="x",pady=5)
         self.phrases.bind("<<ListboxSelect>>",self._choose_phrase)
         rotate=ttk.Frame(presets);rotate.pack(fill="x")
