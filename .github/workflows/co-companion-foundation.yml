@@ -58,6 +58,7 @@ jobs:
           foreach ($file in $include) { Copy-Item "$source/$file" "$root/tgc_cocompanion/$file" -ErrorAction Stop }
           Copy-Item "$source/legacy/__init__.py" "$root/tgc_cocompanion/legacy/__init__.py"
           Copy-Item "$source/legacy/tgc_vrchat_multilog.py" "$root/tgc_cocompanion/legacy/tgc_vrchat_multilog.py"
+          Copy-Item "co-companion/owner_pilot_entry.py" "$root/owner_pilot_entry.py"
           Copy-Item "co-companion/build_info.json" "$root/build_info.json"
           Copy-Item "co-companion/TGC_DESKTOP_TERMS.txt" "$root/TGC_DESKTOP_TERMS.txt"
           Copy-Item "co-companion/requirements_owner_pilot.txt" "$root/requirements_owner_pilot.txt"
