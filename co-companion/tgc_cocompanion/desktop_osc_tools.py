@@ -122,6 +122,7 @@ class WindowsOscControls:
             port=self._send(pid,voice_input(True))
             self._voice_pid=pid
             self._voice_port=port
+            self._voice_started=self._clock()
         elif self._voice_port is not None:
             self.release_voice()
         else:
@@ -134,10 +135,21 @@ class WindowsOscControls:
         We only release to the ORIGINAL local port, never an arbitrary remote.
         """
         port=self._voice_port
-        self._voice_port=None
-        self._voice_pid=None
         if port is not None:
+            # Preserve held state if the packet cannot be sent so a later
+            # retry may still release the original game's microphone.
             self._sender.send(voice_input(False),port=port)
+            self._voice_port=None
+            self._voice_pid=None
+            self._voice_started=None
+
+    def release_if_overdue(self, max_seconds: int = 300) -> bool:
+        if self._voice_port is None or self._voice_started is None:
+            return False
+        if self._clock() - self._voice_started < max_seconds:
+            return False
+        self.release_voice()
+        return True
 
     def set_rotation(self,pid:int,messages:list[str],interval_seconds:int=10):
         if type(interval_seconds) is not int or interval_seconds<5 or interval_seconds>3600:
