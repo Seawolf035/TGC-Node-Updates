@@ -44,6 +44,8 @@ class DesktopPages:
         self._build_osc(notebook)
         from .desktop_more_pages import ProfileAndPresence
         self.profile_tools=ProfileAndPresence(self,notebook)
+        from .desktop_collection_pages import CollectionPages
+        self.collections=CollectionPages(self,notebook)
         self._build_home(notebook)
         self._account_state()
         self._load_presets()
@@ -70,7 +72,7 @@ class DesktopPages:
             ttk.Label(card,textvariable=var,font=("Segoe UI",11)).pack(anchor="w")
         ttk.Label(self.home,text="Quick Access",font=("Segoe UI",12,"bold")).pack(anchor="w",pady=(13,6))
         bar=ttk.Frame(self.home);bar.pack(anchor="w")
-        for label in ("Verification","VRChat Launcher","VRChat Account","Social","StaffDex","OSC Studio","Profiles","Presence","Updates"):
+        for label in ("Verification","VRChat Launcher","VRChat Account","Social","StaffDex","OSC Studio","Profiles","Presence","Avatars","Bookmarks","Inbox","Updates"):
             ttk.Button(bar,text=label,
                        command=lambda name=label:self._select_tab(notebook,name)).pack(side="left",padx=(0,7))
         ttk.Label(self.home,text="Owner pilot: no Invite Network sightings uploader and no Quest/phone pairing yet.",
@@ -242,6 +244,7 @@ class DesktopPages:
         scroll.pack(side="right",fill="y")
         buttons=ttk.Frame(panel);buttons.pack(anchor="w",pady=8)
         ttk.Button(buttons,text="View Details / Actions",command=self._detail_selected).pack(side="left",padx=(0,9))
+        ttk.Button(buttons,text="Bookmark Selected World",command=self._bookmark_selected_world).pack(side="left",padx=(0,9))
         ttk.Button(buttons,text="Open Selected in VRChat Website",command=self._open_selected).pack(side="left")
         ttk.Label(buttons,text="Read-only in this owner pilot; no friend requests or group moderation.",
                   wraplength=500).pack(side="left",padx=14)
@@ -282,6 +285,20 @@ class DesktopPages:
                                    (" • More available" if len(rows)==60 else " • End of current results"))
             self._notice(f"Loaded {len(rows)} personal VRChat {label.lower()} records")
         self.owner._run_async(work,done)
+
+    def _bookmark_selected_world(self):
+        selected=self.social_table.selection()
+        if not selected:
+            self._notice("Select a world from Social first")
+            return
+        record=self.social_table.item(selected[0],"values")
+        if len(record)<3 or not str(record[2]).startswith("wrld_"):
+            self._notice("Select a VRChat world to bookmark")
+            return
+        try:
+            self.collections.bookmark_from_social(str(record[2]),str(record[0])[:100])
+            self._notice("Saved world to your personal Co-Companion bookmarks")
+        except Exception as exc:self._notice(exc)
 
     def _detail_selected(self):
         selected=self.social_table.selection()
