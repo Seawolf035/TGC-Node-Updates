@@ -26,8 +26,8 @@ from zipfile import ZipFile, BadZipFile
 REPOSITORY="Seawolf035/TGC-Node-Updates"
 BRANCH="feature/co-companion-foundation"
 WORKFLOW="co-companion-foundation.yml"
-ARTIFACT_NAME="TGC-CoCompanion-v0.3-OWNER-EXE-NOT-STAFF"
-APPLICATION="TGC_CoCompanion_OwnerPreview_v0.3.exe"
+ARTIFACT_NAME="TGC-CoCompanion-OWNER-EXE-NOT-STAFF"
+APPLICATION="TGC_CoCompanion_OwnerPreview.exe"
 _MAX_ZIP=240_000_000
 _MAX_OUTPUT=550_000_000
 _MAX_FILES=3500
@@ -224,7 +224,9 @@ def _validated_build_file(path:Path,build:PreviewBuild)->bool:
     except (OSError,ValueError):
         return False
     return (isinstance(data,dict) and data.get("channel")=="owner-preview"
-            and data.get("sha")==build.sha and data.get("version")=="0.3"
+            and data.get("sha")==build.sha
+            and isinstance(data.get("version"),str)
+            and re.fullmatch(r"[0-9]+\\.[0-9]+(?:\\.[0-9]+)?",data["version"]) is not None
             and data.get("run_id")==build.run_id)
 
 
