@@ -146,6 +146,8 @@ class PersonalVRChat:
         """Returns pending 2FA methods or [] on complete login."""
         if not isinstance(username, str) or not isinstance(password, str) or not username.strip() or not password:
             raise VRChatApiError("VRChat email/username and password required")
+        if self.signed_in:
+            raise VRChatApiError("Sign out before switching personal VRChat accounts")
         self._pending = None
         creds = base64.b64encode((username + ":" + password).encode("utf-8")).decode("ascii")
         result, cookies = self._transport("GET", "/auth/user", "", "Basic " + creds)
