@@ -212,6 +212,10 @@ class OwnerPilotApp:
         if not self.enrollment.enrolled:
             self.status_var.set("Not enrolled; paste a fresh owner-issued Staff Launcher deployment link.");return
         def operation():
+            # A failed Node recheck must immediately invalidate any previous
+            # cached lease, not leave old extra-instance permissions alive.
+            if self.lease is not None:
+                self.lease.invalidate()
             self.enrollment.verify_node()
             if self.lease is None:
                 self.lease=RelayStaffLease(self.enrollment.access_rpc,
@@ -269,8 +273,8 @@ class OwnerPilotApp:
         if not self._terms_valid() or not self.lease or not self.lease.current():return
         result=scan_log_readiness(process_running=None)
         self.log_health_var.set(result.message+f" ({result.files_found} files, {result.recent_nonempty_files} recent)")
-        if result.logging_warning if hasattr(result,"logging_warning") else False:
-            self.status_var.set("VRChat logs are not ready")
+        if not result.ready:
+            self.status_var.set("VRChat output logs are missing or stale")
 
     def _tick(self):
         if self._stop:return
