@@ -2,11 +2,12 @@
 
 > **Not a production release.** Development branch: `feature/co-companion-foundation`.
 > Do not distribute this as a replacement for an installed TGC Node or Staff Launcher.
-> This initial milestone has no functioning VRChat launcher, Node/Relay connection,
-> account sign-in, or Companion pairing. It includes the original **locked general-interface preview**, plus a separate
-> **owner-only Windows pilot** for verifying the ONE existing TGC Relay after
-> manual rollout, local VRChat launching, OSC chatbox and log diagnostics.
-> That pilot deliberately does NOT upload sightings or replace any Node.
+> The original general-interface scaffold remains a non-operational preview;
+> the **real Windows owner pilot is now v0.2**, with a dark Home dashboard,
+> personal VRChat login/2FA, friends/social, StaffDex, full local OSC Studio
+> and the previously proven 1–4-slot VRChat launcher. It runs against the ONE
+> existing TGC Relay using the owner-only pilot lease. It deliberately does
+> NOT upload sightings or replace any Node.
 
 ## Product definition
 
@@ -51,16 +52,23 @@ Launcher **after a verified, in-place migration**. Existing customized-inviter
 | `tgc_cocompanion/pilot_enrollment.py`, `owner_pilot.py` | Isolated owner-only Windows verification, Terms and VRChat/OSC testing; no uploader |
 | `TGC_DESKTOP_TERMS.txt` | Exact official Terms text recovered from published Staff Launcher |
 | `RUN_OWNER_PILOT.bat`, `README_OWNER_PILOT.md` | Manual owner-only Windows bootstrap instructions |
-| `tests/test_*.py` | 124 synthetic/offline tests, Windows and Linux CI; no live sessions |
+| `tgc_cocompanion/vrchat_personal.py` | DPAPI encrypted, separate personal VRChat API login/2FA + friends/worlds/groups/inbox |
+| `tgc_cocompanion/staffdex_desktop.py` | Official TGC roster + complete friends scans + Mobile 16 visible awards and earned-only hidden awards |
+| `tgc_cocompanion/desktop_osc_tools.py` | Personal saved OSC phrases, rotation, PTT safe release, avatar height and parameters |
+| `tgc_cocompanion/desktop_pages.py`, `desktop_theme.py` | Real Windows Home, VRChat Account, Social, StaffDex and OSC Studio tabs, dark navy/cyan GUI |
+| `owner_pilot_entry.py` | Self-contained Windows EXE build entrypoint (no venv or Python required) |
+| `tests/test_*.py` | 149 offline tests on Linux 3.11 and Windows 3.13; real Tk GUI smoke on Windows |
 | `.github/workflows/co-companion-foundation.yml` | Nonpublishing Python compile and tests on this branch only |
 
-**These are development components. The GUI remains a locked preview.** The
+**These are development components. The owner-only v0.2 GUI has functional
+Windows/Social/StaffDex/OSC testing surfaces.** The
 legacy Node and Staff Launcher source has been recovered, the four-slot launch
 controller and Windows process adapters are now covered by offline tests, and
 a separate Node startup supervisor requires verified staff, Terms, a correct
-legacy Node identity and trusted migration approval. **None of these components
-are wired into a live Windows launcher/Relay session, real staff backend,
-encrypted mobile pairing or VRChat runtime yet.**
+legacy Node identity and trusted migration approval. **The owner has personally verified v0.1 multi-instance launching works.
+The v0.2 personal VRChat account, Social, StaffDex and OSC controls are
+implemented but have not yet been physically tested by the owner.
+No encrypted phone/Quest pairing or embedded uploader takeover exists yet.**
 The port-to-process mapping is **not** inferred or invented; the planned launcher/
 discovery layer must supply it only after validating ownership.
 
@@ -84,12 +92,16 @@ PYTHONPATH=co-companion python -m tgc_cocompanion
 It deliberately has no live staff features or verified sign-in. Do not
 install this over the current Node/Staff Launcher.
 
-The limited [OWNER PILOT installation instructions](README_OWNER_PILOT.md)
+The [v0.2 OWNER PREVIEW installation instructions](README_OWNER_PILOT.md)
 describe a manually downloadable, **nonpublishing** GitHub Actions artifact
 that uses an isolated staff_launcher enrollment and does NOT start the Node
 uploader. It requires the Co-Companion single-account pilot flag on the
 **existing** Relay, off by default, and manual owner-only deployment after
 reconciling the exact currently live Apps Script source.
+
+The [Milestone 5 Mobile parity implementation](MILESTONE_5_OWNER_PREVIEW_MOBILE_PARITY.md)
+records the v0.2 source, retained v0.1 launcher, GUI, social, full initial
+StaffDex awards, OSC Studio, 149 offline tests, owner EXE and next steps.
 
 The [Milestone 4 staff lease and owner-grants contract](MILESTONE_4_STAFF_LEASE_AND_OWNER_GRANTS.md)
 records new *unpublished* Relay endpoints, the expiring PC staff lease and
@@ -124,7 +136,7 @@ Do not claim the legacy systems are migrated until end-to-end tests pass.
    owner-controlled `max_instances` integer **1–4**. Local files or a Discord
    role cannot promote the quota. If status is unknown/expired, no **new** launch
    is permitted, especially no extra slots. Preserve already-running sessions.
-   Backend/API design and approval are **not implemented** yet.
+   Owner-only staff leases and quota endpoints are implemented in isolated Relay code and have been manually owner-tested for v0.1 instance limits; staff-wide release remains disabled.
 2. **Migration:** preserve Node's existing encrypted enrollment credentials and
    immutable Node identity, SQLite pending queue, accepted/rejected ACKs, client
    attribution, and terms acceptance. Never simply delete old installs. Ensure
@@ -158,11 +170,13 @@ Do not claim the legacy systems are migrated until end-to-end tests pass.
 2. **Local launch policy and Node supervisor implemented offline:** matching
    Staff Launcher `--osc` arguments, owner grant 1–4, one selected VR slot,
    actual VRChat.exe marker validation and a blocked-by-default Node takeover.
-   **Completed offline: an expiring online-authorization client adapter and
-   separate owner-grant Relay feature branch. Live backend deployment and
-   approved owner UI are NOT implemented.**
-3. Build and connect the real Windows GUI sections, keeping actions disabled
-   until staff enrollment, license and capabilities are verified.
+   **Completed: owner-pilot lease integration and Main Launcher v2.2.32 pilot
+   permissions. Preserve single-Relay deployment and disabled-by-default
+   owner-only access.**
+3. **v0.2 real Windows UI now contains Home, VRChat Account, Social, StaffDex,
+   OSC Studio and verified launch/diagnostics**; continue with account notes,
+   friend/inbox actions, avatars, worlds/instances, themes, advanced achievements
+   and UI/Quest parity after physical owner testing.
 4. Engineer a one-collector Windows Node migration with live-process
    exclusion, exact legacy identity/key/queue preservation, backup and
    rollback; current read-only inventory does not perform migration.
