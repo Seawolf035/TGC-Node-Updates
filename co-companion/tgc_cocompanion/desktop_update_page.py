@@ -49,7 +49,7 @@ class OwnerUpdatePage:
         text=(
             "1. Check for the newest completed owner-preview Windows build.\n"
             "2. Open its official GitHub Actions page and download the artifact named "
-            "'TGC-CoCompanion-v0.3-OWNER-EXE-NOT-STAFF'.\n"
+            "'TGC-CoCompanion-OWNER-EXE-NOT-STAFF'.\n"
             "3. Select the ORIGINAL downloaded GitHub artifact ZIP in this page. "
             "Don't extract it first.\n"
             "4. Co-Companion checks the SHA256 against GitHub and confirms the build "
