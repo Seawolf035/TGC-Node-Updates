@@ -35,10 +35,10 @@ Follow the video and make sure Developer Mode is switched on before continuing. 
 
 ### Step 2: Install directly on your Quest (recommended)
 
-**You don't need a computer to try this method.** Make sure you've enabled Developer Mode using the video above first.
+**You don't need a computer or to open the Quest Browser separately.** Make sure you've enabled Developer Mode using the video above first.
 
-1. Put on your Quest and open **Browser**.
-2. Open this page in the Quest browser and tap **Download TGC Staff Companion** at the top.
+1. On your Quest, open **Discord** and tap the **TGC Staff Companion download-page link** shared by staff.
+2. On the page, tap **Download TGC Staff Companion** at the top to download the app directly from the link in Discord.
 3. Open **Files** on your Quest, then find the download in **Downloads** or **Recent**.
 4. Select the file and choose **Open with → Package Installer** if that option appears, then tap **Install**.
 5. Open your app library and find **TGC Staff Companion**. If it doesn't appear right away, check **Unknown Sources**.
