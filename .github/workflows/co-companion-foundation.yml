@@ -39,3 +39,28 @@ jobs:
         env:
           PYTHONPATH: co-companion
         run: python -m unittest discover -s co-companion/tests -p "test_*.py" -v
+      - name: Validate Windows runtime libraries in isolated CI
+        run: |
+          python -m pip install --disable-pip-version-check -r co-companion/requirements_owner_pilot.txt
+          python -c "import psutil, win32crypt; print('Windows DPAPI and process dependencies available')"
+      - name: Assemble source-only owner pilot (no credentials, no installer)
+        shell: pwsh
+        run: |
+          $root = "owner-pilot-dist"
+          New-Item -ItemType Directory -Path "$root/tgc_cocompanion/legacy" -Force | Out-Null
+          $source = "co-companion/tgc_cocompanion"
+          $include = @("__init__.py", "permissions.py", "sessions.py", "osc.py", "staff_lease.py", "launch_controller.py", "windows_process.py", "log_diagnostics.py", "pilot_enrollment.py", "owner_pilot.py")
+          foreach ($file in $include) { Copy-Item "$source/$file" "$root/tgc_cocompanion/$file" -ErrorAction Stop }
+          Copy-Item "$source/legacy/__init__.py" "$root/tgc_cocompanion/legacy/__init__.py"
+          Copy-Item "$source/legacy/tgc_vrchat_multilog.py" "$root/tgc_cocompanion/legacy/tgc_vrchat_multilog.py"
+          Copy-Item "co-companion/TGC_DESKTOP_TERMS.txt" "$root/TGC_DESKTOP_TERMS.txt"
+          Copy-Item "co-companion/requirements_owner_pilot.txt" "$root/requirements_owner_pilot.txt"
+          Copy-Item "co-companion/RUN_OWNER_PILOT.bat" "$root/RUN_OWNER_PILOT.bat"
+          Copy-Item "co-companion/README_OWNER_PILOT.md" "$root/README_OWNER_PILOT.md"
+          Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_Owner_Pilot_0.1_TEST.zip" -CompressionLevel Optimal -Force
+          if (!(Test-Path "TGC_CoCompanion_Owner_Pilot_0.1_TEST.zip")) { throw "Package was not created" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-CoCompanion-OWNER-PILOT-0.1-NOT-STAFF
+          path: TGC_CoCompanion_Owner_Pilot_0.1_TEST.zip
+          retention-days: 14
