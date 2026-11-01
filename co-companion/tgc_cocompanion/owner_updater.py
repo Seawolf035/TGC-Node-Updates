@@ -226,7 +226,7 @@ def _validated_build_file(path:Path,build:PreviewBuild)->bool:
     return (isinstance(data,dict) and data.get("channel")=="owner-preview"
             and data.get("sha")==build.sha
             and isinstance(data.get("version"),str)
-            and re.fullmatch(r"[0-9]+\\.[0-9]+(?:\\.[0-9]+)?",data["version"]) is not None
+            and re.fullmatch(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?",data["version"]) is not None
             and data.get("run_id")==build.run_id)
 
 
