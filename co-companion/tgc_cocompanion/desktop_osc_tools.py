@@ -85,6 +85,7 @@ class WindowsOscControls:
         self._last_chat=-1e10
         self._voice_pid: int | None = None
         self._voice_port: int | None = None
+        self._voice_started: float | None = None
         self._rotation: tuple[str, ...] = ()
         self._rotation_index=0
         self._rotation_pid: int | None = None
