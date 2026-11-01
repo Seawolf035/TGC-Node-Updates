@@ -327,6 +327,58 @@ class PersonalVRChat:
         return self.request("PUT","/users/"+uid,
                             {"status":status,"statusDescription":message})
 
+    def avatar_favorites(self, offset: int=0) -> list[dict]:
+        if type(offset) is not int or offset<0 or offset>6000 or offset%60:
+            raise VRChatApiError("Avatar favorites require 60-entry pages")
+        result=self.get(f"/avatars/favorites?n=60&offset={offset}")
+        if not isinstance(result,list):
+            raise VRChatApiError("VRChat avatar favorites unavailable")
+        return [x for x in result if isinstance(x,dict)]
+
+    def avatar(self, avatar_id: str) -> dict:
+        if not isinstance(avatar_id,str) or not re.fullmatch(r"avtr_[0-9a-fA-F-]{36}",avatar_id):
+            raise VRChatApiError("Invalid VRChat avatar ID")
+        result=self.get("/avatars/"+avatar_id)
+        if not isinstance(result,dict):
+            raise VRChatApiError("VRChat avatar unavailable")
+        return result
+
+    def select_avatar(self, avatar_id: str):
+        if not isinstance(avatar_id,str) or not re.fullmatch(r"avtr_[0-9a-fA-F-]{36}",avatar_id):
+            raise VRChatApiError("Invalid VRChat avatar ID")
+        return self.request("PUT","/avatars/"+avatar_id+"/select")
+
+    def avatar_groups(self) -> list[dict]:
+        try:
+            payload=self.get("/favorites/groups/avatar")
+            if isinstance(payload,dict) and isinstance(payload.get("favoriteGroups"),list):
+                return [x for x in payload["favoriteGroups"] if isinstance(x,dict)]
+        except VRChatApiError as exc:
+            if "rate limit" in str(exc).lower() or "expired" in str(exc).lower():
+                raise
+        legacy=self.get("/favorite/groups?type=avatar&n=100&offset=0")
+        if not isinstance(legacy,list):
+            raise VRChatApiError("Avatar favorite groups unavailable")
+        return [x for x in legacy if isinstance(x,dict)]
+
+    def favorite_avatar_group(self, name: str) -> dict:
+        if not isinstance(name,str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}",name):
+            raise VRChatApiError("Invalid avatar group name")
+        result=self.get("/favorites/groups/avatar/"+name)
+        if not isinstance(result,dict):
+            raise VRChatApiError("Avatar group unavailable")
+        return result
+
+    def notification_seen(self, notification_id: str):
+        if not isinstance(notification_id,str) or not re.fullmatch(r"not_[A-Za-z0-9_-]{4,90}",notification_id):
+            raise VRChatApiError("Invalid notification ID")
+        return self.request("POST","/notifications/"+notification_id+"/see")
+
+    def dismiss_notification(self, notification_id: str):
+        if not isinstance(notification_id,str) or not re.fullmatch(r"not_[A-Za-z0-9_-]{4,90}",notification_id):
+            raise VRChatApiError("Invalid notification ID")
+        return self.request("DELETE","/notifications/"+notification_id)
+
     def friend_snapshot(self) -> set[str]:
         """Never save partial friend snapshots or report false achievement unlocks."""
         result = set()
