@@ -44,7 +44,7 @@ class OwnerPilotApp:
         self.root = root
         from .desktop_theme import apply_desktop_theme
         apply_desktop_theme(self.root)
-        self.root.title("TGC Co-Companion — Owner Pilot 0.2 (NOT A STAFF RELEASE)")
+        self.root.title("TGC Co-Companion — Owner Preview 0.3 (NOT A STAFF RELEASE)")
         self.root.geometry("1120x650")
         self.root.minsize(900, 520)
         self.enrollment = PilotEnrollment()
@@ -73,7 +73,7 @@ class OwnerPilotApp:
     def _build(self):
         frame = ttk.Frame(self.root, padding=10)
         frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text="TGC Co-Companion — Owner Pilot v0.2",
+        ttk.Label(frame, text="TGC Co-Companion — Owner Preview v0.3",
                   font=("Segoe UI", 20, "bold")).pack(anchor="w")
         ttk.Label(frame, text="The existing TGC Relay • One explicitly approved test account • No Invite Network uploader",
                   wraplength=900).pack(anchor="w", pady=(0, 6))
@@ -155,6 +155,8 @@ class OwnerPilotApp:
         # but personal VRChat cookies NEVER pass through TGC Relay or Node.
         from .desktop_pages import DesktopPages
         self.features=DesktopPages(self,notebook)
+        from .desktop_update_page import OwnerUpdatePage
+        self.updates=OwnerUpdatePage(self,notebook)
         self._page_names=[notebook.tab(t,"text") for t in notebook.tabs()]
         self.page_picker.configure(values=self._page_names)
         self.page_picker.bind("<<ComboboxSelected>>",self._choose_page)
