@@ -3,7 +3,8 @@
 > **Not a production release.** Development branch: `feature/co-companion-foundation`.
 > Do not distribute this as a replacement for an installed TGC Node or Staff Launcher.
 > This initial milestone has no functioning VRChat launcher, Node/Relay connection,
-> account sign-in, Companion pairing, or desktop GUI. Those are subsequent milestones.
+> account sign-in, or Companion pairing. It includes a **non-operational Tkinter
+> navigation preview**, not a connected staff application.
 
 ## Product definition
 
@@ -34,10 +35,10 @@ Launcher **after a verified, in-place migration**. Existing customized-inviter
 | `tgc_cocompanion/permissions.py` | Fail-closed, **not** self-issuing 1–4 permission policy; atomic provisional slot reservations |
 | `tgc_cocompanion/sessions.py` | Explicit process/OSC-port mapping; refuses ambiguous, stale or unknown targets |
 | `tgc_cocompanion/osc.py` | Packet encoders for chatbox, float/bool/int avatar parameters and avatar eye height; local-loopback-only sender |
-| `tests/test_foundation.py` | Offline policy / multiple clients / OSC regression tests |
+| `tgc_cocompanion/app.py`, `__main__.py` | Locked, non-operational Windows navigation preview; no real actions |\n| `tests/test_foundation.py` | Offline policy / multiple clients / OSC regression tests |
 | `.github/workflows/co-companion-foundation.yml` | Nonpublishing Python compile and tests on this branch only |
 
-**These are foundation components, not yet wired into an app UI or Windows service.**
+**These are foundation components, shown in a non-operational interface only; they are not wired to a Windows Node service, verified authorization system or VRChat runtime.**
 The port-to-process mapping is **not** inferred or invented; the planned launcher/
 discovery layer must supply it only after validating ownership.
 
@@ -49,7 +50,7 @@ From repository root, with Python 3.11+:
 PYTHONPATH=co-companion python -m unittest discover -s co-companion/tests -p 'test_*.py' -v
 ```
 
-No real UDP sends, VRChat API calls or Relay connections occur in tests.
+No real UDP sends, VRChat API calls or Relay connections occur in tests.\n\nThe **locked UI preview** can be opened locally on a Windows development machine\nwith Python/Tkinter installed:\n\n```sh\nPYTHONPATH=co-companion python -m tgc_cocompanion\n```\n\nIt deliberately has no live features or staff verification, and is **not a release**.
 
 ## Source baselines verified before development
 
