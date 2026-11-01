@@ -23,7 +23,7 @@ USER_ID = re.compile(r"usr_[0-9a-fA-F-]{36}\Z")
 TWO_FA_CODE = re.compile(r"[A-Za-z0-9-]{4,32}\Z")
 METHODS = {"totp", "emailotp", "otp"}
 _ALLOWED_COOKIES = ("auth", "twoFactorAuth")
-_AGENT = "TGC-CoCompanion-OwnerPilot/0.2 (personal VRChat API)"
+_AGENT = "TGC-CoCompanion/0.2 masonswan@usa.com"
 MAX_RESPONSE = 1_048_576
 
 
