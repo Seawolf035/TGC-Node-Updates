@@ -32,24 +32,24 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Compile Windows foundation and legacy source
+          python-version: '3.13'
+      - name: Compile all Windows Co-Companion modules and tests
         run: python -m compileall -q co-companion/tgc_cocompanion co-companion/tests
-      - name: Offline unit tests on Windows (no actual VRChat launch)
+      - name: Offline unit and Tk interface tests on Windows 3.13
         env:
           PYTHONPATH: co-companion
         run: python -m unittest discover -s co-companion/tests -p "test_*.py" -v
-      - name: Validate Windows runtime libraries in isolated CI
+      - name: Validate Windows DPAPI/process dependencies
         run: |
           python -m pip install --disable-pip-version-check -r co-companion/requirements_owner_pilot.txt
-          python -c "import psutil, win32crypt; print('Windows DPAPI and process dependencies available')"
-      - name: Assemble source-only owner pilot (no credentials, no installer)
+          python -c "import tkinter, psutil, win32crypt; print('Windows UI, DPAPI and process dependencies available')"
+      - name: Assemble manually runnable owner-preview source ZIP (no credentials)
         shell: pwsh
         run: |
-          $root = "owner-pilot-dist"
+          $root = "owner-preview-source"
           New-Item -ItemType Directory -Path "$root/tgc_cocompanion/legacy" -Force | Out-Null
           $source = "co-companion/tgc_cocompanion"
-          $include = @("__init__.py", "permissions.py", "sessions.py", "osc.py", "staff_lease.py", "launch_controller.py", "windows_process.py", "log_diagnostics.py", "pilot_enrollment.py", "owner_pilot.py")
+          $include = @("__init__.py", "permissions.py", "sessions.py", "osc.py", "staff_lease.py", "launch_controller.py", "windows_process.py", "log_diagnostics.py", "pilot_enrollment.py", "owner_pilot.py", "vrchat_personal.py", "staffdex_desktop.py", "desktop_osc_tools.py", "desktop_pages.py", "desktop_theme.py")
           foreach ($file in $include) { Copy-Item "$source/$file" "$root/tgc_cocompanion/$file" -ErrorAction Stop }
           Copy-Item "$source/legacy/__init__.py" "$root/tgc_cocompanion/legacy/__init__.py"
           Copy-Item "$source/legacy/tgc_vrchat_multilog.py" "$root/tgc_cocompanion/legacy/tgc_vrchat_multilog.py"
@@ -57,10 +57,23 @@ jobs:
           Copy-Item "co-companion/requirements_owner_pilot.txt" "$root/requirements_owner_pilot.txt"
           Copy-Item "co-companion/RUN_OWNER_PILOT.bat" "$root/RUN_OWNER_PILOT.bat"
           Copy-Item "co-companion/README_OWNER_PILOT.md" "$root/README_OWNER_PILOT.md"
-          Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_Owner_Pilot_0.1_TEST.zip" -CompressionLevel Optimal -Force
-          if (!(Test-Path "TGC_CoCompanion_Owner_Pilot_0.1_TEST.zip")) { throw "Package was not created" }
+          Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.2_SOURCE.zip" -CompressionLevel Optimal -Force
+          if (!(Test-Path "TGC_CoCompanion_OwnerPreview_v0.2_SOURCE.zip")) { throw "Source package missing" }
       - uses: actions/upload-artifact@v4
         with:
-          name: TGC-CoCompanion-OWNER-PILOT-0.1-NOT-STAFF
-          path: TGC_CoCompanion_Owner_Pilot_0.1_TEST.zip
+          name: TGC-CoCompanion-v0.2-OWNER-SOURCE-NOT-STAFF
+          path: TGC_CoCompanion_OwnerPreview_v0.2_SOURCE.zip
+          retention-days: 14
+      - name: Compile self-contained Windows owner-preview executable
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check "pyinstaller>=6.16,<7"
+          python -m PyInstaller --noconfirm --clean --onedir --console --name TGC_CoCompanion_OwnerPreview_v0.2 --paths co-companion --add-data "co-companion/TGC_DESKTOP_TERMS.txt;." --hidden-import win32crypt --hidden-import psutil co-companion/owner_pilot_entry.py
+          if (!(Test-Path "dist/TGC_CoCompanion_OwnerPreview_v0.2/TGC_CoCompanion_OwnerPreview_v0.2.exe")) { throw "Windows executable missing" }
+          Copy-Item "co-companion/README_OWNER_PILOT.md" "dist/TGC_CoCompanion_OwnerPreview_v0.2/README_OWNER_PILOT.md"
+          Compress-Archive -Path "dist/TGC_CoCompanion_OwnerPreview_v0.2/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.2_WINDOWS.zip" -CompressionLevel Optimal -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-CoCompanion-v0.2-OWNER-EXE-NOT-STAFF
+          path: TGC_CoCompanion_OwnerPreview_v0.2_WINDOWS.zip
           retention-days: 14
