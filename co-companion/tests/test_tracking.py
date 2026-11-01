@@ -127,6 +127,18 @@ class LogReadinessTests(unittest.TestCase):
             self.assertFalse(result.ready)
             self.assertIn("none contain recent", result.message)
 
+    def test_small_future_timestamp_is_accepted_across_filesystems(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "output_log_clock_skew.txt"
+            path.write_text("fresh")
+            moment = time.time()
+            os.utime(path, (moment + 1.0, moment + 1.0))
+            result = scan_log_readiness(td, now=moment)
+            self.assertEqual(result.recent_nonempty_files, 1)
+            os.utime(path, (moment + 5.0, moment + 5.0))
+            result = scan_log_readiness(td, now=moment)
+            self.assertEqual(result.recent_nonempty_files, 0)
+
     def test_negative_age_rejected(self):
         with self.assertRaises(ValueError):
             scan_log_readiness(".", max_age_seconds=0)
