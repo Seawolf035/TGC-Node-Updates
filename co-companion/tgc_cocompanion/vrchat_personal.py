@@ -238,6 +238,95 @@ class PersonalVRChat:
             raise VRChatApiError("Unexpected VRChat list response")
         return [row for row in result if isinstance(row, dict)]
 
+    def request(self, method: str, route: str, payload: dict | None = None):
+        """Authenticated VRChat operation. No TGC Relay calls or cookie logs."""
+        if method not in ("GET","POST","PUT","DELETE"):
+            raise VRChatApiError("Unsupported personal VRChat operation")
+        with self._lock:
+            if not self.signed_in:
+                raise VRChatApiError("Sign into your personal VRChat account first")
+            current=self._session.copy()
+        response,tokens=self._transport(method,_valid_route(route),_cookie_header(current),"",payload)
+        if tokens:
+            with self._lock:
+                if self._session is not None and self._session.get("auth")==current.get("auth"):
+                    self._session.update(tokens)
+                    self._save()
+        return response
+
+    @staticmethod
+    def _id(kind: str, identifier: str) -> str:
+        if kind not in ("usr","wrld","grp") or not isinstance(identifier,str):
+            raise VRChatApiError("Invalid personal VRChat identity")
+        if not re.fullmatch(kind+r"_[0-9a-fA-F-]{36}",identifier):
+            raise VRChatApiError("Invalid personal VRChat identity")
+        return identifier
+
+    def profile(self, user_id: str) -> dict:
+        uid=self._id("usr",user_id)
+        profile=None
+        try:
+            profile=self.get("/profile/"+uid+"?withGroupsAndWorlds=true"+
+                             ("&asSelf=true" if uid==self.user_id else ""))
+        except VRChatApiError:
+            pass
+        base=self.current_user() if uid==self.user_id else self.get("/users/"+uid)
+        if not isinstance(base,dict):
+            raise VRChatApiError("VRChat profile unavailable")
+        if not isinstance(profile,dict):
+            return base
+        for key,value in base.items():
+            if key not in profile or profile[key] is None or profile[key]=="":
+                profile[key]=value
+        return profile
+
+    def world(self, world_id: str) -> dict:
+        result=self.get("/worlds/"+self._id("wrld",world_id))
+        if not isinstance(result,dict):raise VRChatApiError("World not found")
+        return result
+
+    def group(self, group_id: str) -> dict:
+        result=self.get("/groups/"+self._id("grp",group_id))
+        if not isinstance(result,dict):raise VRChatApiError("Group not found")
+        return result
+
+    def friend_status(self, user_id: str) -> dict:
+        result=self.get("/user/"+self._id("usr",user_id)+"/friendStatus")
+        if not isinstance(result,dict):raise VRChatApiError("Friendship state unavailable")
+        return result
+
+    def send_friend_request(self, user_id: str):
+        uid=self._id("usr",user_id)
+        if uid==self.user_id:raise VRChatApiError("Cannot send a request to yourself")
+        return self.request("POST","/user/"+uid+"/friendRequest")
+
+    def request_invite(self, user_id: str):
+        uid=self._id("usr",user_id)
+        if uid==self.user_id:raise VRChatApiError("Cannot request an invitation from yourself")
+        return self.request("POST","/requestInvite/"+uid,{})
+
+    def notes(self, offset: int=0) -> list[dict]:
+        if type(offset) is not int or offset<0 or offset>10000 or offset%100:
+            raise VRChatApiError("Notes page must use 100-entry offsets")
+        result=self.get(f"/userNotes?n=100&offset={offset}")
+        if not isinstance(result,list):raise VRChatApiError("VRChat notes unavailable")
+        return [x for x in result if isinstance(x,dict)]
+
+    def save_note(self, user_id: str, note: str):
+        uid=self._id("usr",user_id)
+        if not isinstance(note,str) or not 1<=len(note.strip())<=2000:
+            raise VRChatApiError("Note must be between 1 and 2000 characters")
+        return self.request("POST","/userNotes",{"targetUserId":uid,"note":note.strip()})
+
+    def update_presence(self, status: str, message: str):
+        if status not in ("active","ask me","busy","join me"):
+            raise VRChatApiError("Choose a valid presence state")
+        if not isinstance(message,str) or len(message)>32:
+            raise VRChatApiError("Status message must be 32 characters or less")
+        uid=self._id("usr",self.user_id)
+        return self.request("PUT","/users/"+uid,
+                            {"status":status,"statusDescription":message})
+
     def friend_snapshot(self) -> set[str]:
         """Never save partial friend snapshots or report false achievement unlocks."""
         result = set()
