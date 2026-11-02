@@ -138,8 +138,22 @@ class OwnerUpdatePage:
     def _restart(self, entry: Path):
         try:
             command = python_launch_command(entry)
+            # Prevent repeating the v0.4 missing-module failure. Verify that
+            # the actual staged Python app can instantiate its full Tk GUI
+            # BEFORE exiting the current working owner installation.
+            smoke = subprocess.run(
+                command + ["--smoke-check"], cwd=str(entry.parent),
+                capture_output=True, text=True, timeout=45, check=False)
+            if smoke.returncode:
+                detail = (smoke.stderr or smoke.stdout or "Unknown startup error")
+                self.status.set("Update refused: new version failed GUI smoke check.")
+                messagebox.showerror("Update Cannot Start",
+                    "The new Python version did not pass the startup check. "
+                    "The current app is still running and is unchanged.\\n\\n"
+                    + detail[-1700:], parent=self.root)
+                return
             subprocess.Popen(command, cwd=str(entry.parent), close_fds=True)
-        except (OSError, PreviewUpdateError) as exc:
+        except (OSError, PreviewUpdateError, subprocess.TimeoutExpired) as exc:
             self.status.set("Update installed, but restart failed: " + str(exc))
             self.last_installed.set("Run RUN_OWNER_PILOT.bat in " + str(entry.parent))
             return
