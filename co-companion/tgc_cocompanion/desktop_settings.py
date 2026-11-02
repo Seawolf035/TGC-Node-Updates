@@ -5,6 +5,7 @@ No network, no account secrets, no production or staff configuration mutation.
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -42,7 +43,7 @@ class DesktopSettings:
         ), wraplength=800).pack(anchor="w", pady=(8, 0))
 
         build = bundled_build_info()
-        info = ttk.LabelFrame(panel, text="Installed Python Preview", padding=(15, 12))
+        info = ttk.LabelFrame(panel, text="Installed Co-Companion Preview", padding=(15, 12))
         info.pack(fill="x", pady=(0, 14))
         ttk.Label(info, text=(
             "Version: " + str(build.get("version") or "legacy") +
@@ -51,7 +52,7 @@ class DesktopSettings:
         ), wraplength=800).pack(anchor="w")
         bar = ttk.Frame(info)
         bar.pack(anchor="w", pady=(9, 0))
-        ttk.Button(bar, text="Check for Python Updates",
+        ttk.Button(bar, text="Check for Updates",
                    command=lambda: self.shell.open_page("Updates")
                    ).pack(side="left", padx=(0, 9))
         ttk.Button(bar, text="Open Installed Versions Folder",
@@ -62,10 +63,12 @@ class DesktopSettings:
         ttk.Button(tools, text="Copy Safe Diagnostics",
                    command=lambda: owner.features._copy_safe_diagnostics()
                    ).pack(anchor="w")
+        ttk.Button(tools, text="Create / Repair Start Menu Shortcut",
+                   command=self._repair_shortcut).pack(anchor="w", pady=(8, 0))
         ttk.Label(tools, text=(
             "Only the update folder is opened; credentials, encrypted VRChat sessions, "
             "Node keys and databases are never copied, reset or deleted by Settings. "
-            "To roll back, launch RUN_OWNER_PILOT.bat in an earlier verified Python folder."
+            "To roll back, launch an earlier verified EXE (or legacy Python folder)."
         ), wraplength=800).pack(anchor="w", pady=(8, 0))
 
     def _sync_compact(self):
@@ -98,6 +101,19 @@ class DesktopSettings:
         self.shell._apply_compact()
         self._sync_compact()
         self.shell.open_page("Home")
+
+    def _repair_shortcut(self):
+        if os.name != "nt" or not getattr(sys, "frozen", False):
+            messagebox.showinfo("Shortcut", "This option is available in the installed EXE.",
+                                parent=self.owner.root)
+            return
+        try:
+            from .exe_release_updater import update_start_menu_shortcut
+            path = update_start_menu_shortcut(Path(sys.executable))
+            messagebox.showinfo("Shortcut", "Start Menu shortcut is ready:\\n" + str(path),
+                                parent=self.owner.root)
+        except Exception as exc:
+            messagebox.showerror("Shortcut", str(exc), parent=self.owner.root)
 
     def _open_versions(self):
         from .owner_updater import update_root
