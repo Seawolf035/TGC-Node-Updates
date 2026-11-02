@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions
-title TGC Co-Companion - Python Owner Preview v0.3
+title TGC Co-Companion - Python Owner Preview v0.4
 cd /d "%~dp0"
 set "PY=py -3.13"
 %PY% --version >nul 2>&1
