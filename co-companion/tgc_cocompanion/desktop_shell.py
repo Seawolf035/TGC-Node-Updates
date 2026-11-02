@@ -34,7 +34,7 @@ DESCRIPTIONS = {
     "StaffDex": "Friendship collection and achievements",
     "OSC": "Targeted session OSC controls",
     "OSC Studio": "Chatbox, avatar height and voice controls",
-    "Updates": "Verified Python source updates and rollback",
+    "Updates": "Verified EXE updates and rollback",
     "Settings": "Navigation preferences and recovery tools",
 }
 
@@ -53,7 +53,7 @@ class DesktopShell:
         self.description_var = tk.StringVar(value=DESCRIPTIONS["Home"])
         self.pin_var = tk.StringVar(value="Pin page")
         self.pinned_count = tk.StringVar(value="")
-        self.root.title("TGC Co-Companion | Owner Preview v0.4")
+        self.root.title("TGC Co-Companion | Owner Preview v0.5")
         self.root.geometry("1180x690")
         self.root.minsize(900, 540)
 
@@ -65,7 +65,7 @@ class DesktopShell:
         brand.pack(side="left")
         ttk.Label(brand, text="TGC  /  CO-COMPANION",
                   style="Brand.TLabel").pack(anchor="w")
-        ttk.Label(brand, text="WINDOWS OWNER PREVIEW    •    v0.4",
+        ttk.Label(brand, text="WINDOWS OWNER PREVIEW    •    v0.5",
                   style="BrandHint.TLabel").pack(anchor="w")
         ttk.Button(header, text="Find Page  Ctrl+K", style="Accent.TButton",
                    command=self.show_palette).pack(side="right", padx=(9, 0))
