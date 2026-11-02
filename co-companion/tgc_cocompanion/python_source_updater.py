@@ -178,13 +178,13 @@ def source_manifest(sha: str, api_get=_json) -> dict[str, str]:
             raise PreviewUpdateError("Owner-preview package nesting exceeds limit")
         for name, item in _tree(tree_sha, api_get).items():
             if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) and not (
-                    re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*\\.(?:py|png|ico)", name)):
+                    re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*[.](?:py|png|ico)", name)):
                 continue
             relative = prefix + "/" + name
             if item.get("type") == "tree":
                 collect(item["sha"], relative, depth + 1)
             elif item.get("type") == "blob" and re.fullmatch(
-                    r"[A-Za-z_][A-Za-z0-9_]*\\.(?:py|png|ico)", name):
+                    r"[A-Za-z_][A-Za-z0-9_]*[.](?:py|png|ico)", name):
                 discovered.add(relative)
             if len(discovered) > 160:
                 raise PreviewUpdateError("Too many owner-preview source files")
@@ -233,7 +233,7 @@ def _valid_existing(folder: Path, build: SourceBuild) -> bool:
             return False
         for relative, digest in files.items():
             if (not isinstance(relative, str) or not relative or relative.startswith("/")
-                or "\\\\" in relative or ".." in relative.split("/")
+                or chr(92) in relative or ".." in relative.split("/")
                 or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
                 return False
             file = folder.joinpath(*relative.split("/"))
