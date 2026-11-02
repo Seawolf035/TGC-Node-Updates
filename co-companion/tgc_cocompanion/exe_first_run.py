@@ -62,7 +62,14 @@ def stage_first_install(source: Path, install_root: Path | None = None) -> Path:
     install_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".first-install-", dir=install_root) as temp:
         staged = Path(temp) / "app"
-        shutil.copytree(source, staged)
+        staged.mkdir()
+        # Never copy arbitrary files (including possible credentials or DBs)
+        # accidentally placed alongside the downloaded EXE.
+        shutil.copytree(source / "_internal", staged / "_internal")
+        for filename in (APPLICATION, "build_info.json", "README_OWNER_PILOT.md"):
+            candidate = source / filename
+            if candidate.is_file():
+                shutil.copy2(candidate, staged / filename)
         if _confirmed_build(staged) != (version, sha):
             raise PreviewUpdateError("Copied Co-Companion bundle failed integrity checks")
         os.replace(staged, destination)
