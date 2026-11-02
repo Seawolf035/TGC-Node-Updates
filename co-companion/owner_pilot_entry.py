@@ -24,6 +24,9 @@ def main():
         return
     # Create/repair a stable Start Menu entry without blocking the GUI.
     if getattr(sys, 'frozen', False) and os.name == 'nt':
+        from tgc_cocompanion.exe_first_run import first_run_install_dialog
+        if first_run_install_dialog():
+            return
         from tgc_cocompanion.exe_release_updater import maybe_create_shortcut_for_running_exe
         Thread(target=maybe_create_shortcut_for_running_exe,
                name='CoCompanionStartMenu', daemon=True).start()
