@@ -85,6 +85,22 @@ class PythonUpdateTests(unittest.TestCase):
         with self.assertRaises(PreviewUpdateError):
             latest_python_preview(wrong)
 
+    def test_future_new_feature_module_is_discovered_without_updater_change(self):
+        # Regression: v0.3 fixed SOURCE_FILES missed new v0.4 shell/settings modules.
+        # A future page must be included even if it did not exist in this updater.
+        git = FakeGit()
+        name = "tgc_cocompanion/future_extra_page.py"
+        payload = b"FUTURE_SCREEN = True\\n"
+        git.blobs[name] = payload
+        git.add(TREE_PACKAGE, "future_extra_page.py", _blob_sha(payload), "blob", len(payload))
+        manifest = source_manifest(COMMIT, git.api)
+        self.assertEqual(manifest[name], _blob_sha(payload))
+        with tempfile.TemporaryDirectory() as td:
+            entry = stage_python_update(BUILD, Path(td), git.api, git.raw)
+            self.assertEqual((entry.parent / name).read_bytes(), payload)
+            self.assertTrue((entry.parent / INSTALL_RECORD).is_file())
+            self.assertEqual(stage_python_update(BUILD, Path(td), git.api, git.raw), entry)
+
     def test_manifest_uses_immutable_tree_not_bulk_zipball(self):
         git = FakeGit()
         manifest = source_manifest(COMMIT, git.api)
