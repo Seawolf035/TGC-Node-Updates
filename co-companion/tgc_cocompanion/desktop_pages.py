@@ -52,32 +52,91 @@ class DesktopPages:
         self.root.after(1000,self._osc_tick)
 
     def _build_home(self, notebook):
-        self.home=ttk.Frame(notebook,padding=(22,18))
-        notebook.insert(0,self.home,text="Home")
-        ttk.Label(self.home,text="Welcome to TGC Co-Companion",
-                  font=("Segoe UI",19,"bold")).pack(anchor="w")
-        ttk.Label(self.home,text="One Windows hub for VRChat, TGC staff tools and PCVR",
-                  wraplength=850).pack(anchor="w",pady=(4,15))
-        self.home_staff=tk.StringVar(value="TGC staff: not verified")
-        self.home_vrc=tk.StringVar(value="Personal VRChat: not connected")
-        self.home_instance=tk.StringVar(value="VRChat instances: not checked")
-        self.home_dex=tk.StringVar(value="StaffDex: sign in to VRChat")
-        for var in (self.home_staff,self.home_vrc,self.home_instance,self.home_dex):
-            card=ttk.LabelFrame(self.home,text=(
-                "Staff Access" if var is self.home_staff else
-                "VRChat Account" if var is self.home_vrc else
-                "VRChat Sessions" if var is self.home_instance else "StaffDex"
-            ),padding=(15,9))
-            card.pack(fill="x",pady=5)
-            ttk.Label(card,textvariable=var,font=("Segoe UI",11)).pack(anchor="w")
-        ttk.Label(self.home,text="Quick Access",font=("Segoe UI",12,"bold")).pack(anchor="w",pady=(13,6))
-        bar=ttk.Frame(self.home);bar.pack(anchor="w")
-        for label in ("Verification","VRChat Launcher","VRChat Account","Social","StaffDex","OSC Studio","Profiles","Presence","Avatars","Bookmarks","Inbox","Updates"):
-            ttk.Button(bar,text=label,
-                       command=lambda name=label:self._select_tab(notebook,name)).pack(side="left",padx=(0,7))
-        ttk.Label(self.home,text="Owner pilot: no Invite Network sightings uploader and no Quest/phone pairing yet.",
-                  wraplength=850).pack(anchor="w",pady=(16,4))
-        self.root.after(2000,self._home_tick)
+        """Responsive v0.4 dashboard built from existing live owner pilot state."""
+        self.home = ttk.Frame(notebook, padding=(16, 13))
+        notebook.insert(0, self.home, text="Home")
+        ttk.Label(self.home, text="YOUR TGC COMMAND CENTER",
+                  style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(self.home, text=(
+            "Jump between VRChat, StaffDex, OSC and owner tools without losing your place."
+        ), style="PageSubtitle.TLabel").pack(anchor="w", pady=(2, 9))
+
+        self.home_staff = tk.StringVar(value="Awaiting owner verification")
+        self.home_vrc = tk.StringVar(value="Not signed in")
+        self.home_instance = tk.StringVar(value="No sessions detected")
+        self.home_dex = tk.StringVar(value="No scan available")
+        grid = ttk.Frame(self.home)
+        grid.pack(fill="x", pady=(3, 8))
+        for col in range(2):
+            grid.columnconfigure(col, weight=1, uniform="homecards")
+        cards = (
+            ("STAFF ACCESS", self.home_staff, "Verification", 0, 0),
+            ("PERSONAL VRCHAT", self.home_vrc, "VRChat Account", 0, 1),
+            ("VRCHAT INSTANCES", self.home_instance, "VRChat Launcher", 1, 0),
+            ("STAFFDEX", self.home_dex, "StaffDex", 1, 1),
+        )
+        for title, variable, destination, row, col in cards:
+            card = ttk.Frame(grid, style="Card.TFrame", padding=(12, 10))
+            card.grid(row=row, column=col, sticky="nsew", padx=(0 if col == 0 else 5,
+                      5 if col == 0 else 0), pady=4)
+            ttk.Label(card, text=title, style="CardLabel.TLabel").pack(anchor="w")
+            ttk.Label(card, textvariable=variable, style="CardValue.TLabel",
+                      wraplength=300).pack(anchor="w", pady=(6, 7))
+            ttk.Button(card, text="Open " + destination,
+                       command=lambda name=destination:self._select_tab(notebook,name)
+                       ).pack(anchor="w")
+
+        tools = ttk.Frame(self.home)
+        tools.pack(fill="x", pady=(5, 0))
+        ttk.Label(tools, text="QUICK ACTIONS",
+                  style="PageTitle.TLabel").pack(anchor="w", pady=(0, 6))
+        actions = ttk.Frame(tools)
+        actions.pack(fill="x")
+        for col in range(3):
+            actions.columnconfigure(col, weight=1, uniform="homeactions")
+        destinations = (
+            ("Social & Friends", "Social"), ("Find Profiles", "Profiles"),
+            ("OSC Studio", "OSC Studio"), ("Saved Worlds", "Bookmarks"),
+            ("Inbox", "Inbox"), ("Python Updates", "Updates"),
+        )
+        for index,(label, destination) in enumerate(destinations):
+            ttk.Button(actions, text=label,
+                       command=lambda name=destination:self._select_tab(notebook,name)
+                       ).grid(row=index//3, column=index%3, sticky="ew", padx=4, pady=3)
+        lower = ttk.Frame(self.home)
+        lower.pack(fill="x", pady=(9, 0))
+        self.home_recent_var = tk.StringVar(value="Recently opened pages: Home")
+        ttk.Label(lower, textvariable=self.home_recent_var,
+                  style="PageSubtitle.TLabel").pack(side="left")
+        ttk.Button(lower, text="Copy Safe Diagnostics",
+                   command=self._copy_safe_diagnostics).pack(side="right")
+        ttk.Label(self.home, text=(
+            "Owner-only preview • No Invite Network uploader • No phone/Quest pairing yet."
+        ), style="PageSubtitle.TLabel").pack(anchor="w", pady=(10, 0))
+        self.root.after(2000, self._home_tick)
+
+    def _copy_safe_diagnostics(self):
+        """Shareable troubleshooting details without secrets or VRChat identifiers."""
+        try:
+            access = self.owner.lease.current() if self.owner.lease else None
+            running = 0
+            if self.owner.launcher:
+                running = sum(s.pid is not None for s in self.owner.launcher.statuses())
+            report = "\\n".join((
+                "TGC Co-Companion owner preview v0.4",
+                f"Owner verified: {bool(access and self.owner._terms_valid())}",
+                f"Personal VRChat connected: {bool(self.account.signed_in)}",
+                f"Running managed VRChat instances: {running}",
+                f"StaffDex snapshot available: {self._snapshot is not None}",
+                "Legacy Node sightings uploader: NOT ENABLED in Co-Companion",
+                "Production Relay configuration: UNCHANGED",
+                "No tokens, passwords, session cookies, account IDs, or paths included.",
+            ))
+            self.root.clipboard_clear()
+            self.root.clipboard_append(report)
+            self._notice("Safe Co-Companion diagnostics copied to clipboard.")
+        except Exception as exc:
+            self._notice("Could not copy diagnostics: " + str(exc))
 
     @staticmethod
     def _select_tab(notebook,title):
@@ -111,6 +170,9 @@ class DesktopPages:
             )
         except Exception:
             self.home_instance.set("VRChat process discovery unavailable")
+        if hasattr(self.owner, "shell"):
+            self.home_recent_var.set("Recently opened: " +
+                                     "  /  ".join(self.owner.shell.state.recent[:4]))
         self.root.after(10000,self._home_tick)
 
     def _eligible(self,personal=False):
