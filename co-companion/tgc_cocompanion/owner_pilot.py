@@ -144,6 +144,8 @@ class OwnerPilotApp:
         self.features=DesktopPages(self,notebook)
         from .desktop_update_page import OwnerUpdatePage
         self.updates=OwnerUpdatePage(self,notebook)
+        from .desktop_settings import DesktopSettings
+        self.settings=DesktopSettings(self,notebook)
         self.shell.register_pages()
         self._page_names = list(self.shell.page_names)
 
