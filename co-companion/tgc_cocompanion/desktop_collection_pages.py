@@ -168,6 +168,13 @@ class CollectionPages:
         ttk.Entry(controls,textvariable=self.bookmark_world,width=43).pack(side="left",padx=(0,8))
         ttk.Entry(controls,textvariable=self.bookmark_name,width=26).pack(side="left",padx=(0,8))
         ttk.Button(controls,text="Save World",command=self.save_bookmark).pack(side="left")
+        filter_row=ttk.Frame(tab);filter_row.pack(fill="x",pady=(4,0))
+        ttk.Label(filter_row,text="Filter saved worlds:").pack(side="left",padx=(0,8))
+        self.bookmark_filter=tk.StringVar()
+        ttk.Entry(filter_row,textvariable=self.bookmark_filter,width=35).pack(side="left")
+        self.bookmark_filter.trace_add("write",lambda *_:self.refresh_bookmarks())
+        self.bookmark_count=tk.StringVar(value="No saved worlds loaded")
+        ttk.Label(filter_row,textvariable=self.bookmark_count).pack(side="right")
         self.bookmark_table=ttk.Treeview(tab,columns=("name","id"),show="headings",height=13)
         for col,width in (("name",270),("id",430)):
             self.bookmark_table.heading(col,text=col.title());self.bookmark_table.column(col,width=width)
@@ -175,6 +182,7 @@ class CollectionPages:
         actions=ttk.Frame(tab);actions.pack(anchor="w",pady=8)
         ttk.Button(actions,text="Refresh",command=self.refresh_bookmarks).pack(side="left",padx=(0,8))
         ttk.Button(actions,text="Open World in Browser",command=self.open_bookmark).pack(side="left",padx=(0,8))
+        ttk.Button(actions,text="Copy World Link",command=self.copy_bookmark_link).pack(side="left",padx=(0,8))
         ttk.Button(actions,text="Remove Bookmark",command=self.remove_bookmark).pack(side="left")
 
     def bookmark_from_social(self,world_id,name):
@@ -194,8 +202,13 @@ class CollectionPages:
         try:
             self._eligible()
             items=self.bookmarks.list(self.account.user_id)
+            needle=self.bookmark_filter.get().casefold().strip()
+            visible=sorted((row for row in items if needle in row["name"].casefold() or
+                            needle in row["id"].casefold()),
+                           key=lambda row:row["name"].casefold())
             self.bookmark_table.delete(*self.bookmark_table.get_children())
-            for row in items:self.bookmark_table.insert("",tk.END,values=(row["name"],row["id"]))
+            for row in visible:self.bookmark_table.insert("",tk.END,values=(row["name"],row["id"]))
+            self.bookmark_count.set(f"{len(visible)} shown / {len(items)} saved")
         except Exception as exc:self._error(exc)
 
     def _bookmark_selected(self):
@@ -208,6 +221,16 @@ class CollectionPages:
             self._eligible()
             ident=self._bookmark_selected()
             webbrowser.open("https://vrchat.com/home/world/"+ident)
+        except Exception as exc:self._error(exc)
+
+    def copy_bookmark_link(self):
+        try:
+            self._eligible()
+            ident=self._bookmark_selected()
+            url="https://vrchat.com/home/world/"+ident
+            self.owner.root.clipboard_clear()
+            self.owner.root.clipboard_append(url)
+            self._error("VRChat world link copied to clipboard")
         except Exception as exc:self._error(exc)
 
     def remove_bookmark(self):
