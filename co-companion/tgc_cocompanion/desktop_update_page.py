@@ -1,18 +1,22 @@
-"""Python-first owner-preview Updates tab: Check -> Install -> Restart.
+"""Owner-preview Updates: verified one-click EXE releases; Python legacy fallback.
 
-No GitHub login/PAT or EXE zip needed. Only a successful official owner CI
-commit is eligible. Downloaded Python files are verified against immutable
-GitHub Git blob hashes and installed to a NEW folder for easy rollback.
+EXE mode checks a separate GitHub owner prerelease channel, downloads a verified
+Windows bundle, smoke-checks it before restart, and retargets the user's single
+Start Menu shortcut. No PAT, no production Node/Relay/staff manifest updates.
 """
 from __future__ import annotations
-
 from pathlib import Path
 import subprocess
+import sys
 import tkinter as tk
 from tkinter import messagebox, ttk
 import webbrowser
 
 from .owner_updater import bundled_build_info, PreviewUpdateError
+from .exe_release_updater import (
+    latest_exe_release, has_newer_exe_release, stage_exe_release,
+    smoke_check_exe, update_start_menu_shortcut,
+)
 from .python_source_updater import (
     latest_python_preview, has_newer_python_build, stage_python_update,
     python_launch_command,
@@ -23,138 +27,154 @@ class OwnerUpdatePage:
     def __init__(self, owner, notebook):
         self.owner = owner
         self.root = owner.root
+        self.is_exe = bool(getattr(sys, "frozen", False))
         self.current = bundled_build_info()
         self.available = None
         self.staged = None
         tab = ttk.Frame(notebook, padding=18)
         notebook.add(tab, text="Updates")
-        ttk.Label(tab, text="Co-Companion Python Updates",
+        ttk.Label(tab, text="Co-Companion EXE Updates" if self.is_exe else
+                  "Co-Companion Python Updates",
                   font=("Segoe UI", 16, "bold")).pack(anchor="w")
         ttk.Label(tab, text=(
-            "Owner-preview channel only. No EXE downloads, no GitHub login, "
-            "no extra Relay, and no updates to staff, Nodes or Main Launcher."
-        ), wraplength=830).pack(anchor="w", pady=(5, 13))
+            "Owner-preview only. Updates never change any installed staff Node, "
+            "the single Relay, Main Launcher or production update manifests."
+        ), wraplength=800).pack(anchor="w", pady=(5, 13))
         installed = str(self.current.get("sha") or "")
-        ttk.Label(tab, text="Running: v" + str(self.current.get("version", "unknown"))
-                  + (f"  ·  commit {installed[:12]}" if installed else "  ·  legacy preview")
+        ttk.Label(tab, text="Running v" + str(self.current.get("version", "unknown"))
+                  + (f" · {installed[:12]}" if installed else " · legacy preview")
                   ).pack(anchor="w", pady=4)
-        self.status = tk.StringVar(value="Click Check For Updates to find the latest tested Python build.")
-        ttk.Label(tab, textvariable=self.status, wraplength=830).pack(anchor="w", pady=(5, 12))
-        row = ttk.Frame(tab)
-        row.pack(anchor="w", pady=(5, 8))
-        self.check_button = ttk.Button(row, text="Check For Updates", command=self.check)
-        self.check_button.pack(side="left", padx=(0, 9))
-        self.install_button = ttk.Button(row, text="Install Python Update", command=self.install)
-        self.install_button.pack(side="left", padx=(0, 9))
-        self.install_button.configure(state="disabled")
-        ttk.Button(row, text="Open Build on GitHub", command=self.open_build).pack(side="left")
-        ttk.Separator(tab, orient="horizontal").pack(fill="x", pady=16)
-        ttk.Label(tab, text="How the built-in updater works",
+        self.status = tk.StringVar(value="Check the official owner preview for updates.")
+        ttk.Label(tab, textvariable=self.status, wraplength=820).pack(anchor="w", pady=(5, 12))
+        bar = ttk.Frame(tab)
+        bar.pack(anchor="w", pady=6)
+        ttk.Button(bar, text="Check for Updates", command=self.check).pack(side="left", padx=(0, 8))
+        self.install_button = ttk.Button(
+            bar, text="Download & Install EXE" if self.is_exe else "Install Python Update",
+            command=self.install, state="disabled")
+        self.install_button.pack(side="left", padx=(0, 8))
+        ttk.Button(bar, text="View Release on GitHub", command=self.open_build
+                   ).pack(side="left")
+        ttk.Separator(tab, orient="horizontal").pack(fill="x", pady=17)
+        ttk.Label(tab, text="A single application, a single shortcut",
                   font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        ttk.Label(tab, text=(
-            "1. Find the latest successful CI run on the owner development branch.\n"
-            "2. Download only the exact Python files from that successful commit.\n"
-            "3. Verify every file against GitHub's immutable Git blob hash.\n"
-            "4. Install into a new version folder, never over the running app.\n"
-            "5. Confirm restart into the Python update. The previous version remains for rollback."
-        ), justify="left", wraplength=830).pack(anchor="w", pady=(7, 12))
-        ttk.Label(tab, text=(
-            "Pilot authorization, encrypted VRChat sessions, StaffDex saves and other "
-            "owner settings remain under LOCALAPPDATA/TGC/CoCompanionOwnerPilot. "
-            "No staff application, Node uploader, production database or Relay is changed. "
-            "Updates are manual and cannot start without your approval."
-        ), wraplength=830).pack(anchor="w")
+        description = (
+            "1. Check for an approved owner-preview release.\\n"
+            "2. Download the Windows EXE package automatically from GitHub.\\n"
+            "3. Verify GitHub's SHA256 and the exact bundled build identity.\\n"
+            "4. Install alongside the old version and test startup before switching.\\n"
+            "5. Update your TGC Co-Companion Start Menu shortcut and restart.\\n"
+            "The old version stays intact for rollback; no Python or BAT is needed."
+            if self.is_exe else
+            "This is the old Python preview updater. The next owner-preview version "
+            "uses a standalone Windows EXE and its own self-update channel. "
+            "Your saved settings are shared between both."
+        )
+        ttk.Label(tab, text=description, justify="left",
+                  wraplength=820).pack(anchor="w", pady=(8, 13))
         self.last_installed = tk.StringVar(value="")
         ttk.Label(tab, textvariable=self.last_installed,
-                  wraplength=830).pack(anchor="w", pady=(10, 4))
+                  wraplength=820).pack(anchor="w")
+        if self.is_exe:
+            # Nonblocking version check shortly after opening the app.
+            self.root.after(4500, self.check)
 
     def check(self):
         self.available = None
         self.install_button.configure(state="disabled")
-        self.status.set("Checking successful official Python preview builds…")
-
+        self.status.set("Checking official owner preview…")
         def work():
             try:
-                return latest_python_preview(), None
+                return (latest_exe_release() if self.is_exe else
+                        latest_python_preview()), None
             except Exception as exc:
                 return None, str(exc)
-
         def done(result):
             build, error = result
             if error:
-                self.status.set("Update check failed: " + error)
+                self.status.set("Update check: " + error)
                 return
             self.available = build
-            if has_newer_python_build(self.current, build):
-                self.status.set(f"Verified Python preview available: {build.short} "
-                                f"(successful GitHub Actions run {build.run_id}).")
+            newer = (has_newer_exe_release(self.current, build) if self.is_exe else
+                     has_newer_python_build(self.current, build))
+            if newer:
                 self.install_button.configure(state="normal")
+                label = "v" + build.version if self.is_exe else build.short
+                self.status.set("New verified owner-preview ready: " + label)
             else:
-                self.status.set(f"Already running the latest tested Python preview ({build.short}).")
-
+                self.status.set("You're up to date on this owner-preview channel.")
         self.owner._run_async(work, done)
 
     def open_build(self):
         if self.available:
-            webbrowser.open(self.available.run_url)
+            webbrowser.open(self.available.page if self.is_exe else self.available.run_url)
         else:
-            self.status.set("Check for updates before opening the latest build.")
+            webbrowser.open(
+                "https://github.com/Seawolf035/TGC-Node-Updates/releases"
+                if self.is_exe else
+                "https://github.com/Seawolf035/TGC-Node-Updates/actions")
 
     def install(self):
         build = self.available
-        if not build or not has_newer_python_build(self.current, build):
-            messagebox.showinfo("No update", "Check for a newer Python update first.")
+        if not build:
+            messagebox.showinfo("Update", "Check for an available update first.")
             return
-        if not messagebox.askyesno("Install owner-preview Python update",
-                "Download and verify this tested Python update from GitHub?\n\n"
-                "Co-Companion will install it alongside your existing version. "
-                "All saved owner settings and production TGC systems remain unchanged."):
+        newer = (has_newer_exe_release(self.current, build) if self.is_exe else
+                 has_newer_python_build(self.current, build))
+        if not newer:
+            messagebox.showinfo("Up to date", "No newer owner preview is available.")
+            return
+        if not messagebox.askyesno("Update Co-Companion",
+                "Download and install this verified owner-preview update?\\n\\n"
+                "The current version and all AppData account settings will remain untouched.",
+                parent=self.root):
             return
         self.install_button.configure(state="disabled")
-        self.status.set(f"Downloading and verifying Python sources at {build.short}…")
-
+        self.status.set("Downloading and verifying owner-preview update…")
         def work():
             try:
-                return stage_python_update(build), None
+                return (stage_exe_release(build) if self.is_exe else
+                        stage_python_update(build)), None
             except Exception as exc:
                 return None, str(exc)
-
         def done(result):
-            entry, error = result
+            executable, error = result
             if error:
-                self.status.set("Python update failed safely: " + error)
+                self.status.set("Update refused safely: " + error)
                 self.install_button.configure(state="normal")
                 return
-            self.staged = Path(entry)
-            self.last_installed.set(f"Installed verified Python update: {self.staged.parent}")
-            self.status.set("Update installed. Restart when you are ready.")
-            if messagebox.askyesno("Restart Into Python Co-Companion",
-                    "The Python update is ready. Restart into the new version now?\n\n"
-                    "Your old install remains available for rollback."):
+            self.staged = Path(executable)
+            self.last_installed.set("Installed verified preview at " + str(self.staged.parent))
+            self.status.set("Update staged; current app remains intact.")
+            if messagebox.askyesno("Restart Co-Companion",
+                    "The update is ready. Check startup and restart into the new version?",
+                    parent=self.root):
                 self._restart(self.staged)
-
         self.owner._run_async(work, done)
 
     def _restart(self, entry: Path):
         try:
-            command = python_launch_command(entry)
-            # Prevent repeating the v0.4 missing-module failure. Verify that
-            # the actual staged Python app can instantiate its full Tk GUI
-            # BEFORE exiting the current working owner installation.
-            smoke = subprocess.run(
-                command + ["--smoke-check"], cwd=str(entry.parent),
-                capture_output=True, text=True, timeout=45, check=False)
-            if smoke.returncode:
-                detail = (smoke.stderr or smoke.stdout or "Unknown startup error")
-                self.status.set("Update refused: new version failed GUI smoke check.")
-                messagebox.showerror("Update Cannot Start",
-                    "The new Python version did not pass the startup check. "
-                    "The current app is still running and is unchanged.\\n\\n"
-                    + detail[-1700:], parent=self.root)
-                return
+            if self.is_exe:
+                smoke_check_exe(entry)
+                command = [str(entry)]
+            else:
+                command = python_launch_command(entry)
+                result = subprocess.run(command + ["--smoke-check"],
+                        cwd=str(entry.parent), capture_output=True, text=True,
+                        timeout=45, check=False)
+                if result.returncode:
+                    raise PreviewUpdateError("New Python GUI did not start: " +
+                                             (result.stderr or result.stdout)[-1200:])
             subprocess.Popen(command, cwd=str(entry.parent), close_fds=True)
+            if self.is_exe:
+                # Only retarget shortcut after new EXE passes smoke and starts.
+                try:
+                    update_start_menu_shortcut(entry)
+                except PreviewUpdateError as exc:
+                    self.last_installed.set("Updated, but shortcut needs repair: " + str(exc))
         except (OSError, PreviewUpdateError, subprocess.TimeoutExpired) as exc:
-            self.status.set("Update installed, but restart failed: " + str(exc))
-            self.last_installed.set("Run RUN_OWNER_PILOT.bat in " + str(entry.parent))
+            self.status.set("Update did not launch; old app is unchanged.")
+            messagebox.showerror("Cannot start update", str(exc)[-1800:],
+                                 parent=self.root)
             return
         self.owner._close()
