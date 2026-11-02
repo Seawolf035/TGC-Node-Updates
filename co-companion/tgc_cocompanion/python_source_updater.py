@@ -47,6 +47,7 @@ SOURCE_FILES = (
     "tgc_cocompanion/desktop_theme.py",
     "tgc_cocompanion/desktop_shell.py",
     "tgc_cocompanion/desktop_navigation.py",
+    "tgc_cocompanion/desktop_settings.py",
     "tgc_cocompanion/desktop_update_page.py",
     "tgc_cocompanion/owner_updater.py",
     "tgc_cocompanion/python_source_updater.py",
