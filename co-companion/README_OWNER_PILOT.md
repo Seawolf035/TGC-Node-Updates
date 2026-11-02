@@ -1,3 +1,21 @@
+# TGC Co-Companion v0.4 — Windows Owner Preview / Python
+
+**Recommended path for existing v0.3 Python owners:** Open **Updates → Check For Updates → Install Python Update → Restart**. The verified updater downloads only approved source from the latest successful CI commit, stages it side-by-side and keeps the previous Python version for rollback. **Do not install an EXE and do not replace your existing staff Node or the one Relay.** Only Windows/Python owner testing is authorized.
+
+## What's new in v0.4
+
+- **New desktop shell:** full-height dark/cyan header, responsive left navigation, grouped feature areas and page details, and existing working functional pages hosted without replacing their APIs or permission checks.
+- **Discoverability:** `Ctrl+K` opens a searchable page palette; `Ctrl+F` focuses sidebar filtering; `Ctrl+1–9` opens common pages; `Alt+Left` returns to the previous page. A fallback page-picker remains at the top, including compact mode. No more horizontally overflowing main tabs.
+- **Pin your most-used pages:** up to eight pinned sidebar shortcuts; recent pages and last visited page persist to a new **UI-only** `co_companion_navigation.json` in the same owner's AppData. No keys, secrets or VRChat data in that preference file.
+- **Overhauled Home:** two-column live staff access, personal VRChat, managed sessions, StaffDex cards plus direct quick actions; read-only status data only.
+- **World Bookmarks:** instant local filter/search, shown/total counts, sorted display and Copy World Link; bookmarks remain scoped to the personal VRChat account and never upload to Relay.
+- **New Settings page:** compact sidebar toggle, optional startup at Home, reset page pins/history, open installed versions folder for rollback and safe clipboard diagnostics (no account IDs/tokens/cookies).
+- **Preservation:** old UI functionality, login/2FA, StaffDex roster, permission-controlled 1–4 instances, personal avatar and notification actions, OSC studio, Python self-updates, existing Terms and DPAPI/local settings are retained. No embedded Invite Network uploader, new Relay, Quest/phone pairing or production rollout.
+
+**Testing:** New tests cover navigation persistence, page search, pin limits, compact mode, page switching and Windows 1280×720 GUI smoke. Release only after final Windows+Linux CI and owner Windows field testing; CI alone does not prove a finished staff replacement.
+
+---
+
 # TGC Co-Companion — Python v0.3+ with built-in Updates (owner preview)
 
 **Recommended Windows owner installation (replaces EXE delivery):** If your running v0.2 has no Updates tab, use the one-time `TGC_CoCompanion_Python_SelfUpdating_v0.3_Installer.zip` package, launch `INSTALL_FROM_V02.bat`, then launch `RUN_OWNER_PILOT.bat` inside the newly installed Python folder. The one-time bootstrap downloads ONLY source files from the latest successful GitHub Actions commit on `feature/co-companion-foundation`, validates every file against the Git blob hash, and places the source under `%LOCALAPPDATA%\\TGC\\CoCompanionOwnerPilot\\installed_versions\\python-<commit>`. Your existing v0.2 folder and all AppData enrollment, sessions, saved phrases and StaffDex remain in place. It requires Python 3.11+, Tcl/Tk, and network access to GitHub; no venv.
