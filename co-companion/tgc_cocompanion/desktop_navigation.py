@@ -9,7 +9,7 @@ from pathlib import Path
 import tempfile
 
 MAX_RECENT = 6
-MAX_PINNEDED = 8
+MAX_PINNED = 8
 MAX_BYTES = 8192
 
 
