@@ -27,6 +27,7 @@ class NavigationState:
         self.recent = []
         self.last_page = "Home"
         self.compact = False
+        self.open_at_home = False
         self.load()
 
     def load(self):
@@ -49,6 +50,8 @@ class NavigationState:
                 self.last_page = data["last_page"]
             if type(data.get("compact")) is bool:
                 self.compact = data["compact"]
+            if type(data.get("open_at_home")) is bool:
+                self.open_at_home = data["open_at_home"]
         except (OSError, ValueError, UnicodeError):
             pass
 
@@ -78,7 +81,8 @@ class NavigationState:
     def save(self):
         """Atomic replace; UI state is optional, so failure must never stop app."""
         data = {"pinned": self.pinned, "recent": self.recent,
-                "last_page": self.last_page, "compact": self.compact}
+                "last_page": self.last_page, "compact": self.compact,
+                "open_at_home": self.open_at_home}
         temp_name = None
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
