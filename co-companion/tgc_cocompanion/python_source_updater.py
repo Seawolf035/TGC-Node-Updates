@@ -166,7 +166,30 @@ def source_manifest(sha: str, api_get=_json) -> dict[str, str]:
     cache = {"": _tree(project["sha"], api_get)}
     manifest = {}
     total = 0
-    for relative in SOURCE_FILES:
+    # REQUIRED_FILES remains a minimum compatibility contract. Future screens
+    # and feature modules are discovered from the pinned Git tree instead of
+    # trusting a fixed list frozen into the PREVIOUS installed version.
+    discovered = set(SOURCE_FILES)
+    package = cache[""].get("tgc_cocompanion")
+    if not package or package.get("type") != "tree":
+        raise PreviewUpdateError("Co-Companion Python package missing")
+    def collect(tree_sha, prefix, depth=0):
+        if depth > 4:
+            raise PreviewUpdateError("Owner-preview package nesting exceeds limit")
+        for name, item in _tree(tree_sha, api_get).items():
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) and not (
+                    re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*\\.(?:py|png|ico)", name)):
+                continue
+            relative = prefix + "/" + name
+            if item.get("type") == "tree":
+                collect(item["sha"], relative, depth + 1)
+            elif item.get("type") == "blob" and re.fullmatch(
+                    r"[A-Za-z_][A-Za-z0-9_]*\\.(?:py|png|ico)", name):
+                discovered.add(relative)
+            if len(discovered) > 160:
+                raise PreviewUpdateError("Too many owner-preview source files")
+    collect(package["sha"], "tgc_cocompanion")
+    for relative in sorted(discovered):
         if relative.startswith("/") or "\\" in relative or ".." in Path(relative).parts:
             raise PreviewUpdateError("Invalid allowlisted source path")
         directory = ""
@@ -203,9 +226,16 @@ def _valid_existing(folder: Path, build: SourceBuild) -> bool:
         record = json.loads((folder / INSTALL_RECORD).read_text(encoding="utf-8"))
         if info.get("sha") != build.sha or info.get("channel") != "owner-preview":
             return False
-        if record.get("sha") != build.sha or set(record.get("files", {})) != set(SOURCE_FILES):
+        files = record.get("files")
+        if record.get("sha") != build.sha or not isinstance(files, dict):
             return False
-        for relative, digest in record["files"].items():
+        if not set(SOURCE_FILES).issubset(files) or len(files) > 160:
+            return False
+        for relative, digest in files.items():
+            if (not isinstance(relative, str) or not relative or relative.startswith("/")
+                or "\\\\" in relative or ".." in relative.split("/")
+                or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
+                return False
             file = folder.joinpath(*relative.split("/"))
             if not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest() != digest:
                 return False
