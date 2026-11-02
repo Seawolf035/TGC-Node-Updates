@@ -1,3 +1,32 @@
+# TGC Co-Companion v0.5.0 — Windows Owner Preview EXE (recommended)
+
+**This supersedes the old Python-launch instructions below.** The v0.4 Python
+installation had a startup failure because its inherited source-updater file
+list did not download the v0.4 shell modules. The owner-approved next build is
+a **self-updating EXE**. Download the latest successful
+`TGC-CoCompanion-OWNER-EXE-NOT-STAFF` GitHub Actions artifact, extract its
+inner `TGC_CoCompanion_OwnerPreview_v0.5_WINDOWS.zip`, keep `_internal`
+beside `TGC_CoCompanion_OwnerPreview.exe`, and **double-click the EXE**.
+The app will offer to copy itself into your existing owner AppData install
+root, smoke-check the installed copy and create the **TGC Co-Companion**
+Start Menu shortcut. Launch it via Start or pin it to the taskbar thereafter.
+No Python, BAT, extra Node, Relay or admin rights are required. The earlier
+versions and credentials remain untouched.
+
+**Future EXE updates** use the separate public GitHub owner-prerelease channel
+when an approved release asset has been published. The EXE's Updates page can
+check/download/checksum/stage/smoke-check/restart and retarget the Start Menu
+shortcut automatically. **A successful Actions artifact by itself is NOT a
+public GitHub Release**, and thus does not activate one-click EXE downloads.
+The initial owner preview build remains manually downloadable; do not claim
+automatic release publication. See `co-companion/README_OWNER_EXE.md`
+for owner-approved publishing rules and rollback.
+
+**Owner-only. NOT STAFF RELEASE. No changes to the single existing live
+TGC Relay, Main Launcher, Staff Launcher, Node uploader or staff update feed.**
+
+---
+
 # TGC Co-Companion v0.4 — Windows Owner Preview / Python
 
 **Recommended path for existing v0.3 Python owners:** Open **Updates → Check For Updates → Install Python Update → Restart**. The verified updater downloads only approved source from the latest successful CI commit, stages it side-by-side and keeps the previous Python version for rollback. **Do not install an EXE and do not replace your existing staff Node or the one Relay.** Only Windows/Python owner testing is authorized.
