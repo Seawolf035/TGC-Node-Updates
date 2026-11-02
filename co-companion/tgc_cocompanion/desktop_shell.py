@@ -17,7 +17,7 @@ GROUPS = (
     ("SOCIAL & STAFFDEX", (
         "VRChat Account", "Social", "Profiles", "Presence",
         "Avatars", "Bookmarks", "Inbox", "StaffDex")),
-    ("STUDIO & SETTINGS", ("OSC", "OSC Studio", "Updates")),
+    ("STUDIO & SETTINGS", ("OSC", "OSC Studio", "Updates", "Settings")),
 )
 DESCRIPTIONS = {
     "Home": "Your launchpad and live account overview",
@@ -35,6 +35,7 @@ DESCRIPTIONS = {
     "OSC": "Targeted session OSC controls",
     "OSC Studio": "Chatbox, avatar height and voice controls",
     "Updates": "Verified Python source updates and rollback",
+    "Settings": "Navigation preferences and recovery tools",
 }
 
 
@@ -152,7 +153,7 @@ class DesktopShell:
         self.state.restrict(self.page_names)
         self.page_picker.configure(values=self.page_names)
         self.notebook.bind("<<NotebookTabChanged>>", self._tab_changed)
-        self.open_page(self.state.last_page)
+        self.open_page("Home" if self.state.open_at_home else self.state.last_page)
         self.render_sidebar()
 
     def open_page(self, title):
