@@ -46,7 +46,7 @@ jobs:
       - name: Generate pinned owner-preview build metadata
         shell: pwsh
         run: |
-          $info = @{ channel = "owner-preview"; version = "0.3"; sha = "$env:GITHUB_SHA"; run_id = [int64]$env:GITHUB_RUN_ID }
+          $info = @{ channel = "owner-preview"; version = "0.4"; sha = "$env:GITHUB_SHA"; run_id = [int64]$env:GITHUB_RUN_ID }
           $info | ConvertTo-Json -Compress | Set-Content "co-companion/build_info.json" -Encoding utf8
       - name: Assemble manually runnable owner-preview source ZIP (no credentials)
         shell: pwsh
@@ -54,7 +54,7 @@ jobs:
           $root = "owner-preview-source"
           New-Item -ItemType Directory -Path "$root/tgc_cocompanion/legacy" -Force | Out-Null
           $source = "co-companion/tgc_cocompanion"
-          $include = @("__init__.py", "permissions.py", "sessions.py", "osc.py", "staff_lease.py", "launch_controller.py", "windows_process.py", "log_diagnostics.py", "pilot_enrollment.py", "owner_pilot.py", "vrchat_personal.py", "staffdex_desktop.py", "desktop_osc_tools.py", "desktop_pages.py", "desktop_theme.py", "desktop_update_page.py", "owner_updater.py", "python_source_updater.py", "desktop_more_pages.py", "desktop_collection_pages.py")
+          $include = @("__init__.py", "permissions.py", "sessions.py", "osc.py", "staff_lease.py", "launch_controller.py", "windows_process.py", "log_diagnostics.py", "pilot_enrollment.py", "owner_pilot.py", "vrchat_personal.py", "staffdex_desktop.py", "desktop_osc_tools.py", "desktop_pages.py", "desktop_theme.py", "desktop_shell.py", "desktop_navigation.py", "desktop_update_page.py", "owner_updater.py", "python_source_updater.py", "desktop_more_pages.py", "desktop_collection_pages.py")
           foreach ($file in $include) { Copy-Item "$source/$file" "$root/tgc_cocompanion/$file" -ErrorAction Stop }
           Copy-Item "$source/legacy/__init__.py" "$root/tgc_cocompanion/legacy/__init__.py"
           Copy-Item "$source/legacy/tgc_vrchat_multilog.py" "$root/tgc_cocompanion/legacy/tgc_vrchat_multilog.py"
@@ -64,7 +64,7 @@ jobs:
           Copy-Item "co-companion/requirements_owner_pilot.txt" "$root/requirements_owner_pilot.txt"
           Copy-Item "co-companion/RUN_OWNER_PILOT.bat" "$root/RUN_OWNER_PILOT.bat"
           Copy-Item "co-companion/README_OWNER_PILOT.md" "$root/README_OWNER_PILOT.md"
-          Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.3_SOURCE.zip" -CompressionLevel Optimal -Force
+          Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.4_SOURCE.zip" -CompressionLevel Optimal -Force
           if (!(Test-Path "TGC_CoCompanion_OwnerPreview_v0.3_SOURCE.zip")) { throw "Source package missing" }
       - uses: actions/upload-artifact@v4
         with:
@@ -82,7 +82,7 @@ jobs:
           Copy-Item "co-companion/build_info.json" "dist/TGC_CoCompanion_OwnerPreview/build_info.json"
           python -c "import json, pathlib; a=json.loads(pathlib.Path('dist/TGC_CoCompanion_OwnerPreview/build_info.json').read_text(encoding='utf-8-sig')); assert a['sha']=='$env:GITHUB_SHA'; print('Verified build provenance:',a['sha'])"
           Copy-Item "co-companion/README_OWNER_PILOT.md" "dist/TGC_CoCompanion_OwnerPreview/README_OWNER_PILOT.md"
-          Compress-Archive -Path "dist/TGC_CoCompanion_OwnerPreview/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.3_WINDOWS.zip" -CompressionLevel Optimal -Force
+          Compress-Archive -Path "dist/TGC_CoCompanion_OwnerPreview/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.4_WINDOWS.zip" -CompressionLevel Optimal -Force
       - uses: actions/upload-artifact@v4
         with:
           name: TGC-CoCompanion-OWNER-EXE-NOT-STAFF
