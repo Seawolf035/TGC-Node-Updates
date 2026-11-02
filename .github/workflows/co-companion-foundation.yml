@@ -65,11 +65,11 @@ jobs:
           Copy-Item "co-companion/RUN_OWNER_PILOT.bat" "$root/RUN_OWNER_PILOT.bat"
           Copy-Item "co-companion/README_OWNER_PILOT.md" "$root/README_OWNER_PILOT.md"
           Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.4_SOURCE.zip" -CompressionLevel Optimal -Force
-          if (!(Test-Path "TGC_CoCompanion_OwnerPreview_v0.3_SOURCE.zip")) { throw "Source package missing" }
+          if (!(Test-Path "TGC_CoCompanion_OwnerPreview_v0.4_SOURCE.zip")) { throw "Source package missing" }
       - uses: actions/upload-artifact@v4
         with:
           name: TGC-CoCompanion-OWNER-SOURCE-NOT-STAFF
-          path: TGC_CoCompanion_OwnerPreview_v0.3_SOURCE.zip
+          path: TGC_CoCompanion_OwnerPreview_v0.4_SOURCE.zip
           retention-days: 14
       - name: Compile self-contained Windows owner-preview executable
         shell: pwsh
@@ -86,5 +86,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: TGC-CoCompanion-OWNER-EXE-NOT-STAFF
-          path: TGC_CoCompanion_OwnerPreview_v0.3_WINDOWS.zip
+          path: TGC_CoCompanion_OwnerPreview_v0.4_WINDOWS.zip
           retention-days: 14
