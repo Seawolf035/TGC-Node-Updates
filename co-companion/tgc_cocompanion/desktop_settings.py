@@ -1,0 +1,114 @@
+"""v0.4 local owner UI preferences and safe diagnostics / recovery panel.
+
+No network, no account secrets, no production or staff configuration mutation.
+"""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import tkinter as tk
+from tkinter import messagebox, ttk
+
+from .desktop_navigation import MAX_PINNED
+from .owner_updater import bundled_build_info
+
+
+class DesktopSettings:
+    def __init__(self, owner, notebook):
+        self.owner = owner
+        self.shell = owner.shell
+        panel = ttk.Frame(notebook, padding=(20, 16))
+        notebook.add(panel, text="Settings")
+        ttk.Label(panel, text="DESKTOP PREFERENCES",
+                  style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(panel, text="Personal UI choices only. Your VRChat accounts and staff settings are not changed.",
+                  style="PageSubtitle.TLabel").pack(anchor="w", pady=(4, 16))
+
+        nav = ttk.LabelFrame(panel, text="Navigation & Accessibility", padding=(15, 12))
+        nav.pack(fill="x", pady=(0, 14))
+        self.compact_label = tk.StringVar()
+        self._sync_compact()
+        ttk.Button(nav, textvariable=self.compact_label,
+                   command=self._toggle_compact).pack(anchor="w", pady=3)
+        self.home_on_start = tk.BooleanVar(value=self.shell.state.open_at_home)
+        ttk.Checkbutton(nav, text="Always open Home when Co-Companion starts",
+                        variable=self.home_on_start,
+                        command=self._home_toggle).pack(anchor="w", pady=(8, 3))
+        ttk.Button(nav, text="Reset Pinned Pages & Navigation History",
+                   command=self._reset_navigation).pack(anchor="w", pady=5)
+        ttk.Label(nav, text=(
+            "Ctrl+K: Find any page    •    Ctrl+F: Filter navigation    •    "
+            "Ctrl+1–9: quick page shortcuts    •    Alt+Left: previous page"
+        ), wraplength=800).pack(anchor="w", pady=(8, 0))
+
+        build = bundled_build_info()
+        info = ttk.LabelFrame(panel, text="Installed Python Preview", padding=(15, 12))
+        info.pack(fill="x", pady=(0, 14))
+        ttk.Label(info, text=(
+            "Version: " + str(build.get("version") or "legacy") +
+            "     •     Commit: " + str(build.get("sha") or "not pinned")[:12] +
+            "     •     Channel: owner-preview"
+        ), wraplength=800).pack(anchor="w")
+        bar = ttk.Frame(info)
+        bar.pack(anchor="w", pady=(9, 0))
+        ttk.Button(bar, text="Check for Python Updates",
+                   command=lambda: self.shell.open_page("Updates")
+                   ).pack(side="left", padx=(0, 9))
+        ttk.Button(bar, text="Open Installed Versions Folder",
+                   command=self._open_versions).pack(side="left")
+
+        tools = ttk.LabelFrame(panel, text="Troubleshooting", padding=(15, 12))
+        tools.pack(fill="x")
+        ttk.Button(tools, text="Copy Safe Diagnostics",
+                   command=lambda: owner.features._copy_safe_diagnostics()
+                   ).pack(anchor="w")
+        ttk.Label(tools, text=(
+            "Only the update folder is opened; credentials, encrypted VRChat sessions, "
+            "Node keys and databases are never copied, reset or deleted by Settings. "
+            "To roll back, launch RUN_OWNER_PILOT.bat in an earlier verified Python folder."
+        ), wraplength=800).pack(anchor="w", pady=(8, 0))
+
+    def _sync_compact(self):
+        self.compact_label.set("Expand sidebar" if self.shell.state.compact
+                               else "Use compact sidebar")
+
+    def _toggle_compact(self):
+        self.shell.toggle_compact()
+        self._sync_compact()
+
+    def _home_toggle(self):
+        self.shell.state.open_at_home = bool(self.home_on_start.get())
+        self.shell.state.save()
+
+    def _reset_navigation(self):
+        if not messagebox.askyesno("Reset navigation preferences",
+                "Reset sidebar layout, pinned pages and recent navigation?\n"
+                "This will not affect any VRChat account, Node or TGC configuration.",
+                parent=self.owner.root):
+            return
+        state = self.shell.state
+        state.pinned = ["Home", "Social", "VRChat Launcher", "Updates"]
+        state.recent = []
+        state.compact = False
+        state.open_at_home = False
+        state.last_page = "Home"
+        state.restrict(self.shell.page_names)
+        state.save()
+        self.home_on_start.set(False)
+        self.shell._apply_compact()
+        self._sync_compact()
+        self.shell.open_page("Home")
+
+    def _open_versions(self):
+        from .owner_updater import update_root
+        path = update_root()
+        path.mkdir(parents=True, exist_ok=True)
+        if os.name != "nt":
+            messagebox.showinfo("Installed Versions", str(path),
+                                parent=self.owner.root)
+            return
+        try:
+            os.startfile(str(path))
+        except OSError as exc:
+            messagebox.showerror("Open installed versions", str(exc),
+                                 parent=self.owner.root)
