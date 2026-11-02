@@ -44,7 +44,7 @@ class OwnerPilotApp:
         self.root = root
         from .desktop_theme import apply_desktop_theme
         apply_desktop_theme(self.root)
-        self.root.title("TGC Co-Companion — Owner Preview 0.4 (NOT A STAFF RELEASE)")
+        self.root.title("TGC Co-Companion — Owner Preview 0.5 (NOT A STAFF RELEASE)")
         self.root.geometry("1120x650")
         self.root.minsize(900, 520)
         self.enrollment = PilotEnrollment()
