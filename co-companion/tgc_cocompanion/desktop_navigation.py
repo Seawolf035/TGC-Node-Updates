@@ -9,7 +9,7 @@ from pathlib import Path
 import tempfile
 
 MAX_RECENT = 6
-MAX_PINNED = 8
+MAX_PINNEDED = 8
 MAX_BYTES = 8192
 
 
@@ -36,7 +36,7 @@ class NavigationState:
             data = json.loads(self.path.read_text(encoding="utf-8"))
             if not isinstance(data, dict):
                 return
-            for field, size in (("pinned", MAX_PINN), ("recent", MAX_RECENT)):
+            for field, size in (("pinned", MAX_PINNED), ("recent", MAX_RECENT)):
                 value = data.get(field)
                 if isinstance(value, list):
                     cleaned = []
@@ -54,7 +54,7 @@ class NavigationState:
 
     def restrict(self, valid_names):
         allowed = set(valid_names)
-        self.pinned = [name for name in self.pinned if name in allowed][:MAX_PINN]
+        self.pinned = [name for name in self.pinned if name in allowed][:MAX_PINNED]
         self.recent = [name for name in self.recent if name in allowed][:MAX_RECENT]
         if self.last_page not in allowed:
             self.last_page = "Home" if "Home" in allowed else (next(iter(valid_names), ""))
@@ -70,7 +70,7 @@ class NavigationState:
         if name in self.pinned:
             self.pinned.remove(name)
         else:
-            if len(self.pinned) >= MAX_PINN:
+            if len(self.pinned) >= MAX_PINNED:
                 raise ValueError("Maximum eight pinned pages")
             self.pinned.append(name)
         self.save()
