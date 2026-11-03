@@ -41,6 +41,8 @@ class DesktopPages:
         self._snapshot=None
         self._build_account(notebook)
         self._build_social(notebook)
+        from .desktop_friend_hub import FriendHubPage
+        self.friend_hub=FriendHubPage(self,notebook)
         self._build_staffdex(notebook)
         self._build_osc(notebook)
         from .desktop_more_pages import ProfileAndPresence
@@ -102,7 +104,7 @@ class DesktopPages:
         for col in range(3):
             actions.columnconfigure(col, weight=1, uniform="homeactions")
         destinations = (
-            ("Social & Friends", "Social"), ("Find Profiles", "Profiles"),
+            ("Friends Hub", "Friends Hub"), ("Find Profiles", "Profiles"),
             ("OSC Studio", "OSC Studio"), ("Saved Worlds", "Bookmarks"),
             ("Inbox", "Inbox"), ("Updates", "Updates"),
             ("Explore VRChat", "Explore"), ("Recent Players", "Recent Players"),
@@ -132,7 +134,7 @@ class DesktopPages:
             if self.owner.launcher:
                 running = sum(s.pid is not None for s in self.owner.launcher.statuses())
             report = "\n".join((
-                "TGC Co-Companion owner preview v0.7.1",
+                "TGC Co-Companion owner preview v0.8.0",
                 f"Owner verified: {bool(access and self.owner._terms_valid())}",
                 f"Personal VRChat connected: {bool(self.account.signed_in)}",
                 f"Running managed VRChat instances: {running}",
