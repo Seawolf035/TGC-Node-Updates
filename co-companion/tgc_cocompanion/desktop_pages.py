@@ -484,8 +484,13 @@ class DesktopPages:
                   font=("Segoe UI",15,"bold")).pack(anchor="w")
         ttk.Label(panel,text="Uses the same official TGC roster and full VRChat friendship scan as Mobile. Unverified or incomplete scans never award progress.",
                   wraplength=820).pack(anchor="w",pady=(3,6))
-        ttk.Button(panel,text="Refresh Complete StaffDex Scan",command=self._scan_dex).pack(anchor="w",pady=(0,6))
-        self.dex_status=tk.StringVar(value="Sign in to personal VRChat and verify owner pilot first")
+        actions=ttk.Frame(panel)
+        actions.pack(anchor="w",pady=(0,6))
+        ttk.Button(actions,text="Load Staff Directory",
+                   command=self._directory_dex).pack(side="left",padx=(0,9))
+        ttk.Button(actions,text="Scan My Friendships",style="Accent.TButton",
+                   command=self._scan_dex).pack(side="left")
+        self.dex_status=tk.StringVar(value="Load the public staff roster, or sign in and scan your VRChat friendships.")
         ttk.Label(panel,textvariable=self.dex_status,wraplength=830).pack(anchor="w",pady=(0,8))
         split=ttk.Panedwindow(panel,orient="horizontal");split.pack(fill="both",expand=True)
         left=ttk.Frame(split);right=ttk.Frame(split)
@@ -495,6 +500,9 @@ class DesktopPages:
         for k,w in (("name",185),("rank",130),("status",80)):
             self.dex_table.heading(k,text=k.title())
             self.dex_table.column(k,width=w,stretch=True)
+        from .desktop_staff_colors import RANK_COLORS
+        for role,color in RANK_COLORS.items():
+            self.dex_table.tag_configure(role,foreground=color)
         self.dex_table.pack(fill="both",expand=True,padx=(0,6))
         ttk.Label(right,text="Achievements",font=("Segoe UI",12,"bold")).pack(anchor="w")
         self.rewards=tk.Listbox(right,height=18,bg="#16243A",fg="#E7F1FF",
@@ -504,20 +512,50 @@ class DesktopPages:
         self._cached_dex()
 
     def _cached_dex(self):
-        if not self.account.signed_in or not self.owner.enrollment.discord_id:return
-        try:self._render_dex(self.dex.cached(self.owner.enrollment.discord_id,self.account.user_id))
-        except Exception:pass
+        if not self.account.signed_in or not self.owner.enrollment.discord_id:
+            return
+        snapshot=self.dex.cached(self.owner.enrollment.discord_id,self.account.user_id)
+        if snapshot is not None:
+            self._render_dex(snapshot)
+            self.dex_status.set(self.dex_status.get()+" • Saved completed snapshot.")
+
+    def _directory_dex(self):
+        self.dex_status.set("Loading official TGC staff directory…")
+        def work():
+            if not self.owner._terms_valid():
+                raise PermissionError("Accept Desktop Terms first")
+            return self.dex.directory()
+        def done(members):
+            self._snapshot=None
+            self.dex_table.delete(*self.dex_table.get_children())
+            for m in members:
+                self.dex_table.insert("",tk.END,values=(m.name,m.rank,
+                    "Not scanned" if m.vrchat_id else "No VRChat ID"),tags=(m.rank,))
+            self.rewards.delete(0,tk.END)
+            self.dex_status.set(f"Loaded {len(members)} staff from the official roster. "
+                  "Friendship progress requires a complete personal VRChat scan.")
+        self.owner._run_async(work,done,
+              on_error=lambda error:self.dex_status.set(
+              "Could not load official staff roster: "+error+
+              ". Previous completed snapshots are not deleted."))
 
     def _scan_dex(self):
+        self.dex_status.set("Loading authoritative roster + every online/offline VRChat friend page…")
         def work():
-            self._eligible()
+            # StaffDex awards are LOCAL collection progress; never authorize
+            # staff tools. Enrolled Discord ID scopes DPAPI snapshots, while
+            # a verified lease still gates any privileged staff action.
             self._eligible(personal=True)
+            if not self.owner.enrollment.enrolled:
+                raise PermissionError("Enroll the TGC owner pilot to scope your StaffDex")
             return self.dex.refresh(self.account,self.owner.enrollment.discord_id)
         def done(snapshot):
             self._render_dex(snapshot)
             self._notice(f"StaffDex complete: {snapshot.earned}/{snapshot.total} collected")
-        self.dex_status.set("Scanning roster and all friend pages…")
-        self.owner._run_async(work,done)
+        self.owner._run_async(work,done,
+              on_error=lambda error:self.dex_status.set(
+                  "StaffDex scan could not complete: "+error+
+                  ". No partial friendships were saved or counted. Retry when VRChat is available."))
 
     def _render_dex(self,snapshot):
         if snapshot is None:return
@@ -527,7 +565,8 @@ class DesktopPages:
         for member in snapshot.members:
             status="Collected" if snapshot.collected(member.vrchat_id) and member.vrchat_id else "Missing"
             if not member.vrchat_id:status="No VRChat ID"
-            self.dex_table.insert("",tk.END,values=(member.name,member.rank,status))
+            self.dex_table.insert("",tk.END,values=(member.name,member.rank,status),
+                                  tags=(member.rank,))
         for title,earned in snapshot.visible_rewards().items():
             # The visible Mobile catalog includes its 16 normal awards;
             # hidden community rewards are returned ONLY after collection.
