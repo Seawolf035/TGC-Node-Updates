@@ -19,6 +19,14 @@ def main():
             app=OwnerPilotApp(root)
             root.update_idletasks()
             assert hasattr(app,"updates") and hasattr(app.features,"collections")
+            assert hasattr(app.features,"two_factor_panel")
+            assert not app.features.two_factor_panel.winfo_manager()
+            app.shell.toggle_compact()
+            root.update_idletasks()
+            assert app.shell.state.compact
+            app.shell.toggle_compact()
+            root.update_idletasks()
+            assert not app.shell.state.compact
         finally:
             root.destroy()
         return
