@@ -193,7 +193,7 @@ class StaffDex:
         self._fetch = roster_fetch
         self.path = directory / "staffdex_completed_snapshot.dpapi"
 
-    def directory(self) -> tuple[StaffEntry, ...]:
+    def roster_directory(self) -> tuple[StaffEntry, ...]:
         """Read authoritative PUBLIC roster without scanning anyone's friendships.
 
         This is a cosmetic read-only directory, NOT staff authentication.
