@@ -1,3 +1,64 @@
+# Co-Companion v0.6.0 — Desktop Companion Parity Milestone
+
+**INSTALL/UPDATE:** If you already have the owner-only v0.5.0, v0.5.1 or
+v0.5.2 Windows EXE, use **Updates → Check for Updates → Download & Install EXE**
+after the v0.6.0 verified GitHub prerelease is published. No manual ZIP, Python,
+or BAT is needed. The app verifies the public owner preview asset checksum,
+stages it side-by-side, tests EXE startup, restarts and retargets your Start Menu
+shortcut. You can reopen the previous EXE folder to roll back.
+
+## What works in this milestone
+
+- **StaffDex loading fixed:** a public authoritative TGC roster can now be
+  loaded separately from a long full-friend scan even when an ephemeral Relay
+  lease is absent. The scan requires accepted desktop Terms, an enrolled
+  Discord identity and personal VRChat login. It is **local collection only**,
+  never staff authorization, and saves ONLY complete friend snapshots under
+  user-bound Windows DPAPI. Failed scans explain what failed, preserve the prior
+  complete result, and never count partial friend lists. Previous completed
+  snapshots are displayed again after personal login. Staff rank colors match
+  the official roster; a staff row opens its VRChat profile with double-click.
+- **Staff Chatboxes:** exactly the 12 fixed phrases and tiers from the Mobile
+  `TgcOfficialChatboxes.java` catalog. Five common presets require current
+  owner-preview Relay staff verification; rank-specific presets require
+  `staff_rank` in the live **authenticated** Relay response, which the old
+  backend may not supply (these higher labels remain safely locked). The exact
+  three Royalty overrides are preserved. Staff labels cannot be unlocked
+  by selecting a client-side role or by scraping the public roster. Selected
+  template IDs persist per personal VRChat account, never auth claims. OSC
+  messages send ONLY to the selected authorized local VRChat PID; official
+  rotations stop on downgrade, revoked lease, account switch or deselection.
+  Existing personal chatbox editor and rotation remain unaffected.
+- **UI Colors:** Settings includes 12 public Mobile Companion built-in named
+  palettes, chosen locally and persisted across desktop launches. The private
+  exclusive delegated theme is intentionally unavailable. No colors give staff
+  privileges. Full ten-channel custom editing and six-color VRChat palette
+  import remain OPEN pending a verified Admin+ rank signal.
+- **Explore:** unified person/world search using the logged-in personal VRChat
+  API, quick browses recent/favorite worlds, online friends and groups, opens
+  profiles/VRChat.com and bookmarks worlds. Partial searches are labeled when
+  one API endpoint fails (no fake all-clear).
+- **Recent Players:** manual opt-in PCVR history sourced ONLY from bounded
+  recent local VRChat output log tails; excludes own logged-in user when known,
+  deduplicates user IDs, supports filter/profile/VRChat.com/copy ID, and never
+  writes encounter history, submits sightings, contacts the Relay or starts
+  a new watcher/Node.
+- All previous Windows owner preview pages, VRChat login email/TOTP, StaffDex
+  achievements, OSC, session launcher, Settings and in-app updates remain.
+  The EXE smoke check now opens the new pages before an approved release.
+
+## Boundaries and next stages
+
+The production TGC Relay/Node source, staff invite uploader, Android/Quest
+Companion, and Main Launcher are NOT changed. No new Relay or Node process.
+Cross-device phone/Quest pairing, overlays, staff authorized rank sync in the
+live Relay, full ten-channel Admin+ editing, screenshot QA, and actual Windows
+VRChat field testing remain OPEN. Do not claim complete Companion parity yet.
+The owner preview EXE assets are publicly downloadable from the existing
+public TGC-Node-Updates repository, but runtime staff privileges remain gated.
+
+---
+
 # Co-Companion v0.5.1 — Personal VRChat Login, OTP and Compact UI Fixes (Owner EXE)
 
 **Install this updated Windows owner EXE from the successful v0.5.1 Actions artifact.** Close the old app, extract the inner Windows ZIP with `_internal` alongside the EXE, and run the executable. The first-run flow installs side-by-side and updates the Start Menu shortcut. The prior working v0.5.0 and local encrypted VRChat session are preserved. This is still **NOT A STAFF RELEASE**, and must not alter the single live TGC Relay, existing Nodes, staff update feed or Main Launcher.
