@@ -97,7 +97,7 @@ class DesktopPages:
         destinations = (
             ("Social & Friends", "Social"), ("Find Profiles", "Profiles"),
             ("OSC Studio", "OSC Studio"), ("Saved Worlds", "Bookmarks"),
-            ("Inbox", "Inbox"), ("Python Updates", "Updates"),
+            ("Inbox", "Inbox"), ("Updates", "Updates"),
         )
         for index,(label, destination) in enumerate(destinations):
             ttk.Button(actions, text=label,
@@ -176,11 +176,15 @@ class DesktopPages:
         self.root.after(10000,self._home_tick)
 
     def _eligible(self,personal=False):
+        if not self.owner._terms_valid():
+            raise PermissionError("Accept the Co-Companion Desktop Terms first")
+        if personal:
+            if not self.account.signed_in:
+                raise PermissionError("Sign in to personal VRChat first")
+            return
         lease=self.owner.lease.current() if self.owner.lease else None
-        if not self.owner._terms_valid() or not lease or not lease.valid_limit(__import__("time").time()):
-            raise PermissionError("Verify your Co-Companion staff pilot and desktop Terms first")
-        if personal and not self.account.signed_in:
-            raise PermissionError("Sign into your personal VRChat account first")
+        if not lease or not lease.valid_limit(__import__("time").time()):
+            raise PermissionError("Verify your TGC staff pilot first")
 
     def _notice(self,error):
         self.owner.status_var.set(str(error))
@@ -424,6 +428,7 @@ class DesktopPages:
 
     def _scan_dex(self):
         def work():
+            self._eligible()
             self._eligible(personal=True)
             return self.dex.refresh(self.account,self.owner.enrollment.discord_id)
         def done(snapshot):
