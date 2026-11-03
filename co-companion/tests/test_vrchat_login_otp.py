@@ -58,6 +58,7 @@ class LoginChallengeTests(unittest.TestCase):
         self.assertEqual(client.verify_2fa("123456"),"VRChat test user")
         self.assertIn("/auth/twofactorauth/totp/verify",[c[1] for c in wire.calls])
         self.assertEqual(len([c for c in wire.calls if c[1].endswith("/verify")]),1)
+        client.logout()
         second,other=self.account(["totp","otp"])
         second.login("user","pass")
         second.prefer_2fa("otp")
