@@ -14,7 +14,7 @@ import webbrowser
 
 from .vrchat_personal import PersonalVRChat, USER_ID
 from .staffdex_desktop import StaffDex
-from .desktop_osc_tools import PersonalOscPresets, WindowsOscControls
+from .desktop_osc_tools import PersonalOscPresets, PersonalHeightPreset, WindowsOscControls
 
 CATEGORIES = (
     ("Online Friends","online"),("Offline Friends","offline"),
@@ -32,6 +32,7 @@ class DesktopPages:
         self.account=PersonalVRChat(owner.terms_dir)
         self.dex=StaffDex(owner.terms_dir)
         self.presets=PersonalOscPresets(owner.terms_dir)
+        self.heights=PersonalHeightPreset(owner.terms_dir)
         self.controls: WindowsOscControls | None=None
         self._closed=False
         self._social_rows: list[dict]=[]
@@ -568,6 +569,8 @@ class DesktopPages:
         self.osc_height=tk.StringVar(value="1.65")
         ttk.Entry(height,textvariable=self.osc_height,width=8).pack(side="left",padx=8)
         ttk.Button(height,text="Set Custom Height",command=self._custom_height).pack(side="left")
+        ttk.Button(height,text="Save My Height",
+                   command=self._save_height).pack(side="left",padx=(8,0))
         params=ttk.Frame(panel);params.pack(fill="x",pady=7)
         ttk.Label(params,text="Avatar parameter").pack(side="left")
         self.param_name=tk.StringVar()
@@ -608,9 +611,19 @@ class DesktopPages:
             self.osc_note.set(f"OSC chatbox sent locally to PID {pid} (UDP does not confirm display)")
         except Exception as exc:self._notice(exc)
 
+    def _save_height(self):
+        try:
+            self._eligible(personal=True)
+            value=self.heights.save(self.account.user_id,float(self.osc_height.get()))
+            self.osc_note.set(f"Saved your personal {value:g} m height preset")
+        except Exception as exc:self.osc_note.set("Could not save height: "+str(exc))
+
     def _load_presets(self):
         self.phrases.delete(0,tk.END)
         if not self.account.signed_in:return
+        saved=self.heights.get(self.account.user_id)
+        if saved is not None:
+            self.osc_height.set(str(saved))
         for name,text in self.presets.list(self.account.user_id):
             self.phrases.insert(tk.END,name)
 
