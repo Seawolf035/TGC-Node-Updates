@@ -1,4 +1,4 @@
-name: Co-Companion foundation tests (nonpublishing)
+name: Co-Companion owner preview build and release
 
 on:
   push:
@@ -129,3 +129,59 @@ jobs:
           name: TGC-CoCompanion-OWNER-EXE-NOT-STAFF
           path: TGC_CoCompanion_OwnerPreview_v*_WINDOWS.zip
           retention-days: 14
+
+  owner-exe-release:
+    name: Publish owner-only EXE after green CI
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feature/co-companion-foundation' }}
+    needs: [offline-tests, windows-offline-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: TGC-CoCompanion-OWNER-EXE-NOT-STAFF
+          path: verified-owner-build
+      - name: Verify published artifact and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '\r\n' < co-companion/OWNER_VERSION.txt)"
+          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          artifact="verified-owner-build/TGC_CoCompanion_OwnerPreview_v${version}_WINDOWS.zip"
+          test -s "$artifact"
+          python3 - "$artifact" "$version" <<'PY'
+          import json, pathlib, sys, zipfile
+          path, version = pathlib.Path(sys.argv[1]), sys.argv[2]
+          with zipfile.ZipFile(path) as package:
+              names=set(package.namelist())
+              required={'TGC_CoCompanion_OwnerPreview.exe','build_info.json'}
+              if not required.issubset(names) or not any(x.startswith('_internal/') for x in names):
+                  raise SystemExit('Missing owner EXE/runtime files')
+              info=json.loads(package.read('build_info.json').decode('utf-8-sig'))
+              if info.get('channel')!='owner-preview' or info.get('version')!=version or info.get('sha') != __import__('os').environ['GITHUB_SHA']:
+                  raise SystemExit('Owner build is not from this green CI commit/version')
+              if package.testzip() is not None:
+                  raise SystemExit('Owner EXE ZIP has corrupt members')
+          PY
+          sha256sum "$artifact"
+      - name: Publish verified EXE only to independent owner-preview prerelease channel
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '\r\n' < co-companion/OWNER_VERSION.txt)"
+          tag="co-companion-owner-v${version}"
+          archive="verified-owner-build/TGC_CoCompanion_OwnerPreview_v${version}_WINDOWS.zip"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Owner preview $tag was already released; a new version requires a new version number."
+            exit 0
+          fi
+          gh release create "$tag" \
+            "$archive#TGC-CoCompanion-OwnerPreview-WINDOWS.zip" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --prerelease --title "TGC Co-Companion v${version} Owner Preview (NOT STAFF)" \
+            --notes "Tested Windows EXE for the owner-only Co-Companion channel. No staff, Node, Relay, Main Launcher, or production deployment. Owner preview is publicly downloadable; app access still requires owner verification. This release is an unsigned development build."
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq '{tag: .tag_name, commit: .target_commitish, assets: [.assets[] | {name: .name, digest: .digest, size: .size}]}'
