@@ -1,4 +1,33 @@
-# TGC Co-Companion v0.5.0 — Owner-only self-updating Windows EXE
+# Co-Companion v0.5.2+ — ACTUAL IN-APP EXE UPDATES
+
+**Update channel fixed.** Previously CI uploaded EXEs only as GitHub Actions
+artifacts, while the installed v0.5.0/v0.5.1 app checked only GitHub Releases.
+The app therefore could not discover new builds. Now a dedicated
+`owner-exe-release` GitHub Actions job runs **only after both Windows and Linux
+tests pass** on the owner-preview branch. It publishes the exact verified
+Windows ZIP as a separate GitHub **pre-release** named
+`co-companion-owner-v<version>`, using the version in
+`co-companion/OWNER_VERSION.txt`. Publishing is idempotent for each version:
+after the first successful release, additional branch commits require a
+version bump to publish a different version. A failed build is never released.
+
+If you're running v0.5.0 or v0.5.1, you do **not** need another installer:
+open **Updates → Check for Updates → Download & Install EXE** after v0.5.2
+appears in GitHub Releases. The app verifies the release checksum, stages the
+EXE alongside your current installation, runs a GUI startup smoke check, and
+restarts into the updated version. It also retargets the Start Menu shortcut.
+Old installs and saved VRChat/DPAPI settings remain unchanged.
+
+**Distribution/privacy:** the owner-preview ZIP is publicly downloadable
+from this existing public GitHub repository. It is NOT a staff release and does
+not grant staff authorization. Publishing does not update Nodes, Relay,
+Main Launcher, Android/Quest apps, or any production manifest. Do not add
+credentials, personal data, account tokens or proprietary private-repo source
+to this public source/build artifact.
+
+---
+
+# TGC Co-Companion — Owner-only self-updating Windows EXE
 
 This is **not a staff release** and does not alter the one live TGC Relay,
 Nodes, Staff Launcher, Android/Quest Companion, Main Launcher, VRChat session
@@ -53,28 +82,14 @@ version alongside the running executable, and **runs `--smoke-check` before
 starting it**. A bad download or failed startup keeps the old EXE available.
 Settings and encrypted VRChat sessions remain in the existing owner AppData.
 
-**Important owner publication limitation:** The EXE cannot automatically
-download an Actions artifact without GitHub authentication. GitHub Releases
-provides public downloads without a PAT. The repository is public, so owner
-prerelease files there are *publicly downloadable*, even though the application
-keeps its owner-only staff authorization. **Do not publish a release until the
-owner chooses to make that preview public.** Merely uploading the Actions
-artifact is NOT a release and will not enable one-click EXE updates. The
-GitHub public release channel is independent of the existing staff manifest.
-
-### To publish the first preview manually (maintainer action)
-
-After verifying the completed CI run on a pinned v0.5.0 commit:
-
-1. In GitHub, create a new **pre-release** using tag
-   `co-companion-owner-v0.5.0` targeting that exact successful commit.
-2. Attach the **inner Windows ZIP** from the successful Actions artifact,
-   renamed to `TGC-CoCompanion-OwnerPreview-WINDOWS.zip`.
-3. Publish the owner prerelease. Verify GitHub's release REST API reports the
-   exact SHA target and `sha256:` digest, then use Check For Updates in EXE.
-
-**No GitHub release has been published automatically by the ordinary CI job.**
-Future releases need the same approved publication step.
+**Owner-release publishing:** GitHub Actions artifacts are still retained
+for testing, but the separate owner EXE release job now copies the tested
+Windows archive into GitHub Releases automatically on the first passing CI run
+for each version. The release asset is publicly downloadable (not a staff
+release). `co-companion/OWNER_VERSION.txt` is the only version marker the
+workflow uses to decide whether a new release needs publishing.
+The updater does not require a GitHub PAT and it never touches the staff
+update channel.
 
 ## Recovery
 
