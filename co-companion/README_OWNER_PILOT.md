@@ -1,3 +1,58 @@
+# Co-Companion v0.7.0 — Windows UI Color Studio and StaffDex Filters
+
+**Update from the EXE itself:** Open Co-Companion → **Updates → Check for
+Updates → Download & Install EXE** after CI publishes the v0.7.0 owner
+prerelease. The update installs beside your previous version, performs the
+frozen Windows UI smoke test, and automatically retargets your Start Menu
+shortcut. No Python, BAT, or manual ZIP replacement. This is **owner-preview
+only**, not a staff deployment, and does not modify the one live TGC Relay,
+Main Launcher, Node, Quest, Android or staff update feeds.
+
+### Custom desktop UI Color Studio
+
+- Open **Settings → Open 10-Channel Color Studio** or its sidebar page.
+- All **10 Mobile Companion channels** are separately editable: Background,
+  Card Surface, Raised Panels, Input Fields, Accent, Borders, Icons, Buttons,
+  Fonts, and Subtext.
+- Import exactly **six VRChat UI codes** (Highlight, Icons, Buttons,
+  Background, Fonts, Subtext) using the clipboard button. Its ten-channel
+  surface colors are derived using the same channel mixing as Mobile.
+  Export copies six colors in VRChat's exact import/export order.
+- Save up to **25 named custom palettes**, delete or replace them with an
+  explicit overwrite confirmation, and apply them. Records are bound to the
+  TGC Discord ID, stored only in the owner pilot AppData, never uploaded.
+  Built-in themes remain available for all staff regardless of rank.
+- **Authorization:** custom editing, saved colors, import/export and
+  activation require a **currently valid authenticated Relay lease** whose
+  verified `staff_rank` is Admin+ and matches the enrolled Discord ID.
+  Unknown/older Relay rank returns an explanatory lock instead of incorrectly
+  granting Admin. Local theme files, roster display colors and VRChat groups
+  cannot unlock it. No creator override is forged on the client.
+- The last active custom color palette restores on the next successful
+  verified Admin+ lease; choosing a built-in theme clears the active custom
+  choice. This is a UI-only feature, not a staff permission.
+
+### StaffDex usability
+
+- Search by staff name or exact VRChat account ID.
+- Filter by official roster rank (Royalty through Trial Moderator).
+- Filter to Collected, Missing, or Not Scanned. This filtering is
+  presentation-only: no progress changes, no new friend scans and no
+  additional Relay requests.
+- The existing read-only roster, full friendship scan, completed DPAPI cache,
+  rank colors, achievements and links to individual staff profiles remain.
+
+**QA:** offline unit tests verify imported code order and channel blending,
+invalid hex rejection, per-account isolation, 25-preset limit, safe overwrite,
+corrupted preferences, authenticated Admin+ gates, and StaffDex filtering.
+Windows packaged EXE smoke checks that the Color Studio opens and exports a
+valid six-color code without needing any external login. CI does not replace
+the owner's actual Windows/VRChat validation. Some rank-gated features will
+stay locked until the existing Relay starts returning authenticated
+`staff_rank` metadata; **do not change production Relay just to unlock them**.
+
+---
+
 # Co-Companion v0.6.0 — Desktop Companion Parity Milestone
 
 **INSTALL/UPDATE:** If you already have the owner-only v0.5.0, v0.5.1 or
