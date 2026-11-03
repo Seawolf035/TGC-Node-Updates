@@ -1,3 +1,17 @@
+# Co-Companion v0.5.1 — Personal VRChat Login, OTP and Compact UI Fixes (Owner EXE)
+
+**Install this updated Windows owner EXE from the successful v0.5.1 Actions artifact.** Close the old app, extract the inner Windows ZIP with `_internal` alongside the EXE, and run the executable. The first-run flow installs side-by-side and updates the Start Menu shortcut. The prior working v0.5.0 and local encrypted VRChat session are preserved. This is still **NOT A STAFF RELEASE**, and must not alter the single live TGC Relay, existing Nodes, staff update feed or Main Launcher.
+
+**VRChat login fixes:** email `emailOtp` 2FA challenges are now handled correctly; authenticator (`totp`), email (`emailotp`) and recovery codes (`otp`) each use their official VRChat API endpoint. The old OTP dropdown is gone; a single contextual code field appears only when VRChat asks for 2FA. Ordinary codes auto-route based on the server challenge, while ambiguous combinations get explanatory email/authenticator buttons. No blind retries against alternate endpoints. The password is cleared from the GUI, never saved, and session cookies are saved only under Windows-user DPAPI. Saved sessions now receive a nonblocking real API check with clearer failures. **Personal VRChat login no longer requires a verified Relay lease**; staff-only launch/OSC/StaffDex capabilities remain gated by valid Terms and staff authorization.
+
+**Navigation:** compact mode now shows clear pinned-page symbols, current-page context and a Find All Pages control (Ctrl+K) with hover tooltips, not 17 chopped-up 3-letter tabs. Sidebar size and selected-page contrast have been tuned.
+
+**More Companion parity:** OSC Studio already offers 0.8 m / 2.0 m eye-height presets; v0.5.1 adds **Save My Height**, a local, account-specific custom height that reloads after sign-in. Existing personal profile, friends, worlds/groups/search, avatars, notifications/inbox, StaffDex, notes, presence and OSC controls remain in their respective working pages. Not yet full Android/Quest parity: cross-device pairing, floating Quest overlays and production Node uploader migration are not implemented or claimed. All services and personal account permissions stay separate.
+
+**QA:** Offline tests cover `emailOtp`, TOTP vs OTP recovery, ambiguous codes, unsupported-method refusal, account-specific saved heights and compact navigation. Windows packaged EXE `--smoke-check` now creates full Tk UI, toggles compact mode, and checks that the contextual 2FA panel starts hidden, so missing packaged modules fail CI. Field validation with the owner's actual VRChat login is still required; do not transmit passwords or 2FA codes in troubleshooting messages.
+
+---
+
 # TGC Co-Companion v0.5.0 — Windows Owner Preview EXE (recommended)
 
 **This supersedes the old Python-launch instructions below.** The v0.4 Python
