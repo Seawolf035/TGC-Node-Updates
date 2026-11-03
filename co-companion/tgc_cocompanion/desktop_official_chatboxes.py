@@ -254,14 +254,16 @@ class OfficialChatboxPage:
             widget.destroy()
         ttk.Label(self.role_actions,text="ROLE BOXES:",
                   style="SideHint.TLabel").pack(side="left",padx=(0,7))
-        for template in CATALOG:
-            if template.tier==0:
-                continue
+        roles=[t for t in CATALOG if t.tier>0]
+        role_rows=[ttk.Frame(self.role_actions),ttk.Frame(self.role_actions)]
+        for row in role_rows:
+            row.pack(fill="x",pady=2)
+        for index,template in enumerate(roles):
             enabled=template.id in eligible
-            ttk.Button(self.role_actions,text=template.role,
+            ttk.Button(role_rows[index//4],text=template.role,
                 state="normal" if enabled else "disabled",
                 command=lambda ident=template.id:self.choose_role(ident)
-                ).pack(side="left",padx=(0,4))
+                ).pack(side="left",padx=(0,5))
         tier=self.owner.lease.rank() if self.owner.lease and eligible else ""
         available_count=len(selected.intersection(eligible))
         if eligible:
@@ -364,13 +366,18 @@ class OfficialChatboxPage:
             if not chosen:
                 raise ValueError("Select at least one verified eligible official chatbox")
             ctrl,pid=self.pages._active_osc()
+            # The OSC router supports at most eight rotating messages;
+            # tell the user when a broad selection is truncated.
+            ignored=max(0,len(chosen)-8)
             chosen=chosen[:8]
             ctrl.set_rotation(pid,[t.text for t in chosen],int(self.pages.osc_interval.get()))
             self._rotation_ids=tuple(t.id for t in chosen)
             self._official_active=True
             self._account=self.pages.account.user_id
             self._last_rank=self.owner.lease.rank() if self.owner.lease else ""
-            self.status.set(f"Official rotation started on VRChat PID {pid}")
+            self.status.set(f"Official rotation started on VRChat PID {pid} "
+                f"with {len(chosen)} messages" +
+                (f" ({ignored} more selected; maximum 8 in rotation)" if ignored else ""))
         except Exception as exc:self.status.set(str(exc))
 
     def stop(self):
