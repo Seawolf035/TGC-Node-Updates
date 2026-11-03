@@ -1,3 +1,39 @@
+# Co-Companion v0.7.1 — Easier Staff VRChat OSC Role Boxes
+
+Update directly in the running owner EXE:
+**Updates → Check for Updates → Download & Install EXE → Restart**.
+The verified Windows/Linux CI pipeline publishes a dedicated owner-preview
+GitHub release after all tests pass. This is NOT a staff/Node/Relay deployment.
+
+The Staff Chatboxes page is now much faster to use:
+
+- **My Rank Box** picks your exact currently authorized rank label with one
+  click (the rank comes from a live authenticated Relay lease, not local UI).
+- **Common Staff**, **Recommended**, **All Available**, and **Clear All**
+  replace the selected set in one step. No manually toggling 12 rows.
+- Individual **role buttons** are arranged over two rows; unauthorized roles
+  are visibly disabled. Clicking an authorized role checks *only* that role.
+- The list displays a clear checked/unchecked/locked symbol. Double-click a
+  row to toggle its checkbox without pressing another button.
+- **Send My Rank Now** sends the live authorized rank message to the chosen
+  local PCVR process without selecting a row first. **Send Highlighted**
+  continues to work for one chosen individual message.
+- **Start Rotation** uses checked messages (up to eight); if more are checked
+  the status explicitly explains the 8-message rotation limit. Editing any
+  selection immediately stops the existing official rotation so old queued
+  chatboxes cannot continue broadcasting after preferences change.
+- Selected template IDs remain per personally signed-in VRChat account and
+  persist locally. Common staff messages still require verified staff
+  access; no rank-specific labels unlock without a live authenticated
+  `staff_rank` from the existing Relay.
+- No new OSC networking, Node uploader, Relay process, or staff permissions.
+
+Offline tests verify all seven rank buttons against explicit authorized
+catalogs, all quick-select presets, account separation, clear behavior and
+rejection of rank escalation. Windows packaged GUI smoke remains mandatory.
+
+---
+
 # Co-Companion v0.7.0 — Windows UI Color Studio and StaffDex Filters
 
 **Update from the EXE itself:** Open Co-Companion → **Updates → Check for
