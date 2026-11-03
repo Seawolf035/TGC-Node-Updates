@@ -46,7 +46,50 @@ jobs:
       - name: Generate pinned owner-preview build metadata
         shell: pwsh
         run: |
-          $info = @{ channel = "owner-preview"; version = "0.5.1"; sha = "$env:GITHUB_SHA"; run_id = [int64]$env:GITHUB_RUN_ID }
+          $version = (Get-Content "co-companion/OWNER_VERSION.txt" -Raw).Trim()
+          if ($version -notmatch '^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)
+      - name: Assemble manually runnable owner-preview source ZIP (no credentials)
+        shell: pwsh
+        run: |
+          $root = "owner-preview-source"
+          New-Item -ItemType Directory -Path "$root/tgc_cocompanion/legacy" -Force | Out-Null
+          $source = "co-companion/tgc_cocompanion"
+          Get-ChildItem -Path $source -Filter '*.py' -File | ForEach-Object { Copy-Item $_.FullName "$root/tgc_cocompanion/$($_.Name)" -ErrorAction Stop }
+          Get-ChildItem -Path "$source/legacy" -Filter '*.py' -File | ForEach-Object { Copy-Item $_.FullName "$root/tgc_cocompanion/legacy/$($_.Name)" -ErrorAction Stop }
+          Copy-Item "co-companion/owner_pilot_entry.py" "$root/owner_pilot_entry.py"
+          Copy-Item "co-companion/build_info.json" "$root/build_info.json"
+          Copy-Item "co-companion/TGC_DESKTOP_TERMS.txt" "$root/TGC_DESKTOP_TERMS.txt"
+          Copy-Item "co-companion/requirements_owner_pilot.txt" "$root/requirements_owner_pilot.txt"
+          Copy-Item "co-companion/RUN_OWNER_PILOT.bat" "$root/RUN_OWNER_PILOT.bat"
+          Copy-Item "co-companion/README_OWNER_PILOT.md" "$root/README_OWNER_PILOT.md"
+          $version = (Get-Content "co-companion/OWNER_VERSION.txt" -Raw).Trim()
+          Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v$version_SOURCE.zip" -CompressionLevel Optimal -Force
+          if (!(Test-Path "TGC_CoCompanion_OwnerPreview_v$version_SOURCE.zip")) { throw "Source package missing" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-CoCompanion-OWNER-SOURCE-NOT-STAFF
+          path: TGC_CoCompanion_OwnerPreview_v*_SOURCE.zip
+          retention-days: 14
+      - name: Compile self-contained Windows owner-preview executable
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check "pyinstaller>=6.16,<7"
+          python -m PyInstaller --noconfirm --clean --onedir --console --name TGC_CoCompanion_OwnerPreview --paths co-companion --add-data "co-companion/TGC_DESKTOP_TERMS.txt;." --add-data "co-companion/build_info.json;." --hidden-import win32crypt --hidden-import psutil co-companion/owner_pilot_entry.py
+          if (!(Test-Path "dist/TGC_CoCompanion_OwnerPreview/TGC_CoCompanion_OwnerPreview.exe")) { throw "Windows executable missing" }
+          & "dist/TGC_CoCompanion_OwnerPreview/TGC_CoCompanion_OwnerPreview.exe" --smoke-check
+          if ($LASTEXITCODE -ne 0) { throw "Bundled owner-preview EXE failed GUI smoke test" }
+          Copy-Item "co-companion/build_info.json" "dist/TGC_CoCompanion_OwnerPreview/build_info.json"
+          python -c "import json, pathlib; a=json.loads(pathlib.Path('dist/TGC_CoCompanion_OwnerPreview/build_info.json').read_text(encoding='utf-8-sig')); assert a['sha']=='$env:GITHUB_SHA'; print('Verified build provenance:',a['sha'])"
+          Copy-Item "co-companion/README_OWNER_PILOT.md" "dist/TGC_CoCompanion_OwnerPreview/README_OWNER_PILOT.md"
+          $version = (Get-Content "co-companion/OWNER_VERSION.txt" -Raw).Trim()
+          Compress-Archive -Path "dist/TGC_CoCompanion_OwnerPreview/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v$version_WINDOWS.zip" -CompressionLevel Optimal -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TGC-CoCompanion-OWNER-EXE-NOT-STAFF
+          path: TGC_CoCompanion_OwnerPreview_v*_WINDOWS.zip
+          retention-days: 14
+) { throw "Invalid owner EXE version" }
+          $info = @{ channel = "owner-preview"; version = $version; sha = "$env:GITHUB_SHA"; run_id = [int64]$env:GITHUB_RUN_ID }
           $info | ConvertTo-Json -Compress | Set-Content "co-companion/build_info.json" -Encoding utf8
       - name: Assemble manually runnable owner-preview source ZIP (no credentials)
         shell: pwsh
@@ -62,12 +105,12 @@ jobs:
           Copy-Item "co-companion/requirements_owner_pilot.txt" "$root/requirements_owner_pilot.txt"
           Copy-Item "co-companion/RUN_OWNER_PILOT.bat" "$root/RUN_OWNER_PILOT.bat"
           Copy-Item "co-companion/README_OWNER_PILOT.md" "$root/README_OWNER_PILOT.md"
-          Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.5.1_SOURCE.zip" -CompressionLevel Optimal -Force
-          if (!(Test-Path "TGC_CoCompanion_OwnerPreview_v0.5.1_SOURCE.zip")) { throw "Source package missing" }
+          Compress-Archive -Path "$root/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v$version_SOURCE.zip" -CompressionLevel Optimal -Force
+          if (!(Test-Path "TGC_CoCompanion_OwnerPreview_v$version_SOURCE.zip")) { throw "Source package missing" }
       - uses: actions/upload-artifact@v4
         with:
           name: TGC-CoCompanion-OWNER-SOURCE-NOT-STAFF
-          path: TGC_CoCompanion_OwnerPreview_v0.5.1_SOURCE.zip
+          path: TGC_CoCompanion_OwnerPreview_v*_SOURCE.zip
           retention-days: 14
       - name: Compile self-contained Windows owner-preview executable
         shell: pwsh
@@ -80,9 +123,9 @@ jobs:
           Copy-Item "co-companion/build_info.json" "dist/TGC_CoCompanion_OwnerPreview/build_info.json"
           python -c "import json, pathlib; a=json.loads(pathlib.Path('dist/TGC_CoCompanion_OwnerPreview/build_info.json').read_text(encoding='utf-8-sig')); assert a['sha']=='$env:GITHUB_SHA'; print('Verified build provenance:',a['sha'])"
           Copy-Item "co-companion/README_OWNER_PILOT.md" "dist/TGC_CoCompanion_OwnerPreview/README_OWNER_PILOT.md"
-          Compress-Archive -Path "dist/TGC_CoCompanion_OwnerPreview/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v0.5.1_WINDOWS.zip" -CompressionLevel Optimal -Force
+          Compress-Archive -Path "dist/TGC_CoCompanion_OwnerPreview/*" -DestinationPath "TGC_CoCompanion_OwnerPreview_v$version_WINDOWS.zip" -CompressionLevel Optimal -Force
       - uses: actions/upload-artifact@v4
         with:
           name: TGC-CoCompanion-OWNER-EXE-NOT-STAFF
-          path: TGC_CoCompanion_OwnerPreview_v0.5.1_WINDOWS.zip
+          path: TGC_CoCompanion_OwnerPreview_v*_WINDOWS.zip
           retention-days: 14
