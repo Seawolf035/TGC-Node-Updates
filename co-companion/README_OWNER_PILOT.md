@@ -1,3 +1,62 @@
+# Co-Companion v0.8.0 — Friends Hub / Mobile Companion Friend Parity
+
+**From the existing installed EXE, use Updates → Check for Updates →
+Download & Install EXE → Restart after the verified owner prerelease appears.**
+No manual ZIP or Python. The previous EXE and saved account data remain
+available for rollback. Owner-only release; no Relay, production Node,
+Main Launcher, Android/Quest deployment, or staff update feed changes.
+
+## Friends Hub — new desktop page
+
+- **Friends & Pins:** manually load the *complete* personal VRChat online and
+  offline friend lists with bounded pagination. If either side fails, the
+  previous complete result remains untouched. Pin up to **12 friends**,
+  manually reorder with Move Up/Down, or unpin. Pinned friends appear first.
+  Friend pin changes require verified TGC staff access, as in the Mobile
+  Companion's `FriendPinStore`. These are local shortcuts, not friend
+  requests or VRChat favorites.
+- **Shared-instance grouping:** the remaining friends are grouped following
+  Mobile's `FriendOrdering`: VRChat favorites (when provided in the future),
+  shared instances, single known locations, private/hidden online and offline.
+  Visible names are alphabetized within each section. Currently the desktop
+  groups the fetched list by visible instance, hidden and offline; it does not
+  yet retrieve the separate VRChat favorite-friend index.
+- **Pinned Groups:** load your own VRChat group memberships and pin up to
+  **16 group shortcuts** per personal account, matching Mobile's
+  `GroupToolkitStore`. Open a group in the existing Profiles page.
+- **Privacy:** pins/groups are stored in an atomic local JSON containing
+  ONLY account-scoped IDs and display names; no tokens, Relay roles,
+  credentials, group moderation rights, or remote friendship writes.
+- **Friend Activity:** explicitly click **Capture Friend Changes** to fetch
+  another complete friend snapshot. First capture initializes baseline
+  without inventing earlier history. Later complete captures record friend
+  added/removed, online/offline, location, status, description and name
+  changes. Minimum 60 seconds between captures; last 5,000 events retained
+  only in **per-account Windows-user DPAPI-encrypted** local files.
+  **No background polling, log watching, notifications, uploads or Relay calls.**
+  An incomplete/rate-limited response never overwrites prior history.
+
+New source modules: desktop_social_shortcuts.py,
+desktop_friend_ordering.py, desktop_friend_hub.py,
+desktop_friend_activity.py. Existing personal login/2FA, StaffDex,
+official staff OSC, ten-channel Color Studio and all other pages remain.
+
+Tests cover per-account boundaries, limits, ordering, hidden/shared/offline
+sections, full API pagination, partial failure handling, DPAPI manual history
+first-run correctness, event recognition, throttling and no overwrite on
+corruption. The frozen Windows EXE GUI smoke checks Friends Hub trees.
+**Actual owner-PC VRChat API paging and screen QA are still required.**
+
+## Remaining parity work
+
+Mobile's separate live VRChat favorite index, optional pinned-friend alerts,
+device-local friend change alerts, richer group toolkit, overlay/Mini-VRCX,
+Quest/Android pairing and single-writer legacy Node migration are not yet
+complete. This milestone intentionally leaves the one live TGC Relay and
+staff-only permissions alone.
+
+---
+
 # Co-Companion v0.7.1 — Easier Staff VRChat OSC Role Boxes
 
 Update directly in the running owner EXE:
