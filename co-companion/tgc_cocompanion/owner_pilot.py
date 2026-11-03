@@ -53,6 +53,8 @@ class OwnerPilotApp:
         self._busy = False
         self._stop = False
         self.terms_dir = get_pilot_dir()
+        from .desktop_staff_colors import DesktopThemeChoice
+        self.theme_choice = DesktopThemeChoice(self.terms_dir)
         self.terms_file = self.terms_dir / "pilot_terms_acceptance.json"
 
         self.status_var = tk.StringVar(value="Owner pilot locked — verify account and accept desktop terms")
@@ -66,8 +68,7 @@ class OwnerPilotApp:
         self.log_health_var = tk.StringVar(value="Not checked")
         self.control_buttons = []
         self._build()
-        from .desktop_staff_colors import DesktopThemeChoice, apply_desktop_palette
-        self.theme_choice=DesktopThemeChoice(self.terms_dir)
+        from .desktop_staff_colors import apply_desktop_palette
         apply_desktop_palette(self.root,self.theme_choice.load())
         self._refresh_buttons()
         self.root.protocol("WM_DELETE_WINDOW", self._close)
