@@ -526,7 +526,7 @@ class DesktopPages:
         def work():
             if not self.owner._terms_valid():
                 raise PermissionError("Accept Desktop Terms first")
-            return self.dex.directory()
+            return self.dex.roster_directory()
         def done(members):
             self._snapshot=None
             self.dex_table.delete(*self.dex_table.get_children())
