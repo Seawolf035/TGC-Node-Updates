@@ -15,9 +15,9 @@ GROUPS = (
     ("OVERVIEW", ("Home",)),
     ("TGC & PCVR", ("Verification", "VRChat Launcher", "Tracking Diagnostics")),
     ("SOCIAL & STAFFDEX", (
-        "VRChat Account", "Social", "Profiles", "Presence",
-        "Avatars", "Bookmarks", "Inbox", "StaffDex")),
-    ("STUDIO & SETTINGS", ("OSC", "OSC Studio", "Updates", "Settings")),
+        "VRChat Account", "Explore", "Social", "Recent Players",
+        "Profiles", "Presence", "Avatars", "Bookmarks", "Inbox", "StaffDex")),
+    ("STUDIO & SETTINGS", ("OSC", "OSC Studio", "Staff Chatboxes", "Updates", "Settings")),
 )
 DESCRIPTIONS = {
     "Home": "Your launchpad and live account overview",
@@ -26,6 +26,9 @@ DESCRIPTIONS = {
     "Tracking Diagnostics": "Read-only local log health",
     "VRChat Account": "Personal account login and authentication",
     "Social": "Friends, groups, worlds and search",
+    "Explore": "Discover VRChat people, worlds and groups",
+    "Recent Players": "Locally scan recent PCVR encounters on demand",
+    "Staff Chatboxes": "Official Mobile Companion staff OSC phrases",
     "Profiles": "People, world and group details",
     "Presence": "Your VRChat status",
     "Avatars": "Your avatars and favorites",
