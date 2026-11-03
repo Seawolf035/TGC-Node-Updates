@@ -127,7 +127,7 @@ jobs:
                   raise SystemExit('Owner EXE ZIP has corrupt members')
           PY
           sha256sum "$artifact"
-      - name: Publish verified EXE only to independent owner-preview prerelease channel
+      - name: Publish or repair canonical owner EXE asset name
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -135,14 +135,36 @@ jobs:
           set -euo pipefail
           version="$(tr -d '\r\n' < co-companion/OWNER_VERSION.txt)"
           tag="co-companion-owner-v${version}"
-          archive="verified-owner-build/TGC_CoCompanion_OwnerPreview_v${version}_WINDOWS.zip"
+          canonical="TGC-CoCompanion-OwnerPreview-WINDOWS.zip"
+          legacy="TGC_CoCompanion_OwnerPreview_v${version}_WINDOWS.zip"
+          archive="verified-owner-build/$legacy"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Owner preview $tag was already released; a new version requires a new version number."
-            exit 0
+            existing="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq '.target_commitish')"
+            has_asset="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq '[.assets[].name] | any(. == "TGC-CoCompanion-OwnerPreview-WINDOWS.zip")')"
+            if [ "$has_asset" = "true" ]; then
+              echo "Verified canonical asset already published; version bump required for new code."
+              exit 0
+            fi
+            mkdir -p repair
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$legacy" --dir repair
+            python3 - "repair/$legacy" "$existing" "$version" <<'PY'
+          import json, pathlib, sys, zipfile
+          path, sha, version = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+          with zipfile.ZipFile(path) as archive:
+              info=json.loads(archive.read('build_info.json').decode('utf-8-sig'))
+              if info.get('sha')!=sha or info.get('version')!=version:
+                  raise SystemExit('Refusing to rename an asset from a different verified commit')
+              if archive.testzip() is not None:
+                  raise SystemExit('Original release ZIP checksum failed')
+          PY
+            cp "repair/$legacy" "$canonical"
+            gh release upload "$tag" "$canonical" --repo "$GITHUB_REPOSITORY"
+            echo "Repaired existing release asset name while keeping original pinned commit $existing."
+          else
+            cp "$archive" "$canonical"
+            gh release create "$tag" "$canonical" \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --prerelease --title "TGC Co-Companion v${version} Owner Preview (NOT STAFF)" \
+              --notes "Checksum-verified Windows owner-only preview. Public GitHub release, but NOT a staff/Node/Relay/Main Launcher deployment. Owner verification still required at runtime."
           fi
-          gh release create "$tag" \
-            "$archive#TGC-CoCompanion-OwnerPreview-WINDOWS.zip" \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --prerelease --title "TGC Co-Companion v${version} Owner Preview (NOT STAFF)" \
-            --notes "Tested Windows EXE for the owner-only Co-Companion channel. No staff, Node, Relay, Main Launcher, or production deployment. Owner preview is publicly downloadable; app access still requires owner verification. This release is an unsigned development build."
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq '{tag: .tag_name, commit: .target_commitish, assets: [.assets[] | {name: .name, digest: .digest, size: .size}]}'
