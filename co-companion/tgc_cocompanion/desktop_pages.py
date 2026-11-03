@@ -505,7 +505,11 @@ class DesktopPages:
         from .desktop_staff_colors import RANK_COLORS
         for role,color in RANK_COLORS.items():
             self.dex_table.tag_configure(role,foreground=color)
+        self.dex_ids={}
         self.dex_table.pack(fill="both",expand=True,padx=(0,6))
+        self.dex_table.bind("<Double-1>",lambda _e:self._dex_profile())
+        ttk.Button(left,text="Open Selected Staff Profile",
+                   command=self._dex_profile).pack(anchor="w",pady=(6,2))
         ttk.Label(right,text="Achievements",font=("Segoe UI",12,"bold")).pack(anchor="w")
         self.rewards=tk.Listbox(right,height=18,bg="#16243A",fg="#E7F1FF",
                                 selectbackground="#25456A",selectforeground="#36D3FF",
@@ -530,9 +534,11 @@ class DesktopPages:
         def done(members):
             self._snapshot=None
             self.dex_table.delete(*self.dex_table.get_children())
+            self.dex_ids={}
             for m in members:
-                self.dex_table.insert("",tk.END,values=(m.name,m.rank,
+                iid=self.dex_table.insert("",tk.END,values=(m.name,m.rank,
                     "Not scanned" if m.vrchat_id else "No VRChat ID"),tags=(m.rank,))
+                self.dex_ids[iid]=m.vrchat_id
             self.rewards.delete(0,tk.END)
             self.dex_status.set(f"Loaded {len(members)} staff from the official roster. "
                   "Friendship progress requires a complete personal VRChat scan.")
@@ -559,16 +565,29 @@ class DesktopPages:
                   "StaffDex scan could not complete: "+error+
                   ". No partial friendships were saved or counted. Retry when VRChat is available."))
 
+    def _dex_profile(self):
+        selection=self.dex_table.selection()
+        identifier=self.dex_ids.get(selection[0]) if selection else None
+        if not identifier or not USER_ID.fullmatch(identifier):
+            self.dex_status.set("Select a staff member with a valid VRChat ID first.")
+            return
+        try:
+            self.profile_tools.set_selected(identifier)
+        except Exception as exc:
+            self.dex_status.set("Could not open staff profile: "+str(exc))
+
     def _render_dex(self,snapshot):
         if snapshot is None:return
         self._snapshot=snapshot
         self.dex_table.delete(*self.dex_table.get_children())
         self.rewards.delete(0,tk.END)
+        self.dex_ids={}
         for member in snapshot.members:
             status="Collected" if snapshot.collected(member.vrchat_id) and member.vrchat_id else "Missing"
             if not member.vrchat_id:status="No VRChat ID"
-            self.dex_table.insert("",tk.END,values=(member.name,member.rank,status),
+            iid=self.dex_table.insert("",tk.END,values=(member.name,member.rank,status),
                                   tags=(member.rank,))
+            self.dex_ids[iid]=member.vrchat_id
         for title,earned in snapshot.visible_rewards().items():
             # The visible Mobile catalog includes its 16 normal awards;
             # hidden community rewards are returned ONLY after collection.
