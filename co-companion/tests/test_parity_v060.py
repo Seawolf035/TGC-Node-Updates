@@ -73,7 +73,7 @@ class StaffParityTests(unittest.TestCase):
     def test_directory_does_not_need_auth_or_scan_friends(self):
         member=StaffEntry(DISCORD,A,"Staff One","Owner")
         dex=StaffDex(Path(tempfile.gettempdir()),roster_fetch=lambda:(member,))
-        self.assertEqual(dex.directory(),(member,))
+        self.assertEqual(dex.roster_directory(),(member,))
         # Roster parsing uses exact Mobile Companion schema.
         self.assertEqual(parse_roster({"ok":True,"members":[{
           "discordId":DISCORD,"role":"owner","username":"Staff One",
