@@ -202,71 +202,141 @@ class DesktopPages:
 
     def _build_account(self,book):
         panel=self._account_panel(book,"VRChat Account")
-        ttk.Label(panel,text="Personal VRChat",font=("Segoe UI",15,"bold")).pack(anchor="w")
-        ttk.Label(panel,text="Your personal VRChat session is separate from TGC Relay enrollment. Passwords are not stored.",
-                  wraplength=790).pack(anchor="w",pady=(3,8))
+        ttk.Label(panel,text="PERSONAL VRCHAT",style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(panel,text="Your VRChat account is separate from TGC staff verification. "
+                  "Your password is never saved, and your session is Windows DPAPI encrypted.",
+                  wraplength=760).pack(anchor="w",pady=(5,10))
+        status=ttk.LabelFrame(panel,text="Connection",padding=(13,10))
+        status.pack(fill="x",pady=(0,12))
         self.account_status=tk.StringVar()
-        ttk.Label(panel,textvariable=self.account_status).pack(anchor="w",pady=(0,8))
-        ttk.Label(panel,text="Email or username").pack(anchor="w")
+        self.account_feedback=tk.StringVar(value="")
+        ttk.Label(status,textvariable=self.account_status,wraplength=750).pack(anchor="w")
+        ttk.Label(status,textvariable=self.account_feedback,wraplength=750).pack(anchor="w",pady=(5,0))
+        form=ttk.LabelFrame(panel,text="Sign in securely",padding=(14,12))
+        form.pack(fill="x")
+        ttk.Label(form,text="Email or username").pack(anchor="w")
         self.username=tk.StringVar()
-        ttk.Entry(panel,textvariable=self.username,width=62).pack(anchor="w")
-        ttk.Label(panel,text="Password").pack(anchor="w",pady=(9,0))
+        ttk.Entry(form,textvariable=self.username,width=54).pack(fill="x",pady=(3,9))
+        ttk.Label(form,text="Password").pack(anchor="w")
         self.password=tk.StringVar()
-        ttk.Entry(panel,textvariable=self.password,show="•",width=62).pack(anchor="w")
-        actions=ttk.Frame(panel);actions.pack(anchor="w",pady=10)
-        ttk.Button(actions,text="Sign In",command=self._login).pack(side="left",padx=(0,8))
-        ttk.Button(actions,text="Refresh My Profile",command=self._profile).pack(side="left",padx=(0,8))
-        ttk.Button(actions,text="Sign Out",command=self._logout).pack(side="left")
-        ttk.Separator(panel,orient="horizontal").pack(fill="x",pady=8)
-        ttk.Label(panel,text="Two-factor authentication (if VRChat requests it)").pack(anchor="w")
+        password_entry=ttk.Entry(form,textvariable=self.password,show="•",width=54)
+        password_entry.pack(fill="x",pady=(3,10))
+        password_entry.bind("<Return>",lambda _event:self._login())
+        bar=ttk.Frame(form);bar.pack(anchor="w",pady=(2,0))
+        ttk.Button(bar,text="Sign in",style="Accent.TButton",
+                   command=self._login).pack(side="left",padx=(0,9))
+        ttk.Button(bar,text="Check session",
+                   command=self._profile).pack(side="left",padx=(0,9))
+        ttk.Button(bar,text="Sign out",command=self._logout).pack(side="left")
+        self.two_factor_panel=ttk.LabelFrame(panel,text="Complete verification",padding=(14,12))
+        self.verification_hint=tk.StringVar()
+        ttk.Label(self.two_factor_panel,textvariable=self.verification_hint,
+                  wraplength=750).pack(anchor="w",pady=(0,7))
         self.two_factor=tk.StringVar()
-        ttk.Entry(panel,textvariable=self.two_factor,width=26,show="•").pack(anchor="w")
-        self.two_mode=tk.StringVar(value="totp")
-        ttk.Combobox(panel,textvariable=self.two_mode,values=("totp","emailotp","otp"),
-                     state="readonly",width=17).pack(anchor="w",pady=5)
-        ttk.Button(panel,text="Verify 2FA",command=self._verify_2fa).pack(anchor="w")
-        ttk.Label(panel,text="Two-factor codes and passwords are used only for VRChat HTTPS sign-in.",
-                  wraplength=770).pack(anchor="w",pady=12)
+        row=ttk.Frame(self.two_factor_panel);row.pack(anchor="w")
+        code_entry=ttk.Entry(row,textvariable=self.two_factor,width=24,show="•")
+        code_entry.pack(side="left",padx=(0,9))
+        self.two_factor_entry=code_entry
+        code_entry.bind("<Return>",lambda _event:self._verify_2fa())
+        ttk.Button(row,text="Verify code",style="Accent.TButton",
+                   command=self._verify_2fa).pack(side="left")
+        self.method_actions=ttk.Frame(self.two_factor_panel)
+        self.method_actions.pack(anchor="w",pady=(7,0))
+        ttk.Label(panel,text="Login and verification codes go only to VRChat HTTPS. "
+                  "Nothing is sent to the TGC Relay.",wraplength=760).pack(anchor="w",pady=13)
+        self._account_state()
+        if self.account.signed_in:
+            self.account_feedback.set("Checking saved VRChat session…")
+            self.root.after(1700,self._restore_personal_session)
+
+    def _show_pending_2fa(self):
+        methods=self.account.pending_methods
+        for widget in self.method_actions.winfo_children():
+            widget.destroy()
+        if not methods:
+            self.two_factor_panel.pack_forget()
+            return
+        if not self.two_factor_panel.winfo_manager():
+            self.two_factor_panel.pack(fill="x",pady=(12,0))
+        if "emailotp" in methods and "totp" not in methods:
+            self.verification_hint.set("Enter the code VRChat sent to your email.")
+        elif "totp" in methods:
+            self.verification_hint.set("Enter your 6-digit authenticator code.")
+        else:
+            self.verification_hint.set("Enter a VRChat recovery code.")
+        if "otp" in methods and len(methods)>1:
+            ttk.Button(self.method_actions,text="Use recovery code",
+                       command=lambda:self._choose_2fa("otp")).pack(side="left",padx=(0,8))
+        if "emailotp" in methods and "totp" in methods:
+            ttk.Button(self.method_actions,text="Use email code",
+                       command=lambda:self._choose_2fa("emailotp")).pack(side="left",padx=(0,8))
+            ttk.Button(self.method_actions,text="Use authenticator",
+                       command=lambda:self._choose_2fa("totp")).pack(side="left")
+        self.two_factor_entry.focus_set()
+
+    def _choose_2fa(self,mode):
+        try:
+            self.account.prefer_2fa(mode)
+            names={"otp":"recovery", "totp":"authenticator", "emailotp":"email"}
+            self.verification_hint.set("Enter your "+names[mode]+" code.")
+            self.two_factor.set("")
+            self.two_factor_entry.focus_set()
+        except Exception as exc:self.account_feedback.set(str(exc))
 
     def _login(self):
-        try:self._eligible()
-        except Exception as exc:self._notice(exc);return
+        if self.account.signed_in:
+            self.account_feedback.set("Already connected. Sign out to change accounts.")
+            return
+        if not self.owner._terms_valid():
+            self.account_feedback.set("Accept the Desktop Terms in Verification first.")
+            return
         user=self.username.get().strip()
-        password=self.password.get()
+        pwd=self.password.get()
         self.password.set("")
-        def work():
-            return self.account.login(user,password)
+        self.account_feedback.set("Signing in to VRChat…")
         def done(methods):
             self._account_state()
+            self._show_pending_2fa()
             if methods:
-                self.two_mode.set(methods[0])
-                self._notice("VRChat requires 2FA: "+", ".join(methods))
+                self.account_feedback.set("Password accepted. Enter your verification code.")
             else:
-                self._notice("Personal VRChat login complete. Social and StaffDex are ready.")
+                self.account_feedback.set("Connected. Session saved securely.")
                 self._load_presets()
-        self.owner._run_async(work,done)
+        self.owner._run_async(lambda:self.account.login(user,pwd),done,
+            on_error=lambda error:self.account_feedback.set("Sign-in failed: "+error))
 
     def _verify_2fa(self):
         code=self.two_factor.get().strip()
-        method=self.two_mode.get()
         self.two_factor.set("")
-        def work():
-            self._eligible()
-            return self.account.verify_2fa(code,method)
+        self.account_feedback.set("Checking verification code…")
         def done(name):
             self._account_state()
+            self._show_pending_2fa()
             self._load_presets()
-            self._notice(f"Personal VRChat verified: {name}")
-        self.owner._run_async(work,done)
+            self.account_feedback.set("Welcome, "+name+". You're connected.")
+        self.owner._run_async(lambda:self.account.verify_2fa(code),done,
+            on_error=lambda error:self.account_feedback.set("Verification: "+error))
+
+    def _restore_personal_session(self):
+        if not self.account.signed_in:return
+        if self.owner._busy:
+            self.root.after(2200,self._restore_personal_session)
+            return
+        self.owner._run_async(self.account.current_user,
+            lambda _profile:self.account_feedback.set("Saved VRChat session verified."),
+            on_error=lambda error:self.account_feedback.set(
+                "Saved session not verified: "+error+". Try Check session."))
 
     def _profile(self):
-        def work():
-            self._eligible(personal=True)
-            return self.account.current_user()
+        if not self.account.signed_in:
+            self.account_feedback.set("Sign in to VRChat first.")
+            return
+        self.account_feedback.set("Checking VRChat session…")
         def done(profile):
             self._account_state()
-            self._notice(f"VRChat account verified: {profile.get('displayName','Personal account')}")
-        self.owner._run_async(work,done)
+            self.account_feedback.set("Connected: "+str(profile.get("displayName") or "VRChat user"))
+        self.owner._run_async(self.account.current_user,done,
+            on_error=lambda error:self.account_feedback.set("Session check: "+error))
 
     def _logout(self):
         try:
@@ -281,7 +351,9 @@ class DesktopPages:
             self.dex_status.set("Personal VRChat disconnected; collection not available")
             self._load_presets()
             self._account_state()
-            self._notice("Personal VRChat session signed out (TGC pilot verification is separate).")
+            self._show_pending_2fa()
+            self.account_feedback.set("Signed out of personal VRChat.")
+            self._notice("Personal VRChat session signed out.")
         except Exception as exc:self._notice(exc)
 
     def _build_social(self,book):
