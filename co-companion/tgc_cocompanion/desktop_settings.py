@@ -56,10 +56,13 @@ class DesktopSettings:
                      values=list(PALETTES),state="readonly",width=27).pack(
                          side="left",padx=(0,10))
         ttk.Button(colors,text="Apply UI Colors",command=self._apply_theme
+                   ).pack(side="left",padx=(0,10))
+        ttk.Button(colors,text="Open 10-Channel Color Studio",
+                   command=lambda:self.shell.open_page("UI Color Studio")
                    ).pack(side="left")
         ttk.Label(theme_box,text=(
-            "Custom ten-channel editing and exclusive themes still require "
-            "an authenticated Admin+ or owner preview grant; built-in themes "
+            "Custom ten-channel editing and VRChat palette import require "
+            "an authenticated Admin+ staff rank; built-in themes "
             "are cosmetic and do not grant roles."
         ),wraplength=790).pack(anchor="w",pady=(7,0))
         build = bundled_build_info()
@@ -96,6 +99,11 @@ class DesktopSettings:
             from .desktop_staff_colors import apply_desktop_palette
             name=self.theme_name.get()
             self.owner.theme_choice.save(name)
+            # Selecting a public built-in theme also clears the active
+            # custom theme for this account (no permission escalation).
+            identity=self.owner.enrollment.discord_id
+            if identity:
+                self.owner.color_studio.store.activate(identity,None)
             apply_desktop_palette(self.owner.root,name)
             if hasattr(self.owner,"features") and hasattr(self.owner.features,"official_chatboxes"):
                 self.owner.features.official_chatboxes.render()
