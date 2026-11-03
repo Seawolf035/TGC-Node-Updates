@@ -22,7 +22,12 @@ def main():
             assert all(hasattr(app.features, x) for x in (
                 "explore", "recent_players", "official_chatboxes", "collections"))
             assert all(x in app.shell.page_names for x in (
-                "Explore","Recent Players","Staff Chatboxes","StaffDex"))
+                "Explore","Friends Hub","Recent Players","Staff Chatboxes","StaffDex"))
+            assert app.shell.open_page("Friends Hub")
+            assert hasattr(app.features.friend_hub,"friend_tree")
+            assert hasattr(app.features.friend_hub,"group_tree")
+            assert hasattr(app.features.friend_hub,"activity_table")
+            assert len(app.features.friend_hub.friends)==0
             assert app.shell.open_page("Staff Chatboxes")
             assert hasattr(app.features.official_chatboxes,"role_actions")
             assert len(app.features.official_chatboxes.table.get_children())==12
