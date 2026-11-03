@@ -267,6 +267,9 @@ class DesktopPages:
         if "otp" in methods and len(methods)>1:
             ttk.Button(self.method_actions,text="Use recovery code",
                        command=lambda:self._choose_2fa("otp")).pack(side="left",padx=(0,8))
+        if "totp" in methods and "otp" in methods and "emailotp" not in methods:
+            ttk.Button(self.method_actions,text="Use authenticator",
+                       command=lambda:self._choose_2fa("totp")).pack(side="left")
         if "emailotp" in methods and "totp" in methods:
             ttk.Button(self.method_actions,text="Use email code",
                        command=lambda:self._choose_2fa("emailotp")).pack(side="left",padx=(0,8))
