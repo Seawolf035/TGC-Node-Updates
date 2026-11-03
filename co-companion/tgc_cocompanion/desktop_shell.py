@@ -17,7 +17,7 @@ GROUPS = (
     ("SOCIAL & STAFFDEX", (
         "VRChat Account", "Explore", "Social", "Recent Players",
         "Profiles", "Presence", "Avatars", "Bookmarks", "Inbox", "StaffDex")),
-    ("STUDIO & SETTINGS", ("OSC", "OSC Studio", "Staff Chatboxes", "Updates", "Settings")),
+    ("STUDIO & SETTINGS", ("OSC", "OSC Studio", "Staff Chatboxes", "UI Color Studio", "Updates", "Settings")),
 )
 DESCRIPTIONS = {
     "Home": "Your launchpad and live account overview",
@@ -37,6 +37,7 @@ DESCRIPTIONS = {
     "StaffDex": "Friendship collection and achievements",
     "OSC": "Targeted session OSC controls",
     "OSC Studio": "Chatbox, avatar height and voice controls",
+    "UI Color Studio": "Advanced UI colors and VRChat palette import/export",
     "Updates": "Verified EXE updates and rollback",
     "Settings": "Navigation preferences and recovery tools",
 }
