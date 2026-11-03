@@ -150,6 +150,8 @@ class OwnerPilotApp:
         self.updates=OwnerUpdatePage(self,notebook)
         from .desktop_settings import DesktopSettings
         self.settings=DesktopSettings(self,notebook)
+        from .desktop_color_studio import DesktopColorStudio
+        self.color_studio=DesktopColorStudio(self,notebook)
         self.shell.register_pages()
         self._page_names = list(self.shell.page_names)
 
@@ -252,6 +254,9 @@ class OwnerPilotApp:
         def done(grant):
             self.status_var.set(f"Verified staff {grant.discord_id} — {grant.max_instances}/4 slots, short-lived server lease")
             self.relay_var.set(grant.discord_id)
+            # Restore custom colors only after the live server confirms
+            # a valid Admin+ rank; the public roster never grants access.
+            self.color_studio.after_staff_verification()
             if self.launcher is None:
                 try:
                     selected=int(self.vr_slot_var.get())
