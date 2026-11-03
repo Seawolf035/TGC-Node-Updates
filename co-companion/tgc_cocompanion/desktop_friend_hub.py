@@ -11,6 +11,7 @@ import webbrowser
 
 from .desktop_social_shortcuts import SocialShortcuts, GROUP_ID
 from .desktop_friend_ordering import group_friends,user_id,display_name
+from .desktop_friend_activity import FriendActivityStore
 from .vrchat_personal import USER_ID
 
 MAX_PAGES=167
@@ -55,6 +56,7 @@ class FriendHubPage:
         self.pages=pages
         self.owner=pages.owner
         self.shortcuts=SocialShortcuts(self.owner.terms_dir)
+        self.history=FriendActivityStore(self.owner.terms_dir)
         self.friends=()
         self.groups=()
         self.friend_rows={}
@@ -81,8 +83,10 @@ class FriendHubPage:
         columns.pack(fill="both",expand=True)
         friends=ttk.Frame(columns,padding=(2,6))
         groups=ttk.Frame(columns,padding=(2,6))
+        activity=ttk.Frame(columns,padding=(2,6))
         columns.add(friends,text="Friends & Pins")
         columns.add(groups,text="Pinned Groups")
+        columns.add(activity,text="Friend Activity")
         ttk.Label(friends,text="Pinned friends first; remaining friends grouped by VRChat "
                   "favorites, shared instance, solo location, hidden, then offline.",
                   wraplength=820).pack(anchor="w",pady=(0,5))
@@ -115,6 +119,23 @@ class FriendHubPage:
         ttk.Button(gactions,text="Pin / Unpin Group",command=self.toggle_group).pack(
             side="left",padx=(0,8))
         ttk.Button(gactions,text="Open Group",command=self.open_group).pack(side="left")
+        ttk.Label(activity,text="Manual, private history of changes to your own "
+            "VRChat friend list. First capture creates a baseline, not invented history. "
+            "Nothing is uploaded or checked in the background.",wraplength=820).pack(
+            anchor="w",pady=(0,8))
+        bar=ttk.Frame(activity);bar.pack(fill="x",pady=(0,7))
+        ttk.Button(bar,text="Capture Friend Changes",style="Accent.TButton",
+                   command=self.capture_history).pack(side="left",padx=(0,8))
+        ttk.Button(bar,text="View Saved History",command=self.load_history
+                   ).pack(side="left")
+        self.activity_table=ttk.Treeview(activity,
+            columns=("at","name","kind","previous"),show="headings",height=12)
+        for key,label,width in (
+            ("at","Time",155),("name","Friend",180),("kind","Change",165),
+            ("previous","Previous value",300)):
+            self.activity_table.heading(key,text=label)
+            self.activity_table.column(key,width=width,stretch=(key=="previous"))
+        self.activity_table.pack(fill="both",expand=True)
         self.friend_tree.bind("<Double-1>",lambda e:self._friend_double(e))
         self.group_tree.bind("<Double-1>",lambda e:self.open_group())
         self.refresh()
@@ -206,6 +227,43 @@ class FriendHubPage:
     def _loaded_groups(self,rows):
         self.groups=tuple(rows)
         self.refresh()
+
+    def capture_history(self):
+        self.status.set("Capturing full friend snapshot; no partial history will be saved…")
+        def work():
+            user=self._personal()
+            complete=complete_friend_list(self.pages.account)
+            changes=self.history.observe(user,complete)
+            return complete,changes
+        def done(result):
+            self.friends,changes=result
+            self.refresh()
+            self.load_history()
+            self.status.set(f"Complete friend snapshot captured. {changes} new changes "
+                "recorded locally (first capture creates a baseline).")
+        self.owner._run_async(work,done,on_error=lambda error:self.status.set(
+            "Friend history was not changed: "+error))
+
+    def load_history(self):
+        try:
+            user=self._personal()
+            events=self.history.events(user)
+            from datetime import datetime
+            self.activity_table.delete(*self.activity_table.get_children())
+            for event in reversed(events):
+                try:
+                    stamp=datetime.fromtimestamp(int(event.get("time",0))).strftime(
+                        "%Y-%m-%d %H:%M")
+                except (ValueError,OverflowError,OSError):
+                    stamp="Unknown"
+                self.activity_table.insert("",tk.END,values=(
+                    stamp,str(event.get("name",""))[:90],
+                    str(event.get("type",""))[:50],
+                    str(event.get("previous",""))[:160]))
+            self.status.set(f"{len(events)} locally encrypted friend history events. "
+                "No background tracking or Relay uploads.")
+        except Exception as error:
+            self.status.set("Cannot display friend history: "+str(error))
 
     def _selected_friend(self):
         selected=self.friend_tree.selection()
