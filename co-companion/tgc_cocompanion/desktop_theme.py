@@ -76,6 +76,16 @@ def apply_desktop_theme(root):
                     anchor="w", padding=(10, 6), borderwidth=0,
                     font=("Segoe UI Semibold", 10))
     style.map("NavSelected.TButton", background=[("active", HOVER)])
+    style.configure("Rail.TButton", background=SURFACE, foreground=MUTED,
+                    padding=(5, 9), font=("Segoe UI Symbol", 15),
+                    borderwidth=0, anchor="center")
+    style.map("Rail.TButton",
+              background=[("active", HOVER)], foreground=[("active", TEXT)])
+    style.configure("RailActive.TButton", background=RAISED, foreground=ACCENT,
+                    padding=(5, 9), font=("Segoe UI Symbol", 15),
+                    borderwidth=0, anchor="center")
+    style.map("RailActive.TButton",
+              background=[("active", HOVER)], foreground=[("active", ACCENT)])
     style.configure("TEntry", fieldbackground=SURFACE, foreground=TEXT,
                     insertcolor=TEXT, bordercolor=LINE, padding=(5, 6))
     style.configure("TCombobox", fieldbackground=SURFACE, foreground=TEXT,
