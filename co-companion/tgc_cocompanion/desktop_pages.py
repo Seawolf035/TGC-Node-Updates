@@ -132,7 +132,7 @@ class DesktopPages:
             if self.owner.launcher:
                 running = sum(s.pid is not None for s in self.owner.launcher.statuses())
             report = "\n".join((
-                "TGC Co-Companion owner preview v0.5.2",
+                "TGC Co-Companion owner preview v0.6.0",
                 f"Owner verified: {bool(access and self.owner._terms_valid())}",
                 f"Personal VRChat connected: {bool(self.account.signed_in)}",
                 f"Running managed VRChat instances: {running}",
