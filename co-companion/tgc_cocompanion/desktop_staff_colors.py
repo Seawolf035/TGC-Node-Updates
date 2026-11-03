@@ -63,7 +63,14 @@ def apply_desktop_palette(root, name):
     """Repaint Tk+ttk safely; UI-only and leaves all auth/OSC state untouched."""
     import tkinter as tk
     from tkinter import ttk
-    bg,surface,raised,accent,fg,sub = palette_for(name)
+    # Built-in palettes retain their historical six-color schema; custom
+    # Mobile-matched palettes supply all ten independent channels.
+    if isinstance(name, str):
+        bg,surface,raised,accent,fg,sub = palette_for(name)
+        field,border,icon,button=surface,raised,accent,accent
+    else:
+        from .desktop_color_studio import validate_palette
+        (bg,surface,raised,field,accent,border,icon,button,fg,sub) = validate_palette(name)
     styles=ttk.Style(root)
     for key,color in {
         ".":bg, "TFrame":bg,"Shell.TFrame":bg,
@@ -83,8 +90,8 @@ def apply_desktop_palette(root, name):
     styles.configure("CardLabel.TLabel",background=surface,foreground=sub)
     styles.configure("CardValue.TLabel",background=surface,foreground=fg)
     styles.configure("CardAccent.TLabel",background=surface,foreground=accent)
-    styles.configure("TButton",background=raised,foreground=fg)
-    styles.configure("Accent.TButton",background=accent,foreground=bg)
+    styles.configure("TButton",background=button,foreground=bg)
+    styles.configure("Accent.TButton",background=button,foreground=bg)
     styles.configure("Nav.TButton",background=surface,foreground=sub)
     styles.configure("NavSelected.TButton",background=raised,foreground=accent)
     styles.configure("Rail.TButton",background=surface,foreground=sub)
@@ -92,14 +99,18 @@ def apply_desktop_palette(root, name):
     styles.configure("Treeview",background=surface,fieldbackground=surface,foreground=fg)
     styles.configure("Treeview.Heading",background=raised,foreground=fg)
     styles.configure("TNotebook.Tab",background=surface,foreground=sub)
-    styles.configure("TEntry",fieldbackground=surface,foreground=fg)
-    styles.configure("TCombobox",fieldbackground=surface,foreground=fg)
-    styles.configure("TLabelframe",background=bg,foreground=fg)
-    styles.configure("TSeparator",background=raised)
+    styles.configure("TLabelframe.Label",foreground=accent,background=bg)
+    styles.configure("Treeview.Heading",background=raised,foreground=fg)
+    styles.configure("Vertical.TScrollbar",background=raised,troughcolor=surface,
+                     arrowcolor=icon)
+    styles.configure("TEntry",fieldbackground=field,foreground=fg,insertcolor=fg)
+    styles.configure("TCombobox",fieldbackground=field,foreground=fg)
+    styles.configure("TLabelframe",background=bg,foreground=fg,bordercolor=border)
+    styles.configure("TSeparator",background=border)
     styles.map("TNotebook.Tab",background=[("selected",raised),("active",raised)],
                foreground=[("selected",accent)])
     styles.map("Nav.TButton",background=[("active",raised)])
-    styles.map("TCombobox",fieldbackground=[("readonly",surface)],
+    styles.map("TCombobox",fieldbackground=[("readonly",field)],
                foreground=[("readonly",fg)])
     root.configure(background=bg)
     def repaint(widget):
