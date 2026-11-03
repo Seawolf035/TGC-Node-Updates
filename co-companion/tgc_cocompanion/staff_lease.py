@@ -57,17 +57,26 @@ class RelayStaffLease:
         self._clock = clock
         self._bound = max_server_lease_seconds
         self._access: VerifiedAccess | None = None
+        self._verified_rank = ""
         self._lock = RLock()
 
     def current(self) -> VerifiedAccess | None:
         with self._lock:
             if self._access is not None and self._access.valid_limit(self._clock()) == 0:
                 self._access = None
+                self._verified_rank = ""
             return self._access
+
+    def rank(self) -> str:
+        """Never expose a rank from an expired or invalid server grant."""
+        with self._lock:
+            self.current()
+            return self._verified_rank if self._access else ""
 
     def invalidate(self) -> None:
         with self._lock:
             self._access = None
+            self._verified_rank = ""
 
     def refresh(self) -> VerifiedAccess:
         """Explicitly request fresh authenticated staff lease.
@@ -78,12 +87,18 @@ class RelayStaffLease:
         """
         with self._lock:
             self._access = None
+            self._verified_rank = ""
             try:
                 response = self._request()
                 access = self._validate(response, now=self._clock())
             except Exception as exc:
                 raise StaffLeaseRejected("Co-Companion staff verification unavailable") from exc
             self._access = access
+            # Rank must come ONLY from the authenticated Relay response.
+            # Existing older servers omit it and grant only common presets.
+            from .desktop_official_chatboxes import normalize_trusted_rank
+            self._verified_rank = normalize_trusted_rank(
+                response.get("staff_rank"), self._staff_id)
             return access
 
     def _validate(self, response: Mapping[str, Any], *, now: float) -> VerifiedAccess:
