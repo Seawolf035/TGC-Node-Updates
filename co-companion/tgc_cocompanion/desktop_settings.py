@@ -42,6 +42,26 @@ class DesktopSettings:
             "Ctrl+1–9: quick page shortcuts    •    Alt+Left: previous page"
         ), wraplength=800).pack(anchor="w", pady=(8, 0))
 
+        from .desktop_staff_colors import PALETTES
+        theme_box=ttk.LabelFrame(panel,text="Desktop UI Colors • Mobile Companion presets",
+                                padding=(15,10))
+        theme_box.pack(fill="x",pady=(0,12))
+        ttk.Label(theme_box,text="Choose a built-in theme (appearance only, never staff permissions).",
+                  wraplength=800).pack(anchor="w")
+        colors=ttk.Frame(theme_box)
+        colors.pack(fill="x",pady=(7,0))
+        self.theme_name=tk.StringVar(value=owner.theme_choice.load()
+                                   if hasattr(owner,"theme_choice") else "TGC Default")
+        ttk.Combobox(colors,textvariable=self.theme_name,
+                     values=list(PALETTES),state="readonly",width=27).pack(
+                         side="left",padx=(0,10))
+        ttk.Button(colors,text="Apply UI Colors",command=self._apply_theme
+                   ).pack(side="left")
+        ttk.Label(theme_box,text=(
+            "Custom ten-channel editing and exclusive themes still require "
+            "an authenticated Admin+ or owner preview grant; built-in themes "
+            "are cosmetic and do not grant roles."
+        ),wraplength=790).pack(anchor="w",pady=(7,0))
         build = bundled_build_info()
         info = ttk.LabelFrame(panel, text="Installed Co-Companion Preview", padding=(15, 12))
         info.pack(fill="x", pady=(0, 14))
@@ -70,6 +90,17 @@ class DesktopSettings:
             "Node keys and databases are never copied, reset or deleted by Settings. "
             "To roll back, launch an earlier verified EXE (or legacy Python folder)."
         ), wraplength=800).pack(anchor="w", pady=(8, 0))
+
+    def _apply_theme(self):
+        try:
+            from .desktop_staff_colors import apply_desktop_palette
+            name=self.theme_name.get()
+            self.owner.theme_choice.save(name)
+            apply_desktop_palette(self.owner.root,name)
+            if hasattr(self.owner,"features") and hasattr(self.owner.features,"official_chatboxes"):
+                self.owner.features.official_chatboxes.render()
+        except Exception as exc:
+            messagebox.showerror("UI Colors",str(exc),parent=self.owner.root)
 
     def _sync_compact(self):
         self.compact_label.set("Expand sidebar" if self.shell.state.compact
