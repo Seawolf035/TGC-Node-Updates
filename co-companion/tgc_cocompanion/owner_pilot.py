@@ -66,6 +66,9 @@ class OwnerPilotApp:
         self.log_health_var = tk.StringVar(value="Not checked")
         self.control_buttons = []
         self._build()
+        from .desktop_staff_colors import DesktopThemeChoice, apply_desktop_palette
+        self.theme_choice=DesktopThemeChoice(self.terms_dir)
+        apply_desktop_palette(self.root,self.theme_choice.load())
         self._refresh_buttons()
         self.root.protocol("WM_DELETE_WINDOW", self._close)
         self.root.after(10000, self._tick)
