@@ -19,6 +19,15 @@ def main():
             app=OwnerPilotApp(root)
             root.update_idletasks()
             assert hasattr(app,"updates") and hasattr(app.features,"collections")
+            assert all(hasattr(app.features, x) for x in (
+                "explore", "recent_players", "official_chatboxes", "collections"))
+            assert all(x in app.shell.page_names for x in (
+                "Explore","Recent Players","Staff Chatboxes","StaffDex"))
+            assert app.shell.open_page("Staff Chatboxes")
+            assert app.shell.open_page("Recent Players")
+            assert app.shell.open_page("Explore")
+            assert app.shell.open_page("Home")
+            assert hasattr(app.settings,"theme_name")
             assert hasattr(app.features,"two_factor_panel")
             assert not app.features.two_factor_panel.winfo_manager()
             app.shell.toggle_compact()
