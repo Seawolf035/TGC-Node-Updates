@@ -193,6 +193,14 @@ class StaffDex:
         self._fetch = roster_fetch
         self.path = directory / "staffdex_completed_snapshot.dpapi"
 
+    def directory(self) -> tuple[StaffEntry, ...]:
+        """Read authoritative PUBLIC roster without scanning anyone's friendships.
+
+        This is a cosmetic read-only directory, NOT staff authentication.
+        Loading it must work when the owner's short-lived Relay lease expires.
+        """
+        return self._fetch()
+
     def refresh(self, personal_vrchat, verified_discord: str) -> DexSnapshot:
         if not DISCORD_ID.fullmatch(str(verified_discord)):
             raise PermissionError("Verified TGC staff account required")
@@ -204,7 +212,7 @@ class StaffDex:
         if account != personal_vrchat.user_id:
             raise PermissionError("Personal VRChat account switched during scan")
         result = DexSnapshot(verified_discord,account,members,frozenset(friends),time())
-        # Only completed data is persisted, under DPAPI, scoped to BOTH
+        # Owner-preview local collection, NOT an authorization source.\n        # Only completed data is persisted, under DPAPI, scoped to BOTH
         # immutable Discord and personal VRChat identity.
         payload={"discord":verified_discord,"account":account,"captured_at":result.captured_at,
                  "members":[e.__dict__ for e in members],"friend_ids":sorted(friends)}
