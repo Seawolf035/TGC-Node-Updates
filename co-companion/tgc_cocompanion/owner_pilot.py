@@ -44,7 +44,7 @@ class OwnerPilotApp:
         self.root = root
         from .desktop_theme import apply_desktop_theme
         apply_desktop_theme(self.root)
-        self.root.title("TGC Co-Companion — Owner Preview 0.5 (NOT A STAFF RELEASE)")
+        self.root.title("TGC Co-Companion — Owner Preview 0.5.1 (NOT A STAFF RELEASE)")
         self.root.geometry("1120x650")
         self.root.minsize(900, 520)
         self.enrollment = PilotEnrollment()
@@ -200,7 +200,7 @@ class OwnerPilotApp:
             window.destroy();self._refresh_buttons()
         ttk.Button(bar,text="I Agree",command=accept).pack(side="right",padx=6)
 
-    def _run_async(self, operation, done):
+    def _run_async(self, operation, done, on_error=None):
         if self._busy:return
         self._busy=True;self._refresh_buttons()
         def job():
@@ -209,8 +209,12 @@ class OwnerPilotApp:
             self.root.after(0,lambda:finish(outcome,failure))
         def finish(outcome,failure):
             self._busy=False
-            if failure: self.status_var.set("Error: "+failure)
-            else:done(outcome)
+            if failure:
+                self.status_var.set("Error: "+failure)
+                if on_error:
+                    on_error(failure)
+            else:
+                done(outcome)
             self._refresh_buttons()
         Thread(target=job,name="CoCompanionOwnerPilotRPC",daemon=True).start()
 
