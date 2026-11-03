@@ -56,6 +56,10 @@ def _automatic_2fa_mode(methods: tuple[str, ...], code: str) -> str:
     recovery = len(code) > 8 or "-" in code
     if recovery and "otp" in methods:
         return "otp"
+    if "totp" in methods and "emailotp" in methods and code.isdecimal() and len(code) == 6:
+        raise VRChatApiError(
+            "VRChat offered both email and authenticator codes. "
+            "Use the email or authenticator button to choose the code source.")
     if "totp" in methods and code.isdecimal() and len(code) == 6:
         return "totp"
     if "emailotp" in methods and "totp" not in methods:
