@@ -25,7 +25,7 @@ from .owner_updater import (
 
 API = "https://api.github.com/repos/" + REPOSITORY
 RAW = "https://raw.githubusercontent.com/" + REPOSITORY + "/"
-VERSION = "0.5.2"
+VERSION = "0.6.0"
 SOURCE_FILES = (
     "owner_pilot_entry.py", "RUN_OWNER_PILOT.bat",
     "requirements_owner_pilot.txt", "TGC_DESKTOP_TERMS.txt",
