@@ -28,6 +28,14 @@ def main():
             assert app.shell.open_page("Explore")
             assert app.shell.open_page("Home")
             assert hasattr(app.settings,"theme_name")
+            assert app.shell.open_page("UI Color Studio")
+            assert len(app.color_studio.entries)==10
+            from tgc_cocompanion.desktop_color_studio import (
+                import_vrchat_colors, export_vrchat_colors)
+            assert len(import_vrchat_colors(
+                "#123456,#654321,#ABCDEF,#091827,#FFEEDD,#8899AA"))==10
+            assert export_vrchat_colors(app.color_studio.colors()).count(",")==5
+            assert app.shell.open_page("StaffDex")
             assert hasattr(app.features,"two_factor_panel")
             assert not app.features.two_factor_panel.winfo_manager()
             app.shell.toggle_compact()
