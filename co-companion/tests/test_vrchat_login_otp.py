@@ -86,6 +86,23 @@ class LoginChallengeTests(unittest.TestCase):
         client.verify_2fa("123456")
         self.assertTrue(client.signed_in)
 
+    def test_personal_osc_height_is_saved_per_vrchat_account(self):
+        from tgc_cocompanion.desktop_osc_tools import PersonalHeightPreset
+        other="usr_b85631a8-5e23-4b88-a14b-4c8a2ae863c1"
+        with tempfile.TemporaryDirectory() as td:
+            store=PersonalHeightPreset(Path(td))
+            self.assertIsNone(store.get(USER))
+            self.assertEqual(store.save(USER,1.72),1.72)
+            self.assertEqual(store.save(other,0.8),0.8)
+            reload=PersonalHeightPreset(Path(td))
+            self.assertEqual(reload.get(USER),1.72)
+            self.assertEqual(reload.get(other),0.8)
+            self.assertIsNone(reload.get("not-an-id"))
+            with self.assertRaises(ValueError):
+                reload.save(USER,-3)
+            with self.assertRaises(PermissionError):
+                reload.save("not-an-id",1.65)
+
     def test_compact_nav_is_pins_plus_current_not_fifteen_abbreviations(self):
         all_pages=["Home","Social","VRChat Launcher","Settings","StaffDex","Inbox"]
         self.assertEqual(compact_pages(["Home","Social","Home"],"StaffDex",all_pages),
