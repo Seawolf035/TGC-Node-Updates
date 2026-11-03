@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import math
 import re
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -47,7 +48,9 @@ def validate_palette(colors):
 def blend(first, second, strength):
     a = bytes.fromhex(normalize_hex(first)[1:])
     b = bytes.fromhex(normalize_hex(second)[1:])
-    values = [round(a[i] * (1 - strength) + b[i] * strength) for i in range(3)]
+    # Android ThemePreferences uses Java Math.round (not Python banker's round).
+    values = [math.floor(a[i] * (1 - strength) + b[i] * strength + 0.5)
+              for i in range(3)]
     return "#" + "".join(f"{n:02X}" for n in values)
 
 
