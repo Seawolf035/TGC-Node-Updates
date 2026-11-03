@@ -47,6 +47,12 @@ class DesktopPages:
         self.profile_tools=ProfileAndPresence(self,notebook)
         from .desktop_collection_pages import CollectionPages
         self.collections=CollectionPages(self,notebook)
+        from .desktop_explore import ExplorePage
+        self.explore=ExplorePage(self,notebook)
+        from .desktop_recent_players import RecentPlayersPage
+        self.recent_players=RecentPlayersPage(self,notebook)
+        from .desktop_official_chatboxes import OfficialChatboxPage
+        self.official_chatboxes=OfficialChatboxPage(self,notebook)
         self._build_home(notebook)
         self._account_state()
         self._load_presets()
@@ -620,6 +626,9 @@ class DesktopPages:
 
     def _load_presets(self):
         self.phrases.delete(0,tk.END)
+        if hasattr(self,"official_chatboxes"):
+            self.official_chatboxes.render()
+        self._cached_dex()
         if not self.account.signed_in:return
         saved=self.heights.get(self.account.user_id)
         if saved is not None:
@@ -652,6 +661,8 @@ class DesktopPages:
 
     def _rotation_start(self):
         try:
+            if hasattr(self,"official_chatboxes"):
+                self.official_chatboxes._official_active=False
             self._eligible(personal=True)
             ctrl,pid=self._active_osc()
             phrases=[text for name,text in self.presets.list(self.account.user_id)][:8]
@@ -660,6 +671,8 @@ class DesktopPages:
         except Exception as exc:self._notice(exc)
 
     def _rotation_stop(self):
+        if hasattr(self,"official_chatboxes"):
+            self.official_chatboxes._official_active=False
         if self.controls is not None:self.controls.stop_rotation()
         self.osc_note.set("OSC rotation stopped")
 
@@ -707,6 +720,8 @@ class DesktopPages:
         if self._closed:return
         if self.controls is not None:
             try:
+                if hasattr(self,"official_chatboxes"):
+                    self.official_chatboxes.verify_rotation()
                 self.controls.release_if_overdue(300)
                 self.controls.rotate_tick()
             except Exception as exc:
