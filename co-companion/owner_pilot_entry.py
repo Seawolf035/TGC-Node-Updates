@@ -24,6 +24,10 @@ def main():
             assert all(x in app.shell.page_names for x in (
                 "Explore","Recent Players","Staff Chatboxes","StaffDex"))
             assert app.shell.open_page("Staff Chatboxes")
+            assert hasattr(app.features.official_chatboxes,"role_actions")
+            assert len(app.features.official_chatboxes.table.get_children())==12
+            assert app.features.official_chatboxes.table["columns"] == (
+                "checked","role","message","state")
             assert app.shell.open_page("Recent Players")
             assert app.shell.open_page("Explore")
             assert app.shell.open_page("Home")
