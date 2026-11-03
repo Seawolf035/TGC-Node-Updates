@@ -221,12 +221,14 @@ class OfficialChatboxPage:
         try:
             self.pages._eligible(personal=True)
             eligible={t.id for t in self._permitted()}
-            templates=[t.text for t in CATALOG
-                       if t.id in eligible and t.id in self.selection.get(self.pages.account.user_id)]
-            if not templates:
+            chosen=[t for t in CATALOG
+                    if t.id in eligible and t.id in self.selection.get(self.pages.account.user_id)]
+            if not chosen:
                 raise ValueError("Select at least one verified eligible official chatbox")
             ctrl,pid=self.pages._active_osc()
-            ctrl.set_rotation(pid,templates[:8],int(self.pages.osc_interval.get()))
+            chosen=chosen[:8]
+            ctrl.set_rotation(pid,[t.text for t in chosen],int(self.pages.osc_interval.get()))
+            self._rotation_ids=tuple(t.id for t in chosen)
             self._official_active=True
             self._account=self.pages.account.user_id
             self._last_rank=self.owner.lease.rank() if self.owner.lease else ""
@@ -248,7 +250,7 @@ class OfficialChatboxPage:
         eligible={t.id for t in self._permitted()}
         selected=self.selection.get(self.pages.account.user_id)
         if (self.pages.account.user_id!=self._account or rank!=self._last_rank
-            or not selected.intersection(eligible)
+            or not set(getattr(self,"_rotation_ids",())).issubset(selected.intersection(eligible))
             or not self.pages.account.signed_in):
             self.stop()
             self.status.set("Official rotation stopped: access/rank/account changed")
