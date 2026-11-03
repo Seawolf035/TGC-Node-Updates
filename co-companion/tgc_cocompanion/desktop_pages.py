@@ -494,6 +494,24 @@ class DesktopPages:
                    command=self._scan_dex).pack(side="left")
         self.dex_status=tk.StringVar(value="Load the public staff roster, or sign in and scan your VRChat friendships.")
         ttk.Label(panel,textvariable=self.dex_status,wraplength=830).pack(anchor="w",pady=(0,8))
+        controls=ttk.Frame(panel)
+        controls.pack(fill="x",pady=(1,8))
+        self.dex_query=tk.StringVar()
+        self.dex_rank=tk.StringVar(value="All ranks")
+        self.dex_progress=tk.StringVar(value="All")
+        self.dex_rows=[]
+        ttk.Label(controls,text="Find:").pack(side="left")
+        ttk.Entry(controls,textvariable=self.dex_query,width=22).pack(
+            side="left",padx=(5,10),fill="x",expand=True)
+        ttk.Combobox(controls,textvariable=self.dex_rank,state="readonly",width=18,
+            values=("All ranks","The Royalty","Owner","Head Admin",
+                    "Admin","Head Moderator","Moderator","Trial Moderator")
+            ).pack(side="left",padx=(0,10))
+        ttk.Combobox(controls,textvariable=self.dex_progress,state="readonly",width=12,
+            values=("All","Collected","Missing","Unscanned")
+            ).pack(side="left")
+        for value in (self.dex_query,self.dex_rank,self.dex_progress):
+            value.trace_add("write",lambda *_:self._filter_dex())
         split=ttk.Panedwindow(panel,orient="horizontal");split.pack(fill="both",expand=True)
         left=ttk.Frame(split);right=ttk.Frame(split)
         split.add(left,weight=3);split.add(right,weight=2)
@@ -533,12 +551,10 @@ class DesktopPages:
             return self.dex.roster_directory()
         def done(members):
             self._snapshot=None
-            self.dex_table.delete(*self.dex_table.get_children())
-            self.dex_ids={}
-            for m in members:
-                iid=self.dex_table.insert("",tk.END,values=(m.name,m.rank,
-                    "Not scanned" if m.vrchat_id else "No VRChat ID"),tags=(m.rank,))
-                self.dex_ids[iid]=m.vrchat_id
+            self.dex_rows=[(m.name,m.rank,
+                "Not scanned" if m.vrchat_id else "No VRChat ID",m.vrchat_id)
+                for m in members]
+            self._filter_dex()
             self.rewards.delete(0,tk.END)
             self.dex_status.set(f"Loaded {len(members)} staff from the official roster. "
                   "Friendship progress requires a complete personal VRChat scan.")
@@ -565,6 +581,17 @@ class DesktopPages:
                   "StaffDex scan could not complete: "+error+
                   ". No partial friendships were saved or counted. Retry when VRChat is available."))
 
+    def _filter_dex(self):
+        from .desktop_staffdex_filter import filter_staffdex_rows
+        self.dex_table.delete(*self.dex_table.get_children())
+        self.dex_ids={}
+        for name,rank,status,identifier in filter_staffdex_rows(
+                self.dex_rows,self.dex_query.get(),self.dex_rank.get(),
+                self.dex_progress.get()):
+            iid=self.dex_table.insert("",tk.END,values=(name,rank,status),
+                                      tags=(rank,))
+            self.dex_ids[iid]=identifier
+
     def _dex_profile(self):
         selection=self.dex_table.selection()
         identifier=self.dex_ids.get(selection[0]) if selection else None
@@ -579,15 +606,14 @@ class DesktopPages:
     def _render_dex(self,snapshot):
         if snapshot is None:return
         self._snapshot=snapshot
-        self.dex_table.delete(*self.dex_table.get_children())
         self.rewards.delete(0,tk.END)
-        self.dex_ids={}
+        self.dex_rows=[]
         for member in snapshot.members:
             status="Collected" if snapshot.collected(member.vrchat_id) and member.vrchat_id else "Missing"
-            if not member.vrchat_id:status="No VRChat ID"
-            iid=self.dex_table.insert("",tk.END,values=(member.name,member.rank,status),
-                                  tags=(member.rank,))
-            self.dex_ids[iid]=member.vrchat_id
+            if not member.vrchat_id:
+                status="No VRChat ID"
+            self.dex_rows.append((member.name,member.rank,status,member.vrchat_id))
+        self._filter_dex()
         for title,earned in snapshot.visible_rewards().items():
             # The visible Mobile catalog includes its 16 normal awards;
             # hidden community rewards are returned ONLY after collection.
