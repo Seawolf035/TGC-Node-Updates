@@ -53,7 +53,7 @@ class DesktopShell:
         self.description_var = tk.StringVar(value=DESCRIPTIONS["Home"])
         self.pin_var = tk.StringVar(value="Pin page")
         self.pinned_count = tk.StringVar(value="")
-        self.root.title("TGC Co-Companion | Owner Preview v0.5")
+        self.root.title("TGC Co-Companion | Owner Preview v0.5.1")
         self.root.geometry("1180x690")
         self.root.minsize(900, 540)
 
@@ -65,7 +65,7 @@ class DesktopShell:
         brand.pack(side="left")
         ttk.Label(brand, text="TGC  /  CO-COMPANION",
                   style="Brand.TLabel").pack(anchor="w")
-        ttk.Label(brand, text="WINDOWS OWNER PREVIEW    •    v0.5",
+        ttk.Label(brand, text="WINDOWS OWNER PREVIEW    •    v0.5.1",
                   style="BrandHint.TLabel").pack(anchor="w")
         ttk.Button(header, text="Find Page  Ctrl+K", style="Accent.TButton",
                    command=self.show_palette).pack(side="right", padx=(9, 0))
@@ -200,13 +200,9 @@ class DesktopShell:
             text = self.search_var.get().strip()
             visible = search_pages(self.page_names, text)
             if self.state.compact:
-                # The page picker / Ctrl+K still exposes every page.
-                ttk.Label(self.nav, text="GO", style="SideHint.TLabel").pack(pady=9)
-                for title in visible:
-                    label = "".join(x[0] for x in title.split())[:3].upper()
-                    ttk.Button(self.nav, text=label, width=5,
-                        style="NavSelected.TButton" if title==self.page_select.get() else "Nav.TButton",
-                        command=lambda name=title: self.open_page(name)).pack(pady=2)
+                from .desktop_compact_nav import build_rail
+                build_rail(self.nav, self.state.pinned, self.page_select.get(),
+                           self.page_names, self.open_page, self.show_palette)
             else:
                 if not text and self.state.pinned:
                     self._section("PINNED")
@@ -247,7 +243,8 @@ class DesktopShell:
                    fill="x", padx=6, pady=1)
 
     def _apply_compact(self):
-        self.sidebar.configure(width=75 if self.state.compact else 218)
+        self.sidebar.configure(width=74 if self.state.compact else 230)
+        self.sidebar_canvas.configure(width=56 if self.state.compact else 207)
         if self.state.compact:
             self.sidebar_hint.pack_forget()
             self.search_entry.pack_forget()
