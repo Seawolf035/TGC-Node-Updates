@@ -10,7 +10,7 @@ ICONS = {
     "Social":"◇", "Profiles":"◈", "Presence":"●",
     "Avatars":"✦", "Bookmarks":"☆", "Inbox":"✉",
     "StaffDex":"★", "OSC":"≋", "OSC Studio":"⌘",
-    "Updates":"↻", "Settings":"⚙",
+    "UI Color Studio":"◐", "Updates":"↻", "Settings":"⚙",
 }
 
 
