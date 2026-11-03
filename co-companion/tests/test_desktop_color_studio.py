@@ -112,6 +112,25 @@ class PresetStorageTests(unittest.TestCase):
             self.assertNotIn("auth",raw.lower())
 
 
+class StaffDexFilteringTests(unittest.TestCase):
+    def test_filters_search_role_and_collection_without_mutation(self):
+        from tgc_cocompanion.desktop_staffdex_filter import filter_staffdex_rows
+        rows=[
+            ("Seawolf","The Royalty","Collected","usr_2a833076-03ac-4212-aeff-0708d8eab968"),
+            ("Staff B","Admin","Missing","usr_b85631a8-5e23-4b88-a14b-4c8a2ae863c1"),
+            ("Staff C","Moderator","Not scanned",""),
+        ]
+        original=tuple(rows)
+        self.assertEqual(len(filter_staffdex_rows(rows)),3)
+        self.assertEqual(len(filter_staffdex_rows(rows,"seawolf")),1)
+        self.assertEqual(len(filter_staffdex_rows(rows,rank="Admin")),1)
+        self.assertEqual(len(filter_staffdex_rows(rows,progress="Missing")),1)
+        self.assertEqual(len(filter_staffdex_rows(rows,progress="Collected")),1)
+        self.assertEqual(len(filter_staffdex_rows(rows,progress="Unscanned")),1)
+        self.assertEqual(len(filter_staffdex_rows(rows,rank="Admin",progress="Collected")),0)
+        self.assertEqual(tuple(rows),original)
+
+
 class ServerGateTests(unittest.TestCase):
     def access(self,role,valid=True,terms=True,match=True):
         import time
