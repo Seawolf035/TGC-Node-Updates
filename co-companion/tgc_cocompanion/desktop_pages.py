@@ -105,6 +105,8 @@ class DesktopPages:
             ("Social & Friends", "Social"), ("Find Profiles", "Profiles"),
             ("OSC Studio", "OSC Studio"), ("Saved Worlds", "Bookmarks"),
             ("Inbox", "Inbox"), ("Updates", "Updates"),
+            ("Explore VRChat", "Explore"), ("Recent Players", "Recent Players"),
+            ("Staff Chatboxes", "Staff Chatboxes"),
         )
         for index,(label, destination) in enumerate(destinations):
             ttk.Button(actions, text=label,
