@@ -73,6 +73,36 @@ class PersonalOscPresets:
         _atomic_bytes(self.path,json.dumps(self._cache,indent=2).encode("utf-8"))
 
 
+class PersonalHeightPreset:
+    """A single per-user custom height, distinct from shared staff OSC state."""
+    def __init__(self, directory: Path):
+        self.path = Path(directory) / "personal_osc_heights.json"
+        try:
+            data=json.loads(self.path.read_text(encoding="utf-8"))
+            self._cache=data if isinstance(data,dict) and len(data)<=40 else {}
+        except (OSError,ValueError):
+            self._cache={}
+
+    def get(self, user_id: str) -> float | None:
+        if not isinstance(user_id,str) or not USER_ID.fullmatch(user_id):
+            return None
+        value=self._cache.get(user_id)
+        return float(value) if type(value) in (int,float) and 0.1<=value<=100 else None
+
+    def save(self, user_id: str, metres: float) -> float:
+        if not isinstance(user_id,str) or not USER_ID.fullmatch(user_id):
+            raise PermissionError("Sign into VRChat to save your own height")
+        import math
+        value=float(metres)
+        if not math.isfinite(value) or not 0.1<=value<=100:
+            raise ValueError("Height must be between 0.1 and 100 metres")
+        if user_id not in self._cache and len(self._cache)>=40:
+            raise ValueError("Too many personal height presets")
+        self._cache[user_id]=value
+        _atomic_bytes(self.path,json.dumps(self._cache,sort_keys=True).encode("utf-8"))
+        return value
+
+
 class WindowsOscControls:
     def __init__(
         self, router: SessionRouter, permitted: Callable[[], bool],
