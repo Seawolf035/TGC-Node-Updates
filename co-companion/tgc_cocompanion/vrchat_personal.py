@@ -22,8 +22,53 @@ from .pilot_enrollment import _atomic_bytes, _encrypt_for_user, _decrypt_for_use
 USER_ID = re.compile(r"usr_[0-9a-fA-F-]{36}\Z")
 TWO_FA_CODE = re.compile(r"[A-Za-z0-9-]{4,32}\Z")
 METHODS = {"totp", "emailotp", "otp"}
+_METHOD_LABELS = {"totp": "authenticator app", "emailotp": "email",
+                  "otp": "recovery code"}
+
+
+def _supported_2fa_methods(raw) -> tuple[str, ...]:
+    """Normalize VRChat's wire names (notably camel-case emailOtp)."""
+    if not isinstance(raw, list):
+        return ()
+    methods = []
+    for name in raw:
+        if not isinstance(name, str):
+            continue
+        mode = name.strip().lower()
+        if mode in METHODS and mode not in methods:
+            methods.append(mode)
+    return tuple(methods)
+
+
+def _automatic_2fa_mode(methods: tuple[str, ...], code: str) -> str:
+    """Pick ONE supported endpoint without guessing/retrying login codes.
+
+    VRChat commonly offers ['otp','totp']: OTP is a *recovery* code,
+    not an authenticator or email code. A six-digit numeric entry goes to
+    totp; the longer recovery-code format goes to otp. Email mode is
+    selected from the login challenge, not a manual API selector.
+    """
+    if not methods:
+        raise VRChatApiError("Sign in first to receive a VRChat verification challenge")
+    if len(methods) == 1:
+        return methods[0]
+    # Recovery codes are visibly distinct from a time-based six-digit code.
+    recovery = len(code) > 8 or "-" in code
+    if recovery and "otp" in methods:
+        return "otp"
+    if "totp" in methods and code.isdecimal() and len(code) == 6:
+        return "totp"
+    if "emailotp" in methods and "totp" not in methods:
+        return "emailotp"
+    if "totp" in methods and "emailotp" not in methods:
+        return "totp"
+    # If email+TOTP are both offered, 6 digits cannot identify the source.
+    raise VRChatApiError(
+        "VRChat offered both email and authenticator codes. "
+        "Choose 'Use email code' or 'Use authenticator code' before verifying.")
+
 _ALLOWED_COOKIES = ("auth", "twoFactorAuth")
-_AGENT = "TGC-CoCompanion/0.2 masonswan@usa.com"
+_AGENT = "TGC-CoCompanion/0.5.1 masonswan@usa.com"
 MAX_RESPONSE = 1_048_576
 
 
@@ -111,6 +156,8 @@ class PersonalVRChat:
         self._store = self.directory / "personal_vrchat_session.dpapi"
         self._lock = RLock()
         self._pending: dict | None = None
+        self._pending_methods: tuple[str, ...] = ()
+        self._preferred_mode: str | None = None
         self._session: dict | None = None
         self._load()
 
@@ -124,6 +171,19 @@ class PersonalVRChat:
                 self._session = data
         except Exception:  # Invalid DPAPI/session data must never unlock the account
             self._session = None
+
+    @property
+    def pending_methods(self) -> tuple[str, ...]:
+        return self._pending_methods if self._pending else ()
+
+    @property
+    def preferred_2fa(self) -> str | None:
+        return self._preferred_mode if self._pending else None
+
+    def prefer_2fa(self, mode: str) -> None:
+        if not isinstance(mode, str) or mode not in self.pending_methods:
+            raise VRChatApiError("This verification method was not offered by VRChat")
+        self._preferred_mode = mode
 
     @property
     def signed_in(self) -> bool:
@@ -149,35 +209,53 @@ class PersonalVRChat:
         if self.signed_in:
             raise VRChatApiError("Sign out before switching personal VRChat accounts")
         self._pending = None
+        self._pending_methods = ()
+        self._preferred_mode = None
         creds = base64.b64encode((username + ":" + password).encode("utf-8")).decode("ascii")
         result, cookies = self._transport("GET", "/auth/user", "", "Basic " + creds)
         if not isinstance(result, dict) or not cookies.get("auth"):
             raise VRChatApiError("VRChat did not issue a login session")
         methods = result.get("requiresTwoFactorAuth")
         if isinstance(methods, list) and methods:
-            options = [str(m) for m in methods if m in METHODS]
+            options = _supported_2fa_methods(methods)
             if not options:
-                raise VRChatApiError("Unsupported VRChat two-factor mode")
+                raise VRChatApiError("VRChat requested an unsupported two-factor method")
             self._pending = {"auth": cookies["auth"]}
-            return options
+            self._pending_methods = options
+            # Most people have email-only or TOTP + a recovery-code option.
+            self._preferred_mode = options[0] if len(options) == 1 else None
+            return list(options)
         self._finish_login(result, cookies)
         return []
 
-    def verify_2fa(self, code: str, mode: str = "totp") -> str:
-        if mode not in METHODS or not isinstance(code, str) or not TWO_FA_CODE.fullmatch(code.strip()):
-            raise VRChatApiError("Invalid VRChat 2FA mode/code")
+    def verify_2fa(self, code: str, mode: str | None = None) -> str:
+        if not isinstance(code, str) or not TWO_FA_CODE.fullmatch(code.strip()):
+            raise VRChatApiError("Enter a valid VRChat verification or recovery code")
         if not self._pending or not self._pending.get("auth"):
             raise VRChatApiError("Sign in with VRChat credentials first")
-        pending = self._pending
-        result, updated = self._transport("POST", "/auth/twofactorauth/" + mode + "/verify",
-                                           _cookie_header(pending), "", {"code": code.strip()})
+        code = code.strip()
+        # Explicit mode is used only by legacy tests / an optional inline
+        # 'Use email' button when VRChat genuinely offers both same-length
+        # methods. There is no user-facing endpoint selector anymore.
+        if mode is None:
+            mode = self._preferred_mode or _automatic_2fa_mode(self._pending_methods, code)
+        if mode not in self._pending_methods:
+            raise VRChatApiError("VRChat did not offer that verification method")
+        pending = dict(self._pending)
+        result, updated = self._transport(
+            "POST", "/auth/twofactorauth/" + mode + "/verify",
+            _cookie_header(pending), "", {"code": code})
         if not isinstance(result, dict) or result.get("verified") is not True:
-            raise VRChatApiError("VRChat did not verify the code")
+            raise VRChatApiError("VRChat did not accept that verification code")
         pending.update(updated)
         me, updated = self._transport("GET", "/auth/user", _cookie_header(pending))
         pending.update(updated)
+        if isinstance(me, dict) and me.get("requiresTwoFactorAuth"):
+            raise VRChatApiError("VRChat still requires additional verification")
         self._finish_login(me, pending)
         self._pending = None
+        self._pending_methods = ()
+        self._preferred_mode = None
         return self.display_name
 
     def _finish_login(self, profile: object, tokens: dict):
@@ -401,6 +479,8 @@ class PersonalVRChat:
         with self._lock:
             self._session = None
             self._pending = None
+            self._pending_methods = ()
+            self._preferred_mode = None
             try:
                 self._store.unlink(missing_ok=True)
             except OSError:
