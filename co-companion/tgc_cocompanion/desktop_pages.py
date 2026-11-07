@@ -716,6 +716,8 @@ class DesktopPages:
         self.phrases.delete(0,tk.END)
         if hasattr(self,"official_chatboxes"):
             self.official_chatboxes.render()
+        if hasattr(self,"friend_hub"):
+            self.friend_hub.refresh()
         self._cached_dex()
         if not self.account.signed_in:return
         saved=self.heights.get(self.account.user_id)
