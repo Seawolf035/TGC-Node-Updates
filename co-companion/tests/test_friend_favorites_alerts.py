@@ -32,6 +32,17 @@ class FakeAccount:
         raise AssertionError("Unexpected endpoint "+path)
 
 
+class SourcePackagingTests(unittest.TestCase):
+    def test_legacy_python_update_allowlists_every_live_friend_hub_module(self):
+        from tgc_cocompanion.python_source_updater import SOURCE_FILES
+        required=("desktop_friend_hub.py","desktop_friend_favorites.py",
+                  "desktop_pinned_friend_alerts.py","desktop_social_shortcuts.py",
+                  "desktop_friend_ordering.py","desktop_friend_activity.py")
+        for module in required:
+            with self.subTest(module=module):
+                self.assertIn("tgc_cocompanion/"+module,SOURCE_FILES)
+
+
 class FavoriteTests(unittest.TestCase):
     def setUp(self):
         p=patch.multiple("tgc_cocompanion.desktop_friend_favorites",
