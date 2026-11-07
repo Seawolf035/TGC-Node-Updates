@@ -93,9 +93,8 @@ class PinnedFriendAlerts:
             seen.add(uid)
             person=actual.get(uid)
             if person is None:
-                # Do not turn a missing/hidden friend into an offline signal.
-                if uid in old and type(old[uid]) is bool:
-                    newer[uid]=old[uid]
+                # Do not infer a missing/hidden friend is offline; clear its
+                # baseline so reappearance cannot cause a false online alert.
                 continue
             is_online=online_state(person)
             newer[uid]=is_online
