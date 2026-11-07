@@ -76,7 +76,7 @@ class FavoriteTests(unittest.TestCase):
             def get(self,path):
                 if path=="/favorites/groups/friend":
                     return {"favoriteGroups":[{"name":"bad name!"}]}
-                return []
+                return {"invalid":"missing favoriteGroups on fallback"}
         with self.assertRaises(VRChatApiError):
             fetch_favorite_friend_ids(Fake())
         class Switch(FakeAccount):
