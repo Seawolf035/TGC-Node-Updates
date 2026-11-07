@@ -244,10 +244,16 @@ class FriendHubPage:
 
     def load_friends(self):
         self.status.set("Loading complete online and offline VRChat friend lists…")
+        try: user=self._personal()
+        except Exception as e:self.status.set(str(e));return
         def work():
-            self._personal()
-            return complete_friend_list(self.pages.account)
-        self.owner._run_async(work,self._loaded_friends,
+            rows=complete_friend_list(self.pages.account)
+            if not self.pages.account.signed_in or self.pages.account.user_id!=user:
+                raise PermissionError("VRChat account changed while loading friends")
+            return rows
+        self.owner._run_async(work,
+            lambda rows:self._loaded_friends(rows) if self.pages.account.signed_in
+            and self.pages.account.user_id==user else None,
             on_error=lambda e:self.status.set("Friends load failed; prior list kept: "+e))
 
     def _loaded_friends(self,rows):
@@ -256,10 +262,13 @@ class FriendHubPage:
 
     def load_favorites(self):
         self.status.set("Checking read-only VRChat favorite-friend groups…")
+        try: user=self._personal()
+        except Exception as e:self.status.set(str(e));return
         def work():
-            self._personal()
             return self.favorite_index.refresh(self.pages.account)
         def done(result):
+            if not self.pages.account.signed_in or self.pages.account.user_id!=user:
+                return
             self.favorite_ids,came_from_api=result
             self.refresh()
             self.status.set(f"{len(self.favorite_ids)} real VRChat favorite-friend IDs "
@@ -356,10 +365,16 @@ class FriendHubPage:
 
     def load_groups(self):
         self.status.set("Loading your personal VRChat groups…")
+        try: user=self._personal()
+        except Exception as e:self.status.set(str(e));return
         def work():
-            self._personal()
-            return group_shortcuts(self.pages.account.browse("groups"))
-        self.owner._run_async(work,self._loaded_groups,
+            rows=group_shortcuts(self.pages.account.browse("groups"))
+            if not self.pages.account.signed_in or self.pages.account.user_id!=user:
+                raise PermissionError("VRChat account changed during group refresh")
+            return rows
+        self.owner._run_async(work,
+            lambda rows:self._loaded_groups(rows) if self.pages.account.signed_in
+            and self.pages.account.user_id==user else None,
             on_error=lambda e:self.status.set("Groups load failed; prior list kept: "+e))
 
     def _loaded_groups(self,rows):
@@ -368,12 +383,17 @@ class FriendHubPage:
 
     def capture_history(self):
         self.status.set("Capturing full friend snapshot; no partial history will be saved…")
+        try: user=self._personal()
+        except Exception as e:self.status.set(str(e));return
         def work():
-            user=self._personal()
             complete=complete_friend_list(self.pages.account)
+            if not self.pages.account.signed_in or self.pages.account.user_id!=user:
+                raise PermissionError("VRChat account changed during history capture")
             changes=self.history.observe(user,complete)
             return complete,changes
         def done(result):
+            if not self.pages.account.signed_in or self.pages.account.user_id!=user:
+                return
             self.friends,changes=result
             self.refresh()
             self.load_history()
