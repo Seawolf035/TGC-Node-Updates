@@ -194,6 +194,8 @@ class FriendHubPage:
             self.groups=()
             self.favorite_ids=self.favorite_index.saved(account) if account else frozenset()
             self.alert_feed.delete(0,tk.END)
+            self.alert_status.set("Pinned alerts are off unless explicitly enabled "
+                                  "for the signed-in personal VRChat account.")
         if not account:
             self.status.set("Sign in to personal VRChat to use account-specific shortcuts.")
             self.alert_status.set("Sign in to personal VRChat first.")
