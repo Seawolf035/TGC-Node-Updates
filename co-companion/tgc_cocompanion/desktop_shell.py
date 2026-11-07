@@ -58,7 +58,7 @@ class DesktopShell:
         self.description_var = tk.StringVar(value=DESCRIPTIONS["Home"])
         self.pin_var = tk.StringVar(value="Pin page")
         self.pinned_count = tk.StringVar(value="")
-        self.root.title("TGC Co-Companion | Owner Preview v0.8.0")
+        self.root.title("TGC Co-Companion | Owner Preview v0.9.0")
         self.root.geometry("1180x690")
         self.root.minsize(900, 540)
 
@@ -70,7 +70,7 @@ class DesktopShell:
         brand.pack(side="left")
         ttk.Label(brand, text="TGC  /  CO-COMPANION",
                   style="Brand.TLabel").pack(anchor="w")
-        ttk.Label(brand, text="WINDOWS OWNER PREVIEW    •    v0.8.0",
+        ttk.Label(brand, text="WINDOWS OWNER PREVIEW    •    v0.9.0",
                   style="BrandHint.TLabel").pack(anchor="w")
         ttk.Button(header, text="Find Page  Ctrl+K", style="Accent.TButton",
                    command=self.show_palette).pack(side="right", padx=(9, 0))
