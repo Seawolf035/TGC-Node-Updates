@@ -1,3 +1,60 @@
+# Co-Companion v0.9.0 — Real VRChat Favorite Friends + Opt-In Pinned Alerts
+
+**Installed owner EXE update:** Open Co-Companion → **Updates → Check for
+Updates → Download & Install EXE → Restart** after the v0.9.0 owner
+prerelease passes Windows/Linux CI. No manual ZIP/Python installer. The
+previous install is kept for rollback. Owner-only, NOT a staff rollout.
+
+## Friends Hub (Mobile Companion parity)
+
+- **Load VRC Favorites:** reads the *actual personal VRChat favorite friend
+  groups*, not Co-Companion pinned shortcuts, using the same official API
+  paths and legacy fallback as the Mobile Companion's
+  `VRChatFavoriteIndex.java`. It includes all selected favorite groups,
+  deduplicates VRChat user IDs, and sorts favorites above normal friends
+  in the existing Friends Hub. A complete refresh is required before replacing
+  the prior result; a broken/missing group doesn't erase old favorites.
+  The cache is per-VRChat-account, Windows-user DPAPI encrypted, and valid
+  for **15 minutes**, so reopening the view doesn't hammer VRChat.
+- **Pinned Alerts tab:** explicit **Enable Pinned Alerts**, **Disable Alerts**
+  and **Check Now** actions. Only currently pinned friends can generate
+  alerts. Enable requires accepted Desktop Terms, personal VRChat login and
+  a current verified TGC staff lease (like Mobile's StaffGate).
+  **The first observation is silent**. After the baseline, only confirmed
+  offline → online transitions appear in the in-app feed and trigger a Windows
+  sound. Newly pinned or absent/unavailable people receive a silent baseline;
+  no false "offline" assumptions, unsolicited requests or mentions.
+- Alerts are **off by default** and checked at most every **15 minutes**
+  automatically **while Co-Companion is running**, or when Check Now is
+  explicitly clicked. This is NOT a native Windows toast service and does
+  NOT keep running after the app exits. There are no daemon processes.
+  Alert state is account-scoped and encrypted with Windows-user DPAPI;
+  notification text is session-only.
+- **Account-switch safety:** friend/group lists, favorite cache displays,
+  history capture and alert checks reject stale results when the personal
+  VRChat account changes mid-request. Signing out clears the current
+  Friends Hub display, including in-app alert history.
+- Existing local 12 pinned-friend and 16 pinned-group shortcuts, manually
+  triggered encrypted friendship history, and shared-instance sorting remain.
+  Personal account cookies are never sent to the TGC Relay.
+
+## Validation and boundaries
+
+Offline tests cover actual endpoint shapes, fallback, 15-minute cache,
+atomic complete-group refresh, account changes, pin-only alerts, first-seen
+silence, offline→online changes, missing-user behavior, corrupt DPAPI state,
+and required Python owner updater source files. Windows packaged EXE smoke
+checks Friends Hub Favorites/Alerts controls exist. Live VRChat API and owner
+Windows UI require field testing. No production Relay, staff Node, invite
+uploader, Android/Quest code, staff updater or Main Launcher was modified.
+
+**Still pending full cross-platform parity:** native background Windows toast
+notifications, Android/Quest pairing and overlay Mini-VRCX, shared
+mobile/desktop state, authenticated staff_rank backend signals and eventual
+single-writer Node migration. Do not claim those completed.
+
+---
+
 # Co-Companion v0.8.0 — Friends Hub / Mobile Companion Friend Parity
 
 **From the existing installed EXE, use Updates → Check for Updates →
