@@ -12,6 +12,9 @@ import webbrowser
 from .desktop_social_shortcuts import SocialShortcuts, GROUP_ID
 from .desktop_friend_ordering import group_friends,user_id,display_name
 from .desktop_friend_activity import FriendActivityStore
+from .desktop_friend_favorites import FavoriteFriendIndex
+from .desktop_pinned_friend_alerts import PinnedFriendAlerts, MIN_INTERVAL_SECONDS
+import time
 from .vrchat_personal import USER_ID
 
 MAX_PAGES=167
@@ -57,6 +60,11 @@ class FriendHubPage:
         self.owner=pages.owner
         self.shortcuts=SocialShortcuts(self.owner.terms_dir)
         self.history=FriendActivityStore(self.owner.terms_dir)
+        self.favorite_index=FavoriteFriendIndex(self.owner.terms_dir)
+        self.alerts=PinnedFriendAlerts(self.owner.terms_dir)
+        self.favorite_ids=frozenset()
+        self._account_loaded=None
+        self._alert_polling=False
         self.friends=()
         self.groups=()
         self.friend_rows={}
@@ -73,7 +81,8 @@ class FriendHubPage:
         ttk.Button(toolbar,text="Load All Friends",style="Accent.TButton",
                    command=self.load_friends).pack(side="left",padx=(0,8))
         ttk.Button(toolbar,text="Load My Groups",command=self.load_groups).pack(side="left",padx=(0,8))
-        ttk.Button(toolbar,text="Refresh Local Pins",command=self.refresh).pack(side="left",padx=(0,10))
+        ttk.Button(toolbar,text="Load VRC Favorites",command=self.load_favorites).pack(side="left",padx=(0,8))
+        ttk.Button(toolbar,text="Refresh Pins",command=self.refresh).pack(side="left",padx=(0,10))
         ttk.Label(toolbar,text="Filter:").pack(side="left")
         ttk.Entry(toolbar,textvariable=self.search,width=19).pack(
             side="left",fill="x",expand=True,padx=(4,0))
@@ -87,6 +96,25 @@ class FriendHubPage:
         columns.add(friends,text="Friends & Pins")
         columns.add(groups,text="Pinned Groups")
         columns.add(activity,text="Friend Activity")
+        alerttab=ttk.Frame(columns,padding=(3,7))
+        columns.add(alerttab,text="Pinned Alerts")
+        ttk.Label(alerttab,text="Optional in-app notifications when your PINNED VRChat "
+                  "friends change from offline to online. Checks every 15 minutes while "
+                  "this Co-Companion window is running. No system service, Relay calls, "
+                  "tracking Node or automatic friend requests.",wraplength=780).pack(
+                      anchor="w",pady=(0,8))
+        self.alert_status=tk.StringVar(value="Alerts off by default. First check is silent.")
+        ttk.Label(alerttab,textvariable=self.alert_status,wraplength=770).pack(
+                      anchor="w",pady=(0,9))
+        row=ttk.Frame(alerttab);row.pack(anchor="w",pady=(0,9))
+        ttk.Button(row,text="Enable Pinned Alerts",style="Accent.TButton",
+                   command=self.enable_alerts).pack(side="left",padx=(0,8))
+        ttk.Button(row,text="Disable Alerts",command=self.disable_alerts).pack(side="left",padx=(0,8))
+        ttk.Button(row,text="Check Now",command=lambda:self.check_alerts(force=True)
+                   ).pack(side="left")
+        ttk.Label(alerttab,text="Notifications from this session (not stored):").pack(anchor="w")
+        self.alert_feed=tk.Listbox(alerttab,height=11)
+        self.alert_feed.pack(fill="both",expand=True,pady=(5,0))
         ttk.Label(friends,text="Pinned friends first; remaining friends grouped by VRChat "
                   "favorites, shared instance, solo location, hidden, then offline.",
                   wraplength=820).pack(anchor="w",pady=(0,5))
@@ -139,6 +167,7 @@ class FriendHubPage:
         self.friend_tree.bind("<Double-1>",lambda e:self._friend_double(e))
         self.group_tree.bind("<Double-1>",lambda e:self.open_group())
         self.refresh()
+        self.owner.root.after(60_000,self._alert_tick)
 
     def _personal(self,require_staff=False):
         self.pages._eligible(personal=True)
@@ -157,10 +186,18 @@ class FriendHubPage:
         self.group_tree.delete(*self.group_tree.get_children())
         self.friend_rows={}
         self.group_rows={}
-        if not self.pages.account.signed_in:
+        account=self.pages.account.user_id if self.pages.account.signed_in else None
+        if self._account_loaded!=account:
+            # Never show stale people from a different personal VRChat account.
+            self._account_loaded=account
+            self.friends=()
+            self.groups=()
+            self.favorite_ids=self.favorite_index.saved(account) if account else frozenset()
+            self.alert_feed.delete(0,tk.END)
+        if not account:
             self.status.set("Sign in to personal VRChat to use account-specific shortcuts.")
+            self.alert_status.set("Sign in to personal VRChat first.")
             return
-        account=self.pages.account.user_id
         friendpins=self.shortcuts.list(account,"friends")
         pinned={row["id"] for row in friendpins}
         if friendpins:
@@ -169,7 +206,7 @@ class FriendHubPage:
                 self._friend_row(parent,{"id":row["id"],"displayName":row["name"],
                                   "location":"Pinned shortcut"},"★ ")
         grouped=group_friends((p for p in self.friends if user_id(p) not in pinned),
-                              set())
+                              self.favorite_ids)
         for key,label,members in grouped:
             filtered=[p for p in members if self._filter(display_name(p),user_id(p))]
             if not filtered:continue
@@ -188,7 +225,8 @@ class FriendHubPage:
             for row in others:self._group_row(parent,row)
         self.status.set(f"{len(self.friends)} loaded friends • {len(friendpins)}/12 pinned "
             f"• {len(self.groups)} loaded groups • {len(group_pins)}/16 pinned. "
-            "Use Load to refresh VRChat; no background requests.")
+            f"{len(self.favorite_ids)} actual VRChat favorite-friend IDs. "
+            "Manual refresh; alerts only if explicitly enabled.")
 
     def _friend_row(self,parent,person,prefix=""):
         uid=user_id(person); name=display_name(person)
@@ -215,6 +253,106 @@ class FriendHubPage:
     def _loaded_friends(self,rows):
         self.friends=rows
         self.refresh()
+
+    def load_favorites(self):
+        self.status.set("Checking read-only VRChat favorite-friend groups…")
+        def work():
+            self._personal()
+            return self.favorite_index.refresh(self.pages.account)
+        def done(result):
+            self.favorite_ids,came_from_api=result
+            self.refresh()
+            self.status.set(f"{len(self.favorite_ids)} real VRChat favorite-friend IDs "
+                + ("loaded from VRChat." if came_from_api else "loaded from 15-minute cache."))
+        self.owner._run_async(work,done,on_error=lambda error:self.status.set(
+            "Favorite group refresh failed; previous cache preserved: "+error))
+
+    def enable_alerts(self):
+        try:
+            account=self._personal(require_staff=True)
+            self.alerts.set_enabled(account,True)
+            self.alert_status.set("Enabled. Initial observation is silent; no notifications "
+                                  "for friends who are already online.")
+            self.check_alerts(force=True)
+        except Exception as error:self.alert_status.set(str(error))
+
+    def disable_alerts(self):
+        try:
+            account=self._personal()
+            self.alerts.set_enabled(account,False)
+            self.alert_status.set("Alerts disabled for this VRChat account.")
+        except Exception as error:self.alert_status.set(str(error))
+
+    def _alert_tick(self):
+        if not self.owner.root.winfo_exists():
+            return
+        try:
+            self.check_alerts(force=False)
+        finally:
+            self.owner.root.after(60_000,self._alert_tick)
+
+    def check_alerts(self,force=False):
+        if self._alert_polling or self.owner._busy or not self.pages.account.signed_in:
+            return
+        try:
+            account=self._personal(require_staff=True)
+            if not self.alerts.enabled(account):
+                return
+            pins=self.shortcuts.list(account,"friends")
+            if not pins:
+                self.alert_status.set("Pin at least one friend before checking alerts.")
+                return
+            elapsed=time.time()-self.alerts.last_check(account)
+            if not force and elapsed<MIN_INTERVAL_SECONDS:
+                return
+        except Exception as error:
+            self.alert_status.set("Alert check paused: "+str(error))
+            return
+        self._alert_polling=True
+        self.alert_status.set("Checking complete personal friend list for pinned alerts…")
+        def work():
+            # Validate current account and staff at request start, and never
+            # treat partial online/offline friend pages as a complete snapshot.
+            if self._personal(require_staff=True)!=account:
+                raise PermissionError("Personal VRChat account changed")
+            complete=complete_friend_list(self.pages.account)
+            if self.pages.account.user_id!=account:
+                raise PermissionError("Personal VRChat account changed during check")
+            notices=self.alerts.observe(account,pins,complete)
+            return complete,notices
+        def done(result):
+            self._alert_polling=False
+            if self.pages.account.user_id!=account or not self.pages.account.signed_in:
+                return
+            try:
+                self._personal(require_staff=True)
+                if not self.alerts.enabled(account):
+                    return
+            except Exception:
+                self.alert_status.set("Alert verification expired; notifications suppressed.")
+                return
+            friends,notices=result
+            self.friends=friends
+            self.refresh()
+            if notices:
+                from datetime import datetime
+                now=datetime.now().strftime("%H:%M")
+                for notice in notices:
+                    self.alert_feed.insert(0,f"{now} • {notice['name']} is online")
+                while self.alert_feed.size()>25:
+                    self.alert_feed.delete(tk.END)
+                try:
+                    import winsound
+                    winsound.MessageBeep()
+                except (ImportError,RuntimeError,OSError):
+                    pass
+                self.alert_status.set(f"{len(notices)} pinned friend(s) just came online.")
+            else:
+                self.alert_status.set("Checked pinned friends. No new online transitions.")
+        def failed(error):
+            self._alert_polling=False
+            self.alert_status.set("Pinned alerts check failed; previous states kept: "+error)
+        self.owner._run_async(work,done,on_error=failed)
 
     def load_groups(self):
         self.status.set("Loading your personal VRChat groups…")
