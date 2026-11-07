@@ -127,9 +127,11 @@ class AlertsTests(unittest.TestCase):
             mgr.set_enabled(ME,True)
             mgr.observe(ME,pin_a,[{"id":A,"isOnline":False}],at=1)
             self.assertEqual(mgr.observe(ME,pin_a,[],at=2),())
-            self.assertEqual(mgr.observe(ME,pin_a,[{"id":A,"isOnline":True}],at=3),
+            self.assertEqual(mgr.observe(ME,pin_a,[{"id":A,"isOnline":True}],at=3),())
+            self.assertEqual(mgr.observe(ME,pin_a,[{"id":A,"isOnline":False}],at=4),())
+            self.assertEqual(mgr.observe(ME,pin_a,[{"id":A,"isOnline":True}],at=5),
                              ({"id":A,"name":"A"},))
-            self.assertEqual(mgr.observe(ME,pin_b,[{"id":B,"isOnline":True}],at=4),())
+            self.assertEqual(mgr.observe(ME,pin_b,[{"id":B,"isOnline":True}],at=6),())
             self.assertEqual(mgr.observe(ME,pin_b,[{"id":B,"isOnline":False}],at=5),())
             self.assertEqual(mgr.observe(ME,pin_b,[{"id":B,"isOnline":True}],at=6),
                              ({"id":B,"name":"B"},))
