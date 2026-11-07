@@ -112,6 +112,8 @@ class FavoriteFriendIndex:
         if not force and self.fresh(account_id,at):
             return self.saved(account_id),False
         ids=fetch_favorite_friend_ids(account)  # fetch ALL before any write
+        if not account.signed_in or account.user_id!=account_id:
+            raise PermissionError("VRChat account changed during favorite refresh")
         timestamp=int(time.time() if at is None else at)
         payload=json.dumps({"schema":1,"account":account_id,
                             "at":timestamp,"ids":sorted(ids)},separators=(",",":"))
