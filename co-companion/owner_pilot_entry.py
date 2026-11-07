@@ -27,6 +27,10 @@ def main():
             assert hasattr(app.features.friend_hub,"friend_tree")
             assert hasattr(app.features.friend_hub,"group_tree")
             assert hasattr(app.features.friend_hub,"activity_table")
+            assert hasattr(app.features.friend_hub,"favorite_index")
+            assert hasattr(app.features.friend_hub,"alerts")
+            assert hasattr(app.features.friend_hub,"alert_feed")
+            assert app.features.friend_hub.alert_feed.size()==0
             assert len(app.features.friend_hub.friends)==0
             assert app.shell.open_page("Staff Chatboxes")
             assert hasattr(app.features.official_chatboxes,"role_actions")
