@@ -55,7 +55,7 @@ class ModelTests(unittest.TestCase):
         banner="https://api.vrchat.cloud/api/1/file/file_xyz/2"
         other="https://files.vrchat.cloud/file/xyz"
         self.assertEqual(image_sources({
-            "userIcon":image,"profilePicOverride":banner},"user"),(banner,banner))
+            "userIcon":image,"profilePicOverride":banner},"user"),(image,banner))
         self.assertEqual(image_sources({
             "thumbnailImageUrl":image,"imageUrl":other},"world"),(image,other))
         self.assertEqual(image_sources({
