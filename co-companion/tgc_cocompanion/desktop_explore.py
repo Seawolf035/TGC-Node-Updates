@@ -68,6 +68,10 @@ class ExplorePage:
         self.query=tk.StringVar()
         self.status=tk.StringVar(value="Sign in to your personal VRChat account to explore.")
         self.results={}
+        self._all_results=()
+        self._result_account=None
+        self.result_filter=tk.StringVar()
+        self.type_filter=tk.StringVar(value="All types")
         tab=ttk.Frame(notebook,padding=(16,12))
         notebook.add(tab,text="Explore")
         ttk.Label(tab,text="EXPLORE VRCHAT",style="PageTitle.TLabel").pack(anchor="w")
@@ -75,20 +79,31 @@ class ExplorePage:
                   "and favorites, and open results in Profiles or Bookmarks. "
                   "This page uses your personal VRChat session only.",
                   wraplength=790).pack(anchor="w",pady=(3,12))
-        search=ttk.Frame(tab)
-        search.pack(fill="x",pady=(0,8))
-        ttk.Label(search,text="Find:").pack(side="left")
+        search_card=ttk.LabelFrame(tab,text="Discover on VRChat",padding=(12,9))
+        search_card.pack(fill="x",pady=(0,8))
+        search=ttk.Frame(search_card);search.pack(fill="x")
+        ttk.Label(search,text="Find").pack(side="left",padx=(0,8))
         entry=ttk.Entry(search,textvariable=self.query)
-        entry.pack(side="left",fill="x",expand=True,padx=(8,9))
+        entry.pack(side="left",fill="x",expand=True)
         entry.bind("<Return>",lambda _event:self.search_all())
-        ttk.Button(search,text="Search Users + Worlds",style="Accent.TButton",
-                   command=self.search_all).pack(side="left")
-        quick=ttk.Frame(tab)
+        ttk.Button(search_card,text="Search People + Worlds",style="Accent.TButton",
+                   command=self.search_all).pack(anchor="w",pady=(9,0))
+        quick=ttk.LabelFrame(tab,text="Quick browse",padding=(10,7))
         quick.pack(fill="x",pady=(0,8))
-        ttk.Label(quick,text="Quick Browse:").pack(side="left",padx=(0,8))
-        for name,category in QUICK.items():
+        for col in range(2):quick.columnconfigure(col,weight=1)
+        for index,(name,category) in enumerate(QUICK.items()):
             ttk.Button(quick,text=name,command=lambda c=category,n=name:
-                       self.load_category(c,n)).pack(side="left",padx=(0,6))
+                       self.load_category(c,n)).grid(row=index//2,column=index%2,
+                                                    sticky="ew",padx=4,pady=3)
+        filterbar=ttk.Frame(tab);filterbar.pack(fill="x",pady=(0,7))
+        ttk.Label(filterbar,text="Filter results").pack(side="left",padx=(0,8))
+        ttk.Entry(filterbar,textvariable=self.result_filter).pack(
+            side="left",fill="x",expand=True,padx=(0,9))
+        ttk.Combobox(filterbar,textvariable=self.type_filter,state="readonly",
+                     values=("All types","Person","World","Group"),
+                     width=12).pack(side="left")
+        self.result_filter.trace_add("write",lambda *_:self._render_results())
+        self.type_filter.trace_add("write",lambda *_:self._render_results())
         ttk.Label(tab,textvariable=self.status,wraplength=810).pack(
             anchor="w",pady=(0,7))
         body=ttk.Frame(tab)
@@ -116,10 +131,18 @@ class ExplorePage:
 
     def _run(self, operation, label):
         self.status.set("Loading "+label+" from your personal VRChat account…")
+        account=self.pages.account.user_id if self.pages.account.signed_in else None
         def work():
             self.pages._eligible(personal=True)
+            if self.pages.account.user_id!=account:
+                raise PermissionError("VRChat account changed during request")
             return operation()
-        self.owner._run_async(work,lambda rows:self._show(rows,label),
+        def done(rows):
+            if not self.pages.account.signed_in or self.pages.account.user_id!=account:
+                self.clear_results()
+                return
+            self._show(rows,label)
+        self.owner._run_async(work,done,
                on_error=lambda error:self.status.set(label+": "+error))
 
     def search_all(self):
@@ -149,21 +172,44 @@ class ExplorePage:
             return merge_explore_results([(label,rows)]),[]
         self._run(operation,label)
 
+    def clear_results(self):
+        self._all_results=()
+        self._result_account=None
+        self.results={}
+        self.table.delete(*self.table.get_children())
+        self.status.set("Personal VRChat account changed. Browse again to load results.")
+
     def _show(self,result,label):
         rows,errors=result
-        self.table.delete(*self.table.get_children())
-        self.results={}
-        for row in rows:
-            iid=self.table.insert("",tk.END,values=row)
-            self.results[iid]=row
-        self.status.set(f"{len(rows)} {label} result(s) shown. " +
+        self._result_account=self.pages.account.user_id
+        self._all_results=tuple(rows)
+        count=self._render_results()
+        self.status.set(f"{count} / {len(rows)} {label} result(s) shown. " +
                         ("Partial results: "+"; ".join(errors) if errors else
                          "Double-click a result to inspect it."))
+
+    def _render_results(self):
+        self.table.delete(*self.table.get_children())
+        self.results={}
+        if not self.pages.account.signed_in or self.pages.account.user_id!=self._result_account:
+            return 0
+        needle=self.result_filter.get().strip().casefold()[:120]
+        category=self.type_filter.get()
+        for row in self._all_results:
+            if category!="All types" and row[0]!=category:
+                continue
+            if needle and not any(needle in str(field).casefold() for field in row):
+                continue
+            iid=self.table.insert("",tk.END,values=row)
+            self.results[iid]=row
+        return len(self.results)
 
     def _selected(self):
         selected=self.table.selection()
         if not selected or selected[0] not in self.results:
             raise ValueError("Select a person or world first")
+        if not self.pages.account.signed_in or self.pages.account.user_id!=self._result_account:
+            raise PermissionError("Browse using your current VRChat account first")
         return self.results[selected[0]]
 
     def view_details(self):
