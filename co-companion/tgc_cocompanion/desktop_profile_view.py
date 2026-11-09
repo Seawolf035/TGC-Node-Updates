@@ -129,6 +129,9 @@ class VisualProfile:
         self.data=None
         self.picture=None
         self.banner=None
+        self._banner_bytes=None
+        self._banner_width=0
+        self._banner_timer=None
         self._image_url=None
         self._banner_url=None
         self.container=ScrollableCard(parent)
@@ -201,6 +204,25 @@ class VisualProfile:
                                     wraplength=max(170,w-230))
         self.subtitle_widget.configure(wraplength=max(170,w-230))
         self.banner_widget.configure(height=5 if narrow else 7)
+        if self._banner_bytes is not None and abs(self._banner_width-w)>90:
+            if self._banner_timer is not None:
+                self.container.after_cancel(self._banner_timer)
+            self._banner_timer=self.container.after(200,self._resize_banner)
+
+    def _resize_banner(self):
+        self._banner_timer=None
+        if not self._banner_bytes or not self.container.winfo_exists():
+            return
+        try:
+            from PIL import ImageTk
+            target=min(1800,max(320,self.container.canvas.winfo_width()-10))
+            art=render_image(self._banner_bytes,(target,176))
+            picture=ImageTk.PhotoImage(art,master=self.container)
+            self.banner=picture
+            self._banner_width=target
+            self.banner_widget.configure(image=picture,text="")
+        except (tk.TclError,RuntimeError,ValueError,OSError):
+            pass
 
     def _set_bio(self,text):
         self.bio.configure(state="normal")
@@ -216,6 +238,11 @@ class VisualProfile:
         self.data=record
         self.picture=None
         self.banner=None
+        self._banner_bytes=None
+        self._banner_width=0
+        if self._banner_timer is not None:
+            self.container.after_cancel(self._banner_timer)
+            self._banner_timer=None
         self._image_url=None
         self._banner_url=None
         self.banner_widget.configure(image="",text="")
@@ -255,7 +282,11 @@ class VisualProfile:
                         photo=ImageTk.PhotoImage(art,master=self.container)
                         if t=="banner":
                             self.banner=photo
+                            self._banner_bytes=payload
+                            self._banner_width=sz[0]
                             self.banner_widget.configure(image=photo,text="")
+                            if abs(self.container.canvas.winfo_width()-sz[0])>90:
+                                self._resize_banner()
                         else:
                             self.picture=photo
                             self.avatar_widget.configure(image=photo,text="")
