@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 import tkinter as tk
 from tkinter import ttk
 
-from .desktop_profile_images import ProfileImageCache, image_sources, render_image
+from .desktop_profile_images import ProfileImageCache, image_candidates, render_image
 
 DETAILS = {
     "user": (
@@ -134,6 +134,8 @@ class VisualProfile:
         self._banner_timer=None
         self._image_url=None
         self._banner_url=None
+        self._art_results={}
+        self.art_status=tk.StringVar(value="Artwork: no profile selected")
         self.container=ScrollableCard(parent)
         self.container.pack(fill="both",expand=True)
         base=self.container.content
@@ -163,6 +165,8 @@ class VisualProfile:
         self.identity_id=tk.StringVar(value="")
         ttk.Label(identity_text,textvariable=self.identity_id,
                   style="PageSubtitle.TLabel",wraplength=570).pack(anchor="w",pady=(8,0))
+        ttk.Label(identity_text,textvariable=self.art_status,
+                  style="PageSubtitle.TLabel",wraplength=570).pack(anchor="w",pady=(6,0))
         self.meta=ttk.Frame(base,padding=(13,8))
         self.meta.pack(fill="x")
         self.meta_labels=[]
@@ -247,6 +251,8 @@ class VisualProfile:
             self._banner_timer=None
         self._image_url=None
         self._banner_url=None
+        self._art_results={}
+        self.art_status.set("Artwork: loading from VRChat…" if record else "Artwork: no profile selected")
         self.banner_widget.configure(image="",text="")
         self.avatar_widget.configure(image="",text="No artwork",width=14,height=6)
         title,subtitle,meta,bio=profile_summary(record,kind)
@@ -264,36 +270,66 @@ class VisualProfile:
             self._load_art(record,kind,self.generation)
 
     def _load_art(self,record,kind,version):
-        profile,banner=image_sources(record,kind)
-        self._image_url,self._banner_url=profile,banner
-        for url,target,size,circle in (
-            (banner,"banner",(1000,176),False),
-            (profile,"avatar",(112,112),True)):
-            if not url:continue
-            def work(u=url,t=target,sz=size,rounded=circle):
-                try:
-                    payload=CACHE.fetch(u)
-                    art=render_image(payload,sz,circle=rounded)
-                except Exception:
-                    return
+        icons,banners=image_candidates(record,kind)
+        self._image_url=icons[0] if icons else None
+        self._banner_url=banners[0] if banners else None
+        if not icons and not banners:
+            self.art_status.set("Artwork unavailable: VRChat did not provide an approved image URL.")
+            return
+        for sources,target,size,circle in (
+            (banners,"banner",(1000,176),False),
+            (icons,"avatar",(112,112),True)):
+            if not sources:
+                self._art_results[target]="no image URL"
+                continue
+            def work(urls=sources,t=target,sz=size,rounded=circle):
+                art=None
+                payload=None
+                reason="image unavailable"
+                for url in urls:
+                    try:
+                        payload=CACHE.fetch(url)
+                        art=render_image(payload,sz,circle=rounded)
+                        break
+                    except Exception as exc:
+                        # Never display URLs or response bodies: signed image
+                        # URLs can contain private temporary query tokens.
+                        status=getattr(exc,"code",None)
+                        if type(status) is int and 400<=status<=599:
+                            reason=f"HTTP {status}"
+                        else:
+                            reason=type(exc).__name__
                 def apply():
                     if self.generation!=version or not self.container.winfo_exists():
                         return
-                    try:
-                        from PIL import ImageTk
-                        photo=ImageTk.PhotoImage(art,master=self.container)
-                        if t=="banner":
-                            self.banner=photo
-                            self._banner_bytes=payload
-                            self._banner_width=sz[0]
-                            self.banner_widget.configure(image=photo,text="",height=sz[1])
-                            if abs(self.container.canvas.winfo_width()-sz[0])>90:
-                                self._resize_banner()
-                        else:
-                            self.picture=photo
-                            self.avatar_widget.configure(image=photo,text="",width=112,height=112)
-                    except (tk.TclError,RuntimeError):
-                        pass
-                try:self.owner.root.after(0,apply)
-                except (tk.TclError,RuntimeError):pass
+                    if art is not None:
+                        try:
+                            from PIL import ImageTk
+                            photo=ImageTk.PhotoImage(art,master=self.container)
+                            if t=="banner":
+                                self.banner=photo
+                                self._banner_bytes=payload
+                                self._banner_width=sz[0]
+                                self.banner_widget.configure(image=photo,text="",height=sz[1])
+                                if abs(self.container.canvas.winfo_width()-sz[0])>90:
+                                    self._resize_banner()
+                            else:
+                                self.picture=photo
+                                self.avatar_widget.configure(image=photo,text="",width=112,height=112)
+                            self._art_results[t]="loaded"
+                        except (tk.TclError,RuntimeError,ValueError):
+                            self._art_results[t]="display error"
+                    else:
+                        self._art_results[t]=reason
+                    self.art_status.set("Artwork • "+
+                        "  |  ".join(f"{name}: {self._art_results.get(name,'loading')}"
+                                    for name in ("avatar","banner")))
+                try:
+                    self.owner.root.after(0,apply)
+                except (tk.TclError,RuntimeError):
+                    pass
             IMAGE_POOL.submit(work)
+        if not icons or not banners:
+            self.art_status.set("Artwork • "+
+                "  |  ".join(f"{name}: {self._art_results.get(name,'loading')}"
+                            for name in ("avatar","banner")))
