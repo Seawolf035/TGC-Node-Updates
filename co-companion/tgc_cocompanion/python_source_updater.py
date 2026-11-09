@@ -53,6 +53,8 @@ SOURCE_FILES = (
     "tgc_cocompanion/owner_updater.py",
     "tgc_cocompanion/python_source_updater.py",
     "tgc_cocompanion/desktop_more_pages.py",
+    "tgc_cocompanion/desktop_profile_view.py",
+    "tgc_cocompanion/desktop_profile_images.py",
     "tgc_cocompanion/desktop_collection_pages.py",
     "tgc_cocompanion/desktop_compact_nav.py",
     "tgc_cocompanion/desktop_explore.py",
