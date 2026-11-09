@@ -52,6 +52,20 @@ def main():
                 "#123456,#654321,#ABCDEF,#091827,#FFEEDD,#8899AA"))==10
             assert export_vrchat_colors(app.color_studio.colors()).count(",")==5
             assert app.shell.open_page("StaffDex")
+            assert app.shell.open_page("Profiles")
+            assert hasattr(app.features.profile_tools,"visual")
+            profile=app.features.profile_tools.visual
+            profile.update({"id":"usr_2a833076-03ac-4212-aeff-0708d8eab968",
+                "displayName":"Test VRChat Profile","bio":"Structured responsive profile",
+                "status":"active","dateJoined":"2024-03-01"},"user")
+            assert profile.title.get()=="Test VRChat Profile"
+            assert len(profile.meta_labels)==6
+            for width in (800,1024,1280,1920,2560):
+                app.shell._on_window_resize(width=width)
+                profile._responsive(type("Ev",(),{"width":max(320,width-300)})())
+                root.update_idletasks()
+                assert app.shell.sidebar.cget("width") in (74,230)
+            app.shell._on_window_resize(width=1280)
             assert hasattr(app.features,"two_factor_panel")
             assert not app.features.two_factor_panel.winfo_manager()
             app.shell.toggle_compact()
