@@ -23,32 +23,56 @@ class ProfileAndPresence:
         self._build_presence(book)
 
     def _build_details(self,book):
-        tab=ttk.Frame(book,padding=14)
+        from .desktop_profile_view import VisualProfile
+        tab=ttk.Frame(book,padding=(10,8))
         book.add(tab,text="Profiles")
-        ttk.Label(tab,text="VRChat Profiles & Details",font=("Segoe UI",15,"bold")).pack(anchor="w")
-        ttk.Label(tab,text="View a selected user's profile, world or group from Social. "
-                  "Personal friendship actions require explicit confirmation.",
-                  wraplength=850).pack(anchor="w",pady=(4,8))
-        line=ttk.Frame(tab);line.pack(fill="x",pady=3)
-        ttk.Label(line,text="VRChat ID").pack(side="left",padx=(0,7))
+        self.profile_status=tk.StringVar(value="Choose a profile from Explore, Social, StaffDex or enter a VRChat ID.")
+        bar=ttk.Frame(tab)
+        bar.pack(fill="x",pady=(0,8))
+        ttk.Label(bar,text="VRChat profile ID:").pack(side="left",padx=(0,8))
         self.profile_id=tk.StringVar()
-        ttk.Entry(line,textvariable=self.profile_id,width=48).pack(side="left",fill="x",expand=True)
-        ttk.Button(line,text="Load Details",command=self.load).pack(side="left",padx=7)
-        actions=ttk.Frame(tab);actions.pack(anchor="w",pady=9)
-        ttk.Button(actions,text="Send Friend Request",command=self.friend_request).pack(side="left",padx=(0,8))
-        ttk.Button(actions,text="Request Invite",command=self.request_invite).pack(side="left",padx=(0,8))
-        ttk.Button(actions,text="Check Friendship",command=self.friend_status).pack(side="left")
-        self.profile_status=tk.StringVar(value="Choose an entry in Social or paste a VRChat ID.")
-        ttk.Label(tab,textvariable=self.profile_status,wraplength=860).pack(anchor="w",pady=5)
-        self.details=tk.Text(tab,height=10,wrap="word",state="disabled",
-                             bg="#16243A",fg="#E7F1FF",insertbackground="#E7F1FF")
-        self.details.pack(fill="both",expand=True,pady=5)
-        row=ttk.Frame(tab);row.pack(fill="x",pady=6)
-        ttk.Label(row,text="Private VRChat note (1–2000 chars):").pack(side="left")
-        ttk.Button(row,text="Save Note to VRChat",command=self.save_note).pack(side="right")
-        self.note=tk.Text(tab,height=4,wrap="word",bg="#16243A",fg="#E7F1FF",
-                          insertbackground="#E7F1FF")
+        entry=ttk.Entry(bar,textvariable=self.profile_id)
+        entry.pack(side="left",fill="x",expand=True,padx=(0,7))
+        entry.bind("<Return>",lambda _event:self.load())
+        ttk.Button(bar,text="Load Profile",style="Accent.TButton",
+                   command=self.load).pack(side="left",padx=(0,6))
+        ttk.Button(bar,text="Copy ID",command=self.copy_profile_id).pack(side="left")
+        self.person_actions=ttk.Frame(tab)
+        self.person_actions.pack(fill="x",pady=(0,7))
+        for title,action in (
+            ("Check Friendship",self.friend_status),
+            ("Send Friend Request",self.friend_request),
+            ("Request Invite",self.request_invite),
+        ):
+            ttk.Button(self.person_actions,text=title,command=action).pack(
+                side="left",padx=(0,7),pady=1)
+        ttk.Label(tab,textvariable=self.profile_status,
+                  style="PageSubtitle.TLabel",wraplength=850).pack(
+                      fill="x",pady=(0,5))
+        self.note_frame=ttk.Frame(tab)
+        self.note_frame.pack(fill="x",side="bottom",pady=(8,0))
+        header=ttk.Frame(self.note_frame)
+        header.pack(fill="x",pady=(0,4))
+        ttk.Label(header,text="PRIVATE VRCHAT NOTE  •  1–2000 characters",
+                  style="PageSubtitle.TLabel").pack(side="left")
+        ttk.Button(header,text="Save Note",command=self.save_note
+                   ).pack(side="right")
+        self.note=tk.Text(self.note_frame,height=3,wrap="word",relief="flat",
+                          background="#11243B",foreground="#EAF5FF",
+                          insertbackground="#EAF5FF",padx=9,pady=6)
         self.note.pack(fill="x")
+        self.visual=VisualProfile(self.owner,tab)
+        self.details=self.visual.bio
+        self._active_profile_id=None
+
+    def copy_profile_id(self):
+        identifier=self.profile_id.get().strip()
+        if not identifier:
+            self.profile_status.set("No VRChat profile ID to copy.")
+            return
+        self.owner.root.clipboard_clear()
+        self.owner.root.clipboard_append(identifier)
+        self.profile_status.set("Profile ID copied.")
 
     def _build_presence(self,book):
         tab=ttk.Frame(book,padding=16)
@@ -84,33 +108,49 @@ class ProfileAndPresence:
         self.load()
 
     def _show(self,record):
-        # Display public/profile fields without exposing cookies, auth or API tokens.
-        lines=[]
-        for key in ("displayName","name","id","bio","status","statusDescription",
-                    "location","date_joined","dateJoined","visits","favorites",
-                    "capacity","authorName","shortCode","memberCount",
-                    "description","tags"):
-            value=record.get(key)
-            if isinstance(value,(str,int,float,bool)) and value not in ("",None):
-                lines.append(f"{key}: {str(value)[:1600]}")
-        self.details.config(state="normal")
-        self.details.delete("1.0",tk.END)
-        self.details.insert("1.0","\n".join(lines) or "No public fields returned")
-        self.details.config(state="disabled")
+        from .desktop_profile_view import profile_kind
+        self.visual.update(record,profile_kind(record.get("id") or self.profile_id.get().strip()))
 
     def load(self):
+        from .desktop_profile_view import profile_kind
         identifier=self.profile_id.get().strip()
+        if not identifier:
+            self.profile_status.set("Enter a VRChat user, world, or group ID.")
+            return
+        current_kind=profile_kind(identifier)
+        if not identifier.startswith(("usr_","wrld_","grp_")):
+            self.profile_status.set("Use a valid usr_, wrld_, or grp_ VRChat ID.")
+            return
+        self.profile_status.set("Loading VRChat profile and artwork…")
         def work():
             self.pages._eligible(personal=True)
-            if identifier.startswith("usr_"):return self.pages.account.profile(identifier)
-            if identifier.startswith("wrld_"):return self.pages.account.world(identifier)
-            if identifier.startswith("grp_"):return self.pages.account.group(identifier)
-            raise VRChatApiError("Profile ID must begin usr_, wrld_ or grp_")
+            if identifier.startswith("usr_"):
+                return self.pages.account.profile(identifier)
+            if identifier.startswith("wrld_"):
+                return self.pages.account.world(identifier)
+            return self.pages.account.group(identifier)
         def done(result):
+            if self.profile_id.get().strip()!=identifier:
+                return
+            self._active_profile_id=identifier
             self._details=result
-            self._show(result)
-            self.profile_status.set(f"Loaded {result.get('name') or result.get('displayName') or identifier}")
-        self.owner._run_async(work,done)
+            self.visual.update(result,current_kind)
+            if current_kind=="user":
+                if not self.person_actions.winfo_manager():
+                    self.person_actions.pack(fill="x",before=self.visual.container,pady=(0,7))
+                if not self.note_frame.winfo_manager():
+                    self.note_frame.pack(fill="x",side="bottom",pady=(8,0))
+            else:
+                self.person_actions.pack_forget()
+                self.note_frame.pack_forget()
+            self.note.delete("1.0",tk.END)
+            title=result.get("displayName") or result.get("name") or identifier
+            self.profile_status.set("Loaded "+str(title)[:130]+
+                                    " • Artwork loads when available from VRChat.")
+        def failure(message):
+            if self.profile_id.get().strip()==identifier:
+                self.profile_status.set("Could not load profile: "+str(message))
+        self.owner._run_async(work,done,on_error=failure)
 
     def friend_status(self):
         try:ident=self._require_user()
