@@ -42,6 +42,12 @@ class OwnerPilotApp:
         if os.name != "nt":
             raise RuntimeError("TGC Co-Companion owner pilot runs only on Windows")
         self.root = root
+        # Apply saved text/control scaling BEFORE ttk styles and widgets exist.
+        # 100% uses Tk's OS-aware DPI without modification.
+        self.terms_dir = get_pilot_dir()
+        from .desktop_display import DisplayPreferences, apply_scale
+        self.display_choice=DisplayPreferences(self.terms_dir)
+        apply_scale(self.root,self.display_choice.load())
         from .desktop_theme import apply_desktop_theme
         apply_desktop_theme(self.root)
         self.root.title("TGC Co-Companion — Owner Preview 0.10.0 (NOT A STAFF RELEASE)")
@@ -52,7 +58,6 @@ class OwnerPilotApp:
         self.launcher: ManagedVRChatLauncher | None = None
         self._busy = False
         self._stop = False
-        self.terms_dir = get_pilot_dir()
         from .desktop_staff_colors import DesktopThemeChoice
         self.theme_choice = DesktopThemeChoice(self.terms_dir)
         self.terms_file = self.terms_dir / "pilot_terms_acceptance.json"
