@@ -67,7 +67,7 @@ class DesktopShell:
         self.description_var = tk.StringVar(value=DESCRIPTIONS["Home"])
         self.pin_var = tk.StringVar(value="Pin page")
         self.pinned_count = tk.StringVar(value="")
-        self.root.title("TGC Co-Companion | Owner Preview v0.10.0")
+        self.root.title("TGC Co-Companion | Owner Preview v0.11.0")
         # Default to the usable display area; never force a window larger
         # than a 1366x768 or laptop screen. Tk handles monitor DPI scaling.
         sw=max(760,int(self.root.winfo_screenwidth()))
@@ -87,7 +87,7 @@ class DesktopShell:
         brand.pack(side="left")
         ttk.Label(brand, text="TGC  /  CO-COMPANION",
                   style="Brand.TLabel").pack(anchor="w")
-        ttk.Label(brand, text="WINDOWS OWNER PREVIEW    •    v0.10.0",
+        ttk.Label(brand, text="WINDOWS OWNER PREVIEW    •    v0.11.0",
                   style="BrandHint.TLabel").pack(anchor="w")
         ttk.Button(header, text="Find Page  Ctrl+K", style="Accent.TButton",
                    command=self.show_palette).pack(side="right", padx=(9, 0))
