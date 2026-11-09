@@ -44,6 +44,15 @@ DESCRIPTIONS = {
 }
 
 
+def responsive_shell(width: int):
+    """Fit controls without losing Find Page or permanent navigation access."""
+    w=max(1,int(width))
+    return {"compact_sidebar": w < 1100,
+            "show_header_shortcuts": w >= 1140,
+            "show_page_picker": w >= 1020,
+            "sidebar_width": 74 if w < 1100 else 230}
+
+
 class DesktopShell:
     def __init__(self, root, data_directory, status_var):
         self.root = root
@@ -59,8 +68,16 @@ class DesktopShell:
         self.pin_var = tk.StringVar(value="Pin page")
         self.pinned_count = tk.StringVar(value="")
         self.root.title("TGC Co-Companion | Owner Preview v0.10.0")
-        self.root.geometry("1180x690")
-        self.root.minsize(900, 540)
+        # Default to the usable display area; never force a window larger
+        # than a 1366x768 or laptop screen. Tk handles monitor DPI scaling.
+        sw=max(760,int(self.root.winfo_screenwidth()))
+        sh=max(520,int(self.root.winfo_screenheight()))
+        w=min(1480,max(760,int(sw*0.88)))
+        h=min(920,max(500,int(sh*0.86)))
+        self.root.geometry(f"{w}x{h}")
+        self.root.minsize(760,500)
+        self._auto_compact=False
+        self._last_layout=None
 
         self.frame = ttk.Frame(root, style="Shell.TFrame")
         self.frame.pack(fill="both", expand=True)
@@ -74,10 +91,12 @@ class DesktopShell:
                   style="BrandHint.TLabel").pack(anchor="w")
         ttk.Button(header, text="Find Page  Ctrl+K", style="Accent.TButton",
                    command=self.show_palette).pack(side="right", padx=(9, 0))
-        ttk.Button(header, text="Updates", command=lambda:
-                   self.open_page("Updates")).pack(side="right", padx=(9, 0))
-        ttk.Button(header, text="Home", command=lambda:
-                   self.open_page("Home")).pack(side="right")
+        self.header_updates=ttk.Button(header, text="Updates", command=lambda:
+                   self.open_page("Updates"))
+        self.header_updates.pack(side="right",padx=(9,0))
+        self.header_home=ttk.Button(header, text="Home", command=lambda:
+                   self.open_page("Home"))
+        self.header_home.pack(side="right")
 
         body = ttk.Frame(self.frame, style="Shell.TFrame")
         body.pack(fill="both", expand=True)
@@ -130,6 +149,7 @@ class DesktopShell:
         self.page_picker = ttk.Combobox(banner, textvariable=self.page_select,
                          state="readonly", width=19)
         self.page_picker.pack(side="right")
+        self.banner=banner
         self.page_picker.bind("<<ComboboxSelected>>",
                               lambda _: self.open_page(self.page_select.get()))
         self.notebook = ttk.Notebook(main, style="Shell.TNotebook")
@@ -147,7 +167,35 @@ class DesktopShell:
             root.bind(f"<Control-Key-{n}>",
                       lambda _, index=n-1: self.shortcut_page(index))
         root.bind("<Alt-Left>", self._shortcut_previous)
+        self._on_window_resize(width=w)
+        root.bind("<Configure>",self._on_window_resize,add="+")
+
+    def _on_window_resize(self,event=None,width=None):
+        if event is not None and event.widget is not self.root:
+            return
+        available=width if width is not None else (event.width if event else
+                                                    self.root.winfo_width())
+        plan=responsive_shell(available)
+        compact=self.state.compact or plan["compact_sidebar"]
+        layout=(compact,plan["show_header_shortcuts"],plan["show_page_picker"])
+        if layout==self._last_layout:
+            return
+        self._last_layout=layout
+        self._auto_compact=plan["compact_sidebar"]
         self._apply_compact()
+        if plan["show_header_shortcuts"]:
+            if not self.header_home.winfo_manager():
+                self.header_home.pack(side="right")
+            if not self.header_updates.winfo_manager():
+                self.header_updates.pack(side="right",padx=(9,0))
+        else:
+            self.header_home.pack_forget()
+            self.header_updates.pack_forget()
+        if plan["show_page_picker"]:
+            if not self.page_picker.winfo_manager():
+                self.page_picker.pack(side="right",before=self.pin_button)
+        else:
+            self.page_picker.pack_forget()
 
     def _fit_sidebar(self, event):
         self.sidebar_canvas.itemconfigure(self.nav_window, width=max(1, event.width))
@@ -204,7 +252,7 @@ class DesktopShell:
                 child.destroy()
             text = self.search_var.get().strip()
             visible = search_pages(self.page_names, text)
-            if self.state.compact:
+            if self.state.compact or self._auto_compact:
                 from .desktop_compact_nav import build_rail
                 build_rail(self.nav, self.state.pinned, self.page_select.get(),
                            self.page_names, self.open_page, self.show_palette)
@@ -248,9 +296,10 @@ class DesktopShell:
                    fill="x", padx=6, pady=1)
 
     def _apply_compact(self):
-        self.sidebar.configure(width=74 if self.state.compact else 230)
-        self.sidebar_canvas.configure(width=56 if self.state.compact else 207)
-        if self.state.compact:
+        compact=self.state.compact or self._auto_compact
+        self.sidebar.configure(width=74 if compact else 230)
+        self.sidebar_canvas.configure(width=56 if compact else 207)
+        if compact:
             self.sidebar_hint.pack_forget()
             self.search_entry.pack_forget()
         else:
@@ -264,7 +313,8 @@ class DesktopShell:
     def toggle_compact(self):
         self.state.compact = not self.state.compact
         self.state.save()
-        self._apply_compact()
+        self._last_layout=None
+        self._on_window_resize(width=self.root.winfo_width())
 
     def shortcut_page(self, index):
         shortcuts = ("Home", "Social", "VRChat Launcher", "StaffDex",
@@ -283,7 +333,7 @@ class DesktopShell:
         return "break"
 
     def _shortcut_search(self, _event=None):
-        if self.state.compact:
+        if self.state.compact or self._auto_compact:
             self.show_palette()
         else:
             self.search_entry.focus_set()
