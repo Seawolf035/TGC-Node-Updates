@@ -19,7 +19,7 @@ MAX_PIXELS = 18_000_000
 CACHE_COUNT = 32
 CACHE_TTL = 12 * 60
 VALID_HOSTS = (
-    "vrchat.cloud", "vrchat.com", "vrcimg.com",
+    "vrchat.cloud", "vrchat.com", "vrcimg.com", "vrcdn.cloud", "vrcdn.live",
 )
 
 
@@ -41,29 +41,43 @@ def safe_image_url(value):
         return None
 
 
-def image_sources(record, kind="user"):
-    """Return primary image and banner, favoring actual user profile assets."""
+def image_candidates(record, kind="user"):
+    """Ordered independent image candidates from VRChat's actual API data.
+
+    Profile icon and banner should fall back separately when one URL is stale
+    (VRChat image signatures expire), blocked or absent. Never manufacture a
+    file URL, fetch user-supplied links or silently use untrusted hosts.
+    """
     if not isinstance(record,dict):
-        return None,None
+        return (),()
     if kind=="user":
-        primary=("userIcon","profilePicOverride","profilePicUrl",
-                 "currentAvatarThumbnailImageUrl","currentAvatarImageUrl",
-                 "thumbnailImageUrl","imageUrl")
-        banners=("profilePicOverride","profilePicUrl","profilePic",
-                 "currentAvatarImageUrl","imageUrl")
+        primary=("userIcon","profilePicOverrideThumbnail","profilePicOverride",
+                 "profilePicUrl","currentAvatarThumbnailImageUrl",
+                 "currentAvatarImageUrl","thumbnailImageUrl","imageUrl")
+        banners=("profilePicOverride","profilePicOverrideThumbnail","profilePicUrl",
+                 "currentAvatarImageUrl","currentAvatarThumbnailImageUrl",
+                 "imageUrl")
     elif kind=="world":
         primary=("thumbnailImageUrl","imageUrl","featuredImageUrl")
         banners=("imageUrl","featuredImageUrl","thumbnailImageUrl")
     else:
-        primary=("iconUrl","thumbnailUrl","thumbnailImageUrl","imageUrl")
-        banners=("bannerUrl","bannerImageUrl","imageUrl","iconUrl")
-    def get(keys):
+        primary=("iconUrl","thumbnailUrl","thumbnailImageUrl","imageUrl","bannerUrl")
+        banners=("bannerUrl","bannerImageUrl","imageUrl","iconUrl","thumbnailUrl")
+    def collect(keys):
+        urls=[]
         for key in keys:
-            val=record.get(key)
-            if safe_image_url(val):
-                return val
-        return None
-    return get(primary),get(banners)
+            url=safe_image_url(record.get(key))
+            if url is not None and url not in urls:
+                urls.append(url)
+        return tuple(urls[:5])
+    return collect(primary),collect(banners)
+
+
+def image_sources(record, kind="user"):
+    """Backward-compatible first-choice icon/banner for UI and tests."""
+    primary,banners=image_candidates(record,kind)
+    return (primary[0] if primary else None,
+            banners[0] if banners else None)
 
 
 class _SameHostRedirects(HTTPRedirectHandler):
@@ -93,6 +107,7 @@ class ProfileImageCache:
         request=Request(allowed,headers={
             "User-Agent":"TGC-CoCompanion-OwnerPreview/Profiles",
             "Accept":"image/png,image/jpeg,image/webp,image/gif",
+            "Referer":"https://vrchat.com/",
         })
         with self._opener.open(request,timeout=8) as response:
             if not safe_image_url(response.geturl()):
