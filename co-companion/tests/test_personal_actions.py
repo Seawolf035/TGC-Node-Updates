@@ -38,6 +38,19 @@ class ActionsTests(unittest.TestCase):
         self.assertEqual(data["displayName"],"Profile")
         self.assertEqual(data["status"],"active")
 
+    def test_group_search_uses_vrchat_query_not_world_search_parameter(self):
+        group={"id":GROUP,"name":"The Gamer Club","shortCode":"TGC"}
+        with patch.object(self.client,"_transport",return_value=([group],{})) as transport:
+            result=self.client.browse("search_groups",query="The Gamer Club")
+            self.assertEqual(result,[group])
+            self.assertEqual(transport.call_args.args[1],
+                             "/groups?query=The+Gamer+Club&n=60&offset=0")
+        with self.assertRaises(VRChatApiError):
+            self.client.browse("search_groups",query="a")
+        from tgc_cocompanion.desktop_explore import classify_result,merge_explore_results
+        self.assertEqual(classify_result(group,"Groups")[0],"Group")
+        self.assertEqual(merge_explore_results([("Groups",[group])])[0][3],GROUP)
+
     def test_fetch_world_and_group_detail(self):
         self.client.world(WORLD)
         self.client.group(GROUP)
