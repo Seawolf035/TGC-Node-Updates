@@ -1,3 +1,74 @@
+# Co-Companion v0.11.0 — Visual Profiles and Responsive Windows Layout
+
+**Update from your installed EXE:** after v0.11.0 passes both CI suites and
+publishes to the owner-preview prerelease channel, use **Updates → Check for
+Updates → Download & Install EXE → Restart**. No manual ZIP installation.
+The previous version remains available for rollback. Owner preview only;
+no Node, Relay, Main Launcher, staff or Quest/Android deployment.
+
+### Profiles: redesigned instead of raw JSON/text
+
+- Dedicated visual identity header for each **VRChat user, world or group**
+  including their public display name, subtitle/status, actual VRChat
+  **profile picture and banner**, or world/group thumbnail/cover as provided
+  by the authenticated personal VRChat API.
+- Artwork downloads run asynchronously; the page stays responsive and shows
+  dark placeholders when artwork is absent, inaccessible or fails. Only
+  HTTPS images from approved VRChat image/CDN domains are allowed, without
+  session cookies or staff tokens. Cross-site redirects are rejected.
+  Compressed downloads are capped at 5 MiB and decoded dimensions at 18
+  megapixels; in-memory LRU cache (32 items / 12 minutes) only, no image
+  disk cache, no third-party tracking.
+- Six readable detail cards display the fields applicable to the profile
+  type (user status, member since, location; world author/visits/capacity;
+  group members/visibility, etc.) rather than huge monospaced text.
+  Long biographies/descriptions scroll in a dedicated content area.
+- The prior **friend request, invite request, friendship status and private
+  VRChat note** functions remain, still requiring personal sign-in and
+  explicit confirmations for writes. User-only buttons and note editor are
+  hidden for world/group profiles. Profile IDs can be copied. Asynchronous
+  loading errors and competing tasks now show readable status messages.
+
+### Responsive desktop window & settings
+
+- Default window size adapts to the available screen instead of always
+  forcing the same 1180×690 geometry. Minimum 760×500; tested window
+  layout breakpoints from **760 to 3840 pixels**, including 800, 1024,
+  1280, 1366, 1920, 2560 and 4K.
+- The sidebar automatically uses the compact icon rail below 1100 px,
+  **without changing your saved navigation preference**. At narrower widths,
+  redundant Home/Updates header buttons and the page picker are hidden;
+  Find Page (Ctrl+K), keyboard shortcuts, pinned pages and all features
+  remain accessible. Normal sidebar returns when the window grows again.
+- Profiles and Settings scroll vertically, including mouse wheel over
+  embedded card widgets, keeping content available at short window heights.
+  Settings breaks the wide color-editor buttons across rows.
+- New **Settings → Display & Screen Scaling** offers 85%, 100%, 115%,
+  130% or 150% control/text scale, saved locally and applied on next
+  restart. 100% always retains Tk/Windows native DPI settings (no
+  forced absolute DPI). This changes only UI preferences.
+- New source `desktop_profile_view.py`, `desktop_profile_images.py`,
+  `desktop_display.py`; Pillow is bundled in the EXE to decode common
+  JPEG/PNG/WebP/GIF images and ImageTk supports actual raster display.
+
+### Verification and limits
+
+Unit tests validate user/world/group structured fields, approved image
+URLs, image caching/decoding, corrupt display preferences and responsive
+breakpoint logic. Windows executable startup tests instantiate Profiles,
+render a sample user without any network, exercise multiple window widths,
+create a real ImageTk photo and check UI modules are packaged. The tests
+do **not** access real owner VRChat accounts or reproduce every Windows
+DPI/multi-monitor configuration: screenshots and real-image behavior should
+still be checked on the owner's Windows PC.
+
+This is the first major **Profiles + application shell** overhaul, NOT a
+claim that every older StaffDex/OSC/Node page has been redesigned. Follow-up
+work should progressively migrate their dense legacy layouts to the shared
+card/scroll patterns without changing permissions, Relay or Nodes.
+
+---
+
 # Co-Companion v0.10.0 — Native Windows Pinned Notifications + Alert Reliability
 
 **Install via the EXE itself:** after the v0.10.0 owner prerelease passes
