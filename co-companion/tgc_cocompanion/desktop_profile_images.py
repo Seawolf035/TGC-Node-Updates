@@ -46,7 +46,7 @@ def image_sources(record, kind="user"):
     if not isinstance(record,dict):
         return None,None
     if kind=="user":
-        primary=("profilePicOverride","profilePicUrl","userIcon",
+        primary=("userIcon","profilePicOverride","profilePicUrl",
                  "currentAvatarThumbnailImageUrl","currentAvatarImageUrl",
                  "thumbnailImageUrl","imageUrl")
         banners=("profilePicOverride","profilePicUrl","profilePic",
