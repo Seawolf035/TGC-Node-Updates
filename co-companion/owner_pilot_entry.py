@@ -30,6 +30,9 @@ def main():
             assert hasattr(app.features.friend_hub,"favorite_index")
             assert hasattr(app.features.friend_hub,"alerts")
             assert hasattr(app.features.friend_hub,"alert_feed")
+            assert hasattr(app.features.friend_hub,"native_notifier")
+            assert hasattr(app.features.friend_hub,"windows_alerts")
+            assert not app.features.friend_hub.windows_alerts.get()
             assert app.features.friend_hub.alert_feed.size()==0
             assert len(app.features.friend_hub.friends)==0
             assert app.shell.open_page("Staff Chatboxes")
