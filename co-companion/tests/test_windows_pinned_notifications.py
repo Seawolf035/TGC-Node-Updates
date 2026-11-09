@@ -45,8 +45,10 @@ class WindowsNotificationTests(unittest.TestCase):
                 native.ctypes,"windll",SimpleNamespace(user32=fake_icon),create=True):
             self.assertTrue(notify.show("Ocean Wolf"))
             self.assertTrue(notify.show("Second"))
+            self.assertTrue(notify.show_test())
             self.assertEqual([e[0] for e in sent],
-                             [native.NIM_ADD,native.NIM_MODIFY,native.NIM_MODIFY])
+                             [native.NIM_ADD,native.NIM_MODIFY,
+                              native.NIM_MODIFY,native.NIM_MODIFY])
             self.assertIn("Ocean Wolf",sent[1][3])
             notify.close()
             self.assertEqual(sent[-1][0],native.NIM_DELETE)
