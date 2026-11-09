@@ -5,7 +5,8 @@ import unittest
 from unittest.mock import patch
 
 from tgc_cocompanion.desktop_friend_activity import (
-    FriendActivityStore,detect_friend_changes,normalize_friends,MIN_POLL_SECONDS)
+    FriendActivityStore,detect_friend_changes,normalize_friends,MIN_POLL_SECONDS,
+    filter_activity_events, ACTIVITY_KINDS)
 
 ACCOUNT="usr_2a833076-03ac-4212-aeff-0708d8eab968"
 OTHER="usr_b85631a8-5e23-4b88-a14b-4c8a2ae863c1"
@@ -68,6 +69,46 @@ class ActivityModelTests(unittest.TestCase):
             self.assertEqual(store._path(ACCOUNT).read_bytes(),b"dpapi:not-json")
             with self.assertRaises(PermissionError):
                 store.events("fake")
+
+    def test_local_history_filter_respects_event_type_and_newest_first(self):
+        events=(
+            {"time":100,"userId":ACCOUNT,"name":"Alpha","type":"friend_added","status":"online"},
+            {"time":101,"userId":OTHER,"name":"Beta","type":"location","location":"wrld_example"},
+            {"time":102,"userId":ACCOUNT,"name":"Alpha","type":"offline","previous":"active"},
+            {"time":103,"userId":OTHER,"name":"Beta","type":"statusDescription","previous":"BRB"},
+        )
+        self.assertEqual([r["time"] for r in filter_activity_events(events)], [103,102,101,100])
+        self.assertEqual([r["time"] for r in filter_activity_events(
+            events,kind="Online/offline")],[102])
+        self.assertEqual([r["time"] for r in filter_activity_events(
+            events,kind="World/location changes")],[101])
+        self.assertEqual([r["time"] for r in filter_activity_events(
+            events,kind="Status changes")],[103])
+        self.assertEqual([r["time"] for r in filter_activity_events(
+            events,kind="Friends added/removed")],[100])
+
+    def test_local_history_search_matches_name_id_and_old_values(self):
+        events=(
+            {"type":"location","userId":ACCOUNT,"name":"Blue Shark",
+             "location":"private","previous":"wrld_old"},
+            {"type":"offline","userId":OTHER,"name":"Seawolf Friend",
+             "status":"offline","previous":"active"},
+        )
+        self.assertEqual(len(filter_activity_events(events,"shark")),1)
+        self.assertEqual(filter_activity_events(events,"WRLD_OLD")[0]["userId"],ACCOUNT)
+        self.assertEqual(filter_activity_events(events,"seawolf friend")[0]["userId"],OTHER)
+        self.assertEqual(len(filter_activity_events(events,"___not_found___")),0)
+        self.assertEqual(len(ACTIVITY_KINDS),5)
+        with self.assertRaises(ValueError):
+            filter_activity_events(events,kind="Admin override")
+
+    def test_filtered_history_never_mutates_saved_events(self):
+        events=[{"type":"online","name":"A","userId":ACCOUNT},
+                {"type":"offline","name":"B","userId":OTHER}]
+        before=[dict(x) for x in events]
+        result=filter_activity_events(events,"a")
+        self.assertEqual(len(result),1)
+        self.assertEqual(events,before)
 
     def test_invalid_friend_ids_ignored(self):
         data=normalize_friends([{"id":"invalid","displayName":"Bad"},A,A])
