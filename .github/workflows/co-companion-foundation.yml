@@ -80,7 +80,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check "pyinstaller>=6.16,<7"
-          python -m PyInstaller --noconfirm --clean --onedir --console --name TGC_CoCompanion_OwnerPreview --paths co-companion --add-data "co-companion/TGC_DESKTOP_TERMS.txt;." --add-data "co-companion/build_info.json;." --hidden-import win32crypt --hidden-import psutil co-companion/owner_pilot_entry.py
+          python -m PyInstaller --noconfirm --clean --onedir --console --name TGC_CoCompanion_OwnerPreview --paths co-companion --add-data "co-companion/TGC_DESKTOP_TERMS.txt;." --add-data "co-companion/build_info.json;." --hidden-import win32crypt --hidden-import psutil --hidden-import PIL.ImageTk --hidden-import PIL.Image --collect-submodules PIL co-companion/owner_pilot_entry.py
           if (!(Test-Path "dist/TGC_CoCompanion_OwnerPreview/TGC_CoCompanion_OwnerPreview.exe")) { throw "Windows executable missing" }
           & "dist/TGC_CoCompanion_OwnerPreview/TGC_CoCompanion_OwnerPreview.exe" --smoke-check
           if ($LASTEXITCODE -ne 0) { throw "Bundled owner-preview EXE failed GUI smoke test" }
