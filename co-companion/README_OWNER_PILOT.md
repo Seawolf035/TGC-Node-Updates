@@ -1,6 +1,6 @@
 # Co-Companion v0.11.1 — Visual Profiles and Responsive Windows Layout
 
-**Update from your installed EXE:** after v0.11.0 passes both CI suites and
+**Update from your installed EXE:** after v0.11.1 passes both CI suites and
 publishes to the owner-preview prerelease channel, use **Updates → Check for
 Updates → Download & Install EXE → Restart**. No manual ZIP installation.
 The previous version remains available for rollback. Owner preview only;
