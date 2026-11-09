@@ -95,6 +95,23 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(render_image(payload,(112,112),circle=True).size,
                          (112,112))
 
+class DisplayTests(unittest.TestCase):
+    def test_per_user_scale_is_validated_and_atomic(self):
+        import tempfile
+        from tgc_cocompanion.desktop_display import SCALES,DisplayPreferences
+        self.assertEqual(SCALES,(85,100,115,130,150))
+        with tempfile.TemporaryDirectory() as td:
+            prefs=DisplayPreferences(Path(td))
+            self.assertEqual(prefs.load(),100)
+            prefs.save(130)
+            self.assertEqual(DisplayPreferences(Path(td)).load(),130)
+            for bad in (0,200,True,"150",1.5):
+                with self.subTest(bad=bad),self.assertRaises(ValueError):
+                    prefs.save(bad)
+            prefs.path.write_text("{broken JSON",encoding="utf-8")
+            self.assertEqual(prefs.load(),100)
+
+
 class TkProfileTests(unittest.TestCase):
     def setUp(self):
         try:
