@@ -207,7 +207,9 @@ class OwnerPilotApp:
         ttk.Button(bar,text="I Agree",command=accept).pack(side="right",padx=6)
 
     def _run_async(self, operation, done, on_error=None):
-        if self._busy:return
+        # Return whether a task was actually started so scheduled workers can
+        # clear their flags rather than remaining stuck forever if busy.
+        if self._busy:return False
         self._busy=True;self._refresh_buttons()
         def job():
             try: outcome=operation();failure=None
@@ -223,6 +225,7 @@ class OwnerPilotApp:
                 done(outcome)
             self._refresh_buttons()
         Thread(target=job,name="CoCompanionOwnerPilotRPC",daemon=True).start()
+        return True
 
     def _redeem(self):
         if not self._terms_valid():
