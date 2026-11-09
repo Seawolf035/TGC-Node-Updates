@@ -374,14 +374,21 @@ class DesktopPages:
         panel=self._account_panel(book,"Social")
         ttk.Label(panel,text="Friends, Worlds, Groups & Inbox",
                   font=("Segoe UI",15,"bold")).pack(anchor="w")
-        search=ttk.Frame(panel);search.pack(fill="x",pady=7)
+        # Two rows prevent the search toolbar from crushing the results at 720p.
+        browse=ttk.LabelFrame(panel,text="Browse personal VRChat",padding=(12,10))
+        browse.pack(fill="x",pady=(5,9))
+        filters=ttk.Frame(browse);filters.pack(fill="x")
         self.category=tk.StringVar(value="Online Friends")
-        ttk.Combobox(search,textvariable=self.category,
-                     values=[x[0] for x in CATEGORIES],state="readonly",width=23).pack(side="left",padx=(0,7))
+        ttk.Combobox(filters,textvariable=self.category,
+            values=[x[0] for x in CATEGORIES],state="readonly",width=23).pack(
+            side="left",padx=(0,9))
         self.search=tk.StringVar()
-        ttk.Entry(search,textvariable=self.search,width=36).pack(side="left",fill="x",expand=True,padx=(0,7))
-        ttk.Button(search,text="Load / Search",command=lambda:self._load_social(reset=True)).pack(side="left")
-        ttk.Button(search,text="More",command=lambda:self._load_social(reset=False)).pack(side="left",padx=6)
+        ttk.Entry(filters,textvariable=self.search).pack(side="left",fill="x",expand=True)
+        commands=ttk.Frame(browse);commands.pack(fill="x",pady=(9,0))
+        ttk.Button(commands,text="Load / Search",style="Accent.TButton",
+            command=lambda:self._load_social(reset=True)).pack(side="left",padx=(0,8))
+        ttk.Button(commands,text="Load More",command=lambda:self._load_social(reset=False)
+            ).pack(side="left")
         self.social_status=tk.StringVar(value="Sign in to your personal VRChat account to browse.")
         ttk.Label(panel,textvariable=self.social_status,wraplength=830).pack(anchor="w",pady=(0,6))
         body=ttk.Frame(panel);body.pack(fill="both",expand=True)
@@ -398,8 +405,8 @@ class DesktopPages:
         ttk.Button(buttons,text="View Details / Actions",command=self._detail_selected).pack(side="left",padx=(0,9))
         ttk.Button(buttons,text="Bookmark Selected World",command=self._bookmark_selected_world).pack(side="left",padx=(0,9))
         ttk.Button(buttons,text="Open Selected in VRChat Website",command=self._open_selected).pack(side="left")
-        ttk.Label(buttons,text="Read-only in this owner pilot; no friend requests or group moderation.",
-                  wraplength=500).pack(side="left",padx=14)
+        ttk.Label(panel,text="Profile details provide only actions allowed by your personal VRChat session; no group moderation is performed here.",
+                  style="PageSubtitle.TLabel",wraplength=780).pack(anchor="w")
 
     @staticmethod
     def _row(row):
@@ -514,27 +521,51 @@ class DesktopPages:
             ).pack(side="left")
         for value in (self.dex_query,self.dex_rank,self.dex_progress):
             value.trace_add("write",lambda *_:self._filter_dex())
-        split=ttk.Panedwindow(panel,orient="horizontal");split.pack(fill="both",expand=True)
-        left=ttk.Frame(split);right=ttk.Frame(split)
-        split.add(left,weight=3);split.add(right,weight=2)
+        # Full-width directory and achievements are separate tabs: no 720p squeeze.
+        summary=ttk.Frame(panel);summary.pack(fill="x",pady=(0,8))
+        self.dex_count=tk.StringVar(value="Not scanned")
+        self.dex_roster_count=tk.StringVar(value="Not loaded")
+        for label,variable in (("FRIENDSHIP COLLECTION",self.dex_count),
+                               ("OFFICIAL ROSTER",self.dex_roster_count)):
+            tile=ttk.Frame(summary,style="Card.TFrame",padding=(13,10))
+            tile.pack(side="left",fill="x",expand=True,padx=(0,8))
+            ttk.Label(tile,text=label,style="CardLabel.TLabel").pack(anchor="w")
+            ttk.Label(tile,textvariable=variable,style="CardAccent.TLabel").pack(anchor="w",pady=(5,0))
+        sections=ttk.Notebook(panel)
+        sections.pack(fill="both",expand=True)
+        directory=ttk.Frame(sections,padding=(2,7))
+        achievements=ttk.Frame(sections,padding=(9,10))
+        sections.add(directory,text="Staff Directory")
+        sections.add(achievements,text="Achievements")
         cols=("name","rank","status")
-        self.dex_table=ttk.Treeview(left,columns=cols,show="headings",height=17)
-        for k,w in (("name",185),("rank",130),("status",80)):
+        list_frame=ttk.Frame(directory);list_frame.pack(fill="both",expand=True)
+        self.dex_table=ttk.Treeview(list_frame,columns=cols,show="headings",height=13)
+        for k,w in (("name",185),("rank",130),("status",115)):
             self.dex_table.heading(k,text=k.title())
             self.dex_table.column(k,width=w,stretch=True)
         from .desktop_staff_colors import RANK_COLORS
         for role,color in RANK_COLORS.items():
             self.dex_table.tag_configure(role,foreground=color)
         self.dex_ids={}
-        self.dex_table.pack(fill="both",expand=True,padx=(0,6))
+        scroll=ttk.Scrollbar(list_frame,orient="vertical",command=self.dex_table.yview)
+        self.dex_table.configure(yscrollcommand=scroll.set)
+        self.dex_table.pack(side="left",fill="both",expand=True)
+        scroll.pack(side="right",fill="y")
         self.dex_table.bind("<Double-1>",lambda _e:self._dex_profile())
-        ttk.Button(left,text="Open Selected Staff Profile",
-                   command=self._dex_profile).pack(anchor="w",pady=(6,2))
-        ttk.Label(right,text="Achievements",font=("Segoe UI",12,"bold")).pack(anchor="w")
-        self.rewards=tk.Listbox(right,height=18,bg="#16243A",fg="#E7F1FF",
+        ttk.Button(directory,text="Open Selected Staff Profile",
+                   command=self._dex_profile).pack(anchor="w",pady=(7,2))
+        ttk.Label(achievements,text="COLLECTION ACHIEVEMENTS",
+                  style="PageTitle.TLabel").pack(anchor="w",pady=(0,4))
+        ttk.Label(achievements,text="Complete friend scans determine collection progress. Hidden awards appear only when earned.",
+                  style="PageSubtitle.TLabel",wraplength=680).pack(anchor="w",pady=(0,9))
+        reward_box=ttk.Frame(achievements);reward_box.pack(fill="both",expand=True)
+        self.rewards=tk.Listbox(reward_box,height=14,bg="#16243A",fg="#E7F1FF",
                                 selectbackground="#25456A",selectforeground="#36D3FF",
                                 borderwidth=0,highlightthickness=0)
-        self.rewards.pack(fill="both",expand=True)
+        reward_scroll=ttk.Scrollbar(reward_box,orient="vertical",command=self.rewards.yview)
+        self.rewards.configure(yscrollcommand=reward_scroll.set)
+        self.rewards.pack(side="left",fill="both",expand=True)
+        reward_scroll.pack(side="right",fill="y")
         self._cached_dex()
 
     def _cached_dex(self):
@@ -558,6 +589,8 @@ class DesktopPages:
                 for m in members]
             self._filter_dex()
             self.rewards.delete(0,tk.END)
+            self.dex_count.set("Awaiting scan")
+            self.dex_roster_count.set(f"{len(members)} members")
             self.dex_status.set(f"Loaded {len(members)} staff from the official roster. "
                   "Friendship progress requires a complete personal VRChat scan.")
         self.owner._run_async(work,done,
@@ -616,6 +649,8 @@ class DesktopPages:
                 status="No VRChat ID"
             self.dex_rows.append((member.name,member.rank,status,member.vrchat_id))
         self._filter_dex()
+        self.dex_count.set(f"{snapshot.earned} / {snapshot.total} collected")
+        self.dex_roster_count.set(f"{len(snapshot.members)} members")
         for title,earned in snapshot.visible_rewards().items():
             # The visible Mobile catalog includes its 16 normal awards;
             # hidden community rewards are returned ONLY after collection.
@@ -626,21 +661,35 @@ class DesktopPages:
 
     def _build_osc(self,book):
         panel=self._account_panel(book,"OSC Studio")
-        ttk.Label(panel,text="OSC Studio — Personal Chatbox & Avatar Controls",
-                  font=("Segoe UI",15,"bold")).pack(anchor="w")
-        ttk.Label(panel,text="Select the actual VRChat PID from the Launcher. Saved phrases are separate for each signed-in personal VRChat account.",
-                  wraplength=820).pack(anchor="w",pady=(2,9))
-        top=ttk.Frame(panel);top.pack(fill="x")
-        ttk.Label(top,text="VRChat PID").pack(side="left")
+        ttk.Label(panel,text="OSC STUDIO",style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(panel,text="Control an authorized running VRChat instance. OSC routes locally to your selected PID.",
+                  style="PageSubtitle.TLabel",wraplength=760).pack(anchor="w",pady=(3,11))
+        target=ttk.Frame(panel,style="Card.TFrame",padding=(12,10))
+        target.pack(fill="x",pady=(0,8))
+        ttk.Label(target,text="TARGET VRCHAT PID",style="CardLabel.TLabel").pack(side="left")
         self.osc_pid=tk.StringVar()
-        ttk.Entry(top,textvariable=self.osc_pid,width=12).pack(side="left",padx=(8,20))
-        ttk.Label(top,text="Text").pack(side="left")
-        self.osc_text=tk.StringVar()
-        ttk.Entry(top,textvariable=self.osc_text,width=47).pack(side="left",fill="x",expand=True,padx=6)
-        ttk.Button(top,text="Send",command=self._osc_send).pack(side="left")
+        ttk.Entry(target,textvariable=self.osc_pid,width=14).pack(side="left",padx=(12,8))
+        ttk.Label(target,text="From your running Launcher",style="CardLabel.TLabel").pack(side="left")
         self.osc_note=tk.StringVar(value="No OSC commands sent")
-        ttk.Label(panel,textvariable=self.osc_note,wraplength=810).pack(anchor="w",pady=7)
-        presets=ttk.LabelFrame(panel,text="Saved Chatbox Phrases",padding=9);presets.pack(fill="x",pady=6)
+        ttk.Label(panel,textvariable=self.osc_note,wraplength=770).pack(anchor="w",pady=(1,8))
+        sections=ttk.Notebook(panel)
+        sections.pack(fill="both",expand=True)
+        chat=ttk.Frame(sections,padding=(9,12))
+        avatar=ttk.Frame(sections,padding=(9,12))
+        voice=ttk.Frame(sections,padding=(9,12))
+        sections.add(chat,text="Chatbox & Rotation")
+        sections.add(avatar,text="Avatar & Parameters")
+        sections.add(voice,text="Voice")
+        ttk.Label(chat,text="PERSONAL CHATBOX",style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(chat,text="Send a message or reuse a phrase saved for your personal VRChat account.",
+                  style="PageSubtitle.TLabel").pack(anchor="w",pady=(3,10))
+        composer=ttk.Frame(chat);composer.pack(fill="x")
+        self.osc_text=tk.StringVar()
+        ttk.Entry(composer,textvariable=self.osc_text).pack(side="left",fill="x",expand=True,padx=(0,9))
+        ttk.Button(composer,text="Send Chatbox",style="Accent.TButton",
+                   command=self._osc_send).pack(side="left")
+        presets=ttk.LabelFrame(chat,text="Saved chatbox phrases",padding=(11,10))
+        presets.pack(fill="both",expand=True,pady=(14,0))
         row=ttk.Frame(presets);row.pack(fill="x")
         self.phrase_name=tk.StringVar()
         ttk.Entry(row,textvariable=self.phrase_name,width=24).pack(side="left",padx=(0,7))
@@ -649,36 +698,45 @@ class DesktopPages:
         self.phrases=tk.Listbox(presets,height=4,exportselection=False,
                                 bg="#16243A",fg="#E7F1FF",selectbackground="#25456A",
                                 selectforeground="#36D3FF",borderwidth=0,highlightthickness=0)
-        self.phrases.pack(fill="x",pady=5)
+        self.phrases.pack(fill="both",expand=True,pady=(8,9))
         self.phrases.bind("<<ListboxSelect>>",self._choose_phrase)
         rotate=ttk.Frame(presets);rotate.pack(fill="x")
         self.osc_interval=tk.IntVar(value=10)
         ttk.Label(rotate,text="Rotate every (sec)").pack(side="left")
-        ttk.Spinbox(rotate,from_=5,to=3600,textvariable=self.osc_interval,width=6).pack(side="left",padx=(5,10))
-        ttk.Button(rotate,text="Start Saved Phrase Rotation",command=self._rotation_start).pack(side="left",padx=(0,9))
-        ttk.Button(rotate,text="Stop Rotation",command=self._rotation_stop).pack(side="left")
-        height=ttk.LabelFrame(panel,text="Avatar Eye Height",padding=9);height.pack(fill="x",pady=6)
-        ttk.Button(height,text="0.8 m",command=lambda:self._height(0.8)).pack(side="left",padx=5)
-        ttk.Button(height,text="2.0 m",command=lambda:self._height(2.0)).pack(side="left",padx=5)
+        ttk.Spinbox(rotate,from_=5,to=3600,textvariable=self.osc_interval,width=6
+                    ).pack(side="left",padx=(5,10))
+        ttk.Button(rotate,text="Start Rotation",command=self._rotation_start).pack(side="left",padx=(0,9))
+        ttk.Button(rotate,text="Stop",command=self._rotation_stop).pack(side="left")
+
+        ttk.Label(avatar,text="AVATAR CONTROLS",style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(avatar,text="Height presets and typed OSC parameters for the selected instance.",
+                  style="PageSubtitle.TLabel").pack(anchor="w",pady=(3,12))
+        height=ttk.LabelFrame(avatar,text="Avatar eye height",padding=(11,11))
+        height.pack(fill="x",pady=(0,13))
+        ttk.Button(height,text="0.8 m",command=lambda:self._height(0.8)).pack(side="left",padx=(0,8))
+        ttk.Button(height,text="2.0 m",command=lambda:self._height(2.0)).pack(side="left",padx=(0,8))
         self.osc_height=tk.StringVar(value="1.65")
-        ttk.Entry(height,textvariable=self.osc_height,width=8).pack(side="left",padx=8)
-        ttk.Button(height,text="Set Custom Height",command=self._custom_height).pack(side="left")
-        ttk.Button(height,text="Save My Height",
-                   command=self._save_height).pack(side="left",padx=(8,0))
-        params=ttk.Frame(panel);params.pack(fill="x",pady=7)
-        ttk.Label(params,text="Avatar parameter").pack(side="left")
+        ttk.Entry(height,textvariable=self.osc_height,width=9).pack(side="left",padx=(0,8))
+        ttk.Button(height,text="Set Height",command=self._custom_height).pack(side="left",padx=(0,8))
+        ttk.Button(height,text="Save Preset",command=self._save_height).pack(side="left")
+        params=ttk.LabelFrame(avatar,text="Avatar parameter",padding=(11,11))
+        params.pack(fill="x")
+        fields=ttk.Frame(params);fields.pack(fill="x",pady=(0,9))
         self.param_name=tk.StringVar()
-        ttk.Entry(params,textvariable=self.param_name,width=20).pack(side="left",padx=(6,10))
+        ttk.Entry(fields,textvariable=self.param_name,width=23).pack(side="left",padx=(0,8))
         self.param_type=tk.StringVar(value="bool")
-        ttk.Combobox(params,textvariable=self.param_type,values=("bool","int","float"),
-                     state="readonly",width=8).pack(side="left")
+        ttk.Combobox(fields,textvariable=self.param_type,values=("bool","int","float"),
+                     state="readonly",width=8).pack(side="left",padx=(0,8))
         self.param_value=tk.StringVar(value="true")
-        ttk.Entry(params,textvariable=self.param_value,width=8).pack(side="left",padx=6)
-        ttk.Button(params,text="Send Parameter",command=self._parameter).pack(side="left")
-        mic=ttk.Frame(panel);mic.pack(anchor="w",pady=5)
-        ttk.Label(mic,text="Push-to-talk:").pack(side="left")
-        ptt=ttk.Button(mic,text="HOLD TO TALK")
-        ptt.pack(side="left",padx=6)
+        ttk.Entry(fields,textvariable=self.param_value,width=12).pack(side="left")
+        ttk.Button(params,text="Send Parameter",style="Accent.TButton",
+                   command=self._parameter).pack(anchor="w")
+
+        ttk.Label(voice,text="VOICE CONTROLS",style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(voice,text="Hold to talk on the selected session. Releasing the button or leaving it releases voice.",
+                  style="PageSubtitle.TLabel",wraplength=680).pack(anchor="w",pady=(3,15))
+        ptt=ttk.Button(voice,text="HOLD TO TALK",style="Accent.TButton")
+        ptt.pack(anchor="w",pady=(3,9))
         ptt.bind("<ButtonPress-1>",lambda e:self._ptt_press())
         ptt.bind("<ButtonRelease-1>",lambda e:self._ptt_release())
         ptt.bind("<Leave>",lambda e:self._ptt_release())
