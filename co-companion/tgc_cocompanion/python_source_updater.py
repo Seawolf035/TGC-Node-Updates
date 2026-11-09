@@ -67,6 +67,7 @@ SOURCE_FILES = (
     "tgc_cocompanion/desktop_friend_activity.py",
     "tgc_cocompanion/desktop_friend_favorites.py",
     "tgc_cocompanion/desktop_pinned_friend_alerts.py",
+    "tgc_cocompanion/desktop_windows_notifications.py",
     "tgc_cocompanion/legacy/__init__.py",
     "tgc_cocompanion/legacy/tgc_vrchat_multilog.py",
 )
