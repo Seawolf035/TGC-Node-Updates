@@ -65,6 +65,8 @@ class CollectionPages:
         self.bookmarks=WorldBookmarks(self.owner.terms_dir)
         self._avatars=[]
         self._inbox=[]
+        self._inbox_account=None
+        self._inbox_rows={}
         self._build_avatars(notebook)
         self._build_bookmarks(notebook)
         self._build_inbox(notebook)
@@ -287,45 +289,134 @@ class CollectionPages:
         except Exception as exc:self._error(exc)
 
     def _build_inbox(self,book):
-        tab=ttk.Frame(book,padding=14);book.add(tab,text="Inbox")
-        ttk.Label(tab,text="VRChat Inbox",font=("Segoe UI",15,"bold")).pack(anchor="w")
-        ttk.Label(tab,text="Your personal VRChat notifications. Mark Seen and Dismiss affect only your personal VRChat inbox.",
-                  wraplength=830).pack(anchor="w",pady=(4,8))
-        bar=ttk.Frame(tab);bar.pack(anchor="w",pady=7)
-        ttk.Button(bar,text="Refresh Inbox",command=self.load_inbox).pack(side="left",padx=(0,8))
-        ttk.Button(bar,text="Mark Selected Seen",command=self.seen).pack(side="left",padx=(0,8))
-        ttk.Button(bar,text="Dismiss Selected",command=self.dismiss).pack(side="left")
+        tab=ttk.Frame(book,padding=(13,10));book.add(tab,text="Inbox")
+        ttk.Label(tab,text="PERSONAL VRCHAT INBOX",style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(tab,text="Browse notifications from your personal VRChat session. Mark Seen and Dismiss are explicit VRChat account actions.",
+                  style="PageSubtitle.TLabel",wraplength=780).pack(anchor="w",pady=(3,9))
+        ttk.Button(tab,text="Refresh Inbox",style="Accent.TButton",
+                   command=self.load_inbox).pack(anchor="w",pady=(0,9))
+        filters=ttk.Frame(tab);filters.pack(fill="x",pady=(0,8))
+        ttk.Label(filters,text="Find notification").pack(side="left",padx=(0,8))
+        self.inbox_query=tk.StringVar()
+        ttk.Entry(filters,textvariable=self.inbox_query).pack(
+            side="left",fill="x",expand=True,padx=(0,9))
+        self.inbox_type=tk.StringVar(value="All types")
+        self.inbox_type_picker=ttk.Combobox(filters,textvariable=self.inbox_type,
+                                           values=("All types",),state="readonly",width=19)
+        self.inbox_type_picker.pack(side="left")
+        self.inbox_query.trace_add("write",lambda *_:self.render_inbox())
+        self.inbox_type.trace_add("write",lambda *_:self.render_inbox())
         self.inbox_status=tk.StringVar(value="No notifications loaded")
-        ttk.Label(tab,textvariable=self.inbox_status,wraplength=830).pack(anchor="w")
-        self.inbox_table=ttk.Treeview(tab,columns=("type","message","id"),show="headings",height=15)
-        for col,width in (("type",170),("message",440),("id",270)):
-            self.inbox_table.heading(col,text=col.title());self.inbox_table.column(col,width=width)
-        self.inbox_table.pack(fill="both",expand=True,pady=9)
+        ttk.Label(tab,textvariable=self.inbox_status,wraplength=780).pack(anchor="w",pady=(0,6))
+        body=ttk.Frame(tab);body.pack(fill="both",expand=True)
+        self.inbox_table=ttk.Treeview(body,columns=("type","message","id"),
+                                     show="headings",height=12,selectmode="browse")
+        for col,width in (("type",145),("message",360),("id",230)):
+            self.inbox_table.heading(col,text=col.title())
+            self.inbox_table.column(col,width=width,stretch=(col=="message"))
+        inbox_scroll=ttk.Scrollbar(body,orient="vertical",command=self.inbox_table.yview)
+        self.inbox_table.configure(yscrollcommand=inbox_scroll.set)
+        self.inbox_table.pack(side="left",fill="both",expand=True)
+        inbox_scroll.pack(side="right",fill="y")
+        self.inbox_selected=tk.StringVar(value="Select a notification for details.")
+        ttk.Label(tab,textvariable=self.inbox_selected,wraplength=780,
+                  style="PageSubtitle.TLabel").pack(anchor="w",pady=(8,5))
+        self.inbox_table.bind("<<TreeviewSelect>>",lambda _:self._selected_inbox_detail())
+        actions=ttk.Frame(tab);actions.pack(fill="x",pady=(4,0))
+        ttk.Button(actions,text="Mark Selected Seen",command=self.seen
+                   ).pack(side="left",padx=(0,9))
+        ttk.Button(actions,text="Dismiss Selected",command=self.dismiss).pack(side="left")
 
     def load_inbox(self):
+        account=self.account.user_id if self.account.signed_in else None
         def work():
             self._eligible()
+            if self.account.user_id!=account:
+                raise PermissionError("Personal VRChat account changed during inbox load")
             return self.account.browse("inbox")
         def done(rows):
-            self._inbox=rows
-            self.inbox_table.delete(*self.inbox_table.get_children())
-            for row in rows:self.inbox_table.insert("",tk.END,values=(
-                str(row.get("type") or "")[:70],
-                str(row.get("message") or row.get("senderUsername") or "")[:170],
-                str(row.get("id") or "")[:110]))
-            self.inbox_status.set(f"{len(rows)} inbox records loaded")
+            if not self.account.signed_in or self.account.user_id!=account:
+                self.clear_inbox()
+                return
+            self._inbox=list(rows)
+            self._inbox_account=account
+            types=sorted({str(row.get("type") or "Other")[:70] for row in rows
+                          if isinstance(row,dict)})
+            self.inbox_type_picker.configure(values=("All types",*types))
+            if self.inbox_type.get() not in ("All types",*types):
+                self.inbox_type.set("All types")
+            self.render_inbox()
         self.owner._run_async(work,done)
 
-    def _notification_id(self):
+    def clear_inbox(self):
+        self._inbox=[]
+        self._inbox_account=None
+        self._inbox_rows={}
+        self.inbox_table.delete(*self.inbox_table.get_children())
+        self.inbox_type_picker.configure(values=("All types",))
+        self.inbox_type.set("All types")
+        self.inbox_selected.set("Select a notification for details.")
+        self.inbox_status.set("No notifications loaded for this account.")
+
+    def render_inbox(self):
+        self.inbox_table.delete(*self.inbox_table.get_children())
+        self._inbox_rows={}
+        self.inbox_selected.set("Select a notification for details.")
+        if not self.account.signed_in or self.account.user_id!=self._inbox_account:
+            self.inbox_status.set("Sign in and refresh to load your personal inbox.")
+            return
+        query=self.inbox_query.get().strip().casefold()[:120]
+        selected_type=self.inbox_type.get()
+        for row in self._inbox:
+            if not isinstance(row,dict):continue
+            kind=str(row.get("type") or "Other")[:70]
+            name=str(row.get("senderUsername") or row.get("senderUserId") or "")[:120]
+            message=str(row.get("message") or name)[:500]
+            ident=str(row.get("id") or "")[:110]
+            if selected_type!="All types" and kind!=selected_type:continue
+            if query and not any(query in value.casefold() for value in (kind,name,message,ident)):
+                continue
+            iid=self.inbox_table.insert("",tk.END,values=(kind,message[:170],ident))
+            self._inbox_rows[iid]=row
+        self.inbox_status.set(f"{len(self._inbox_rows)} shown / {len(self._inbox)} "
+                              "personal VRChat inbox records (manual refresh).")
+
+    def _selected_inbox_detail(self):
         selected=self.inbox_table.selection()
-        if not selected:raise ValueError("Select a notification first")
-        return self.inbox_table.item(selected[0],"values")[2]
+        row=self._inbox_rows.get(selected[0]) if selected else None
+        if not row:
+            self.inbox_selected.set("Select a notification for details.");return
+        sender=str(row.get("senderUsername") or "Unknown sender")[:100]
+        msg=str(row.get("message") or "No message provided")[:360]
+        self.inbox_selected.set(f"From: {sender} • {msg}")
+
+    def clear_private_views(self):
+        """Clear personal result rows on VRChat sign-out without deleting data."""
+        self._avatars=[]
+        self.avatar_table.delete(*self.avatar_table.get_children())
+        self.avatar_title_var.set("Select an avatar, then choose View Selected Avatar")
+        self.avatar_meta_var.set("")
+        self.avatar_detail.config(state="normal")
+        self.avatar_detail.delete("1.0",tk.END)
+        self.avatar_detail.config(state="disabled")
+        self.avatar_status.set("Sign in to your personal VRChat account")
+        self.bookmark_table.delete(*self.bookmark_table.get_children())
+        self.bookmark_count.set("Sign in to view your saved worlds")
+        self.clear_inbox()
+
+    def _notification_id(self):
+        if not self.account.signed_in or self.account.user_id!=self._inbox_account:
+            raise PermissionError("Refresh inbox for your current VRChat account")
+        selected=self.inbox_table.selection()
+        if not selected or selected[0] not in self._inbox_rows:
+            raise ValueError("Select a notification first")
+        return str(self._inbox_rows[selected[0]].get("id") or "")
 
     def seen(self):
         try:self._eligible();identifier=self._notification_id()
         except Exception as exc:self._error(exc);return
         self.owner._run_async(lambda:self.account.notification_seen(identifier),
-                              lambda _:self.inbox_status.set("Notification marked seen"))
+                              lambda _:self.load_inbox())
 
     def dismiss(self):
         try:self._eligible();identifier=self._notification_id()
