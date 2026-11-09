@@ -76,25 +76,42 @@ class CollectionPages:
         self.pages._notice(ex)
 
     def _build_avatars(self,book):
-        tab=ttk.Frame(book,padding=13);book.add(tab,text="Avatars")
-        ttk.Label(tab,text="VRChat Avatar Favorites",font=("Segoe UI",15,"bold")).pack(anchor="w")
-        ttk.Label(tab,text="Browse your personal account's favorite avatars. Select Avatar requires confirmation.",
-                  wraplength=820).pack(anchor="w",pady=(4,8))
-        toolbar=ttk.Frame(tab);toolbar.pack(anchor="w",pady=8)
-        ttk.Button(toolbar,text="Load Favorite Avatars",command=self.load_avatars).pack(side="left",padx=(0,8))
-        ttk.Button(toolbar,text="Load Avatar Groups",command=self.load_avatar_groups).pack(side="left",padx=(0,8))
-        ttk.Button(toolbar,text="View Selected Avatar",command=self.avatar_details).pack(side="left",padx=(0,8))
-        ttk.Button(toolbar,text="Wear Selected Avatar",command=self.wear_avatar).pack(side="left")
+        tab=ttk.Frame(book,padding=(13,10));book.add(tab,text="Avatars")
+        ttk.Label(tab,text="AVATAR COLLECTION",style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(tab,text="Browse your favorite VRChat avatars or inspect their details. Changing your avatar always asks for confirmation.",
+                  style="PageSubtitle.TLabel",wraplength=780).pack(anchor="w",pady=(3,9))
+        loads=ttk.Frame(tab);loads.pack(fill="x",pady=(0,6))
+        ttk.Button(loads,text="Load Favorite Avatars",style="Accent.TButton",
+                   command=self.load_avatars).pack(side="left",padx=(0,9))
+        ttk.Button(loads,text="Load Avatar Groups",command=self.load_avatar_groups).pack(side="left")
+        actions=ttk.Frame(tab);actions.pack(fill="x",pady=(0,9))
+        ttk.Button(actions,text="View Selected Avatar",command=self.avatar_details
+                   ).pack(side="left",padx=(0,9))
+        ttk.Button(actions,text="Wear Selected Avatar",command=self.wear_avatar).pack(side="left")
         self.avatar_status=tk.StringVar(value="Sign in to your personal VRChat account")
-        ttk.Label(tab,textvariable=self.avatar_status,wraplength=830).pack(anchor="w")
+        ttk.Label(tab,textvariable=self.avatar_status,wraplength=780).pack(anchor="w",pady=(0,7))
+        listing=ttk.Frame(tab);listing.pack(fill="both",expand=True)
         columns=("name","author","id")
-        self.avatar_table=ttk.Treeview(tab,columns=columns,show="headings",height=11)
-        for col,width in (("name",270),("author",200),("id",320)):
-            self.avatar_table.heading(col,text=col.title());self.avatar_table.column(col,width=width)
-        self.avatar_table.pack(fill="both",expand=True,pady=8)
-        self.avatar_detail=tk.Text(tab,height=6,wrap="word",state="disabled",
-                                   bg="#16243A",fg="#E7F1FF")
-        self.avatar_detail.pack(fill="both",expand=True,pady=6)
+        self.avatar_table=ttk.Treeview(listing,columns=columns,show="headings",height=9)
+        for col,width in (("name",230),("author",160),("id",260)):
+            self.avatar_table.heading(col,text=col.title())
+            self.avatar_table.column(col,width=width,stretch=(col!="id"))
+        avatar_scroll=ttk.Scrollbar(listing,orient="vertical",command=self.avatar_table.yview)
+        self.avatar_table.configure(yscrollcommand=avatar_scroll.set)
+        self.avatar_table.pack(side="left",fill="both",expand=True)
+        avatar_scroll.pack(side="right",fill="y")
+        details=ttk.LabelFrame(tab,text="Selected avatar",padding=(12,8))
+        details.pack(fill="x",pady=(8,0))
+        self.avatar_title_var=tk.StringVar(value="Select an avatar, then choose View Selected Avatar")
+        self.avatar_meta_var=tk.StringVar(value="")
+        ttk.Label(details,textvariable=self.avatar_title_var,style="PageTitle.TLabel",
+                  wraplength=700).pack(anchor="w")
+        ttk.Label(details,textvariable=self.avatar_meta_var,
+                  style="PageSubtitle.TLabel",wraplength=700).pack(anchor="w",pady=(3,5))
+        self.avatar_detail=tk.Text(details,height=3,wrap="word",state="disabled",
+                                   bg="#16243A",fg="#E7F1FF",borderwidth=0,
+                                   relief="flat",font=("Segoe UI",10))
+        self.avatar_detail.pack(fill="x")
 
     def _avatar_id(self):
         selected=self.avatar_table.selection()
@@ -139,13 +156,23 @@ class CollectionPages:
             self._eligible()
             return self.account.avatar(ident)
         def done(data):
-            result="\n".join(f"{key}: {str(data[key])[:250]}"
-                             for key in ("name","authorName","id","description","releaseStatus","version")
-                             if key in data and data[key] not in ("",None))
+            if not isinstance(data,dict):
+                self.avatar_status.set("Avatar details were unavailable; previous selection preserved.")
+                return
+            name=str(data.get("name") or "Unnamed avatar")[:150]
+            author=str(data.get("authorName") or "Unknown author")[:100]
+            release=str(data.get("releaseStatus") or "Not supplied")[:60]
+            version=str(data.get("version") or "Not supplied")[:40]
+            ident=str(data.get("id") or "")[:90]
+            description=str(data.get("description") or "No description provided.")[:3000]
+            self.avatar_title_var.set(name)
+            self.avatar_meta_var.set(
+                f"By {author}  •  Release: {release}  •  Version: {version}\n{ident}")
             self.avatar_detail.config(state="normal")
             self.avatar_detail.delete("1.0",tk.END)
-            self.avatar_detail.insert("1.0",result)
+            self.avatar_detail.insert("1.0",description)
             self.avatar_detail.config(state="disabled")
+            self.avatar_status.set("Avatar details loaded from your personal VRChat session.")
         self.owner._run_async(work,done)
 
     def wear_avatar(self):
