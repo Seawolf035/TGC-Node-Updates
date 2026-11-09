@@ -307,11 +307,18 @@ class PersonalVRChat:
             if offset:
                 raise VRChatApiError("Groups do not have a paginated view")
             routes[category] = "/users/" + self.user_id + "/groups"
-        if category in ("search_users", "search_worlds"):
+        if category in ("search_users", "search_worlds", "search_groups"):
             if not 2 <= len(query.strip()) <= 80:
                 raise VRChatApiError("Search text must be between 2 and 80 characters")
-            endpoint = "/users" if category == "search_users" else "/worlds"
-            routes[category] = endpoint + "?" + urlencode({"search":query.strip(),"n":60,"offset":offset})
+            # VRChat Group Search is GET /groups?query=..., NOT the
+            # /users or /worlds ?search=... interface. Keep existing routes.
+            if category == "search_groups":
+                routes[category] = "/groups?" + urlencode(
+                    {"query":query.strip(),"n":60,"offset":offset})
+            else:
+                endpoint = "/users" if category == "search_users" else "/worlds"
+                routes[category] = endpoint + "?" + urlencode(
+                    {"search":query.strip(),"n":60,"offset":offset})
         route = routes.get(category)
         if route is None:
             raise VRChatApiError("Unsupported personal VRChat list")
