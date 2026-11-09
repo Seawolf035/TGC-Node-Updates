@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install profile image decoder for offline rendering checks
+        run: python -m pip install --disable-pip-version-check "Pillow>=11,<13"
       - name: Compile foundation modules
         run: python -m compileall -q co-companion/tgc_cocompanion co-companion/tests
       - name: Test without network or VRChat
@@ -33,6 +35,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Install profile image decoder for offline rendering checks
+        run: python -m pip install --disable-pip-version-check "Pillow>=11,<13"
       - name: Compile all Windows Co-Companion modules and tests
         run: python -m compileall -q co-companion/tgc_cocompanion co-companion/tests
       - name: Offline unit and Tk interface tests on Windows 3.13
@@ -42,7 +46,7 @@ jobs:
       - name: Validate Windows DPAPI/process dependencies
         run: |
           python -m pip install --disable-pip-version-check -r co-companion/requirements_owner_pilot.txt
-          python -c "import tkinter, psutil, win32crypt; print('Windows UI, DPAPI and process dependencies available')"
+          python -c "import tkinter, psutil, win32crypt, PIL.Image, PIL.ImageTk; print('Windows UI, profile artwork, DPAPI and process dependencies available')"
       - name: Generate pinned owner-preview build metadata
         shell: pwsh
         run: |
