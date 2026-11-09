@@ -82,6 +82,14 @@ class WindowsFriendNotifier:
         return data
 
     def show(self,name):
+        return self._notify("Pinned VRChat friend online",
+                            safe_label(name,70)+" is online in VRChat")
+
+    def show_test(self):
+        return self._notify("TGC Co-Companion notification test",
+                            "Native Windows notifications are working.")
+
+    def _notify(self,title,body):
         if os.name!="nt":
             return False
         try:
@@ -104,8 +112,8 @@ class WindowsFriendNotifier:
                     return False
                 self._registered=True
             update=self._struct(NIF_INFO)
-            update.szInfoTitle="Pinned VRChat friend online"
-            update.szInfo=safe_label(name,70)+" is online in VRChat"
+            update.szInfoTitle=safe_label(title,60)
+            update.szInfo=safe_label(body,250)
             update.dwInfoFlags=NIIF_INFO
             update.uTimeoutOrVersion=10000
             return self._shell(NIM_MODIFY,update)
