@@ -118,6 +118,8 @@ class FriendHubPage:
         ttk.Checkbutton(alerttab,text="Also show Windows notifications (optional)",
             variable=self.windows_alerts,command=self._toggle_windows_notifications
             ).pack(anchor="w",pady=(2,5))
+        ttk.Button(alerttab,text="Test Windows Notification",
+                   command=self.test_windows_notification).pack(anchor="w",pady=(1,6))
         ttk.Label(alerttab,text="Windows may suppress system alerts under Do Not Disturb. "
                   "The in-app feed remains available either way.",
                   wraplength=760).pack(anchor="w",pady=(0,5))
@@ -303,6 +305,22 @@ class FriendHubPage:
             self.windows_alerts.set(not checked)
             self.alert_status.set("Could not change Windows notification preference: "+
                                   str(error))
+
+    def test_windows_notification(self):
+        try:
+            account=self._personal(require_staff=True)
+            if not self.alerts.enabled(account):
+                raise PermissionError("Enable pinned alerts first")
+            if not self.alerts.windows_notifications(account):
+                raise PermissionError("Enable Windows notifications first")
+            if self.native_notifier.show_test():
+                self.alert_status.set("Windows notification test sent. Check your "
+                    "notification settings if it did not appear.")
+            else:
+                self.alert_status.set("Windows system notifications are unavailable. "
+                    "In-app pinned alerts will continue working.")
+        except Exception as error:
+            self.alert_status.set(str(error))
 
     def close(self):
         self._alert_polling=False
