@@ -14,6 +14,7 @@ from .desktop_friend_ordering import group_friends,user_id,display_name
 from .desktop_friend_activity import FriendActivityStore
 from .desktop_friend_favorites import FavoriteFriendIndex
 from .desktop_pinned_friend_alerts import PinnedFriendAlerts, MIN_INTERVAL_SECONDS
+from .desktop_windows_notifications import WindowsFriendNotifier
 import time
 from .vrchat_personal import USER_ID
 
@@ -62,6 +63,8 @@ class FriendHubPage:
         self.history=FriendActivityStore(self.owner.terms_dir)
         self.favorite_index=FavoriteFriendIndex(self.owner.terms_dir)
         self.alerts=PinnedFriendAlerts(self.owner.terms_dir)
+        self.native_notifier=WindowsFriendNotifier(self.owner.root)
+        self.windows_alerts=tk.BooleanVar(value=False)
         self.favorite_ids=frozenset()
         self._account_loaded=None
         self._alert_polling=False
@@ -111,7 +114,13 @@ class FriendHubPage:
                    command=self.enable_alerts).pack(side="left",padx=(0,8))
         ttk.Button(row,text="Disable Alerts",command=self.disable_alerts).pack(side="left",padx=(0,8))
         ttk.Button(row,text="Check Now",command=lambda:self.check_alerts(force=True)
-                   ).pack(side="left")
+                   ).pack(side="left",padx=(0,9))
+        ttk.Checkbutton(alerttab,text="Also show Windows notifications (optional)",
+            variable=self.windows_alerts,command=self._toggle_windows_notifications
+            ).pack(anchor="w",pady=(2,5))
+        ttk.Label(alerttab,text="Windows may suppress system alerts under Do Not Disturb. "
+                  "The in-app feed remains available either way.",
+                  wraplength=760).pack(anchor="w",pady=(0,5))
         ttk.Label(alerttab,text="Notifications from this session (not stored):").pack(anchor="w")
         self.alert_feed=tk.Listbox(alerttab,height=11)
         self.alert_feed.pack(fill="both",expand=True,pady=(5,0))
@@ -194,6 +203,11 @@ class FriendHubPage:
             self.groups=()
             self.favorite_ids=self.favorite_index.saved(account) if account else frozenset()
             self.alert_feed.delete(0,tk.END)
+            try:
+                self.windows_alerts.set(self.alerts.windows_notifications(account)
+                                        if account else False)
+            except ValueError:
+                self.windows_alerts.set(False)
             self.alert_status.set("Pinned alerts are off unless explicitly enabled "
                                   "for the signed-in personal VRChat account.")
         if not account:
@@ -278,6 +292,22 @@ class FriendHubPage:
         self.owner._run_async(work,done,on_error=lambda error:self.status.set(
             "Favorite group refresh failed; previous cache preserved: "+error))
 
+    def _toggle_windows_notifications(self):
+        checked=self.windows_alerts.get()
+        try:
+            account=self._personal(require_staff=True)
+            self.alerts.set_windows_notifications(account,checked)
+            self.alert_status.set("Windows notifications "+("enabled" if checked
+                    else "disabled")+". Your in-app feed still works.")
+        except Exception as error:
+            self.windows_alerts.set(not checked)
+            self.alert_status.set("Could not change Windows notification preference: "+
+                                  str(error))
+
+    def close(self):
+        self._alert_polling=False
+        self.native_notifier.close()
+
     def enable_alerts(self):
         try:
             account=self._personal(require_staff=True)
@@ -352,18 +382,28 @@ class FriendHubPage:
                     self.alert_feed.insert(0,f"{now} • {notice['name']} is online")
                 while self.alert_feed.size()>25:
                     self.alert_feed.delete(tk.END)
-                try:
-                    import winsound
-                    winsound.MessageBeep()
-                except (ImportError,RuntimeError,OSError):
-                    pass
-                self.alert_status.set(f"{len(notices)} pinned friend(s) just came online.")
+                native=0
+                if self.windows_alerts.get() and self.alerts.windows_notifications(account):
+                    for notice in notices[:5]:
+                        if self.native_notifier.show(notice["name"]):
+                            native+=1
+                if native==0:
+                    try:
+                        import winsound
+                        winsound.MessageBeep()
+                    except (ImportError,RuntimeError,OSError):
+                        pass
+                self.alert_status.set(f"{len(notices)} pinned friend(s) came online." +
+                    (" Windows notification sent." if native else
+                     " In-app alert only; Windows notifications may be unavailable."))
             else:
                 self.alert_status.set("Checked pinned friends. No new online transitions.")
         def failed(error):
             self._alert_polling=False
             self.alert_status.set("Pinned alerts check failed; previous states kept: "+error)
-        self.owner._run_async(work,done,on_error=failed)
+        if not self.owner._run_async(work,done,on_error=failed):
+            self._alert_polling=False
+            self.alert_status.set("App is busy; retry pinned alert check shortly.")
 
     def load_groups(self):
         self.status.set("Loading your personal VRChat groups…")
