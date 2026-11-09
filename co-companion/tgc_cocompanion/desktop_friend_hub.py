@@ -72,6 +72,9 @@ class FriendHubPage:
         self.groups=()
         self.friend_rows={}
         self.group_rows={}
+        self._history_events=()
+        self._history_account=None
+        self._history_ids={}
         self.status=tk.StringVar(value="Sign in to VRChat, then Load Friends. No background tracking.")
         self.search=tk.StringVar()
         panel=ttk.Frame(book,padding=(13,10))
@@ -172,14 +175,36 @@ class FriendHubPage:
                    command=self.capture_history).pack(side="left",padx=(0,8))
         ttk.Button(bar,text="View Saved History",command=self.load_history
                    ).pack(side="left")
-        self.activity_table=ttk.Treeview(activity,
+        from .desktop_friend_activity import ACTIVITY_KINDS
+        filters=ttk.Frame(activity);filters.pack(fill="x",pady=(0,7))
+        ttk.Label(filters,text="Search history").pack(side="left",padx=(0,7))
+        self.activity_query=tk.StringVar()
+        ttk.Entry(filters,textvariable=self.activity_query).pack(
+            side="left",fill="x",expand=True,padx=(0,10))
+        self.activity_kind=tk.StringVar(value="All events")
+        ttk.Combobox(filters,textvariable=self.activity_kind,state="readonly",
+            values=ACTIVITY_KINDS,width=24).pack(side="left")
+        self.activity_query.trace_add("write",lambda *_:self.render_history())
+        self.activity_kind.trace_add("write",lambda *_:self.render_history())
+        self.activity_count=tk.StringVar(value="Capture a complete friend snapshot to begin.")
+        ttk.Label(activity,textvariable=self.activity_count,
+                  style="PageSubtitle.TLabel").pack(anchor="w",pady=(0,6))
+        table_frame=ttk.Frame(activity);table_frame.pack(fill="both",expand=True)
+        self.activity_table=ttk.Treeview(table_frame,
             columns=("at","name","kind","previous"),show="headings",height=12)
         for key,label,width in (
             ("at","Time",155),("name","Friend",180),("kind","Change",165),
             ("previous","Previous value",300)):
             self.activity_table.heading(key,text=label)
             self.activity_table.column(key,width=width,stretch=(key=="previous"))
-        self.activity_table.pack(fill="both",expand=True)
+        activity_scroll=ttk.Scrollbar(table_frame,orient="vertical",
+                                      command=self.activity_table.yview)
+        self.activity_table.configure(yscrollcommand=activity_scroll.set)
+        self.activity_table.pack(side="left",fill="both",expand=True)
+        activity_scroll.pack(side="right",fill="y")
+        ttk.Button(activity,text="Open Selected Friend Profile",
+            command=self.open_history_profile).pack(anchor="w",pady=(7,2))
+        self.activity_table.bind("<Double-1>",lambda _:self.open_history_profile())
         self.friend_tree.bind("<Double-1>",lambda e:self._friend_double(e))
         self.group_tree.bind("<Double-1>",lambda e:self.open_group())
         self.refresh()
@@ -208,6 +233,11 @@ class FriendHubPage:
             self._account_loaded=account
             self.friends=()
             self.groups=()
+            self._history_events=()
+            self._history_account=None
+            self._history_ids={}
+            self.activity_table.delete(*self.activity_table.get_children())
+            self.activity_count.set("No history loaded for this VRChat account.")
             self.favorite_ids=self.favorite_index.saved(account) if account else frozenset()
             self.alert_feed.delete(0,tk.END)
             try:
@@ -471,22 +501,57 @@ class FriendHubPage:
         try:
             user=self._personal()
             events=self.history.events(user)
-            from datetime import datetime
-            self.activity_table.delete(*self.activity_table.get_children())
-            for event in reversed(events):
-                try:
-                    stamp=datetime.fromtimestamp(int(event.get("time",0))).strftime(
-                        "%Y-%m-%d %H:%M")
-                except (ValueError,OverflowError,OSError):
-                    stamp="Unknown"
-                self.activity_table.insert("",tk.END,values=(
-                    stamp,str(event.get("name",""))[:90],
-                    str(event.get("type",""))[:50],
-                    str(event.get("previous",""))[:160]))
+            self._history_account=user
+            self._history_events=tuple(events)
+            self.render_history()
             self.status.set(f"{len(events)} locally encrypted friend history events. "
                 "No background tracking or Relay uploads.")
         except Exception as error:
             self.status.set("Cannot display friend history: "+str(error))
+
+    def render_history(self):
+        """Presentation-only filter over existing encrypted, account-bound events."""
+        from .desktop_friend_activity import filter_activity_events
+        account=(self.pages.account.user_id if self.pages.account.signed_in else None)
+        self.activity_table.delete(*self.activity_table.get_children())
+        self._history_ids={}
+        if not account or account!=self._history_account:
+            self.activity_count.set("No history loaded for this VRChat account.")
+            return
+        try:
+            matches=filter_activity_events(self._history_events,
+                 self.activity_query.get(),self.activity_kind.get())
+        except ValueError as error:
+            self.activity_count.set(str(error));return
+        from datetime import datetime
+        for event in matches:
+            try:
+                stamp=datetime.fromtimestamp(int(event.get("time",0))).strftime(
+                    "%Y-%m-%d %H:%M")
+            except (ValueError,TypeError,OverflowError,OSError):
+                stamp="Unknown"
+            iid=self.activity_table.insert("",tk.END,values=(
+                stamp,str(event.get("name",""))[:90],
+                str(event.get("type",""))[:50],
+                str(event.get("previous",""))[:160]))
+            ident=str(event.get("userId") or "")
+            if USER_ID.fullmatch(ident):
+                self._history_ids[iid]=ident
+        self.activity_count.set(f"{len(matches)} shown / {len(self._history_events)} stored events"
+            " • Manual snapshots only • Local to this Windows account")
+
+    def open_history_profile(self):
+        try:
+            account=self._personal()
+            if account!=self._history_account:
+                raise PermissionError("Load history for your current VRChat account first")
+            selected=self.activity_table.selection()
+            ident=self._history_ids.get(selected[0]) if selected else None
+            if not ident or not USER_ID.fullmatch(ident):
+                raise ValueError("Select a history entry with a valid friend ID")
+            self.pages.profile_tools.set_selected(ident)
+        except Exception as error:
+            self.status.set("Cannot open history profile: "+str(error))
 
     def _selected_friend(self):
         selected=self.friend_tree.selection()
