@@ -91,9 +91,12 @@ class ScrollableCard(ttk.Frame):
         self.window=self.canvas.create_window((0,0),window=self.content,anchor="nw")
         self.content.bind("<Configure>",self._content_changed)
         self.canvas.bind("<Configure>",self._resize)
-        self.canvas.bind("<MouseWheel>",self._wheel)
-        self.canvas.bind("<Button-4>",lambda _e:self.canvas.yview_scroll(-2,"units"))
-        self.canvas.bind("<Button-5>",lambda _e:self.canvas.yview_scroll(2,"units"))
+        # Mouse-wheel events go to the actual label/card under the pointer,
+        # not automatically to its parent Canvas. Route them here only if
+        # the pointer is over this visible ScrollableCard (not the sidebar).
+        self.canvas.bind_all("<MouseWheel>",self._wheel_if_inside,add="+")
+        self.canvas.bind_all("<Button-4>",self._wheel_if_inside,add="+")
+        self.canvas.bind_all("<Button-5>",self._wheel_if_inside,add="+")
 
     def _content_changed(self,_event=None):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -101,8 +104,18 @@ class ScrollableCard(ttk.Frame):
     def _resize(self,event):
         self.canvas.itemconfigure(self.window,width=max(1,event.width))
 
-    def _wheel(self,event):
-        self.canvas.yview_scroll(-int(event.delta/120)*2,"units")
+    def _wheel_if_inside(self,event):
+        if not self.winfo_exists() or not self.winfo_ismapped():
+            return
+        node=event.widget
+        while node is not None:
+            if node is self:
+                steps=(-2 if getattr(event,"num",0)==4 else
+                       2 if getattr(event,"num",0)==5 else
+                       -int(getattr(event,"delta",0)/120)*2)
+                if steps:self.canvas.yview_scroll(steps,"units")
+                return "break"
+            node=getattr(node,"master",None)
 
     def top(self):
         self.canvas.yview_moveto(0)
