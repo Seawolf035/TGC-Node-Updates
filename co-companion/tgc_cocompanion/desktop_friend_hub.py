@@ -80,15 +80,20 @@ class FriendHubPage:
         ttk.Label(panel,text="Mobile Companion-style pinned friends, shared instance grouping "
                   "and pinned groups. All actions are local shortcuts; VRChat friendships "
                   "and groups are never modified.",wraplength=810).pack(anchor="w",pady=(2,8))
+        # Avoid one oversized row of actions on 760px / compact windows.
         toolbar=ttk.Frame(panel);toolbar.pack(fill="x",pady=(0,5))
         ttk.Button(toolbar,text="Load All Friends",style="Accent.TButton",
                    command=self.load_friends).pack(side="left",padx=(0,8))
-        ttk.Button(toolbar,text="Load My Groups",command=self.load_groups).pack(side="left",padx=(0,8))
-        ttk.Button(toolbar,text="Load VRC Favorites",command=self.load_favorites).pack(side="left",padx=(0,8))
-        ttk.Button(toolbar,text="Refresh Pins",command=self.refresh).pack(side="left",padx=(0,10))
-        ttk.Label(toolbar,text="Filter:").pack(side="left")
-        ttk.Entry(toolbar,textvariable=self.search,width=19).pack(
-            side="left",fill="x",expand=True,padx=(4,0))
+        ttk.Button(toolbar,text="Load My Groups",command=self.load_groups
+                   ).pack(side="left",padx=(0,8))
+        ttk.Button(toolbar,text="Load VRC Favorites",command=self.load_favorites
+                   ).pack(side="left")
+        filters=ttk.Frame(panel);filters.pack(fill="x",pady=(0,7))
+        ttk.Button(filters,text="Refresh Pins",command=self.refresh
+                   ).pack(side="left",padx=(0,10))
+        ttk.Label(filters,text="Find:").pack(side="left")
+        self.search=tk.StringVar()
+        ttk.Entry(filters,textvariable=self.search).pack(side="left",fill="x",expand=True,padx=(6,0))
         self.search.trace_add("write",lambda *_:self.refresh())
         ttk.Label(panel,textvariable=self.status,wraplength=830).pack(anchor="w",pady=(2,5))
         columns=ttk.Notebook(panel)
