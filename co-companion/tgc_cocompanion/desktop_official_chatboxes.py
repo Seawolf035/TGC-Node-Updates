@@ -175,11 +175,14 @@ class OfficialChatboxPage:
                    command=lambda:self.owner.shell.open_page("OSC Studio")).pack(side="left")
         quick=ttk.LabelFrame(panel,text="QUICK SELECT",padding=(10,7))
         quick.pack(fill="x",pady=(2,8))
-        presets=ttk.Frame(quick);presets.pack(fill="x",pady=(0,5))
-        for label,mode in (("My Rank Box","rank"),("Common Staff","common"),
-                           ("Recommended","suggested"),("All Available","all"),
-                           ("Clear All","clear")):
-            ttk.Button(presets,text=label,
+        # Keep all presets available on smaller windows without clipping.
+        quick_rows=(ttk.Frame(quick),ttk.Frame(quick))
+        for row in quick_rows:row.pack(fill="x",pady=(0,5))
+        for index,(label,mode) in enumerate((
+            ("My Rank Box","rank"),("Common Staff","common"),
+            ("Recommended","suggested"),("All Available","all"),
+            ("Clear All","clear"))):
+            ttk.Button(quick_rows[index//3],text=label,
                 command=lambda m=mode:self.quick_select(m)).pack(
                     side="left",padx=(0,7))
         self.role_actions=ttk.Frame(quick);self.role_actions.pack(fill="x")
@@ -201,16 +204,19 @@ class OfficialChatboxPage:
         scroll.pack(side="right",fill="y")
         self.table.configure(yscrollcommand=scroll.set)
         self.table.bind("<Double-1>",self._toggle_double_click)
-        buttons=ttk.Frame(panel);buttons.pack(fill="x",pady=(10,6))
+        actions=ttk.LabelFrame(panel,text="Selected staff chatbox actions",padding=(10,8))
+        actions.pack(fill="x",pady=(9,6))
+        buttons=ttk.Frame(actions);buttons.pack(fill="x",pady=(0,5))
         ttk.Button(buttons,text="Toggle Highlighted",
                    command=self.toggle).pack(side="left",padx=(0,7))
         ttk.Button(buttons,text="Send Highlighted",style="Accent.TButton",
                    command=self.send).pack(side="left",padx=(0,7))
         ttk.Button(buttons,text="Send My Rank Now",
-                   command=self.send_rank).pack(side="left",padx=(0,7))
-        ttk.Button(buttons,text="Start Rotation",
-                   command=self.start).pack(side="left",padx=(0,7))
-        ttk.Button(buttons,text="Stop",command=self.stop).pack(side="left")
+                   command=self.send_rank).pack(side="left")
+        rotation=ttk.Frame(actions);rotation.pack(fill="x")
+        ttk.Button(rotation,text="Start Rotation",
+                   command=self.start).pack(side="left",padx=(0,9))
+        ttk.Button(rotation,text="Stop Rotation",command=self.stop).pack(side="left")
         ttk.Label(panel,text=(
             "Rotation uses the OSC Studio interval and pauses on revocation, "
             "rank downgrade or account change. Never broadcasts without a click."
