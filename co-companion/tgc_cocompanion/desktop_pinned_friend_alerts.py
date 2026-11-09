@@ -56,9 +56,24 @@ class PinnedFriendAlerts:
     def set_enabled(self,account,enabled):
         if type(enabled) is not bool:
             raise ValueError("Alert enable state must be boolean")
-        # Enabling ALWAYS starts a new silent baseline; avoid surprise alerts.
+        # Enabling ALWAYS starts a new silent baseline; keep separately chosen
+        # Windows notification preference when toggling general alerts.
+        windows=self.windows_notifications(account)
         data={"schema":1,"account":account,"enabled":enabled,
-              "seeded":False,"last":0,"states":{}}
+              "windows":windows,"seeded":False,"last":0,"states":{}}
+        self._save(account,data)
+
+    def windows_notifications(self,account):
+        return self._load(account).get("windows") is True
+
+    def set_windows_notifications(self,account,enabled):
+        if type(enabled) is not bool:
+            raise ValueError("Windows notification preference must be boolean")
+        data=self._load(account)
+        if not data:
+            data={"schema":1,"account":account,"enabled":False,
+                  "seeded":False,"last":0,"states":{}}
+        data["windows"]=enabled
         self._save(account,data)
 
     def last_check(self,account):
