@@ -75,7 +75,7 @@ class ExplorePage:
         tab=ttk.Frame(notebook,padding=(16,12))
         notebook.add(tab,text="Explore")
         ttk.Label(tab,text="EXPLORE VRCHAT",style="PageTitle.TLabel").pack(anchor="w")
-        ttk.Label(tab,text="Search people and worlds together, browse your recent worlds "
+        ttk.Label(tab,text="Search people, worlds and groups together, browse your recent worlds "
                   "and favorites, and open results in Profiles or Bookmarks. "
                   "This page uses your personal VRChat session only.",
                   wraplength=790).pack(anchor="w",pady=(3,12))
@@ -86,7 +86,7 @@ class ExplorePage:
         entry=ttk.Entry(search,textvariable=self.query)
         entry.pack(side="left",fill="x",expand=True)
         entry.bind("<Return>",lambda _event:self.search_all())
-        ttk.Button(search_card,text="Search People + Worlds",style="Accent.TButton",
+        ttk.Button(search_card,text="Search People + Worlds + Groups",style="Accent.TButton",
                    command=self.search_all).pack(anchor="w",pady=(9,0))
         quick=ttk.LabelFrame(tab,text="Quick browse",padding=(10,7))
         quick.pack(fill="x",pady=(0,8))
@@ -148,14 +148,15 @@ class ExplorePage:
     def search_all(self):
         query=self.query.get().strip()
         if not 2<=len(query)<=80:
-            self.status.set("Enter 2–80 characters to search people and worlds.")
+            self.status.set("Enter 2–80 characters to search people, worlds and groups.")
             return
         def operation():
             # If one endpoint fails, preserve whichever endpoint succeeded,
             # rather than losing both pages. Do not blindly retry rate limits.
             results=[]
             errors=[]
-            for label,category in (("People","search_users"),("Worlds","search_worlds")):
+            for label,category in (("People","search_users"),("Worlds","search_worlds"),
+                                   ("Groups","search_groups")):
                 try:
                     results.append((label,self.pages.account.browse(
                         category,offset=0,query=query)))
@@ -164,7 +165,7 @@ class ExplorePage:
             if not results:
                 raise RuntimeError("; ".join(errors))
             return merge_explore_results(results),errors
-        self._run(operation,"people and worlds")
+        self._run(operation,"people, worlds and groups")
 
     def load_category(self, category, label):
         def operation():
