@@ -82,9 +82,9 @@ class DesktopSettings:
                          side="left",padx=(0,10))
         ttk.Button(colors,text="Apply UI Colors",command=self._apply_theme
                    ).pack(side="left",padx=(0,10))
-        ttk.Button(colors,text="Open 10-Channel Color Studio",
+        ttk.Button(theme_box,text="Open 10-Channel Color Studio",
                    command=lambda:self.shell.open_page("UI Color Studio")
-                   ).pack(side="left")
+                   ).pack(anchor="w",pady=(8,1))
         ttk.Label(theme_box,text=(
             "Custom ten-channel editing and VRChat palette import require "
             "an authenticated Admin+ staff rank; built-in themes "
