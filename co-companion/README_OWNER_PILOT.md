@@ -1,3 +1,23 @@
+# Co-Companion v0.13.0 — Group Search, Profile Artwork Fixes and Friend History
+
+**Owner-only upgrade:** After CI and GitHub prerelease verification, use Updates → Check for Updates → Download & Install EXE → Restart. Previous versions remain installed for rollback. No staff, Node, Relay, Main Launcher or Android deployments.
+
+## Fixed owner-reported problems
+
+- Group discovery: Explore now searches **People, Worlds and Groups** together, and Social offers **Group Search**. The new authenticated personal VRChat query uses GET /groups?query=...&n=60&offset=0 instead of the users/worlds ?search=... parameter. Group results classify as Group, open their full Profiles and respect VRChat's published visibility.
+- Artwork: Use only approved VRChat-owned HTTPS hosts, including vrcdn.cloud and vrcdn.live for signed image URLs. Prefer user icon/banner, then fall back independently to approved VRChat thumbnail/image candidates when the primary URL is expired or blocked. No cookies, Relay secrets or signed URL tokens leave the personal image fetch; URL contents are not logged. Limits remain 5 MiB compressed / 18 MP decoded, 32 images for 12 minutes, 2 bounded workers.
+- Visibility: Visual Profiles now show safe per-image loading status (loaded, HTTP error code, no image URL, render error) rather than swallowing every image exception. This cannot guarantee that VRChat will serve an artwork URL; test with real Windows owner session.
+
+## Included UI and VRCX-style improvements since 0.12.0
+
+- Friends Hub has a searchable and filterable LOCAL DPAPI-encrypted friendship timeline from complete manual snapshots, with friend-profile navigation; no continuous tracking, Relay upload or invented past events.
+- Improved Explore, Avatar collection, Bookmarks, personal Inbox, Recent Players and official Staff Chatboxes layouts. Explore, Avatar, Inbox and StaffDex views clear on sign-out; locally stored information is retained.
+- Additional offline checks for group API routes and results, signed artwork candidates and expired-primary fallbacks, friend activity filtering, and frozen Windows executable UI smoke.
+
+**Limitations:** First complete snapshot creates a baseline, not historical records. Real logged-in VRChat group results and artwork must still be tested on the owner's PC. Do not claim complete VRCX parity or full-window pixel QA.
+
+---
+
 # Co-Companion v0.12.0 — StaffDex, Social, Friends Hub and OSC Overhaul (Owner Only)
 
 **Owner-only update path:** Updates → Check for Updates → Download & Install EXE → Restart,
