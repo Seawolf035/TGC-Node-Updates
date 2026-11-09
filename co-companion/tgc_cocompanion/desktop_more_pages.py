@@ -150,7 +150,8 @@ class ProfileAndPresence:
         def failure(message):
             if self.profile_id.get().strip()==identifier:
                 self.profile_status.set("Could not load profile: "+str(message))
-        self.owner._run_async(work,done,on_error=failure)
+        if not self.owner._run_async(work,done,on_error=failure):
+            self.profile_status.set("Another task is running. Try loading the profile again.")
 
     def friend_status(self):
         try:ident=self._require_user()
