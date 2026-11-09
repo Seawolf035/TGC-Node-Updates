@@ -203,7 +203,9 @@ class VisualProfile:
         self.title_widget.configure(font=("Segoe UI Semibold",16 if narrow else 21),
                                     wraplength=max(170,w-230))
         self.subtitle_widget.configure(wraplength=max(170,w-230))
-        self.banner_widget.configure(height=5 if narrow else 7)
+        self.banner_widget.configure(
+            height=(132 if narrow else 176) if self.banner is not None
+            else (5 if narrow else 7))
         if self._banner_bytes is not None and abs(self._banner_width-w)>90:
             if self._banner_timer is not None:
                 self.container.after_cancel(self._banner_timer)
@@ -216,11 +218,11 @@ class VisualProfile:
         try:
             from PIL import ImageTk
             target=min(1800,max(320,self.container.canvas.winfo_width()-10))
-            art=render_image(self._banner_bytes,(target,176))
+            art=render_image(self._banner_bytes,(target,132 if target<720 else 176))
             picture=ImageTk.PhotoImage(art,master=self.container)
             self.banner=picture
             self._banner_width=target
-            self.banner_widget.configure(image=picture,text="")
+            self.banner_widget.configure(image=picture,text="",height=art.height)
         except (tk.TclError,RuntimeError,ValueError,OSError):
             pass
 
@@ -246,7 +248,7 @@ class VisualProfile:
         self._image_url=None
         self._banner_url=None
         self.banner_widget.configure(image="",text="")
-        self.avatar_widget.configure(image="",text="No artwork")
+        self.avatar_widget.configure(image="",text="No artwork",width=14,height=6)
         title,subtitle,meta,bio=profile_summary(record,kind)
         self.type.set({"user":"VRCHAT USER","world":"VRCHAT WORLD",
                        "group":"VRCHAT GROUP"}.get(kind,"VRCHAT PROFILE"))
@@ -284,12 +286,12 @@ class VisualProfile:
                             self.banner=photo
                             self._banner_bytes=payload
                             self._banner_width=sz[0]
-                            self.banner_widget.configure(image=photo,text="")
+                            self.banner_widget.configure(image=photo,text="",height=sz[1])
                             if abs(self.container.canvas.winfo_width()-sz[0])>90:
                                 self._resize_banner()
                         else:
                             self.picture=photo
-                            self.avatar_widget.configure(image=photo,text="")
+                            self.avatar_widget.configure(image=photo,text="",width=112,height=112)
                     except (tk.TclError,RuntimeError):
                         pass
                 try:self.owner.root.after(0,apply)
