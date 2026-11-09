@@ -1,3 +1,59 @@
+# Co-Companion v0.10.0 — Native Windows Pinned Notifications + Alert Reliability
+
+**Install via the EXE itself:** after the v0.10.0 owner prerelease passes
+Windows/Linux CI, open **Updates → Check for Updates → Download & Install EXE
+→ Restart**. No manual ZIP or Python. Previous versions remain available for
+rollback. This is a public **owner preview**, not a staff deployment.
+
+## Windows notification improvements
+
+- Friends Hub → **Pinned Alerts** → Enable Pinned Alerts. Existing per-account
+  offline→online detection, 15-minute open-window checks and silent initial
+  baseline remain unchanged. Alerts still require a valid TGC staff lease,
+  accepted Desktop Terms and the independently authenticated personal VRChat
+  session. Missing/hidden users are never misreported as offline.
+- **Also show Windows notifications** is a *separate, off-by-default opt-in*.
+  With both switches enabled, friend-online events are delivered to the
+  Windows shell as native notification balloons via `Shell_NotifyIconW`;
+  Windows 10/11 may display these as modern notifications depending on system
+  settings. Windows Do Not Disturb/Focus Assist and user preferences can
+  suppress them. The existing in-app feed always remains the source of truth.
+- **Test Windows Notification** sends a clearly identified test message and
+  reports whether Windows accepted it, without faking an online friend event
+  or changing any friend state. At most five shell notifications are submitted
+  per observed batch; the full set still appears in the in-app feed.
+- Native delivery uses only the Windows API through Python `ctypes`, with
+  no PowerShell, shell commands, third-party toast package, elevated
+  permissions, background service or network access. An app-lifetime tray
+  icon is created on first successful native notification and removed during
+  ordinary app shutdown. Non-Windows systems retain their in-app alerts.
+- The Windows preference is saved *separately per personal VRChat account*
+  within the same Windows-user DPAPI-encrypted alert state. Switching the
+  general alerts toggle preserves the separate Windows preference but resets
+  the friend baseline, ensuring no initial spam.
+- **Reliability fix:** the app's shared async executor now reports whether a
+  job was started. If an alert check arrives while another owner-preview task
+  is running, it safely clears its busy flag and can retry on the next timer
+  tick rather than becoming permanently stuck.
+- Source update allowlist and packaged EXE smoke checks include the new
+  `desktop_windows_notifications.py` module and toggle/test controls.
+
+## Testing and boundaries
+
+Offline Linux/Windows tests mock the Win32 tray API, verify registration,
+notification update, shutdown removal, message sanitization, disabled-by-
+default preferences, per-account isolation and corrupt DPAPI failure behavior.
+The frozen Windows EXE startup check confirms the new Friends Hub controls
+are packaged. **A real system notification still requires owner-PC testing**
+because Windows may suppress or reroute notifications; passing mocks is not
+equivalent to testing Action Center visibility.
+
+NO TGC production Relay, inviter/sighting Node, staff software, Main Launcher
+or Android/Quest code was changed. The app does not run in the background
+after closing. Full Android/Quest Companion parity is not yet complete.
+
+---
+
 # Co-Companion v0.9.0 — Real VRChat Favorite Friends + Opt-In Pinned Alerts
 
 **Installed owner EXE update:** Open Co-Companion → **Updates → Check for
