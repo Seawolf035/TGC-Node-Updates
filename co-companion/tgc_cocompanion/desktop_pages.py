@@ -20,7 +20,8 @@ CATEGORIES = (
     ("Online Friends","online"),("Offline Friends","offline"),
     ("Favorite Worlds","worlds"),("Recent Worlds","recent"),
     ("My Groups","groups"),("User Search","search_users"),
-    ("World Search","search_worlds"),("Inbox","inbox"),
+    ("World Search","search_worlds"),("Group Search","search_groups"),
+    ("Inbox","inbox"),
 )
 _CATEGORY_BY_NAME = dict(CATEGORIES)
 
@@ -426,7 +427,7 @@ class DesktopPages:
         cat=_CATEGORY_BY_NAME.get(label)
         if cat is None:return
         text=self.search.get().strip()
-        if cat in ("search_users","search_worlds") and len(text)<2:
+        if cat in ("search_users","search_worlds","search_groups") and len(text)<2:
             self._notice("Enter at least two characters to search VRChat.");return
         old_cat=self._social_category
         if not reset and cat!=old_cat:
