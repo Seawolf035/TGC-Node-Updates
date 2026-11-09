@@ -106,7 +106,7 @@ class ActivityModelTests(unittest.TestCase):
         events=[{"type":"online","name":"A","userId":ACCOUNT},
                 {"type":"offline","name":"B","userId":OTHER}]
         before=[dict(x) for x in events]
-        result=filter_activity_events(events,"a")
+        result=filter_activity_events(events,"onl")
         self.assertEqual(len(result),1)
         self.assertEqual(events,before)
 
