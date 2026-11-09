@@ -18,8 +18,13 @@ class DesktopSettings:
     def __init__(self, owner, notebook):
         self.owner = owner
         self.shell = owner.shell
-        panel = ttk.Frame(notebook, padding=(20, 16))
-        notebook.add(panel, text="Settings")
+        from .desktop_profile_view import ScrollableCard
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Settings")
+        self.scroller=ScrollableCard(tab)
+        self.scroller.pack(fill="both",expand=True)
+        panel=ttk.Frame(self.scroller.content,padding=(20,16))
+        panel.pack(fill="both",expand=True)
         ttk.Label(panel, text="DESKTOP PREFERENCES",
                   style="PageTitle.TLabel").pack(anchor="w")
         ttk.Label(panel, text="Personal UI choices only. Your VRChat accounts and staff settings are not changed.",
