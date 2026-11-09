@@ -154,8 +154,8 @@ class TkProfileTests(unittest.TestCase):
             @staticmethod
             def submit(fn):
                 fn()
-        with patch("tgc_cocompanion.desktop_profile_view.IMAGE_POOL",Immediate()), \\
-             patch("tgc_cocompanion.desktop_profile_view.CACHE.fetch",side_effect=fetch):
+        with (patch("tgc_cocompanion.desktop_profile_view.IMAGE_POOL",Immediate()),
+              patch("tgc_cocompanion.desktop_profile_view.CACHE.fetch",side_effect=fetch)):
             visual.update(record,"user")
             self.root.update()
         self.assertIsNotNone(visual.picture)
