@@ -47,6 +47,11 @@ def main():
                 "checked","role","message","state")
             assert app.shell.open_page("Recent Players")
             assert app.shell.open_page("Explore")
+            from tgc_cocompanion.desktop_pages import CATEGORIES
+            assert ("Group Search","search_groups") in CATEGORIES
+            from tgc_cocompanion.desktop_explore import classify_result
+            assert classify_result({"id":"grp_2a833076-03ac-4212-aeff-0708d8eab968",
+                                    "name":"TGC"},"Groups")[0]=="Group"
             assert hasattr(app.features.explore,"result_filter")
             assert hasattr(app.features.explore,"type_filter")
             assert app.features.explore._render_results()==0
@@ -99,6 +104,7 @@ def main():
                 "displayName":"Test VRChat Profile","bio":"Structured responsive profile",
                 "status":"active","dateJoined":"2024-03-01"},"user")
             assert profile.title.get()=="Test VRChat Profile"
+            assert "Artwork" in profile.art_status.get()
             assert len(profile.meta_labels)==6
             for width in (800,1024,1280,1920,2560):
                 app.shell._on_window_resize(width=width)
