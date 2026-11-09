@@ -58,6 +58,43 @@ def detect_friend_changes(prior,current,at):
     return changes
 
 
+# Local-only VRCX-style history filters. Never fabricate earlier events,
+# query the Relay, or turn unknown/hidden locations into known locations.
+ACTIVITY_KINDS=("All events","Friends added/removed","Online/offline",
+                "World/location changes","Status changes")
+EVENT_KIND_MAP={
+    "Friends added/removed":frozenset(("friend_added","friend_removed")),
+    "Online/offline":frozenset(("online","offline")),
+    "World/location changes":frozenset(("location",)),
+    "Status changes":frozenset(("status","statusDescription","name")),
+}
+
+
+def filter_activity_events(events, query="", kind="All events"):
+    """Filter completed-snapshot history without modifying encrypted storage.
+
+    Results are newest first, matching Friend Hub presentation. No substring
+    matching over arbitrary object reprs, URLs, credentials or raw log lines.
+    """
+    if kind not in ACTIVITY_KINDS:
+        raise ValueError("Unknown friend history filter")
+    term=str(query).strip().casefold()[:120]
+    allowed=EVENT_KIND_MAP.get(kind)
+    out=[]
+    for row in reversed(tuple(events)[-MAX_EVENTS:]):
+        if not isinstance(row,dict):
+            continue
+        event_kind=str(row.get("type") or "")
+        if allowed is not None and event_kind not in allowed:
+            continue
+        if term and not any(term in str(row.get(key) or "")[:240].casefold()
+                            for key in ("name","userId","type","location",
+                                        "status","statusDescription","previous")):
+            continue
+        out.append(row)
+    return tuple(out)
+
+
 class FriendActivityStore:
     def __init__(self,directory:Path):
         self.directory=Path(directory)
