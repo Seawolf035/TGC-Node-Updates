@@ -55,6 +55,7 @@ SOURCE_FILES = (
     "tgc_cocompanion/desktop_more_pages.py",
     "tgc_cocompanion/desktop_profile_view.py",
     "tgc_cocompanion/desktop_profile_images.py",
+    "tgc_cocompanion/desktop_display.py",
     "tgc_cocompanion/desktop_collection_pages.py",
     "tgc_cocompanion/desktop_compact_nav.py",
     "tgc_cocompanion/desktop_explore.py",
