@@ -27,6 +27,11 @@ def main():
             assert hasattr(app.features.friend_hub,"friend_tree")
             assert hasattr(app.features.friend_hub,"group_tree")
             assert hasattr(app.features.friend_hub,"activity_table")
+            assert hasattr(app.features.friend_hub,"activity_query")
+            assert hasattr(app.features.friend_hub,"activity_kind")
+            assert hasattr(app.features.friend_hub,"activity_count")
+            app.features.friend_hub.render_history()
+            assert len(app.features.friend_hub._history_ids)==0
             assert hasattr(app.features.friend_hub,"favorite_index")
             assert hasattr(app.features.friend_hub,"alerts")
             assert hasattr(app.features.friend_hub,"alert_feed")
@@ -42,6 +47,19 @@ def main():
                 "checked","role","message","state")
             assert app.shell.open_page("Recent Players")
             assert app.shell.open_page("Explore")
+            assert hasattr(app.features.explore,"result_filter")
+            assert hasattr(app.features.explore,"type_filter")
+            assert app.features.explore._render_results()==0
+            for title in ("Avatars","Bookmarks","Inbox"):
+                assert app.shell.open_page(title)
+            assert hasattr(app.features.collections,"avatar_title_var")
+            assert hasattr(app.features.collections,"avatar_meta_var")
+            assert hasattr(app.features.collections,"bookmark_filter")
+            assert hasattr(app.features.collections,"inbox_type_picker")
+            assert hasattr(app.features.collections,"inbox_selected")
+            app.features.collections.render_inbox()
+            app.features.collections.clear_private_views()
+            assert len(app.features.collections._inbox_rows)==0
             assert app.shell.open_page("Home")
             assert hasattr(app.settings,"theme_name")
             assert app.shell.open_page("UI Color Studio")
