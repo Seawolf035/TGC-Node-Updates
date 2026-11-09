@@ -42,6 +42,26 @@ class DesktopSettings:
             "Ctrl+1–9: quick page shortcuts    •    Alt+Left: previous page"
         ), wraplength=800).pack(anchor="w", pady=(8, 0))
 
+        from .desktop_display import SCALES
+        display=ttk.LabelFrame(panel,text="Display & Screen Scaling",
+                               padding=(15,10))
+        display.pack(fill="x",pady=(0,12))
+        ttk.Label(display,text="Designed for 720p through 4K. Narrow windows automatically "
+                  "collapse the navigation; change scale for smaller or larger text.",
+                  wraplength=780).pack(anchor="w")
+        row=ttk.Frame(display)
+        row.pack(fill="x",pady=(8,2))
+        ttk.Label(row,text="UI scale:").pack(side="left",padx=(0,8))
+        self.display_scale=tk.StringVar(value=str(owner.display_choice.load())+"%")
+        ttk.Combobox(row,textvariable=self.display_scale,state="readonly",
+                     width=9,values=[str(x)+"%" for x in SCALES]
+                     ).pack(side="left",padx=(0,9))
+        ttk.Button(row,text="Save Scale (Restart Required)",
+                   command=self._save_scale).pack(side="left")
+        ttk.Label(display,text="100% uses the scale Windows recommends for your monitor. "
+                  "Only UI size changes; account settings are unaffected.",
+                  style="PageSubtitle.TLabel",wraplength=780).pack(anchor="w",pady=(5,0))
+
         from .desktop_staff_colors import PALETTES
         theme_box=ttk.LabelFrame(panel,text="Desktop UI Colors • Mobile Companion presets",
                                 padding=(15,10))
@@ -93,6 +113,17 @@ class DesktopSettings:
             "Node keys and databases are never copied, reset or deleted by Settings. "
             "To roll back, launch an earlier verified EXE (or legacy Python folder)."
         ), wraplength=800).pack(anchor="w", pady=(8, 0))
+
+    def _save_scale(self):
+        try:
+            selected=int(self.display_scale.get().rstrip("%"))
+            self.owner.display_choice.save(selected)
+            messagebox.showinfo("Display Scale Saved",
+                "The UI will use "+str(selected)+"% scale the next time "
+                "Co-Companion opens. Restart to apply this setting.",
+                parent=self.owner.root)
+        except (ValueError,OSError) as exc:
+            messagebox.showerror("Display Scale",str(exc),parent=self.owner.root)
 
     def _apply_theme(self):
         try:
