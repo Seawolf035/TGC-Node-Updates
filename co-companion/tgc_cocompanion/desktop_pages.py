@@ -820,5 +820,7 @@ class DesktopPages:
 
     def close(self):
         self._closed=True
+        if hasattr(self,"friend_hub"):
+            self.friend_hub.close()
         if self.controls is not None:
             self.controls.shutdown()
