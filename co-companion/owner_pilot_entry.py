@@ -54,6 +54,10 @@ def main():
             assert app.shell.open_page("StaffDex")
             assert app.shell.open_page("Profiles")
             assert hasattr(app.features.profile_tools,"visual")
+            from PIL import Image, ImageTk
+            placeholder=ImageTk.PhotoImage(Image.new("RGB",(24,24),"navy"),
+                                           master=root)
+            assert placeholder.width()==24
             profile=app.features.profile_tools.visual
             profile.update({"id":"usr_2a833076-03ac-4212-aeff-0708d8eab968",
                 "displayName":"Test VRChat Profile","bio":"Structured responsive profile",
