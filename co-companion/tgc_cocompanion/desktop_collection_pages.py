@@ -185,32 +185,49 @@ class CollectionPages:
             lambda _:self.avatar_status.set("VRChat avatar selection requested"))
 
     def _build_bookmarks(self,book):
-        tab=ttk.Frame(book,padding=14);book.add(tab,text="Bookmarks")
-        ttk.Label(tab,text="Saved World Bookmarks",font=("Segoe UI",15,"bold")).pack(anchor="w")
-        ttk.Label(tab,text="Personal local bookmarks, not VRChat favorites. Stored separately for each VRChat account.",
-                  wraplength=830).pack(anchor="w",pady=(4,8))
-        controls=ttk.Frame(tab);controls.pack(fill="x",pady=8)
+        tab=ttk.Frame(book,padding=(13,10));book.add(tab,text="Bookmarks")
+        ttk.Label(tab,text="SAVED VRCHAT WORLDS",style="PageTitle.TLabel").pack(anchor="w")
+        ttk.Label(tab,text="Local bookmarks belong to your personal VRChat account, not your official VRChat favorites or TGC Relay.",
+                  style="PageSubtitle.TLabel",wraplength=780).pack(anchor="w",pady=(3,9))
+        form=ttk.LabelFrame(tab,text="Save a world",padding=(12,10))
+        form.pack(fill="x",pady=(0,9))
         self.bookmark_world=tk.StringVar()
         self.bookmark_name=tk.StringVar()
-        ttk.Entry(controls,textvariable=self.bookmark_world,width=43).pack(side="left",padx=(0,8))
-        ttk.Entry(controls,textvariable=self.bookmark_name,width=26).pack(side="left",padx=(0,8))
-        ttk.Button(controls,text="Save World",command=self.save_bookmark).pack(side="left")
-        filter_row=ttk.Frame(tab);filter_row.pack(fill="x",pady=(4,0))
-        ttk.Label(filter_row,text="Filter saved worlds:").pack(side="left",padx=(0,8))
+        form.columnconfigure(0,weight=3)
+        form.columnconfigure(1,weight=2)
+        ttk.Label(form,text="VRChat World ID").grid(row=0,column=0,sticky="w",padx=(0,10))
+        ttk.Label(form,text="Display name").grid(row=0,column=1,sticky="w")
+        ttk.Entry(form,textvariable=self.bookmark_world).grid(row=1,column=0,sticky="ew",padx=(0,10),pady=(3,7))
+        ttk.Entry(form,textvariable=self.bookmark_name).grid(row=1,column=1,sticky="ew",pady=(3,7))
+        ttk.Button(form,text="Save World",style="Accent.TButton",command=self.save_bookmark
+                   ).grid(row=2,column=0,sticky="w")
+        filter_row=ttk.Frame(tab);filter_row.pack(fill="x",pady=(0,8))
+        ttk.Label(filter_row,text="Find saved world").pack(side="left",padx=(0,8))
         self.bookmark_filter=tk.StringVar()
-        ttk.Entry(filter_row,textvariable=self.bookmark_filter,width=35).pack(side="left")
+        ttk.Entry(filter_row,textvariable=self.bookmark_filter).pack(
+            side="left",fill="x",expand=True,padx=(0,10))
         self.bookmark_filter.trace_add("write",lambda *_:self.refresh_bookmarks())
         self.bookmark_count=tk.StringVar(value="No saved worlds loaded")
         ttk.Label(filter_row,textvariable=self.bookmark_count).pack(side="right")
-        self.bookmark_table=ttk.Treeview(tab,columns=("name","id"),show="headings",height=13)
-        for col,width in (("name",270),("id",430)):
-            self.bookmark_table.heading(col,text=col.title());self.bookmark_table.column(col,width=width)
-        self.bookmark_table.pack(fill="both",expand=True,pady=8)
-        actions=ttk.Frame(tab);actions.pack(anchor="w",pady=8)
-        ttk.Button(actions,text="Refresh",command=self.refresh_bookmarks).pack(side="left",padx=(0,8))
-        ttk.Button(actions,text="Open World in Browser",command=self.open_bookmark).pack(side="left",padx=(0,8))
-        ttk.Button(actions,text="Copy World Link",command=self.copy_bookmark_link).pack(side="left",padx=(0,8))
-        ttk.Button(actions,text="Remove Bookmark",command=self.remove_bookmark).pack(side="left")
+        body=ttk.Frame(tab);body.pack(fill="both",expand=True)
+        self.bookmark_table=ttk.Treeview(body,columns=("name","id"),show="headings",height=12)
+        for col,width in (("name",265),("id",350)):
+            self.bookmark_table.heading(col,text=col.title())
+            self.bookmark_table.column(col,width=width,stretch=(col=="name"))
+        bookmark_scroll=ttk.Scrollbar(body,orient="vertical",
+                                      command=self.bookmark_table.yview)
+        self.bookmark_table.configure(yscrollcommand=bookmark_scroll.set)
+        self.bookmark_table.pack(side="left",fill="both",expand=True)
+        bookmark_scroll.pack(side="right",fill="y")
+        actions=ttk.Frame(tab);actions.pack(fill="x",pady=(9,3))
+        ttk.Button(actions,text="Refresh",command=self.refresh_bookmarks
+                   ).pack(side="left",padx=(0,8))
+        ttk.Button(actions,text="Open World",command=self.open_bookmark
+                   ).pack(side="left",padx=(0,8))
+        ttk.Button(actions,text="Copy World Link",command=self.copy_bookmark_link
+                   ).pack(side="left",padx=(0,8))
+        ttk.Button(actions,text="Remove Bookmark",command=self.remove_bookmark
+                   ).pack(side="left")
 
     def bookmark_from_social(self,world_id,name):
         self.bookmark_world.set(world_id)
