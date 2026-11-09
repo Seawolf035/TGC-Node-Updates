@@ -120,15 +120,16 @@ class RecentPlayersPage:
             "See people you encountered in PCVR from this PC's VRChat output logs. "
             "Only scan when you choose; nothing is saved, uploaded, or sent to the Invite Network."
         ), wraplength=790).pack(anchor="w", pady=(3, 12))
-        toolbar = ttk.Frame(tab)
-        toolbar.pack(fill="x", pady=(0, 6))
-        ttk.Button(toolbar, text="Scan PCVR Logs", style="Accent.TButton",
-                   command=self.scan).pack(side="left", padx=(0, 9))
-        ttk.Button(toolbar, text="Clear Results",
-                   command=self.clear).pack(side="left", padx=(0, 14))
-        ttk.Label(toolbar, text="Filter:").pack(side="left")
-        ttk.Entry(toolbar, textvariable=self.query, width=25).pack(
-            side="left", fill="x", expand=True, padx=(6, 0))
+        tools=ttk.LabelFrame(tab,text="Local PCVR history",padding=(12,9))
+        tools.pack(fill="x",pady=(0,9))
+        toolbar=ttk.Frame(tools);toolbar.pack(fill="x",pady=(0,8))
+        ttk.Button(toolbar,text="Scan PCVR Logs",style="Accent.TButton",
+                   command=self.scan).pack(side="left",padx=(0,9))
+        ttk.Button(toolbar,text="Clear Results",command=self.clear).pack(side="left")
+        search=ttk.Frame(tools);search.pack(fill="x")
+        ttk.Label(search,text="Find player").pack(side="left",padx=(0,9))
+        ttk.Entry(search,textvariable=self.query).pack(
+            side="left",fill="x",expand=True)
         self.query.trace_add("write", lambda *_: self.render())
         ttk.Label(tab, textvariable=self.status, wraplength=800).pack(
             anchor="w", pady=(3, 8))
