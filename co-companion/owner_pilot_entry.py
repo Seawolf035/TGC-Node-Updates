@@ -51,7 +51,25 @@ def main():
             assert len(import_vrchat_colors(
                 "#123456,#654321,#ABCDEF,#091827,#FFEEDD,#8899AA"))==10
             assert export_vrchat_colors(app.color_studio.colors()).count(",")==5
-            assert app.shell.open_page("StaffDex")
+            # Verify the new focused workspaces exist in the real frozen
+            # executable, rather than checking source strings alone.
+            from tkinter import ttk
+            def workspace_tabs(title):
+                assert app.shell.open_page(title)
+                index=app.shell.page_names.index(title)
+                frame=app.shell.notebook.nametowidget(app.shell.notebook.tabs()[index])
+                books=[child for child in frame.winfo_children()
+                       if isinstance(child,ttk.Notebook)]
+                assert len(books)==1, (title,len(books))
+                book=books[0]
+                return [book.tab(tab,"text") for tab in book.tabs()]
+            assert workspace_tabs("StaffDex")==["Staff Directory","Achievements"]
+            assert hasattr(app.features,"dex_count")
+            assert hasattr(app.features,"dex_roster_count")
+            assert workspace_tabs("OSC Studio")==[
+                "Chatbox & Rotation","Avatar & Parameters","Voice"]
+            assert hasattr(app.features,"osc_pid")
+            assert hasattr(app.features,"osc_interval")
             assert app.shell.open_page("Profiles")
             assert hasattr(app.features.profile_tools,"visual")
             from PIL import Image, ImageTk
