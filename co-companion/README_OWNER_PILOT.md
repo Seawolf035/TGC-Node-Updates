@@ -1,3 +1,36 @@
+# Co-Companion v0.12.0 — StaffDex, Social, Friends Hub and OSC Overhaul (Owner Only)
+
+**Owner-only update path:** Updates → Check for Updates → Download & Install EXE → Restart,
+after Windows/Linux CI and the owner prerelease are confirmed. The previous
+installation remains available for rollback. No staff/Node/Relay/Main Launcher
+or Android/Quest deployment accompanies this release.
+
+### Focused workspaces
+- StaffDex retains the same official roster, rank colors, complete friend scan,
+  cached progress, hidden achievement eligibility and profile actions. The
+  cramped directory/achievements side-by-side split becomes full-width
+  **Staff Directory** and **Achievements** tabs, with two collection summary cards.
+  Directory and achievements have independent vertical scrollbars.
+- OSC Studio groups all existing actions into **Chatbox & Rotation**,
+  **Avatar & Parameters** and **Voice** tabs, with one persistent VRChat PID
+  target and honest UDP status. Existing launcher PID authorization,
+  session lease, OSC routing, saved phrases, height presets, rotation and
+  push-to-talk release safeguards are unchanged.
+- Social browsing separates category/filter inputs from Load / Search and
+  Load More actions instead of squeezing the results toolbar into one line.
+  Friends Hub separates friend/group/favorite loads from filtering and pin refresh.
+- Windows frozen executable smoke now asserts real StaffDex and OSC tab
+  widgets exist, and existing image/Pages and no-network tests remain.
+
+**Not yet complete:** This is the next incremental application overhaul,
+not proof of perfect UI on the owner's monitor, nor full VRCX parity.
+Screenshots and real runtime testing at 720p/1080p/4K are still needed.
+Next pass: modernize the remaining Social, Inbox, Explore and collection
+screens; plan VRCX-like activity summaries, richer favorites/history,
+and instance/world tools that remain private and optional.
+
+---
+
 # Co-Companion v0.11.1 — Visual Profiles and Responsive Windows Layout
 
 **Update from your installed EXE:** after v0.11.1 passes both CI suites and
