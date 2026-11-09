@@ -2,7 +2,7 @@
 from io import BytesIO
 from pathlib import Path
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from tkinter import TclError
 import tkinter as tk
 from tkinter import ttk
@@ -10,7 +10,7 @@ from tkinter import ttk
 from tgc_cocompanion.desktop_profile_view import (
     profile_kind,profile_summary,VisualProfile)
 from tgc_cocompanion.desktop_profile_images import (
-    safe_image_url,image_sources,ProfileImageCache,render_image)
+    safe_image_url,image_sources,image_candidates,ProfileImageCache,render_image)
 from tgc_cocompanion.desktop_shell import responsive_shell
 
 UID="usr_2a833076-03ac-4212-aeff-0708d8eab968"
@@ -70,6 +70,21 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(safe_image_url("https://api.vrchat.cloud/x"),
                          "https://api.vrchat.cloud/x")
 
+    def test_signed_vrcdn_hosts_and_multiple_fallback_candidates(self):
+        signed="https://cdn.vrcdn.cloud/pic.png?expires=123&signature=abc"
+        self.assertEqual(safe_image_url(signed),signed)
+        self.assertEqual(safe_image_url("https://assets.vrchat.com/avatar.jpg"),
+                         "https://assets.vrchat.com/avatar.jpg")
+        self.assertIsNone(safe_image_url("https://cdn.vrcdn.cloud.attacker.net/pic"))
+        self.assertIsNone(safe_image_url("https://not-vrchat.example.com/pic"))
+        bad="https://images.vrchat.cloud/expired.png"
+        icons,banners=image_candidates(
+            {"userIcon":bad,"profilePicOverrideThumbnail":signed,
+             "profilePicOverride":"https://assets.vrchat.com/banner.jpg"},"user")
+        self.assertEqual(icons[:2],(bad,signed))
+        self.assertEqual(banners[0],"https://assets.vrchat.com/banner.jpg")
+        self.assertEqual(image_candidates({},kind="group"),((),()))
+
     def test_profile_image_cache_respects_limit_and_reuses_bytes(self):
         try:
             from PIL import Image
@@ -121,6 +136,32 @@ class TkProfileTests(unittest.TestCase):
         except TclError:
             self.skipTest("No graphical display")
         self.addCleanup(self.root.destroy)
+
+    def test_profile_images_try_fallback_and_surface_diagnostics(self):
+        from PIL import Image
+        image=Image.new("RGB",(16,16),(2,60,170))
+        stream=BytesIO();image.save(stream,format="PNG")
+        old="https://images.vrchat.cloud/expired.png"
+        fresh="https://cdn.vrcdn.cloud/signed-image.png?expires=123"
+        visual=VisualProfile(Mock(root=self.root),ttk.Frame(self.root))
+        record={"id":UID,"displayName":"Example","userIcon":old,
+                "profilePicOverrideThumbnail":fresh}
+        def fetch(url):
+            if url==old:
+                raise ValueError("expired URL")
+            return stream.getvalue()
+        class Immediate:
+            @staticmethod
+            def submit(fn):
+                fn()
+        with patch("tgc_cocompanion.desktop_profile_view.IMAGE_POOL",Immediate()), \\
+             patch("tgc_cocompanion.desktop_profile_view.CACHE.fetch",side_effect=fetch):
+            visual.update(record,"user")
+            self.root.update()
+        self.assertIsNotNone(visual.picture)
+        self.assertIsNotNone(visual.banner)
+        self.assertIn("avatar: loaded",visual.art_status.get())
+        self.assertIn("banner: loaded",visual.art_status.get())
 
     def test_real_visual_profile_at_multiple_layout_widths(self):
         owner=Mock(root=self.root)
