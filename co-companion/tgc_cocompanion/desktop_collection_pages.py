@@ -64,6 +64,7 @@ class CollectionPages:
         self.account=pages.account
         self.bookmarks=WorldBookmarks(self.owner.terms_dir)
         self._avatars=[]
+        self._avatar_account=None
         self._inbox=[]
         self._inbox_account=None
         self._inbox_rows={}
@@ -116,6 +117,8 @@ class CollectionPages:
         self.avatar_detail.pack(fill="x")
 
     def _avatar_id(self):
+        if not self.account.signed_in or self.account.user_id!=self._avatar_account:
+            raise PermissionError("Load avatars for your current VRChat account")
         selected=self.avatar_table.selection()
         if not selected:raise ValueError("Select an avatar first")
         value=self.avatar_table.item(selected[0],"values")
@@ -124,8 +127,11 @@ class CollectionPages:
         return value[2]
 
     def load_avatars(self):
+        account=self.account.user_id if self.account.signed_in else None
         def work():
             self._eligible()
+            if self.account.user_id!=account:
+                raise PermissionError("Personal VRChat account changed during avatar load")
             result=[]
             for offset in range(0,601,60):
                 page=self.account.avatar_favorites(offset)
@@ -133,7 +139,10 @@ class CollectionPages:
                 if len(page)<60:break
             return result
         def done(items):
+            if not self.account.signed_in or self.account.user_id!=account:
+                return
             self._avatars=items
+            self._avatar_account=account
             self.avatar_table.delete(*self.avatar_table.get_children())
             for item in items:
                 self.avatar_table.insert("",tk.END,values=(
@@ -144,20 +153,28 @@ class CollectionPages:
         self.owner._run_async(work,done)
 
     def load_avatar_groups(self):
+        account=self.account.user_id if self.account.signed_in else None
         def work():
             self._eligible()
+            if self.account.user_id!=account:
+                raise PermissionError("Personal VRChat account changed during group load")
             return self.account.avatar_groups()
         def done(groups):
+            if not self.account.signed_in or self.account.user_id!=account:return
             self.avatar_status.set("Favorite avatar groups: "+", ".join(str(x.get("displayName") or x.get("name") or "?")[:40] for x in groups)[:400])
         self.owner._run_async(work,done)
 
     def avatar_details(self):
         try:ident=self._avatar_id()
         except Exception as exc:self._error(exc);return
+        account=self.account.user_id
         def work():
             self._eligible()
+            if self.account.user_id!=account:
+                raise PermissionError("Personal VRChat account changed during avatar details")
             return self.account.avatar(ident)
         def done(data):
+            if not self.account.signed_in or self.account.user_id!=account:return
             if not isinstance(data,dict):
                 self.avatar_status.set("Avatar details were unavailable; previous selection preserved.")
                 return
@@ -393,6 +410,7 @@ class CollectionPages:
     def clear_private_views(self):
         """Clear personal result rows on VRChat sign-out without deleting data."""
         self._avatars=[]
+        self._avatar_account=None
         self.avatar_table.delete(*self.avatar_table.get_children())
         self.avatar_title_var.set("Select an avatar, then choose View Selected Avatar")
         self.avatar_meta_var.set("")
